@@ -1,0 +1,16 @@
+*.json
+*.ndjson
+*.memmap
+*.pkl
+*.npy
+*.pt
+notebooks/
+checkpoints/
+runs/
+scratchpad/
+
+*.pyc
+__pycache__/
+.ipynb_checkpoints/
+
+.idea/
