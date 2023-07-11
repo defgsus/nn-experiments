@@ -1,3 +1,4 @@
+import time
 import unittest
 import math
 from typing import List
@@ -33,7 +34,20 @@ class TestDatasetCA(unittest.TestCase):
             [int(r) for r in rule]
         )
 
-        #print(state)
+    def test_210_total_repeat(self):
+        shape = (32, 32)
+        ds = TotalCADataset(
+            shape,
+            init_prob=(0, 1),
+            num_iterations=(2, 10),
+            seed=23,
+        )
+        state, rule = ds["3-23"]
+
+        self.assertEqual(
+            [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 1., 1., 0., 0., 0., 0., 0.],
+            [int(r) for r in rule]
+        )
 
     def assert_ca(
             self,
@@ -100,3 +114,48 @@ class TestDatasetCA(unittest.TestCase):
                 .....|.#...|.##..|.##..|.###.|..##.|.#.#.|...##|....#|..#.#|....#|...#.|....#|.....|.....|.....|.....
                 .....|.....|.....|.....|.....|..#..|..##.|..##.|..###|...##|..#.#|#...#|#....|#..#.|#....|....#|#....
             """, wrap=True, dtype=dtype)
+
+    def test_400_speed(self):
+        """
+        first implementation:
+            (32, 32)     torch.uint8      wrap=False cells/s=13,902,945
+            (32, 32)     torch.uint8      wrap=True  cells/s=9,108,662
+            (32, 32)     torch.float32    wrap=False cells/s=13,455,411
+            (32, 32)     torch.float32    wrap=True  cells/s=8,115,368
+            (128, 128)   torch.uint8      wrap=False cells/s=100,147,677
+            (128, 128)   torch.uint8      wrap=True  cells/s=74,320,733
+            (128, 128)   torch.float32    wrap=False cells/s=87,735,018
+            (128, 128)   torch.float32    wrap=True  cells/s=61,928,547
+            (1024, 1024) torch.uint8      wrap=False cells/s=412,475,663
+            (1024, 1024) torch.uint8      wrap=True  cells/s=350,573,802
+            (1024, 1024) torch.float32    wrap=False cells/s=113,898,721
+            (1024, 1024) torch.float32    wrap=True  cells/s=95,649,338
+        """
+        print()
+        for shape in (
+                (32, 32),
+                (128, 128),
+                (1024, 1024),
+        ):
+            for dtype in (torch.uint8, torch.float):
+                for wrap in (False, True):
+                    ds = TotalCADataset(shape=shape, wrap=wrap, dtype=dtype)
+
+                    cells = ds.init_cells()
+                    iterations = 0
+
+                    start_time = time.time()
+                    while True:
+                        for i in range(100):
+                            cells = ds.step_cells(cells, [3], [2, 3])
+                            iterations += 1
+
+                        cur_time = time.time()
+                        if cur_time - start_time > .1:
+                            break
+
+                    seconds = cur_time - start_time
+                    cells = math.prod(shape) * iterations
+                    cells_per_second = int(cells / seconds)
+
+                    print(f"{str(shape):12} {str(dtype):16} wrap={str(wrap):5} cells/s={cells_per_second:,}")

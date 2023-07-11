@@ -164,7 +164,7 @@ class Trainer:
                 self.num_batch_steps += 1
                 self.num_input_steps += input_batch.shape[0]
 
-                self.log_scalar("train_loss", loss.clamp_max(10.))
+                self.log_scalar("train_loss", loss)
 
                 if self.num_input_steps - last_validation_step > self.num_inputs_between_validations:
                     last_validation_step = self.num_input_steps

@@ -8,6 +8,7 @@ from typing import List, Iterable, Tuple, Optional, Callable, Union
 from tqdm import tqdm
 import torch
 import torch.nn
+import torch.fft
 import torch.nn.functional as F
 import torch.utils.data
 from torch.utils.data import DataLoader
@@ -33,7 +34,16 @@ class TrainAutoencoder(Trainer):
         input_batch = input_batch.to(self.device)
 
         output_batch = self.model.forward(input_batch)
-        loss = F.mse_loss(input_batch, output_batch)
+
+        def _transform(x):
+            f = torch.fft.fft2(x)
+            #return f.real + f.imag
+            return torch.cat([f.real, f.imag])
+
+        input_batch = _transform(input_batch)
+        output_batch = _transform(output_batch)
+
+        loss = F.l1_loss(input_batch, output_batch)
 
         return loss
 

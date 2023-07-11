@@ -1,5 +1,5 @@
 import itertools
-from typing import Tuple, Union, Optional, Iterable, List
+from typing import Tuple, Union, Optional, Iterable, List, Callable, Generator
 
 import torch
 import torch.nn as nn
@@ -12,36 +12,47 @@ class TotalCADataset(Dataset):
     def __init__(
             self,
             shape: Union[torch.Size, Tuple[int, int]],
-            num_iterations: int = 10,
-            init_prob: float = .5,
+            num_iterations: Union[int, Tuple[int, int]] = 10,
+            init_prob: Union[float, Tuple[float, float]] = .5,
+            seed: Optional[int] = None,
+            num_repetitions: int = 1,
             wrap: bool = False,
-            dtype: torch.dtype = torch.float,
-
+            rules: Optional[Iterable[Union[int, str]]] = None,
+            dtype: torch.dtype = torch.uint8,
+            transforms: Optional[List[Union[nn.Module, Callable]]] = None,
     ):
-        # assert padding_mode in ("zeros", "reflect", "replicate")
+        assert num_repetitions >= 1
 
         self.shape = torch.Size(shape)
         self.num_iterations = num_iterations
+        self.num_repetitions = num_repetitions
         self.init_prob = init_prob
+        self.seed = seed
         self.wrap = wrap
         self.dtype = dtype
+        self.transforms = transforms
+        self.rules = None
+        if rules is not None:
+            self.rules = [
+                r if isinstance(r, int) else self.rule_to_number(r)
+                for r in rules
+            ]
 
-        #self.conv = nn.Conv2d(
-        #    1, 1,
-        #    kernel_size=3,
-        #    padding_mode="circular" if self.wrap else "zeros",
-        #    padding=1,
-        #    bias=False,
-        #)
         # 1x1x3x3
         self.kernel = torch.Tensor([[[
             [1, 1, 1],
             [1, 0, 1],
             [1, 1, 1],
-        ]]]).to(self.dtype)#, requires_grad=False)
+        ]]]).to(self.dtype)
 
     def __len__(self):
-        return 2 ** 18
+        if self.rules is not None:
+            return len(self.rules) * self.num_repetitions
+        return (2 ** 18) * self.num_repetitions
+
+    def __iter__(self) -> Generator[Tuple[torch.Tensor, torch.Tensor], None, None]:
+        for i in range(len(self)):
+            yield self.__getitem__(i)
 
     def __getitem__(self, item: Union[int, str]) -> Tuple[torch.Tensor, torch.Tensor]:
         if isinstance(item, str):
@@ -49,11 +60,29 @@ class TotalCADataset(Dataset):
         else:
             index = item
 
-        birth, survive = self.index_to_rule(index)
+        rng = torch.default_generator
+        if self.seed is not None:
+            rng = torch.Generator().manual_seed((index * 1234567) ^ self.seed)
 
-        cells = self.init_cells()
-        for iter in range(self.num_iterations):
+        birth, survive = self.index_to_rule(index)
+        num_iterations = self.num_iterations
+        if isinstance(num_iterations, (list, tuple)):
+            if self.num_iterations[0] == self.num_iterations[1]:
+                num_iterations = self.num_iterations[0]
+            else:
+                num_iterations = torch.randint(
+                    self.num_iterations[0],
+                    self.num_iterations[1],
+                    (1,), generator=rng
+                )[0]
+
+        cells = self.init_cells(rng)
+        for iter in range(num_iterations):
             cells = self.step_cells(cells, birth, survive)
+
+        if self.transforms is not None:
+            for t in self.transforms:
+                cells = t(cells)
 
         return (
             cells,
@@ -64,6 +93,11 @@ class TotalCADataset(Dataset):
             self,
             index: int,
     ) -> Tuple[List[int], List[int]]:
+        index //= self.num_repetitions
+
+        if self.rules is not None:
+            index = self.rules[index]
+
         r1 = index & (2 ** 9 - 1)
         r2 = (index >> 9) & (2 ** 9 - 1)
         birth = [b for b in range(9) if (r1 >> b) & 1]
@@ -73,7 +107,16 @@ class TotalCADataset(Dataset):
     def rule_to_index(
             self,
             rule: Union[str, Tuple[Iterable[int], Iterable[int]]] = "3-23"
-    ):
+    ) -> int:
+        if self.rules is not None:
+            raise NotImplementedError(f"Can't use rule_to_index on dataset with limited rules")
+        return self.rule_to_number(rule)
+
+    @classmethod
+    def rule_to_number(
+            cls,
+            rule: Union[str, Tuple[Iterable[int], Iterable[int]]] = "3-23"
+    ) -> int:
         if isinstance(rule, str):
             r1, r2 = rule.split("-")
         else:
@@ -86,8 +129,12 @@ class TotalCADataset(Dataset):
             index |= (1 << (int(n) + 9))
         return index
 
-    def init_cells(self) -> torch.Tensor:
-        return (torch.rand(*self.shape) <= self.init_prob).to(self.dtype)
+    def init_cells(self, rng: Optional[torch.Generator] = None) -> torch.Tensor:
+        init_prob = (
+            torch.rand(1, generator=rng)[0] * (self.init_prob[1] - self.init_prob[0]) + self.init_prob[0]
+            if isinstance(self.init_prob, (list, tuple)) else self.init_prob
+        )
+        return (torch.rand(*self.shape, generator=rng) < init_prob).to(self.dtype)
 
     def step_cells(self, cells: torch.Tensor, birth: Iterable[int], survive: Iterable[int]) -> torch.Tensor:
         neigh = self.total_neighbours(cells)

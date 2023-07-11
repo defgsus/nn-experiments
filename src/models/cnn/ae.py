@@ -58,12 +58,15 @@ class ConvAutoEncoder(torch.nn.Module):
         x = self.decoder.forward(x).reshape(-1, *self.shape)
         return x
 
-    def XX_weight_images(self):
+    def weight_images(self, **kwargs):
         images = []
-        for layers in (self.encoder.layers, self.decoder.layers):
+        for layers in (self.encoder[0].layers, self.decoder[-1].layers):
             for layer in layers:
                 if hasattr(layer, "weight"):
                     weight = layer.weight
-                    if weight.ndim == 2:
-                        images.append(weight)
+                    if weight.ndim == 4:
+                        for w in weight[:5]:
+                            images.append(w[0])
+                        for w in weight[0, 1:6]:
+                            images.append(w)
         return images
