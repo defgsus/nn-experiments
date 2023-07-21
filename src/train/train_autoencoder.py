@@ -38,7 +38,7 @@ class TrainAutoencoder(Trainer):
         def _transform(x):
             f = torch.fft.fft2(x)
             #return f.real + f.imag
-            return torch.cat([f.real, f.imag])
+            return torch.cat([f.real[:, 3:-3], f.imag[:, 3:-3]])
 
         input_batch = _transform(input_batch)
         output_batch = _transform(output_batch)
