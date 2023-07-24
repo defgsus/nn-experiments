@@ -1,12 +1,19 @@
 import math
 from io import BytesIO
-from typing import Iterable, Callable, Optional
+from typing import Iterable, Callable, Optional, Dict, Tuple
 
 import torch
 import torchvision.transforms.functional as VF
 
 
 class ImageFilter:
+
+    COMPRESSION_FORMAT_OPTIONS = {
+        "png": {
+            "none": {"optimize": False, "compress_level": 0},
+            "full": {"optimize": True, "compress_level": 9},
+        }
+    }
 
     def __init__(
             self,
@@ -26,6 +33,12 @@ class ImageFilter:
             compression_format: str = "png",
             callable: Optional[Callable[[torch.Tensor], bool]] = None,
     ):
+        if compression_format not in self.COMPRESSION_FORMAT_OPTIONS:
+            raise ValueError(
+                f"Unsupported compression format '{compression_format}', please use one of: "
+                + ", ".join(f"'{f}'" for f in self.COMPRESSION_FORMAT_OPTIONS)
+            )
+
         self.min_mean = min_mean
         self.max_mean = max_mean
         self.min_std = min_std
@@ -41,6 +54,7 @@ class ImageFilter:
         self.blurred_compression_sigma = blurred_compression_sigma
         self.compression_format = compression_format
         self.callable = callable
+        self._compression_reference: Dict[Tuple[int, int, int], int] = {}
 
     def __call__(self, image: torch.Tensor) -> bool:
         if self.min_mean or self.max_mean:
@@ -89,9 +103,19 @@ class ImageFilter:
         return True
 
     def calc_compression_ratio(self, image: torch.Tensor) -> float:
+        """
+        Calc ratio of compressed size / compressed size of black image
+        """
+        options = self.COMPRESSION_FORMAT_OPTIONS[self.compression_format]
+
+        if image.shape not in self._compression_reference:
+            self._compression_reference[image.shape] = self._compressed_size(
+                image, options["none"],
+            )
+        return self._compressed_size(image, options["full"]) / self._compression_reference[image.shape]
+
+    def _compressed_size(self, image: torch.Tensor, options: dict) -> int:
         img = VF.to_pil_image(image)
         fp = BytesIO()
-        img.save(fp, self.compression_format)
-        memory_size = math.prod(image.shape)
-        compress_size = fp.tell()
-        return compress_size / memory_size
+        img.save(fp, self.compression_format, **options)
+        return fp.tell()

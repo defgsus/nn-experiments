@@ -21,7 +21,7 @@ from src.util import ImageFilter
 
 
 class Kali2dDataset(Dataset):
-    accumulation_choices = ["none", "mean", "min", "max"]
+    accumulation_choices = ["none", "mean", "max", "min", "submin", "alternate"]
 
     def __init__(
             self,

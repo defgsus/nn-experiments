@@ -10,7 +10,9 @@ def kali2d(
         param: torch.Tensor,
         iterations: int = 7,
         out_weights: Optional[torch.Tensor] = None,
-        accumulate: str = "mean",  # mean, max, min, none
+        accumulate: str = "none",  # none, mean, max, min, submin, alternate
+        exponent: float = 0,
+        sin_freq: float = 0,
         aa: int = 0,
 ) -> torch.Tensor:
     param = param.reshape(-1, 1, 1)
@@ -18,34 +20,48 @@ def kali2d(
     def _render(space: torch.Tensor) -> torch.Tensor:
         if accumulate == "none":
             pass
-        if accumulate == "min":
+        elif accumulate in ("min", "submin"):
             accum = torch.ones_like(space) * iterations
         else:
             accum = torch.zeros_like(space)
 
         for iteration in range(iterations):
-            #dot_prod = space.sum(dim=0).unsqueeze(0).repeat(3, 1, 1)
             dot_prod = torch.sum(space * space, dim=0, keepdim=True) + 0.000001
             space = torch.abs(space) / dot_prod
 
+            a_space = space
+            if exponent:
+                a_space = torch.exp(-a_space * exponent)
+
+            if sin_freq:
+                a_space = torch.sin(a_space * sin_freq)
+
             if accumulate == "mean":
-                accum = accum + space
+                accum = accum + a_space
 
             elif accumulate == "max":
-                accum = torch.max(space, accum)
+                accum = torch.max(a_space, accum)
 
             elif accumulate == "min":
-                accum = torch.min(space, accum)
+                accum = torch.min(a_space, accum)
+
+            elif accumulate == "submin":
+                accum = accum - torch.min(accum, a_space)
+
+            elif accumulate == "alternate":
+                accum = accum + (a_space if iteration % 2 == 0 else -a_space)
 
             if iteration < iterations - 1:
                 space = space - param
 
         if accumulate == "none":
-            output = space # iterations
+            output = a_space
         elif accumulate == "min":
             output = accum * iterations
         else:
             output = accum / iterations
+            if accumulate == "alternate":
+                output = output * 2
 
         return output
 
@@ -64,7 +80,6 @@ def kali2d(
                 if x or y:
                     output[:, :s[-2], :s[-1]] = output[:, :s[-2], :s[-1]] + output[:, y*s[-2]:(y+1)*s[-2], x*s[-1]:(x+1)*s[-1]]
         output = output[:, :s[-2], :s[-1]] / (aa * aa)
-        #output = output[:, (aa-1)*s[-2]:(aa)*s[-2], (aa-1)*s[-1]:(aa)*s[-1]]
 
     else:
         output = _render(space.space())
