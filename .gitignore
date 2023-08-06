@@ -4,6 +4,7 @@
 *.pkl
 *.npy
 *.pt
+*.df
 notebooks/
 checkpoints/
 runs/

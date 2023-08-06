@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Iterable
+from typing import Tuple, Optional, Iterable, Union
 
 import torch
 import torch.nn as nn
@@ -11,9 +11,13 @@ class Conv2dBlock(nn.Module):
             self,
             channels: Iterable[int],
             kernel_size: int = 5,
+            stride: int = 1,
+            pool_kernel_size: int = 0,
+            pool_type: str = "max",  # "max", "average"
             act_fn: Optional[nn.Module] = None,
             bias: bool = True,
             transpose: bool = False,
+            batch_norm: bool = False,
     ):
         super().__init__()
         self.channels = list(channels)
@@ -22,27 +26,46 @@ class Conv2dBlock(nn.Module):
 
         self.layers = nn.Sequential()
 
-        for channels, next_channels in zip(self.channels, self.channels[1:]):
+        if batch_norm:
+            self.layers.append(
+                nn.BatchNorm2d(self.channels[0])
+            )
+
+        for i, (channels, next_channels) in enumerate(zip(self.channels, self.channels[1:])):
             self.layers.append(
                 self._create_layer(
                     in_channels=channels,
                     out_channels=next_channels,
                     kernel_size=kernel_size,
+                    stride=stride,
                     bias=bias,
                     transpose=transpose,
                 )
             )
+            if pool_kernel_size and i == len(self.channels) - 2:
+                klass = {
+                    "max": nn.MaxPool2d,
+                    "average": nn.AvgPool2d,
+                }[pool_type]
+                self.layers.append(
+                    klass(pool_kernel_size)
+                )
             if self._act_fn:
                 self.layers.append(act_fn)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.layers.forward(x)
 
-    def get_output_shape(self, shape: Tuple[int, int]) -> Tuple[int, int]:
-        with torch.no_grad():
-            x = torch.zeros(self.channels[0], shape[0], shape[1])
-            y = self.forward(x)
-            return tuple(y.shape[-2:])
+    @torch.no_grad()
+    def get_output_shape(
+            self,
+            shape: Union[Tuple[int, int], Tuple[int, int, int]],
+    ) -> Tuple[int, int, int]:
+        if len(shape) == 2:
+            shape = (self.channels[0], *shape)
+        x = torch.zeros(1, *shape)
+        y = self.forward(x)
+        return tuple(y.shape[-3:])
 
     def add_input_layer(
             self,
@@ -85,6 +108,7 @@ class Conv2dBlock(nn.Module):
             in_channels: int,
             out_channels: int,
             kernel_size: int,
+            stride: int = 1,
             bias: bool = True,
             transpose: bool = False,
     ) -> nn.Module:
@@ -92,7 +116,7 @@ class Conv2dBlock(nn.Module):
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=kernel_size,
-            stride=1,
+            stride=stride,
             padding=0,
             dilation=1,
             groups=1,

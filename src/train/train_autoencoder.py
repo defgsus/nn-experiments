@@ -40,8 +40,8 @@ class TrainAutoencoder(Trainer):
             #return f.real + f.imag
             return torch.cat([f.real[:, 3:-3], f.imag[:, 3:-3]])
 
-        input_batch = _transform(input_batch)
-        output_batch = _transform(output_batch)
+        #input_batch = _transform(input_batch)
+        #output_batch = _transform(output_batch)
 
         loss = F.l1_loss(input_batch, output_batch)
 
@@ -52,7 +52,7 @@ class TrainAutoencoder(Trainer):
             images = get_images_from_iterable(self.data_loader)
             self.train_display_batch = torch.cat(images).to(self.device)
 
-        output_batch1 = self.model.forward(self.validation_batch)
+        output_batch1 = self.model.forward(self.validation_batch[:8])
         output_batch2 = self.model.forward(self.train_display_batch)
 
         output_batch1 = output_batch1.clamp(0, 1)

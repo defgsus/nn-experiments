@@ -7,7 +7,7 @@ import itertools
 import argparse
 import shutil
 from pathlib import Path
-from typing import List, Iterable, Tuple, Optional, Callable, Union
+from typing import List, Iterable, Tuple, Optional, Callable, Union, Generator
 
 from tqdm import tqdm
 import torch
@@ -32,11 +32,13 @@ class Trainer:
             model: torch.nn.Module,
             data_loader: DataLoader,
             validation_loader: Optional[DataLoader] = None,
+            freeze_validation_set: bool = False,
             min_loss: Optional[float] = None,
             max_epoch: Optional[int] = None,
             max_inputs: Optional[int] = 10_000_000,
             optimizers: Iterable[torch.optim.Optimizer] = tuple(),
-            num_inputs_between_validations: int = 3_000,
+            num_inputs_between_validations: Optional[int] = None,
+            num_epochs_between_validations: Optional[int] = None,
             reset: bool = False,
             device: Optional[Union[str, torch.DeviceObjType]] = None,
             hparams: Optional[dict] = None,
@@ -46,7 +48,9 @@ class Trainer:
         self.model = model
         self.data_loader = data_loader
         self.validation_loader = validation_loader
-        self._validation_batch: Optional[torch.Tensor] = None
+        self.freeze_validation_set = freeze_validation_set
+        self._validation_batches: Optional[torch.Tensor] = None
+        self._best_validation_loss: Optional[float] = None
         self.min_loss = min_loss
         self.max_epoch = max_epoch
         self.max_inputs = max_inputs
@@ -54,6 +58,7 @@ class Trainer:
         self.hparams = hparams
         self.weight_image_kwargs = weight_image_kwargs
         self.num_inputs_between_validations = num_inputs_between_validations
+        self.num_epochs_between_validations = num_epochs_between_validations
         self.epoch = 0
         self.num_batch_steps = 0
         self.num_input_steps = 0
@@ -96,6 +101,14 @@ class Trainer:
             self.num_batch_steps = checkpoint_data.get("num_batch_steps") or 0
             self.num_input_steps = checkpoint_data.get("num_input_steps") or 0
 
+        best_filename = self.checkpoint_path / "best.json"
+        if best_filename.exists():
+            try:
+                self._best_validation_loss = json.loads(best_filename.read_text())["loss"]
+                print(f"best validation loss so far: {self._best_validation_loss}")
+            except (json.JSONDecodeError, KeyError):
+                pass
+
     def save_checkpoint(self, name: str = "snapshot"):
         checkpoint_filename = self.checkpoint_path / f"{name}.pt"
         print(f"storing {checkpoint_filename}")
@@ -111,7 +124,7 @@ class Trainer:
             checkpoint_filename,
         )
 
-    def save_description(self, name: str = "description"):
+    def save_description(self, name: str = "description", extra: Optional[dict] = None):
         description_filename = self.checkpoint_path / f"{name}.json"
         print(f"storing {description_filename}")
         os.makedirs(description_filename.parent, exist_ok=True)
@@ -122,6 +135,7 @@ class Trainer:
             "max_inputs": self.max_inputs,
             "model": repr(self.model),
             "optimizers": [repr(o) for o in self.optimizers],
+            **(extra or {}),
         }, indent=2))
 
     def num_trainable_parameters(self) -> int:
@@ -140,47 +154,78 @@ class Trainer:
         print(f"---- training on {self.device}")
         print(f"trainable params: {self.num_trainable_parameters():,}")
 
-        last_validation_step = -self.num_inputs_between_validations
+        last_validation_step = None
+        last_validation_epoch = None
+        if self.num_inputs_between_validations is not None:
+            last_validation_step = -self.num_inputs_between_validations
+        if self.num_epochs_between_validations is not None:
+            last_validation_epoch = -self.num_epochs_between_validations
+
         self.running = True
         while self.running:
+
             if self.max_epoch is not None and self.epoch >= self.max_epoch:
                 break
 
-            for batch_idx, input_batch in enumerate(tqdm(self.data_loader, desc=f"epoch #{self.epoch}")):
-                if isinstance(input_batch, (tuple, list)):
-                    input_batch = input_batch[0]
-                input_batch = input_batch.to(self.device)
+            total = None
+            try:
+                total = len(self.data_loader.dataset)
+            except:
+                pass
 
-                if self.epoch == 0 and batch_idx == 0:
-                    print("BATCH", input_batch.shape)
+            with tqdm(
+                    total=total,
+                    desc=f"epoch #{self.epoch}",
+            ) as progress:
+                for batch_idx, input_batch in enumerate(self.data_loader):
+                    if not isinstance(input_batch, (tuple, list)):
+                        input_batch = (input_batch, )
 
-                loss = self._train_step(input_batch)
+                    progress.update(input_batch[0].shape[0])
 
-                self.model.zero_grad()
-                loss.backward()
-                for opt in self.optimizers:
-                    opt.step()
+                    input_batch = tuple(
+                        i.to(self.device) if isinstance(i, torch.Tensor) else i
+                        for i in input_batch
+                    )
 
-                self.num_batch_steps += 1
-                self.num_input_steps += input_batch.shape[0]
+                    if self.epoch == 0 and batch_idx == 0:
+                        print("BATCH", input_batch[0].shape)
 
-                self.log_scalar("train_loss", loss)
+                    loss = self._train_step(input_batch)
 
-                if self.num_input_steps - last_validation_step > self.num_inputs_between_validations:
-                    last_validation_step = self.num_input_steps
-                    self.run_validation()
+                    self.model.zero_grad()
+                    loss.backward()
+                    for opt in self.optimizers:
+                        opt.step()
 
-                # print(f"\nepoch {self.epoch}, batch {self.num_batch_steps}, image {self.num_input_steps}, loss {float(loss)}")
+                    self.num_batch_steps += 1
+                    self.num_input_steps += input_batch[0].shape[0]
 
-                self._run_every_callbacks()
+                    self.log_scalar("train_loss", loss)
 
-                if self.max_inputs and self.num_input_steps >= self.max_inputs:
-                    print(f"max_inputs ({self.max_inputs}) reached")
-                    self.running = False
-                    break
+                    if self.num_inputs_between_validations is not None:
+                        if self.num_input_steps - last_validation_step >= self.num_inputs_between_validations:
+                            last_validation_step = self.num_input_steps
+                            last_validation_epoch = self.epoch
+                            self.run_validation()
+
+                    # print(f"\nepoch {self.epoch}, batch {self.num_batch_steps}, image {self.num_input_steps}, loss {float(loss)}")
+
+                    self._run_every_callbacks()
+
+                    if self.max_inputs and self.num_input_steps >= self.max_inputs:
+                        print(f"max_inputs ({self.max_inputs}) reached")
+                        self.running = False
+                        break
 
             # self.save_checkpoint(f"epoch-{epoch:03d}")
             self.save_checkpoint("snapshot")
+
+            if self.num_epochs_between_validations is not None:
+                if self.epoch - last_validation_epoch >= self.num_epochs_between_validations:
+                    last_validation_step = self.num_input_steps
+                    last_validation_epoch = self.epoch
+                    self.run_validation()
 
             if self.running:
                 self.epoch += 1
@@ -189,16 +234,33 @@ class Trainer:
 
         self.writer.flush()
 
-    @property
-    def validation_batch(self) -> Optional[torch.Tensor]:
+    def iter_validation_batches(self) -> Generator:
+        """Makes a copy of the validation set to memory if 'freeze_validation_set' is True"""
         if self.validation_loader is None:
             return
-        if self._validation_batch is None:
-            self._validation_batch = torch.cat([
-                i[0] if isinstance(i, (tuple, list)) else i
-                for i in self.validation_loader
-            ]).to(self.device)
-        return self._validation_batch
+
+        if not self.freeze_validation_set:
+            yield from self.validation_loader
+
+        if self._validation_batches is None:
+            self._validation_batches = list(self.validation_loader)
+
+        yield from self._validation_batches
+
+    def validation_sample(self, index: int) -> Optional[tuple]:
+        if self.validation_loader is None:
+            return
+
+        if not self.freeze_validation_set:
+            return self.validation_loader.dataset[index]
+
+        if self._validation_batches is None:
+            self._validation_batches = list(self.validation_loader)
+
+        batch_size = self.validation_loader.batch_size
+        batch_tuple = self._validation_batches[index // batch_size]
+        b_index = index % batch_size
+        return tuple(b[b_index] for b in batch_tuple)
 
     def run_validation(self):
         if self.validation_loader is None:
@@ -207,14 +269,32 @@ class Trainer:
         print(f"validation @ {self.num_input_steps}")
         with torch.no_grad():
             self.model.for_validation = True
-            loss = self.validation_step(self.validation_batch)
+
+            losses = []
+            for validation_batch in self.iter_validation_batches():
+                validation_batch = tuple(
+                    i.to(self.device) if isinstance(i, torch.Tensor) else i
+                    for i in validation_batch
+                )
+                losses.append(
+                    self.validation_step(validation_batch)
+                )
+            loss = torch.Tensor(losses).mean()
+
             self.model.for_validation = False
 
             # print(f"\nVALIDATION loss {float(loss)}")
             self.log_scalar("validation_loss", loss)
 
+            loss = float(loss)
+
+            if self._best_validation_loss is None or loss < self._best_validation_loss:
+                self._best_validation_loss = loss
+                self.save_checkpoint("best")
+                self.save_description("best", extra={"validation_loss": loss})
+
             self.save_weight_image()
-            self.write_step()
+            self._write_step()
 
             if self.min_loss is not None and loss <= self.min_loss:
                 print(f"min_loss ({self.min_loss}) reached with validation loss {loss}")
@@ -229,6 +309,9 @@ class Trainer:
             return
 
         images = self.model.weight_images(**(self.weight_image_kwargs or {}))
+        if images is None:
+            return
+
         max_shape = None
         max_single_shape = list(max_single_shape)
         for image_idx, image in enumerate(images):
@@ -263,11 +346,17 @@ class Trainer:
             help="Delete previous checkpoint and logs"
         )
 
-    def _train_step(self, input_batch: torch.Tensor) -> torch.Tensor:
+    def _train_step(self, input_batch: Tuple[torch.Tensor, ...]) -> torch.Tensor:
         if hasattr(self.model, "train_step"):
             return self.model.train_step(input_batch)
         else:
             return self.train_step(input_batch)
+
+    def _write_step(self):
+        if hasattr(self.model, "write_step"):
+            self.model.write_step(self)
+        else:
+            self.write_step()
 
     def _setup_every_callbacks(self):
         self._every_callbacks = []
