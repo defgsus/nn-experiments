@@ -6,7 +6,14 @@ from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
 
 class TransformDataset(Dataset):
+    """
+    Transformation on Tensor Dataset
 
+    Optionally convert dtype, multiply by factor and apply list of transforms.
+    Can also add features from a DataFrame.
+
+    Transformations only apply to first Tensor in tuple
+    """
     def __init__(
             self,
             source_dataset: Dataset,
@@ -38,9 +45,10 @@ class TransformDataset(Dataset):
 
         if self.features_dataframe is not None:
             features = torch.Tensor(self.features_dataframe.iloc[index].tolist())
+            features = (features, )
 
         if features is not None:
-            return item, features
+            return item, *features
         else:
             return item,
 

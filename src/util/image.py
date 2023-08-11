@@ -1,7 +1,9 @@
-from typing import Tuple, Union, List, Iterable
+from typing import Tuple, Union, List, Iterable, Optional
 
 import PIL.Image
+import PIL.ImageDraw
 import torch
+from torchvision.utils import make_grid
 import torchvision.transforms as VT
 import torchvision.transforms.functional as VF
 
@@ -131,3 +133,55 @@ def get_images_from_iterable(
                 image_list[idx] = i[0]
 
     return image_list
+
+
+def make_grid_labeled(
+        tensor: Union[torch.Tensor, List[torch.Tensor]],
+        labels: Union[bool, Iterable[str]] = True,
+        nrow: int = 8,
+        padding: int = 2,
+        normalize: bool = False,
+        value_range: Optional[Tuple[int, int]] = None,
+        scale_each: bool = False,
+        pad_value: float = 0.0,
+        return_pil: bool = False,
+        **kwargs,
+) -> torch.Tensor:
+    grid = make_grid(
+        tensor=tensor, nrow=nrow, padding=padding, value_range=value_range,
+        scale_each=scale_each, pad_value=pad_value, normalize=normalize,
+        **kwargs,
+    )
+
+    if labels:
+        if isinstance(tensor, (list, tuple)):
+            num_images = len(tensor)
+            shape = tensor[0].shape
+        else:
+            assert tensor.ndim == 4, f"make_grid_labeled() only supports [N, C, H, W] shape, got '{tensor.shape}'"
+            num_images = tensor.shape[0]
+            shape = tensor.shape[1:]
+
+        if labels is True:
+            labels = [str(i) for i in range(num_images)]
+        else:
+            labels = [str(i) for i in labels]
+
+        grid_pil = VF.to_pil_image(grid)
+        draw = PIL.ImageDraw.ImageDraw(grid_pil)
+
+        for idx, label in enumerate(labels):
+            x = padding + ((idx % nrow) * (shape[-1] + padding))
+            y = padding + ((idx // nrow) * (shape[-2] + padding))
+            draw.text((x-1, y), label, fill=(0, 0, 0))
+            draw.text((x+1, y), label, fill=(0, 0, 0))
+            draw.text((x, y-1), label, fill=(0, 0, 0))
+            draw.text((x, y+1), label, fill=(0, 0, 0))
+            draw.text((x, y), label, fill=(256, 256, 256))
+
+        if return_pil:
+            return grid_pil
+
+        grid = VF.to_tensor(grid_pil)
+
+    return grid

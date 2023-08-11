@@ -35,7 +35,7 @@ class Trainer:
             freeze_validation_set: bool = False,
             min_loss: Optional[float] = None,
             max_epoch: Optional[int] = None,
-            max_inputs: Optional[int] = 10_000_000,
+            max_inputs: Optional[int] = None,
             optimizers: Iterable[torch.optim.Optimizer] = tuple(),
             num_inputs_between_validations: Optional[int] = None,
             num_epochs_between_validations: Optional[int] = None,
@@ -64,7 +64,7 @@ class Trainer:
         self.num_input_steps = 0
         self.tensorboard_path = Path("./runs/") / self.experiment_name
         self.checkpoint_path = Path("./checkpoints/") / self.experiment_name
-        if device is None:
+        if device is None or device == "auto":
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
             self.device = torch.device(device)
@@ -82,7 +82,16 @@ class Trainer:
         self._setup_every_callbacks()
 
     def train_step(self, input_batch) -> torch.Tensor:
-        raise NotImplementedError
+        """
+        Default implementation expects input_batch to be a tuple of two Tensors
+        and returns the MSE loss between second tensor and model output.
+
+        Override to implement something else and return a 0-dim loss tensor
+        """
+        input, target_features = input_batch
+        output_features = self.model(input)
+
+        return F.mse_loss(output_features, target_features)
 
     def validation_step(self, input_batch) -> torch.Tensor:
         return self._train_step(input_batch)
@@ -104,7 +113,7 @@ class Trainer:
         best_filename = self.checkpoint_path / "best.json"
         if best_filename.exists():
             try:
-                self._best_validation_loss = json.loads(best_filename.read_text())["loss"]
+                self._best_validation_loss = json.loads(best_filename.read_text())["validation_loss"]
                 print(f"best validation loss so far: {self._best_validation_loss}")
             except (json.JSONDecodeError, KeyError):
                 pass
@@ -344,6 +353,10 @@ class Trainer:
         parser.add_argument(
             "-r", "--reset", type=bool, nargs="?", default=False, const="True",
             help="Delete previous checkpoint and logs"
+        )
+        parser.add_argument(
+            "-d", "--device", type=str, nargs="?", default="auto",
+            help="Specify device"
         )
 
     def _train_step(self, input_batch: Tuple[torch.Tensor, ...]) -> torch.Tensor:

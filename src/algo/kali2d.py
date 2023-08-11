@@ -5,7 +5,7 @@ import torch
 from .space2d import Space2d
 
 
-def kali2d(
+def kali_2d(
         space: Space2d,
         param: torch.Tensor,
         iterations: int = 7,

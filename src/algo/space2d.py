@@ -54,3 +54,22 @@ class Space2d:
             space += self.offset.reshape(-1, 1, 1)
 
         return space
+
+    def aa_space(self, aa: int) -> torch.Tensor:
+        s = self.shape
+        aa_space = self.space().repeat(1, aa, aa)
+        for x in range(aa):
+            for y in range(aa):
+                if x or y:
+                    aa_space[1, y*s[-2]:(y+1)*s[-2], x*s[-1]:(x+1)*s[-1]] += (y / aa / s[-2]) * self.scale
+                    aa_space[0, y*s[-2]:(y+1)*s[-2], x*s[-1]:(x+1)*s[-1]] += (x / aa / s[-1]) * self.scale
+
+        return aa_space
+
+    def reduce_aa_output(self, aa: int, output: torch.Tensor) -> torch.Tensor:
+        s = self.shape
+        for x in range(0, aa):
+            for y in range(0, aa):
+                if x or y:
+                    output[:, :s[-2], :s[-1]] = output[:, :s[-2], :s[-1]] + output[:, y * s[-2]:(y + 1) * s[-2], x * s[-1]:(x + 1) * s[-1]]
+        return output[:, :s[-2], :s[-1]] / (aa * aa)

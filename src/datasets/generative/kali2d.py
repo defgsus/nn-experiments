@@ -1,22 +1,14 @@
-import sys
-sys.path.append("..")
-
-import random
 import math
-from io import BytesIO
-from pathlib import Path
 from typing import Optional, Callable, List, Tuple, Iterable, Generator
 
-from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader, TensorDataset, IterableDataset
+from torch.utils.data import Dataset, IterableDataset
 import torchvision.transforms as VT
 import torchvision.transforms.functional as VF
-from torchvision.utils import make_grid
 
-from src.algo import Space2d, kali2d
+from src.algo import Space2d, kali_2d
 from src.util import ImageFilter
 
 
@@ -74,7 +66,7 @@ class Kali2dDataset(Dataset):
                 torch.rand((self.shape[0], self.shape[0]), dtype=self.dtype, generator=rng) / math.sqrt(self.shape[0])
                 + torch.randn((self.shape[0], self.shape[0]), dtype=self.dtype, generator=rng) * .2
         )
-        return kali2d(
+        return kali_2d(
             space=space,
             param=param,
             iterations=iterations,
