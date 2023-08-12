@@ -20,6 +20,7 @@ class TransformDataset(Dataset):
             dtype: Optional[torch.dtype] = None,
             multiply: Optional[float] = None,
             transforms: Optional[Iterable[Callable]] = None,
+            num_repeat: int = 1,
             features_dataframe: Optional[pd.DataFrame] = None,
     ):
         super().__init__()
@@ -27,12 +28,16 @@ class TransformDataset(Dataset):
         self.dtype = dtype
         self.multiply = multiply
         self.transforms = list(transforms) if transforms is not None else None
+        self.num_repeat = num_repeat
         self.features_dataframe = features_dataframe
 
     def __len__(self):
-        return len(self.source_dataset)
+        return len(self.source_dataset) * self.num_repeat
 
     def __getitem__(self, index) -> Tuple[torch.Tensor, ...]:
+        repeat_index = index % self.num_repeat
+        index = index // self.num_repeat
+
         item = self.source_dataset[index]
 
         if isinstance(item, (tuple, int)):

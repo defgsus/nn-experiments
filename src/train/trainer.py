@@ -39,6 +39,7 @@ class Trainer:
             optimizers: Iterable[torch.optim.Optimizer] = tuple(),
             num_inputs_between_validations: Optional[int] = None,
             num_epochs_between_validations: Optional[int] = None,
+            training_noise: float = 0.,
             reset: bool = False,
             device: Optional[Union[str, torch.DeviceObjType]] = None,
             hparams: Optional[dict] = None,
@@ -55,6 +56,7 @@ class Trainer:
         self.max_epoch = max_epoch
         self.max_inputs = max_inputs
         self.optimizers = list(optimizers)
+        self.training_noise = training_noise
         self.hparams = hparams
         self.weight_image_kwargs = weight_image_kwargs
         self.num_inputs_between_validations = num_inputs_between_validations
@@ -160,7 +162,7 @@ class Trainer:
         self.writer.add_image(tag=tag, img_tensor=image, global_step=self.num_input_steps)
 
     def train(self):
-        print(f"---- training on {self.device}")
+        print(f"---- training '{self.experiment_name}' on {self.device} ----")
         print(f"trainable params: {self.num_trainable_parameters():,}")
 
         last_validation_step = None
@@ -190,17 +192,20 @@ class Trainer:
                     if not isinstance(input_batch, (tuple, list)):
                         input_batch = (input_batch, )
 
-                    progress.update(input_batch[0].shape[0])
-
-                    input_batch = tuple(
+                    input_batch = [
                         i.to(self.device) if isinstance(i, torch.Tensor) else i
                         for i in input_batch
-                    )
+                    ]
+
+                    if self.training_noise > 0.:
+                        with torch.no_grad():
+                            input_batch[0] = input_batch[0] + self.training_noise * torch.randn_like(input_batch[0])
 
                     if self.epoch == 0 and batch_idx == 0:
                         print("BATCH", input_batch[0].shape)
 
-                    loss = self._train_step(input_batch)
+                    loss = self._train_step(tuple(input_batch))
+                    progress.update(input_batch[0].shape[0])
 
                     self.model.zero_grad()
                     loss.backward()
@@ -340,9 +345,16 @@ class Trainer:
             if any(a < b for a, b in zip(image.shape, max_shape)):
                 images[image_idx] = VF.pad(image, [0, 0, max_shape[-1] - image.shape[-1], max_shape[0] - image.shape[0]])
 
-            images[image_idx] = signed_to_image(images[image_idx])
+        norm_grid = make_grid(
+            [i.unsqueeze(0) for i in images],
+            nrow=nrow, normalize=True
+        )
+        signed_grid = make_grid(
+            [signed_to_image(i) for i in images],
+            nrow=nrow,
+        )
 
-        self.log_image("weights", make_grid(images, nrow=nrow))
+        self.log_image("weights", make_grid([signed_grid, norm_grid]))
 
     @classmethod
     def add_parser_args(cls, parser: argparse.ArgumentParser):
