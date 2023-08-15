@@ -9,6 +9,7 @@ import numpy as np
 
 
 class IFS:
+    # limit on which to break generation
     max_coordinate = 1e10
 
     def __init__(

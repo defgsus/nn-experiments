@@ -1,3 +1,15 @@
+"""
+Generates a multi-class IteratedFunctionSystem image dataset with variations per class
+
+```shell
+# generate (in parallel)
+# creates 5 datasets with 200 classes x 32 variations each
+python scripts/make_ifs_dataset.py -nc 200 -nv 32 -s 100_000 200_000 300_000 400_000 500_000
+
+# combine to one dataset
+python scripts/make_ifs_dataset.py -nc 200 -nv 32 -m combine
+```
+"""
 import argparse
 import re
 import json
@@ -16,11 +28,6 @@ import torchvision.transforms as VT
 import torchvision.transforms.functional as VF
 from torchvision.utils import make_grid
 
-import PIL.Image
-import PIL.ImageDraw
-import plotly
-import plotly.express as px
-plotly.io.templates.default = "plotly_dark"
 import numpy as np
 import pandas as pd
 
@@ -28,6 +35,7 @@ from src.datasets import *
 from src.util.image import *
 from src.util import ImageFilter
 from src.algo import IFS
+from src.datasets.generative import IFSClassIterableDataset
 
 
 def get_answer(prompt: str) -> bool:
@@ -37,119 +45,6 @@ def get_answer(prompt: str) -> bool:
             return False
         if answer in ("", "y", "Y"):
             return True
-
-
-class IFSClassIterableDataset(IterableDataset):
-    def __init__(
-            self,
-            shape: Tuple[int, int],
-            num_classes: int,
-            num_instances_per_class: int = 1,
-            num_iterations: int = 10_000,
-            seed: Optional[int] = None,
-            alpha: float = 0.1,
-            patch_size: int = 1,
-            parameter_variation: float = 0.03,
-            parameter_variation_max: Optional[float] = None,
-            alpha_variation: float = 0.05,
-            patch_size_variations: Optional[Iterable[int]] = None,
-            num_iterations_variation: int = 0,
-            image_filter: Optional[ImageFilter] = None,
-            filter_num_iterations: Optional[int] = None,
-            filter_shape: Optional[Tuple[int, int]] = None,
-            filter_alpha: Optional[float] = None,
-    ):
-        self.shape = shape
-        self.num_classes = num_classes
-        self.num_instances_per_class = num_instances_per_class
-        self.num_iterations = num_iterations
-        self.seed = seed if seed is not None else random.randint(0, 1e10)
-        self.alpha = alpha
-        self.patch_size = patch_size
-        self.parameter_variation = parameter_variation
-        self.parameter_variation_max = parameter_variation_max
-        self.alpha_variation = alpha_variation
-        self.patch_size_variations = list(patch_size_variations) if patch_size_variations is not None else None
-        self.num_iterations_variation = num_iterations_variation
-
-        self.image_filter = image_filter
-        self.filter_num_iterations = filter_num_iterations
-        self.filter_shape = filter_shape
-        self.filter_alpha = filter_alpha
-
-        self.rng = np.random.Generator(np.random.MT19937(
-            seed if seed is not None else random.randint(0, int(1e10))
-        ))
-        self.rng.bytes(42)
-
-    def __len__(self) -> int:
-        return self.num_classes * self.num_instances_per_class
-
-    def _iter_class_seeds(self) -> Generator[int, None, None]:
-        class_index = 0
-        class_count = 0
-        while class_count < self.num_classes:
-            seed = class_index ^ self.seed
-
-            ifs = IFS(seed=seed)
-            class_index += 1
-
-            if self.image_filter is not None:
-
-                image = torch.Tensor(ifs.render_image(
-                    shape=self.filter_shape or self.shape,
-                    num_iterations=self.filter_num_iterations or self.num_iterations,
-                    alpha=self.filter_alpha or self.alpha,
-                    patch_size=self.patch_size,
-                ))
-                if not self.image_filter(image):
-                    continue
-
-            yield seed
-            class_count += 1
-
-    def __iter__(self) -> Generator[Tuple[torch.Tensor, int], None, None]:
-        for class_index, seed in enumerate(self._iter_class_seeds()):
-
-            instance_count = 0
-            base_mean = None
-            while instance_count < self.num_instances_per_class:
-                ifs = IFS(seed=seed)
-
-                alpha = self.alpha
-                patch_size = self.patch_size
-                num_iterations = self.num_iterations
-
-                if instance_count > 0:
-                    t = (instance_count + 1) / self.num_instances_per_class
-
-                    amt = self.parameter_variation
-                    if self.parameter_variation_max is not None:
-                        amt = amt * (1. - t) + t * self.parameter_variation_max
-
-                    ifs.parameters += amt* self.rng.uniform(-1., 1., ifs.parameters.shape)
-                    alpha = max(.001, alpha + self.alpha_variation * self.rng.uniform(-1., 1.))
-                    if self.patch_size_variations is not None:
-                        patch_size = self.patch_size_variations[self.rng.integers(len(self.patch_size_variations))]
-                    if self.num_iterations_variation:
-                        num_iterations += self.rng.integers(self.num_iterations_variation)
-
-                image = torch.Tensor(ifs.render_image(
-                    shape=self.shape,
-                    num_iterations=num_iterations,
-                    alpha=alpha,
-                    patch_size=patch_size,
-                ))
-
-                if base_mean is None:
-                    base_mean = image.mean()
-                else:
-                    mean = image.mean()
-                    if mean < base_mean / 1.5:
-                        continue
-
-                yield image, seed
-                instance_count += 1
 
 
 def store_dataset(
@@ -206,9 +101,13 @@ def store_ifs_dataset(
     dataset_name = f"./datasets/ifs-1x{shape[-2]}x{shape[-1]}-uint8-{num_classes}x{num_variations}-seed{seed}"
 
     ds = IFSClassIterableDataset(
-        num_classes=num_classes, num_instances_per_class=num_variations, seed=seed,
-        shape=(128, 128), num_iterations=10_000, alpha=.15,
-        #shape=(32, 32), num_iterations=1_000, alpha=1,
+        num_classes=num_classes,
+        num_instances_per_class=num_variations,
+        start_seed=seed,
+        variation_seed=seed,
+        shape=shape,
+        num_iterations=10_000, alpha=.15,
+        #num_iterations=500, alpha=1,
         parameter_variation=0.05,
         parameter_variation_max=0.09,
         alpha_variation=0.12,
@@ -273,10 +172,11 @@ def combine_datasets(
         labels.append(torch.load(f"./datasets/{entry['label']}"))
     images = torch.cat(images)
     labels = torch.cat(labels)
+    num_classes = len(set(labels.tolist()))
 
-    print(f"images: {images.shape}, labels: {labels.shape}")
+    print(f"images: {images.shape}, labels: {labels.shape}, num_classes: {num_classes}")
 
-    dataset_name = f"ifs-1x{shape[-2]}x{shape[-1]}-uint8-{images.shape[0] // num_variations}x{num_variations}"
+    dataset_name = f"ifs-1x{shape[-2]}x{shape[-1]}-uint8-{num_classes}x{num_variations}"
 
     for data, filename in (
             (images, f"./datasets/{dataset_name}.pt"),
