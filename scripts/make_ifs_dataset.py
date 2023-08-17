@@ -190,11 +190,40 @@ def combine_datasets(
         torch.save(data, filename)
 
 
+def test_dataset(
+        num_classes: int,
+        num_variations: int,
+        shape: Tuple[int, int] = (128, 128),
+        **kwargs
+):
+    from sklearn.decomposition import PCA
+    from sklearn.neighbors import KNeighborsClassifier
+
+    dataset_name = f"./datasets/ifs-1x{shape[-2]}x{shape[-1]}-uint8-{num_classes}x{num_variations}"
+    print(f"testing {dataset_name}")
+    images = torch.load(f"{dataset_name}.pt").numpy()
+    images = images.reshape(images.shape[0], -1)
+    labels = torch.load(f"{dataset_name}-labels.pt").numpy()
+
+    print("pca...")
+    pca = PCA(128)
+    features = pca.fit_transform(images)
+
+    print("classifier..")
+    classifier = KNeighborsClassifier()
+    classifier.fit(features, labels)
+    predicted_labels = classifier.predict(features)
+
+    num_correct = (labels == predicted_labels).astype(np.int8).sum()
+    accuracy = num_correct / len(labels) * 100.
+    print(f"correct/all: {num_correct}/{len(labels)} ({accuracy:.3f}%)")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-m", "--mode", type=str, nargs="?", default="make",
-        choices=["make", "combine"],
+        choices=["make", "combine", "test"],
     )
     parser.add_argument(
         "-s", "--seed", type=int, nargs="+", default=[0],
@@ -213,6 +242,9 @@ def main():
     mode = kwargs.pop("mode")
     if mode == "combine":
         combine_datasets(**kwargs)
+        return
+    elif mode == "test":
+        test_dataset(**kwargs)
         return
 
     if len(kwargs["seed"]) == 1:

@@ -27,6 +27,8 @@ from src.util.image import *
 from src.util import num_module_parameters
 from src.algo import Space2d
 
+from scripts.train_classifier_dataset import AlexNet
+
 
 class ContrastiveImageTrainer(Trainer):
 
@@ -220,37 +222,64 @@ def main():
             ds, dtype=torch.float, multiply=1. / 255.,
             #transforms=[VT.Grayscale()],
         )
-    else:
+    elif 0:
         ORG_SHAPE = (1, 128, 128)
-        SHAPE = (1, 64, 64)
+        SHAPE = (3, 128, 128)
         ds = TensorDataset(
             torch.load(f"./datasets/pattern-{ORG_SHAPE[-3]}x{ORG_SHAPE[-2]}x{ORG_SHAPE[-1]}-uint.pt")
             [:1000]
         )
         ds = TransformDataset(
             ds, dtype=torch.float, multiply=1. / 255.,
-            #transforms=[VT.Grayscale()],
+            transforms=[
+                #VT.Grayscale(),
+                lambda i: i.repeat(3, 1, 1)
+            ],
         )
-        assert ds[0][0].shape == torch.Size(ORG_SHAPE), ds[0][0].shape
+        assert ds[0][0].shape == torch.Size(SHAPE), ds[0][0].shape
+
+    else:
+        ORG_SHAPE = (1, 128, 128)
+        SHAPE = (3, 112, 112)
+        ds = TransformDataset(
+            TensorDataset(
+                torch.load(f"./datasets/ifs-{ORG_SHAPE[-3]}x{ORG_SHAPE[-2]}x{ORG_SHAPE[-1]}-uint8-1000x32.pt"),
+                torch.load(f"./datasets/ifs-{ORG_SHAPE[-3]}x{ORG_SHAPE[-2]}x{ORG_SHAPE[-1]}-uint8-1000x32-labels.pt")
+            ),
+            dtype=torch.float, multiply=1. / 255.,
+            transforms=[
+                #VT.RandomRotation(20),
+                #VT.RandomCrop(SHAPE[-2:]),
+                lambda i: i.repeat(3, 1, 1),
+            ],
+            # num_repeat=5,
+        )
+        assert ds[0][0].shape == torch.Size((SHAPE[0], *ORG_SHAPE[-2:])), ds[0][0].shape
 
     ds = ContrastiveImageDataset(
         ds, crop_shape=SHAPE[-2:],
-        num_crops=30, num_contrastive_crops=30,
+        num_crops=3, num_contrastive_crops=3,
         prob_h_flip=.5,
         prob_v_flip=.5,
         prob_hue=.0,
         prob_saturation=0.,
         prob_brightness=0.5,
         prob_grayscale=1.,
+        use_labels=True,
     )
     assert ds[0][0].shape == torch.Size(SHAPE), ds[0][0].shape
 
-    train_ds, test_ds = torch.utils.data.random_split(ds, [0.99, 0.01], torch.Generator().manual_seed(42))
+    num_valid = 2000
+    num_train = len(ds) - num_valid
+    train_ds, test_ds = torch.utils.data.random_split(ds, [num_train, num_valid], torch.Generator().manual_seed(42))
+    print(f"{len(test_ds)} validation samples")
 
+    CODE_SIZE = 128
     #model = EncoderTrans(SHAPE, code_size=128)
     #model = EncoderMLP(SHAPE, channels=[64, 2])
     model = EncoderConv(SHAPE, code_size=2, channels=[32, 32, 64], kernel_size=16, pool_kernel_size=16, batch_norm=True)#, pool_type="average")
     #model = EncoderConv(SHAPE, code_size=2, channels=[32, 32], kernel_size=16, max_pool_kernel_size=8)
+    model = AlexNet(num_classes=CODE_SIZE)
     print(model)
 
     trainer = ContrastiveImageTrainer(
@@ -259,7 +288,7 @@ def main():
         #min_loss=0.001,
         num_epochs_between_validations=1,
         #num_inputs_between_validations=10_000,
-        max_inputs=100_000_000_000,
+        #max_inputs=100_000_000_000,
         max_epoch=1000,
         #data_loader=DataLoader(train_ds, shuffle=True, batch_size=10),
         data_loader=DataLoader(train_ds, batch_size=128),# num_workers=5),

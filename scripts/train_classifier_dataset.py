@@ -96,7 +96,7 @@ def main():
     Trainer.add_parser_args(parser)
     kwargs = vars(parser.parse_args())
 
-    SHAPE = (3, 112, 112)
+    SHAPE = (3, 128, 128)
     NUM_CLASSES = 1000
     ds = ConcatDataset(
         [
@@ -109,7 +109,7 @@ def main():
                     dtype=torch.float, multiply=1. / 255.,
                     transforms=[
                         #VT.RandomRotation(20),
-                        VT.RandomCrop(SHAPE[-2:]),
+                        #VT.RandomCrop(SHAPE[-2:]),
                         lambda i: i.repeat(3, 1, 1),
                     ],
                     # num_repeat=5,
@@ -151,11 +151,11 @@ def main():
         data_loader=DataLoader(train_ds, batch_size=64, shuffle=True),
         validation_loader=DataLoader(test_ds, batch_size=512),
         freeze_validation_set=True,
-        training_noise=0.1,
+        #training_noise=0.05,
         optimizers=[
             #torch.optim.SGD(model.parameters(), lr=.005, weight_decay=0.00001),
-            torch.optim.Adam(model.parameters(), lr=.001, weight_decay=0.),
-            #torch.optim.Adadelta(model.parameters(), lr=1.),
+            #torch.optim.Adam(model.parameters(), lr=.001, weight_decay=0.00001),
+            torch.optim.Adadelta(model.parameters(), lr=1.),
             #torch.optim.RMSprop(model.parameters(), lr=.001)
         ],
         hparams={

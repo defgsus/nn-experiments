@@ -8,8 +8,9 @@ import torchvision.transforms.functional as VF
 
 class ContrastiveImageDataset(Dataset):
     """
-    Returns tuple of two image crops and bool if the crops
-    are from the same image.
+    Returns tuple of two image crops and bool if the crops are from the same image.
+
+    If `use_labels` is True, similar or dissimilar images are determined by the image labels
     """
     def __init__(
             self,
@@ -17,6 +18,7 @@ class ContrastiveImageDataset(Dataset):
             crop_shape: Tuple[int, int],
             num_crops: int = 2,
             num_contrastive_crops: int = 2,
+            use_labels: bool = False,
             prob_h_flip: float = .5,
             prob_v_flip: float = .5,
             prob_hue: float = .5,
@@ -29,6 +31,7 @@ class ContrastiveImageDataset(Dataset):
         self.crop_shape = crop_shape
         self.num_contrastive_crops = num_contrastive_crops
         self.num_crops = num_crops
+        self.use_labels = use_labels
         self.prob_h_flip = prob_h_flip
         self.prob_v_flip = prob_v_flip
         self.prob_hue = prob_hue
@@ -65,11 +68,7 @@ class ContrastiveImageDataset(Dataset):
         is_same = True
 
         if crop_index >= self.num_crops:
-            other_index = true_index
-            while other_index == true_index:
-                other_index = torch.randint(0, len(self.source_dataset) - 1, (1,), generator=self.generator).item()
-
-            image2 = self._get_image(other_index)
+            image2 = self._get_other_image(true_index)
             is_same = False
 
         return (
@@ -83,6 +82,32 @@ class ContrastiveImageDataset(Dataset):
         if isinstance(image, (tuple, list)):
             image = image[0]
         return image
+
+    def _get_other_image(self, index: int):
+        if not self.use_labels:
+            other_index = index
+            while other_index == index:
+                other_index = torch.randint(0, len(self.source_dataset), (1,), generator=self.generator).item()
+
+            return self._get_image(other_index)
+        else:
+            image, label = self._get_image_and_label(index)
+            for i in range(10000):
+                other_index = torch.randint(0, len(self.source_dataset), (1,), generator=self.generator).item()
+                other_image, other_label = self._get_image_and_label(other_index)
+                if other_label != label:
+                    return other_image
+
+            raise RuntimeError(
+                f"Could not find an image with a different label than {label}"
+            )
+    def _get_image_and_label(self, index: int) -> Tuple[torch.Tensor, int]:
+        data = self.source_dataset[index]
+        if not isinstance(data, (list, tuple)) or len(data) < 2:
+            raise ValueError(
+                f"source_dataset must provide at least a 2-tuple when `use_labels` is True"
+            )
+        return data[0], data[1]
 
     def _crop(self, image: torch.Tensor) -> torch.Tensor:
         h, w = image.shape[-2:]

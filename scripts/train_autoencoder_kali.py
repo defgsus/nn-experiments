@@ -4,7 +4,7 @@ import random
 from pathlib import Path
 from typing import List, Iterable, Tuple, Optional, Callable
 
-
+import torchvision.models
 from tqdm import tqdm
 import PIL.Image
 from PIL import ImageFont, ImageDraw
@@ -26,6 +26,8 @@ from src.datasets import *
 from src.util.image import *
 from src.util import num_module_parameters
 from src.algo import Space2d
+
+from scripts.train_classifier_dataset import AlexNet
 
 
 class Encoder(nn.Module):
@@ -112,15 +114,218 @@ class TransformerAutoencoder(ConvAutoEncoder):
         pass
 
 
+class AlexAutoEncoder(nn.Module):
+    def __init__(self, shape: Tuple[int, int, int], code_size: int):
+        from torchvision.models.resnet import ResNet, BasicBlock, Bottleneck
+        super().__init__()
+        self.shape = shape
+        self.encoder = AlexNet(num_classes=code_size)
+        #self.encoder = ResNet(
+        #    block=Bottleneck,
+        #    layers=[2, 2, 2, 2], num_classes=code_size,
+        #)
+        self.decoder = nn.Sequential(
+            nn.Linear(code_size, code_size * 2),
+            nn.ReLU(),
+            nn.Dropout(.5),
+            nn.Linear(code_size * 2, math.prod(shape)),
+        )
+        self.decoder = Decoder(code_size)
+        print(f"encoder params: {num_module_parameters(self.encoder):,}")
+        print(f"decoder params: {num_module_parameters(self.decoder):,}")
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.decoder(self.encoder(x), shape=self.shape)#.reshape(-1, *self.shape)
+
+    def weight_images(self, **kwargs):
+        pass#return self.encoder.weight_images(**kwargs)
+
+
+class MLPAutoEncoder(nn.Module):
+    def __init__(self, shape: Tuple[int, int, int], channels: Iterable[int]):
+        super().__init__()
+        self.channels = [math.prod(shape), *channels]
+        self.shape = shape
+        self.code_size = self.channels[-1]
+        self.encoder = nn.Sequential(
+            nn.Flatten(),
+        )
+        for i, (chan, next_chan) in enumerate(zip(self.channels, self.channels[1:])):
+            self.encoder.append(nn.Linear(chan, next_chan))
+            if i < len(self.channels) - 2:
+                self.encoder.append(nn.ReLU())
+                # self.encoder.append(nn.Dropout())
+
+        self.decoder = nn.Sequential()
+        channels = list(reversed(self.channels))
+        for i, (chan, next_chan) in enumerate(zip(channels, channels[1:])):
+            self.decoder.append(nn.Linear(chan, next_chan))
+            if i < len(self.channels) - 2:
+                self.decoder.append(nn.ReLU())
+                # self.decoder.append(nn.Dropout())
+
+        print(f"encoder params: {num_module_parameters(self.encoder):,}")
+        print(f"decoder params: {num_module_parameters(self.decoder):,}")
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.decoder(self.encoder(x)).reshape(-1, *self.shape)
+
+    def weight_images(self, **kwargs):
+        images = []
+        for w in self.encoder[1].weight.reshape(-1, *self.shape)[:32]:
+            for w1 in w:
+                images.append(w1)
+        for w in self.decoder[-1].weight.T.reshape(-1, *self.shape)[:32]:
+            for w1 in w:
+                images.append(w1)
+        return images
+
+
+class MLPDetailAutoEncoder(nn.Module):
+    def __init__(self, shape: Tuple[int, int, int], code_size: int):
+        super().__init__()
+        self.shape = shape
+        self.code_size = code_size
+        self.encoder = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(math.prod(shape), code_size),
+        )
+
+        class Decoder(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.coarse = nn.Linear(code_size, math.prod(shape))
+                self.fine = nn.Sequential(
+                    nn.Linear(math.prod(shape) + code_size, math.prod(shape))
+                )
+            def forward(self, x):
+                y = self.coarse(x)
+                y2 = self.fine(torch.cat([y, x], dim=-1))
+                y = (y + y2).reshape(-1, *shape)
+                return y
+
+        self.decoder = Decoder()
+
+        print(f"encoder params: {num_module_parameters(self.encoder):,}")
+        print(f"decoder params: {num_module_parameters(self.decoder):,}")
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.decoder(self.encoder(x)).reshape(-1, *self.shape)
+
+    def weight_images(self, **kwargs):
+        images = []
+        for w in self.encoder[-1].weight.reshape(-1, *self.shape)[:32]:
+            for w1 in w:
+                images.append(w1)
+        for w in self.decoder.coarse.weight.T.reshape(-1, *self.shape)[:32]:
+            for w1 in w:
+                images.append(w1)
+        return images
+
+
+# from https://avandekleut.github.io/vae/
+class VariationalEncoder(nn.Module):
+    def __init__(self, shape: Tuple[int, int, int], latent_dims):
+        super(VariationalEncoder, self).__init__()
+        self.shape = shape
+        self.linear1 = nn.Linear(math.prod(shape), 512)
+        self.linear_mu = nn.Linear(512, latent_dims)
+        self.linear_sigma = nn.Linear(512, latent_dims)
+
+        self.N = torch.distributions.Normal(0, 1)
+        self.kl = 0.
+
+    def forward(self, x):
+        device = self.linear_mu.weight.device
+        if self.N.loc.device != device:
+            self.N.loc = self.N.loc.to(device)
+            self.N.scale = self.N.scale.to(device)
+
+        x = torch.flatten(x, start_dim=1)
+        x = F.relu(self.linear1(x))
+        mu = self.linear_mu(x)
+        sigma = torch.exp(self.linear_sigma(x))
+        z = mu + sigma * self.N.sample(mu.shape)
+        self.kl = (sigma**2 + mu**2 - torch.log(sigma) - 1/2).sum()
+        return z
+
+    def weight_images(self, **kwargs):
+        images = []
+        for w in self.linear1.weight.reshape(-1, *self.shape)[:32]:
+            for w1 in w:
+                images.append(w1)
+        #for w in self.linear3.weight.reshape(-1, *self.shape)[:16]:
+        #    for w1 in w:
+        #        images.append(w1)
+        return images
+
+
+class VAEDecoder(nn.Module):
+    def __init__(self, shape: Tuple[int, int, int], latent_dims):
+        super().__init__()
+        self.shape = shape
+        self.linear1 = nn.Linear(latent_dims, math.prod(shape))
+        #self.linear2 = nn.Linear(512, math.prod(shape))
+
+    def forward(self, z):
+        #z = F.relu(self.linear1(z))
+        z = torch.sigmoid(self.linear1(z))
+        return z.reshape((-1, *self.shape))
+
+    def weight_images(self, **kwargs):
+        images = []
+        for w in self.linear1.weight.T.reshape(-1, *self.shape)[:32]:
+            for w1 in w:
+                images.append(w1)
+        return images
+
+
+class VariationalAutoencoder(nn.Module):
+    def __init__(self, shape: Tuple[int, int, int], latent_dims):
+        super(VariationalAutoencoder, self).__init__()
+        self.shape = shape
+        self.encoder = VariationalEncoder(shape, latent_dims)
+        self.decoder = VAEDecoder(shape, latent_dims)
+
+    def forward(self, x):
+        z = self.encoder(x)
+        return self.decoder(z)
+
+    def train_step(self, batch):
+        x = batch[0]
+        recon = self.decoder(self.encoder(x))
+
+        loss = ((x - recon) ** 2).sum() + self.encoder.kl
+        return loss
+
+    def weight_images(self, **kwargs):
+        images = []
+        if hasattr(self.encoder, "weight_images"):
+            images += self.encoder.weight_images(**kwargs)
+        if hasattr(self.decoder, "weight_images"):
+            images += self.decoder.weight_images(**kwargs)
+
+        return images
+
+
 def main():
     parser = argparse.ArgumentParser()
     TrainAutoencoder.add_parser_args(parser)
     kwargs = vars(parser.parse_args())
 
-    if 0:
+    if 1:
         SHAPE = (3, 64, 64)
-        ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{SHAPE[-2]}x{SHAPE[-1]}.pt"))
-        ds = TransformDataset(ds, dtype=torch.float, multiply=1. / 255.)
+        #ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{SHAPE[-2]}x{SHAPE[-1]}.pt"))
+        ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{128}x{128}.pt")[:5000])
+        ds = TransformDataset(
+            ds,
+            dtype=torch.float, multiply=1. / 255.,
+            transforms=[
+                VT.CenterCrop(64),
+                #VT.RandomCrop(SHAPE[-2:])
+            ],
+            num_repeat=40,
+        )
     else:
         SHAPE = (1, 32, 32)
         ds = TensorDataset(torch.load(f"./datasets/fonts-regular-{SHAPE[-2]}x{SHAPE[-1]}.pt"))
@@ -132,22 +337,26 @@ def main():
     #test_ds = TensorDataset(torch.load("./datasets/fonts-32x32.pt")[:500])
 
     #model = NewAutoEncoder(SHAPE)
-    #model = ConvAutoEncoder(SHAPE, channels=[8, 16, 24], kernel_size=7, code_size=64) # good one
-    model = TransformerAutoencoder(SHAPE, channels=[8, 16, 24], kernel_size=7, code_size=64)
+    #model = ConvAutoEncoder(SHAPE, channels=[8, 16, 24], kernel_size=7, code_size=128) # good one
+    #model = TransformerAutoencoder(SHAPE, channels=[8, 16, 24], kernel_size=7, code_size=64)
     #model = ConvAutoEncoder(SHAPE, channels=[8, 12, 16, 24], kernel_size=7, code_size=64)
+    #model = MLPAutoEncoder(SHAPE, [512])
+    #model = MLPDetailAutoEncoder(SHAPE, 128)
+    model = VariationalAutoencoder(SHAPE, 128)
     print(model)
 
     trainer = TrainAutoencoder(
         **kwargs,
         model=model,
         #min_loss=0.001,
-        num_inputs_between_validations=50_000,
-        #data_loader=DataLoader(train_ds, shuffle=True, batch_size=10),
-        data_loader=DataLoader(train_ds, batch_size=50),# num_workers=5),
-        validation_loader=DataLoader(test_ds, batch_size=50),
+        num_epochs_between_validations=1,
+        #num_inputs_between_validations=10_000,
+        data_loader=DataLoader(train_ds, batch_size=64, shuffle=True),
+        validation_loader=DataLoader(test_ds, batch_size=64),
+        freeze_validation_set=True,
         optimizers=[
-            #torch.optim.AdamW(model.parameters(), lr=.1, weight_decay=0.001),
-            torch.optim.Adadelta(model.parameters(), lr=1.),
+            torch.optim.Adam(model.parameters(), lr=.001),#, weight_decay=0.00001),
+            #torch.optim.Adadelta(model.parameters(), lr=1.),
         ],
         hparams={
             "shape": SHAPE,

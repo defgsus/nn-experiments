@@ -36,7 +36,7 @@ class ConvAutoEncoder(torch.nn.Module):
             batch_norm=batch_norm,
             #act_last_layer=True,
         )
-        conv_shape = (self.channels[-1], *encoder_block.get_output_shape(self.shape[-2:]))
+        conv_shape = encoder_block.get_output_shape(self.shape)
         self.encoder = torch.nn.Sequential(
             encoder_block,
             nn.Flatten(),

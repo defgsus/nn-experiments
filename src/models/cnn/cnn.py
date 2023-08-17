@@ -54,7 +54,8 @@ class Conv2dBlock(nn.Module):
                 self.layers.append(act_fn)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.layers.forward(x)
+        y = self.layers.forward(x)
+        return y
 
     @torch.no_grad()
     def get_output_shape(
@@ -123,3 +124,15 @@ class Conv2dBlock(nn.Module):
             bias=bias,
             padding_mode="zeros",
         )
+
+    def weight_images(self, **kwargs):
+        images = []
+
+        for layer in self.layers:
+            if hasattr(layer, "weight"):
+                weight = layer.weight
+                if weight.ndim == 4:
+                    for wchan in weight[:64]:
+                        for w in wchan[:3]:
+                            images.append(w)
+        return images

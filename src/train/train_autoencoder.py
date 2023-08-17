@@ -29,9 +29,7 @@ class TrainAutoencoder(Trainer):
         self.train_display_batch: Optional[torch.Tensor] = None
 
     def train_step(self, input_batch) -> torch.Tensor:
-        if isinstance(input_batch, (tuple, list)):
-            input_batch = input_batch[0]
-        input_batch = input_batch.to(self.device)
+        input_batch = input_batch[0]
 
         output_batch = self.model.forward(input_batch)
 
@@ -43,24 +41,30 @@ class TrainAutoencoder(Trainer):
         #input_batch = _transform(input_batch)
         #output_batch = _transform(output_batch)
 
+        #loss = F.kl_div(input_batch, output_batch.clamp_min(0))
         loss = F.l1_loss(input_batch, output_batch)
-
         return loss
 
     def write_step(self):
-        if self.train_display_batch is None:
-            images = get_images_from_iterable(self.data_loader)
-            self.train_display_batch = torch.cat(images).to(self.device)
+        images = []
+        count = 0
+        for batch in self.iter_validation_batches():
+            images.append(batch[0])
+            count += batch[0].shape[0]
+            if count >= 32:
+                break
+        images = torch.cat(images)[:32].to(self.device)
 
-        output_batch1 = self.model.forward(self.validation_batch[:8])
-        output_batch2 = self.model.forward(self.train_display_batch)
+        output_batch = self.model.forward(images).clamp(0, 1)
+        grid_images = []
+        for i in range(0, images.shape[0], 8):
+            for j in range(8):
+                if i + j < images.shape[0]:
+                    grid_images.append(images[i + j])
+            for j in range(8):
+                if i + j < images.shape[0]:
+                    grid_images.append(output_batch[i + j])
 
-        output_batch1 = output_batch1.clamp(0, 1)
-        output_batch2 = output_batch2.clamp(0, 1)
-        image = make_grid(
-            [i for i in self.validation_batch[:8]] + [i for i in output_batch1[:8]]
-            + [i for i in self.train_display_batch] + [i for i in output_batch2],
-            nrow=8,
-        )
+        image = make_grid(grid_images, nrow=8)
         self.log_image("validation_reconstruction", image)
 
