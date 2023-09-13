@@ -188,7 +188,7 @@ class Trainer:
                     total=total,
                     desc=f"epoch #{self.epoch}",
             ) as progress:
-                for batch_idx, input_batch in enumerate(self.data_loader):
+                for batch_idx, input_batch in enumerate(self.iter_training_batches()):
                     if not isinstance(input_batch, (tuple, list)):
                         input_batch = (input_batch, )
 
@@ -202,20 +202,24 @@ class Trainer:
                             input_batch[0] = input_batch[0] + self.training_noise * torch.randn_like(input_batch[0])
 
                     if self.epoch == 0 and batch_idx == 0:
-                        print("BATCH", input_batch[0].shape)
+                        print("BATCH", ", ".join(str(b.shape) for b in input_batch))
 
-                    loss = self._train_step(tuple(input_batch))
+                    loss_result = self._train_step(tuple(input_batch))
+                    if not isinstance(loss_result, dict):
+                        loss_result = {"loss": loss_result}
+
                     progress.update(input_batch[0].shape[0])
 
                     self.model.zero_grad()
-                    loss.backward()
+                    loss_result["loss"].backward()
                     for opt in self.optimizers:
                         opt.step()
 
                     self.num_batch_steps += 1
                     self.num_input_steps += input_batch[0].shape[0]
 
-                    self.log_scalar("train_loss", loss)
+                    for key, value in loss_result.items():
+                        self.log_scalar(f"train_{key}", value)
 
                     if self.num_inputs_between_validations is not None:
                         if self.num_input_steps - last_validation_step >= self.num_inputs_between_validations:
@@ -247,6 +251,12 @@ class Trainer:
         self.run_validation()
 
         self.writer.flush()
+
+    def iter_training_batches(self) -> Generator:
+        """
+        Override to adjust the training data or labels
+        """
+        yield from self.data_loader
 
     def iter_validation_batches(self) -> Generator:
         """Makes a copy of the validation set to memory if 'freeze_validation_set' is True"""
@@ -290,9 +300,10 @@ class Trainer:
                     i.to(self.device) if isinstance(i, torch.Tensor) else i
                     for i in validation_batch
                 )
-                losses.append(
-                    self.validation_step(validation_batch)
-                )
+                loss = self.validation_step(validation_batch)
+                if isinstance(loss, dict):
+                    loss = loss["loss"]
+                losses.append(loss)
             loss = torch.Tensor(losses).mean()
 
             self.model.for_validation = False
@@ -371,7 +382,7 @@ class Trainer:
             help="Specify device"
         )
 
-    def _train_step(self, input_batch: Tuple[torch.Tensor, ...]) -> torch.Tensor:
+    def _train_step(self, input_batch: Tuple[torch.Tensor, ...]) -> Union[torch.Tensor, dict]:
         if hasattr(self.model, "train_step"):
             return self.model.train_step(input_batch)
         else:
@@ -394,6 +405,10 @@ class Trainer:
                     what = parts[2]
                 else:
                     what = "inputs"
+
+                if what == "epoch":
+                    what = "epochs"
+
                 assert what in ("inputs", "batches", "epochs"), f"Got '{what}'"
 
                 self._every_callbacks.append({

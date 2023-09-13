@@ -26,75 +26,10 @@ from src.datasets import *
 from src.util.image import *
 from src.util import num_module_parameters
 from src.algo import Space2d
+from src.models.vae import *
+from src.models.transform import *
 
 from scripts.train_classifier_dataset import AlexNet
-
-
-# based on https://avandekleut.github.io/vae/
-class VariationalEncoder(nn.Module):
-    def __init__(self, encoder: nn.Module, encoder_dims: int, latent_dims: int):
-        super().__init__()
-        self.encoder = encoder
-        self.linear_mu = nn.Linear(encoder_dims, latent_dims)
-        self.linear_sigma = nn.Linear(encoder_dims, latent_dims)
-
-        self.N = torch.distributions.Normal(0, 1)
-        self.kl = 0.
-
-    def forward(self, x):
-        # move sampler to GPU
-        device = self.linear_mu.weight.device
-        if self.N.loc.device != device:
-            self.N.loc = self.N.loc.to(device)
-            self.N.scale = self.N.scale.to(device)
-
-        x = self.encoder(x)
-
-        mu = self.linear_mu(x)
-        sigma = torch.exp(self.linear_sigma(x))
-        z = mu + sigma * self.N.sample(mu.shape)
-        self.kl = (sigma**2 + mu**2 - torch.log(sigma) - 1/2).sum()
-        return z
-
-    def weight_images(self, **kwargs):
-        images = []
-
-        if isinstance(self.encoder, nn.Sequential):
-            for layer in self.encoder:
-                if hasattr(layer, "weight_images"):
-                    images += layer.weight_images(**kwargs)
-        else:
-            if hasattr(self.encoder, "weight_images"):
-                images += self.encoder.weight_images(**kwargs)
-
-        return images
-
-
-class VariationalAutoencoder(nn.Module):
-    def __init__(self, encoder: VariationalEncoder, decoder: nn.Module):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def forward(self, x):
-        z = self.encoder(x)
-        return self.decoder(z)
-
-    def train_step(self, batch):
-        x = batch[0]
-        recon = self.forward(x)
-
-        loss = ((x - recon) ** 2).sum() + self.encoder.kl
-        return loss
-
-    def weight_images(self, **kwargs):
-        images = []
-        if hasattr(self.encoder, "weight_images"):
-            images += self.encoder.weight_images(**kwargs)
-        if hasattr(self.decoder, "weight_images"):
-            images += self.decoder.weight_images(**kwargs)
-
-        return images
 
 
 class ConvEncoder(nn.Module):
@@ -115,13 +50,19 @@ class ConvEncoder(nn.Module):
         return self.layers(x)
 
 
-class MLPDecoder(nn.Module):
+class MLPEncoder(nn.Module):
 
-    def __init__(self, shape: Tuple[int, int, int], channels: Iterable[int]):
+    def __init__(
+            self,
+            shape: Tuple[int, int, int],
+            channels: Iterable[int],
+            final_activation: Callable = nn.Sigmoid(),
+    ):
         super().__init__()
-        self.channels = [*channels, math.prod(shape)]
+        self.channels = [math.prod(shape), *channels]
         self.shape = shape
         self.layers = torch.nn.Sequential()
+        self.final_activation = final_activation
 
         for i, (chan, next_chan) in enumerate(zip(self.channels, self.channels[1:])):
             self.layers.append(nn.Linear(chan, next_chan))
@@ -129,7 +70,40 @@ class MLPDecoder(nn.Module):
                 self.decoder.append(nn.ReLU())
 
     def forward(self, x):
-        return self.layers(x).reshape(-1, *self.shape)
+        x = x.flatten(1)
+        z = self.layers(x)
+        return self.final_activation(z)
+
+    def weight_images(self, **kwargs):
+        images = []
+        for w in self.layers[-1].weight.reshape(-1, *self.shape)[:32]:
+            for w1 in w:
+                images.append(w1)
+        return images
+
+
+class MLPDecoder(nn.Module):
+
+    def __init__(
+            self,
+            shape: Tuple[int, int, int],
+            channels: Iterable[int],
+            final_activation: Callable = nn.Sigmoid(),
+    ):
+        super().__init__()
+        self.channels = [*channels, math.prod(shape)]
+        self.shape = shape
+        self.layers = torch.nn.Sequential()
+        self.final_activation = final_activation
+
+        for i, (chan, next_chan) in enumerate(zip(self.channels, self.channels[1:])):
+            self.layers.append(nn.Linear(chan, next_chan))
+            if i < len(self.channels) - 2:
+                self.decoder.append(nn.ReLU())
+
+    def forward(self, z):
+        x = self.layers(z).reshape(-1, *self.shape)
+        return self.final_activation(x)
 
     def weight_images(self, **kwargs):
         images = []
@@ -154,12 +128,35 @@ class VariationalAutoencoderAlexMLP(VariationalAutoencoder):
         self.shape = shape
 
 
-class Reshape(nn.Module):
-    def __init__(self, shape: Tuple[int, int, int]):
-        super().__init__()
-        self.shape = shape
-    def forward(self, x):
-        return x.reshape(-1, *self.shape)
+class VariationalAutoencoderMLP(VariationalAutoencoder):
+    def __init__(
+            self,
+            shape: Tuple[int, int, int],
+            latent_dims: int,
+            hidden_dims: Iterable[int] = tuple(),
+    ):
+        channels = [*hidden_dims, latent_dims]
+        encoder = MLPEncoder(
+            shape=shape,
+            channels=channels,
+        )
+        encoder = VariationalEncoder(
+            encoder=encoder,
+            encoder_dims=latent_dims,
+            latent_dims=latent_dims,
+        )
+
+        channels = list(reversed(channels))
+        decoder = MLPDecoder(
+            shape=shape,
+            channels=channels,
+        )
+        super().__init__(
+            encoder=encoder,
+            decoder=decoder,
+            #reconstruction_loss_weight=10.,
+            #kl_loss_weight=10.,
+        )
 
 
 class VariationalAutoencoderConv(VariationalAutoencoder):
@@ -169,6 +166,7 @@ class VariationalAutoencoderConv(VariationalAutoencoder):
             latent_dims: int,
             kernel_size: int = 15,
             channels: Iterable[int] = (16, 32),
+            encoder_dims: int = 1024,
     ):
         channels = [shape[0], *channels]
         encoder = Conv2dBlock(
@@ -177,7 +175,6 @@ class VariationalAutoencoderConv(VariationalAutoencoder):
             act_fn=nn.ReLU(),
         )
         encoded_shape = encoder.get_output_shape(shape)
-        encoder_dims = 1024
         encoder = nn.Sequential(
             encoder,
             nn.Flatten(),
@@ -215,7 +212,7 @@ def main():
     if 1:
         SHAPE = (3, 64, 64)
         #ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{SHAPE[-2]}x{SHAPE[-1]}.pt"))
-        ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{128}x{128}.pt")[:5000])
+        ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{128}x{128}.pt"))
         ds = TransformDataset(
             ds,
             dtype=torch.float, multiply=1. / 255.,
@@ -223,12 +220,17 @@ def main():
                 VT.CenterCrop(64),
                 #VT.RandomCrop(SHAPE[-2:])
             ],
-            num_repeat=40,
+            num_repeat=1,
         )
     else:
-        SHAPE = (1, 32, 32)
-        ds = TensorDataset(torch.load(f"./datasets/fonts-regular-{SHAPE[-2]}x{SHAPE[-1]}.pt"))
-    assert ds[0][0].shape[:3] == torch.Size(SHAPE), ds[0][0].shape
+        SHAPE = (1, 64, 64)
+        ds = TensorDataset(torch.load(f"./datasets/pattern-{SHAPE[-3]}x{SHAPE[-2]}x{SHAPE[-1]}-uint.pt")[:10])
+        ds = TransformDataset(
+            ds,
+            dtype=torch.float, multiply=1. / 255.,
+            num_repeat=2000,
+        )
+        assert ds[0][0].shape[:3] == torch.Size(SHAPE), ds[0][0].shape
 
     train_ds, test_ds = torch.utils.data.random_split(ds, [0.99, 0.01], torch.Generator().manual_seed(42))
 
@@ -236,7 +238,8 @@ def main():
     #test_ds = TensorDataset(torch.load("./datasets/fonts-32x32.pt")[:500])
 
     # model = VariationalAutoencoderAlexMLP(SHAPE, 512, 128)  # not good in reproduction
-    model = VariationalAutoencoderConv(SHAPE, 128)
+    model = VariationalAutoencoderConv(SHAPE, 128, channels=[32, 64, 128])
+    #model = VariationalAutoencoderMLP(SHAPE, 10)
     print(model)
 
     trainer = TrainAutoencoder(
@@ -250,7 +253,7 @@ def main():
         freeze_validation_set=True,
         optimizers=[
             torch.optim.Adam(model.parameters(), lr=.0001),#, weight_decay=0.00001),
-            #torch.optim.Adadelta(model.parameters(), lr=1.),
+            #torch.optim.Adadelta(model.parameters(), lr=.1),
         ],
         hparams={
             "shape": SHAPE,
