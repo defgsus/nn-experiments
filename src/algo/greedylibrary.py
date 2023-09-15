@@ -54,16 +54,20 @@ class GreedyLibrary:
         d.hits = self.hits.copy()
         return d
 
-    def to(self, device: Union[str, torch.device]) -> "GreedyLibrary":
+    def to(self, device: Union[str, torch.device], inplace: bool = False) -> "GreedyLibrary":
+        if not inplace:
+            lib = self.copy()
+            return lib.to(device, inplace=True)
+
         self.device = to_torch_device(device)
         self.entries = self.entries.to(self.device)
         return self
 
-    def cpu(self) -> "GreedyLibrary":
-        return self.to("cpu")
+    def cpu(self, inplace: bool = False) -> "GreedyLibrary":
+        return self.to("cpu", inplace=inplace)
 
-    def cuda(self) -> "GreedyLibrary":
-        return self.to("cuda")
+    def cuda(self, inplace: bool = False) -> "GreedyLibrary":
+        return self.to("cuda", inplace=inplace)
 
     def save_torch(self, f: torch.serialization.FILE_LIKE, **kwargs):
         torch.save(self._save_data(), f, **kwargs)
@@ -278,7 +282,7 @@ class GreedyLibrary:
             self.entries = torch.concat(entries) if entries else torch.Tensor()
             self.hits = hits
             self.n_entries = len(self.hits)
-            self.to(self.device)
+            self.to(self.device, inplace=True)
 
         return self
 

@@ -130,6 +130,9 @@ class TestGreedyLibrary(TestBase):
         _assert_device(lib.sort_entries(), expected_device)
         _assert_device(lib.drop_unused(), expected_device)
 
+        _assert_device(lib.to("cpu"), "cpu")
+        _assert_device(lib, expected_device)
+
     def test_500_convolve(self):
         #cl = GreedyLibrary(5, (3,))
         #self.assertEqual((2, 8), cl.convolve(torch.ones(2, 10)).shape)
