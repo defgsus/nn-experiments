@@ -31,18 +31,18 @@ class TrainAutoencoder(Trainer):
     def train_step(self, input_batch) -> torch.Tensor:
         input_batch = input_batch[0]
 
-        output_batch = self.model.forward(input_batch)
+        output_batch = self.model(input_batch)
 
-        def _transform(x):
-            f = torch.fft.fft2(x)
-            #return f.real + f.imag
-            return torch.cat([f.real[:, 3:-3], f.imag[:, 3:-3]])
+        #def _transform(x):
+        #    f = torch.fft.fft2(x)
+        #    #return f.real + f.imag
+        #    return torch.cat([f.real[:, 3:-3], f.imag[:, 3:-3]])
 
         #input_batch = _transform(input_batch)
         #output_batch = _transform(output_batch)
 
         #loss = F.kl_div(input_batch, output_batch.clamp_min(0))
-        loss = F.l1_loss(input_batch, output_batch)
+        loss = self.loss_function(input_batch, output_batch)
         return loss
 
     def write_step(self):

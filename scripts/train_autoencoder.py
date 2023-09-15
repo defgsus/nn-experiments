@@ -223,89 +223,24 @@ class MLPDetailAutoEncoder(nn.Module):
         return images
 
 
-# from https://avandekleut.github.io/vae/
-class VariationalEncoder(nn.Module):
-    def __init__(self, shape: Tuple[int, int, int], latent_dims):
-        super(VariationalEncoder, self).__init__()
-        self.shape = shape
-        self.linear1 = nn.Linear(math.prod(shape), 512)
-        self.linear_mu = nn.Linear(512, latent_dims)
-        self.linear_sigma = nn.Linear(512, latent_dims)
+class TrainAutoencoderSpecial(TrainAutoencoder):
 
-        self.N = torch.distributions.Normal(0, 1)
-        self.kl = 0.
+    def train_step(self, input_batch) -> torch.Tensor:
+        input_batch = input_batch[0]
+        feature_batch = self.model.encode(input_batch)
+        output_batch = self.model.decode(feature_batch)
 
-    def forward(self, x):
-        device = self.linear_mu.weight.device
-        if self.N.loc.device != device:
-            self.N.loc = self.N.loc.to(device)
-            self.N.scale = self.N.scale.to(device)
+        reconstruction_loss = self.loss_function(input_batch, output_batch)
+        return reconstruction_loss
 
-        x = torch.flatten(x, start_dim=1)
-        x = F.relu(self.linear1(x))
-        mu = self.linear_mu(x)
-        sigma = torch.exp(self.linear_sigma(x))
-        z = mu + sigma * self.N.sample(mu.shape)
-        self.kl = (sigma**2 + mu**2 - torch.log(sigma) - 1/2).sum()
-        return z
+        active_ratio = (feature_batch.abs()).sum() / math.prod(feature_batch.shape)
+        sparsity_loss = (1./100. - active_ratio).abs()
+        #sparsity_loss = (0. - feature_batch.mean()).abs() + (1. - feature_batch.std()).abs()
 
-    def weight_images(self, **kwargs):
-        images = []
-        for w in self.linear1.weight.reshape(-1, *self.shape)[:32]:
-            for w1 in w:
-                images.append(w1)
-        #for w in self.linear3.weight.reshape(-1, *self.shape)[:16]:
-        #    for w1 in w:
-        #        images.append(w1)
-        return images
+        self.log_scalar("reconstruction_loss", reconstruction_loss)
+        self.log_scalar("sparsity_loss", sparsity_loss)
 
-
-class VAEDecoder(nn.Module):
-    def __init__(self, shape: Tuple[int, int, int], latent_dims):
-        super().__init__()
-        self.shape = shape
-        self.linear1 = nn.Linear(latent_dims, math.prod(shape))
-        #self.linear2 = nn.Linear(512, math.prod(shape))
-
-    def forward(self, z):
-        #z = F.relu(self.linear1(z))
-        z = torch.sigmoid(self.linear1(z))
-        return z.reshape((-1, *self.shape))
-
-    def weight_images(self, **kwargs):
-        images = []
-        for w in self.linear1.weight.T.reshape(-1, *self.shape)[:32]:
-            for w1 in w:
-                images.append(w1)
-        return images
-
-
-class VariationalAutoencoder(nn.Module):
-    def __init__(self, shape: Tuple[int, int, int], latent_dims):
-        super(VariationalAutoencoder, self).__init__()
-        self.shape = shape
-        self.encoder = VariationalEncoder(shape, latent_dims)
-        self.decoder = VAEDecoder(shape, latent_dims)
-
-    def forward(self, x):
-        z = self.encoder(x)
-        return self.decoder(z)
-
-    def train_step(self, batch):
-        x = batch[0]
-        recon = self.decoder(self.encoder(x))
-
-        loss = ((x - recon) ** 2).sum() + self.encoder.kl
-        return loss
-
-    def weight_images(self, **kwargs):
-        images = []
-        if hasattr(self.encoder, "weight_images"):
-            images += self.encoder.weight_images(**kwargs)
-        if hasattr(self.decoder, "weight_images"):
-            images += self.decoder.weight_images(**kwargs)
-
-        return images
+        return reconstruction_loss + sparsity_loss
 
 
 def main():
@@ -314,17 +249,18 @@ def main():
     kwargs = vars(parser.parse_args())
 
     if 1:
-        SHAPE = (3, 64, 64)
+        SHAPE = (1, 64, 64)
         #ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{SHAPE[-2]}x{SHAPE[-1]}.pt"))
-        ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{128}x{128}.pt")[:5000])
+        ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{128}x{128}.pt"))
         ds = TransformDataset(
             ds,
             dtype=torch.float, multiply=1. / 255.,
             transforms=[
                 VT.CenterCrop(64),
                 #VT.RandomCrop(SHAPE[-2:])
+                VT.Grayscale(),
             ],
-            num_repeat=40,
+            num_repeat=1,
         )
     else:
         SHAPE = (1, 32, 32)
@@ -337,15 +273,16 @@ def main():
     #test_ds = TensorDataset(torch.load("./datasets/fonts-32x32.pt")[:500])
 
     #model = NewAutoEncoder(SHAPE)
-    #model = ConvAutoEncoder(SHAPE, channels=[8, 16, 24], kernel_size=7, code_size=128) # good one
+    model = ConvAutoEncoder(SHAPE, channels=[8, 16, 24], kernel_size=7, code_size=128) # good one
+    model = ConvAutoEncoder(SHAPE, channels=[8, 16, 24], kernel_size=7, code_size=128, bias=False, linear_bias=False, act_last_layer=False)
     #model = TransformerAutoencoder(SHAPE, channels=[8, 16, 24], kernel_size=7, code_size=64)
-    #model = ConvAutoEncoder(SHAPE, channels=[8, 12, 16, 24], kernel_size=7, code_size=64)
+    #model = ConvAutoEncoder(SHAPE, channels=[32], kernel_size=7, code_size=64)
     #model = MLPAutoEncoder(SHAPE, [512])
     #model = MLPDetailAutoEncoder(SHAPE, 128)
-    model = VariationalAutoencoder(SHAPE, 128)
+    #model = VariationalAutoencoder(SHAPE, 128)
     print(model)
 
-    trainer = TrainAutoencoder(
+    trainer = TrainAutoencoderSpecial(
         **kwargs,
         model=model,
         #min_loss=0.001,
@@ -354,9 +291,10 @@ def main():
         data_loader=DataLoader(train_ds, batch_size=64, shuffle=True),
         validation_loader=DataLoader(test_ds, batch_size=64),
         freeze_validation_set=True,
+        loss_function="l2",
         optimizers=[
-            torch.optim.Adam(model.parameters(), lr=.001),#, weight_decay=0.00001),
-            #torch.optim.Adadelta(model.parameters(), lr=1.),
+            #torch.optim.Adam(model.parameters(), lr=.001),#, weight_decay=0.00001),
+            torch.optim.Adadelta(model.parameters(), lr=1.),
         ],
         hparams={
             "shape": SHAPE,

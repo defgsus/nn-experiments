@@ -15,6 +15,7 @@ class Conv2dBlock(nn.Module):
             pool_kernel_size: int = 0,
             pool_type: str = "max",  # "max", "average"
             act_fn: Optional[nn.Module] = None,
+            act_last_layer: bool = True,
             bias: bool = True,
             transpose: bool = False,
             batch_norm: bool = False,
@@ -50,7 +51,7 @@ class Conv2dBlock(nn.Module):
                 self.layers.append(
                     klass(pool_kernel_size)
                 )
-            if self._act_fn:
+            if self._act_fn and (act_last_layer or i + 2 < len(self.channels)):
                 self.layers.append(act_fn)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

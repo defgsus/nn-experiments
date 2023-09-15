@@ -21,7 +21,9 @@ import torchvision.transforms.functional as VF
 from torchvision.utils import make_grid
 
 from src import console
+from src.util import to_torch_device
 from src.util.image import signed_to_image, get_images_from_iterable
+from src.models.util import get_loss_callable
 
 
 class Trainer:
@@ -40,8 +42,9 @@ class Trainer:
             num_inputs_between_validations: Optional[int] = None,
             num_epochs_between_validations: Optional[int] = None,
             training_noise: float = 0.,
+            loss_function: Union[str, Callable, torch.nn.Module] = "l1",
             reset: bool = False,
-            device: Optional[Union[str, torch.DeviceObjType]] = None,
+            device: Union[None, str, torch.DeviceObjType] = None,
             hparams: Optional[dict] = None,
             weight_image_kwargs: Optional[dict] = None,
     ):
@@ -57,6 +60,7 @@ class Trainer:
         self.max_inputs = max_inputs
         self.optimizers = list(optimizers)
         self.training_noise = training_noise
+        self.loss_function = get_loss_callable(loss_function)
         self.hparams = hparams
         self.weight_image_kwargs = weight_image_kwargs
         self.num_inputs_between_validations = num_inputs_between_validations
@@ -66,10 +70,7 @@ class Trainer:
         self.num_input_steps = 0
         self.tensorboard_path = Path("./runs/") / self.experiment_name
         self.checkpoint_path = Path("./checkpoints/") / self.experiment_name
-        if device is None or device == "auto":
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        else:
-            self.device = torch.device(device)
+        self.device = to_torch_device(device)
 
         self.model = self.model.to(self.device)
 
@@ -93,7 +94,7 @@ class Trainer:
         input, target_features = input_batch
         output_features = self.model(input)
 
-        return F.mse_loss(output_features, target_features)
+        return self.loss_function(output_features, target_features)
 
     def validation_step(self, input_batch) -> torch.Tensor:
         return self._train_step(input_batch)

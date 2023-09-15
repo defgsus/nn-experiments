@@ -18,6 +18,9 @@ class ConvAutoEncoder(torch.nn.Module):
             code_size: int = 128,
             act_fn: Optional[torch.nn.Module] = torch.nn.GELU(),
             batch_norm: bool = False,
+            bias: bool = True,
+            linear_bias: bool = True,
+            act_last_layer: bool = True,
     ):
         super().__init__()
         self.shape = tuple(shape)
@@ -34,26 +37,31 @@ class ConvAutoEncoder(torch.nn.Module):
             kernel_size=self.kernel_size,
             act_fn=self._act_fn,
             batch_norm=batch_norm,
+            bias=bias,
             #act_last_layer=True,
         )
         conv_shape = encoder_block.get_output_shape(self.shape)
         self.encoder = torch.nn.Sequential(
             encoder_block,
             nn.Flatten(),
-            nn.Linear(math.prod(conv_shape), code_size),
+            nn.Linear(math.prod(conv_shape), code_size, bias=linear_bias),
         )
         self.decoder = torch.nn.Sequential(
-            nn.Linear(code_size, math.prod(conv_shape)),
+            nn.Linear(code_size, math.prod(conv_shape), bias=linear_bias),
             nn.Unflatten(1, conv_shape),
             Conv2dBlock(
                 channels=list(reversed(self.channels)),
                 kernel_size=self.kernel_size,
                 act_fn=self._act_fn,
                 batch_norm=batch_norm,
+                bias=bias,
                 transpose=True,
-                # act_last_layer=True,
+                act_last_layer=act_last_layer,
             )
         )
+
+    def conv_parameters(self):
+        return list(self.encoder[:-1].parameters()) + list(self.decoder[1:].parameters())
 
     def add_layer(self, channels: int, kernel_size: Optional[int] = None, bias: bool = True):
         kernel_size = self.kernel_size if kernel_size is None else kernel_size

@@ -50,6 +50,7 @@ class TrainUnsupervisedClustering(Trainer):
         self.reset_cluster()
 
     def reset_cluster(self):
+        self._clusterer = None
         self._cluster_labels = None
         self._cluster_labels_v = None
         self._cluster_label_features = None
@@ -58,7 +59,8 @@ class TrainUnsupervisedClustering(Trainer):
     def train_step(self, input_batch) -> torch.Tensor:
         input, target_features = input_batch
         output_features = self.model(input)
-        return F.cross_entropy(output_features, target_features)
+        #return F.l1_loss(output_features, target_features)
+        return self.loss_function(output_features, target_features)
 
     def iter_training_batches(self) -> Generator:
         """
@@ -111,6 +113,10 @@ class TrainUnsupervisedClustering(Trainer):
             )
         dtype = None
 
+        def _normalize(x):
+            return x #F.softmax(x, dim=1)
+            #return x / torch.norm(x, dim=1, keepdim=True)
+
         def _fit(what, data_loader):
             nonlocal dtype
 
@@ -119,7 +125,7 @@ class TrainUnsupervisedClustering(Trainer):
                 if isinstance(batch, (list, tuple)):
                     batch = batch[0]
 
-                features = self.model.encoder(batch.to(self.device))
+                features = _normalize(self.model.encoder(batch.to(self.device)))
                 dtype = features.dtype
 
                 self._clusterer.partial_fit(features.cpu().numpy())
@@ -133,7 +139,7 @@ class TrainUnsupervisedClustering(Trainer):
                 if isinstance(batch, (list, tuple)):
                     batch = batch[0]
 
-                features = self.model.encoder(batch.to(self.device)).cpu().numpy()
+                features = _normalize(self.model.encoder(batch.to(self.device))).cpu().numpy()
 
                 labels.append(self._clusterer.predict(features))
             return np.concatenate(labels)
@@ -150,9 +156,9 @@ class TrainUnsupervisedClustering(Trainer):
         for input, target_features in self.iter_validation_batches():
             output_features = self.model(input.to(self.device)).cpu()
 
-            if feature_count < 1000:
-                all_features.append(output_features)
-                feature_count += output_features.shape[0]
+            #if feature_count < 1000:
+            all_features.append(output_features)
+            #feature_count += output_features.shape[0]
 
             target_idx = torch.argmax(target_features, dim=-1, keepdim=True).reshape(-1)
             output_idx = torch.argmax(output_features, dim=-1, keepdim=True).reshape(-1)
@@ -235,9 +241,6 @@ def main():
     train_ds, test_ds = torch.utils.data.random_split(ds, [num_train, num_valid], torch.Generator().manual_seed(42))
     print(f"{len(test_ds)} validation samples")
 
-    #train_ds = FontDataset(shape=SHAPE)
-    #test_ds = TensorDataset(torch.load("./datasets/fonts-32x32.pt")[:500])
-
     NUM_CLUSTERS = 512
     CODE_SIZE = 512
     # model = AlexNet(CODE_SIZE)
@@ -254,6 +257,7 @@ def main():
         data_loader=DataLoader(train_ds, batch_size=64, shuffle=False),
         validation_loader=DataLoader(test_ds, batch_size=64),
         freeze_validation_set=False,
+        loss_function="l2",
         optimizers=[
             torch.optim.Adam(model.parameters(), lr=.001),#, weight_decay=0.00001),
             #torch.optim.Adadelta(model.parameters(), lr=.1),
