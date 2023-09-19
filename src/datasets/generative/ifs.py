@@ -13,7 +13,6 @@ import numpy as np
 
 from src.datasets import *
 from src.util.image import *
-from src.util import ImageFilter
 from src.algo import IFS
 
 

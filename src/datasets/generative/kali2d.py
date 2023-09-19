@@ -9,7 +9,7 @@ import torchvision.transforms as VT
 import torchvision.transforms.functional as VF
 
 from src.algo import Space2d, kali_2d
-from src.util import ImageFilter
+from src.util.image import ImageFilter
 
 
 class Kali2dDataset(Dataset):

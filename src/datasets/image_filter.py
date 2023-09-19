@@ -3,7 +3,7 @@ from typing import Union, Generator, Optional
 import torch
 from torch.utils.data import IterableDataset, Dataset
 
-from src.util.image_filter import ImageFilter
+from src.util.image import ImageFilter
 
 
 class IterableImageFilterDataset(IterableDataset):
