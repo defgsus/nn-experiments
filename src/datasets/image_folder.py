@@ -15,7 +15,7 @@ from torchvision.transforms.functional import pil_to_tensor
 from src.util.image import image_resize_crop, set_image_channels, set_image_dtype
 
 
-class ImageFolder(IterableDataset):
+class ImageFolderIterableDataset(IterableDataset):
 
     def __init__(
             self,
@@ -33,13 +33,13 @@ class ImageFolder(IterableDataset):
         self.force_dtype = force_dtype
         self._filenames = None
 
-    # def __len__(self):
-    #     """
-    #     This is only an approximation,
-    #     files that can not be loaded by PIL will be skipped
-    #     """
-    #     self._get_filenames()
-    #     return len(self._filenames)
+    def __len__(self):
+        """
+        This is only an approximation,
+        files that can not be loaded by PIL will be skipped
+        """
+        self._get_filenames()
+        return len(self._filenames)
 
     # def __getitem__(self, index) -> Union[None, PIL.Image.Image, torch.Tensor]:
     #     """

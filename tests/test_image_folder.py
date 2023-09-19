@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from tests.base import *
-from src.datasets import ImageFolder
+from src.datasets import ImageFolderIterableDataset
 
 
 class TestImageFolder(TestBase):
@@ -29,14 +29,14 @@ class TestImageFolder(TestBase):
             self.assertEqual(expected_shape, image.shape[-3:])
 
     def test_100_single_worker(self):
-        ds = ImageFolder(self.DATA_PATH / "images")
+        ds = ImageFolderIterableDataset(self.DATA_PATH / "images")
         self.assert_data_loader(DataLoader(ds))
 
     def test_110_multi_worker(self):
-        ds = ImageFolder(self.DATA_PATH / "images")
+        ds = ImageFolderIterableDataset(self.DATA_PATH / "images")
         for i in range(1, 8):
             self.assert_data_loader(DataLoader(ds, num_workers=i))
 
     def test_200_recursive(self):
-        ds = ImageFolder(self.DATA_PATH / "images", recursive=True)
+        ds = ImageFolderIterableDataset(self.DATA_PATH / "images", recursive=True)
         self.assert_data_loader(DataLoader(ds), with_subfolder=True)

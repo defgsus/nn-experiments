@@ -61,11 +61,11 @@ class TestGreedyLibrary(TestBase):
         ])
         self.assertEqual(
             [0, 1, 2, 3, 4],
-            list(cl.best_entries_for(cl.entries))
+            list(cl.best_entries_for(cl.entries)[0])
         )
         self.assertEqual(
             [0, 4, 1, 2],
-            list(cl.best_entries_for(torch.Tensor([[-10], [10], [2.49], [2.51]])))
+            list(cl.best_entries_for(torch.Tensor([[-10], [10], [2.49], [2.51]]))[0])
         )
 
     def test_210_match_skip(self):
@@ -78,15 +78,15 @@ class TestGreedyLibrary(TestBase):
 
         self.assertEqual(
             [1, 1, 2, 3, 4],
-            list(cl.best_entries_for(cl.entries, skip_top_entries=True))
+            list(cl.best_entries_for(cl.entries, skip_top_entries=True)[0])
         )
         self.assertEqual(
             [1, 1, 2, 3, 4],
-            list(cl.best_entries_for(cl.entries, skip_top_entries=1))
+            list(cl.best_entries_for(cl.entries, skip_top_entries=1)[0])
         )
         self.assertEqual(
             [2, 2, 2, 3, 4],
-            list(cl.best_entries_for(cl.entries, skip_top_entries=2))
+            list(cl.best_entries_for(cl.entries, skip_top_entries=2)[0])
         )
 
     def test_300_ndim(self):
@@ -106,9 +106,13 @@ class TestGreedyLibrary(TestBase):
     @unittest.skipIf(not torch.cuda.is_available(), "no cuda available")
     def test_400_cuda(self):
         lib = GreedyLibrary(50, (3, 2), device="cuda")
+
+        # add all things here that can be done with GreedyLibrary
         lib.fit(torch.randn(100, *lib.shape))
         lib.fit(torch.randn(100, *lib.shape), zero_mean=True)
         lib.fit(torch.randn(100, *lib.shape), skip_top_entries=3)
+        lib.fit(torch.randn(100, *lib.shape), grow_if_distance_above=0)
+        lib.fit(torch.randn(100, *lib.shape), grow_if_distance_above=0, skip_top_entries=5)
         lib.convolve(torch.randn(4, 3, 2))
         lib.sorted_entry_indices("hits")
         lib.sorted_entry_indices("tsne")

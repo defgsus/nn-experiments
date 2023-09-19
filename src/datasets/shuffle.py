@@ -18,7 +18,7 @@ class IterableShuffle(IterableDataset):
 
     def __init__(
             self,
-            source_dataset: Dataset,
+            source_dataset: Union[Dataset, IterableDataset],
             shuffle: bool = True,
             max_shuffle: int = 100,
     ):
@@ -26,6 +26,9 @@ class IterableShuffle(IterableDataset):
         self.source_dataset = source_dataset
         self.shuffle = shuffle
         self.max_shuffle = max_shuffle
+
+    def __len__(self):
+        return len(self.source_dataset)
 
     def __iter__(self) -> Generator[Any, None, None]:
         items = []

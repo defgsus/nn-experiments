@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as VT
 
 from tests.base import *
-from src.datasets import ImageFolder, ImageAugmentation
+from src.datasets import ImageFolderIterableDataset, ImageAugmentation
 
 
 class TestImageAugmentation(TestBase):
@@ -25,7 +25,7 @@ class TestImageAugmentation(TestBase):
             self.assertEqual(expected_shape, image.shape[-3:])
 
     def test_100_single_worker(self):
-        ds = ImageFolder(self.DATA_PATH / "images")
+        ds = ImageFolderIterableDataset(self.DATA_PATH / "images")
         ds = ImageAugmentation(
             ds,
             augmentations=[
@@ -43,7 +43,7 @@ class TestImageAugmentation(TestBase):
         for num_workers in range(1, 8):
             # print("## workers:", num_workers, "#"*100)
 
-            ds = ImageFolder(self.DATA_PATH / "images")
+            ds = ImageFolderIterableDataset(self.DATA_PATH / "images")
             ds = ImageAugmentation(
                 ds,
                 augmentations=[

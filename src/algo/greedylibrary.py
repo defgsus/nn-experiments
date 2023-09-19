@@ -17,6 +17,8 @@ from src.util import to_torch_device
 class GreedyLibrary:
     """
     Collection of library patches of ndim=>1.
+
+    Learns by adjusting the best matching patch to match the input patch
     """
     def __init__(
             self,
@@ -45,7 +47,7 @@ class GreedyLibrary:
     @property
     def max_hits(self) -> int:
         """Maximum number of hits of all entries"""
-        return max(*self.hits) if self.hits else 0
+        return max(0, *self.hits) if self.hits else 0
 
     def copy(self) -> "GreedyLibrary":
         d = self.__class__(0, self.shape, device=self.device)
@@ -169,8 +171,11 @@ class GreedyLibrary:
             self,
             batch: torch.Tensor,
             lr: float = 1.,
+            metric: str = "l1",
             zero_mean: bool = False,
             skip_top_entries: Union[bool, int] = False,
+            grow_if_distance_above: Optional[float] = None,
+            max_entries: int = 1000,
     ) -> None:
         """
         Partially fit a batch of patches.
@@ -189,10 +194,23 @@ class GreedyLibrary:
                 batch_mean = batch_mean.mean(dim=i+1, keepdim=True)
             batch = batch - batch_mean
 
-        best_entry_ids = self.best_entries_for(batch, skip_top_entries=skip_top_entries)
-        #print(best_entry_ids.tolist())
+        best_entry_ids, distances = self.best_entries_for(
+            batch, skip_top_entries=skip_top_entries, metric=metric
+        )
+
         for i in range(batch.shape[0]):
             entry_id = best_entry_ids[i]
+
+            if grow_if_distance_above is not None:
+                if distances[i] > grow_if_distance_above and self.n_entries < max_entries:
+                    self.entries = torch.concat([
+                        self.entries,
+                        torch.randn(1, *self.shape).to(self.device) * 0.001 + self.entries.mean()
+                    ])
+                    self.hits.append(0)
+                    entry_id = self.n_entries
+                    self.n_entries += 1
+
             weight = 1. / (1 + self.hits[entry_id])
             self.entries[entry_id] += lr * weight * (batch[i] - self.entries[entry_id])
             self.hits[entry_id] += 1
@@ -213,14 +231,17 @@ class GreedyLibrary:
             self,
             batch: torch.Tensor,
             skip_top_entries: Union[bool, int] = False,
-    ) -> Union[List[int], torch.Tensor]:
+            metric: str = "l1",
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Returns the index of the best matching entry for each patch in the batch.
 
         :param batch: Tensor of N patches of shape matching the library's shape
         :param skip_top_entries: bool or int,
             Do not match the top N entries (1 for True), sorted by number of hits
-        :return: list or Tensor of int
+        :return: tuple of
+            - Tensor of int64: entry indices
+            - Tensor of float: distances
         """
         assert batch.ndim == len(self.shape) + 1, f"Got {batch.shape}"
         assert batch.shape[1:] == self.shape, f"Got {batch.shape}"
@@ -229,15 +250,23 @@ class GreedyLibrary:
         repeated_entries = self.entries.repeat(batch.shape[0], *ones)
         repeated_batch = batch.to(self.device).repeat(1, self.n_entries, *ones[1:]).reshape(-1, *self.shape)
 
-        dist = (repeated_entries - repeated_batch).abs()
+        if metric in ("l1", "mae"):
+            dist = (repeated_entries - repeated_batch).abs().flatten(1).sum(1)
+        elif metric in ("l2", "mse"):
+            dist = (repeated_entries - repeated_batch).pow(2).flatten(1).sum(1).sqrt()
+        elif metric.startswith("corr"):
+            dist = -(repeated_entries * repeated_batch).flatten(1).sum(1)
 
-        # TODO: correlation, about like: dist = (repeated_entries * repeated_batch).sum(??)
-
-        while dist.ndim > 1:
-            dist = dist.sum(1)
         dist = dist.reshape(batch.shape[0], -1)
+
         if not skip_top_entries:
-            return torch.argmin(dist, 1)
+            indices = torch.argmin(dist, 1)
+            return (
+                indices,
+                dist.flatten()[
+                    indices + torch.linspace(0, indices.shape[0] - 1, indices.shape[0]).to(torch.int64).to(indices.device) * self.n_entries
+                ]
+            )
 
         skip_top_entries = int(skip_top_entries)
         sorted_indices = torch.argsort(dist, 1)
@@ -247,9 +276,15 @@ class GreedyLibrary:
             idx = 0
             while idx + 1 < len(indices) and entry_ranks[indices[idx]] < skip_top_entries:
                 idx += 1
-            #print(idx)
             best_entries.append(indices[idx])
-        return best_entries
+
+        indices = torch.Tensor(best_entries).to(torch.int64)
+        return (
+            indices,
+            dist.flatten()[
+                indices + torch.linspace(0, indices.shape[0] - 1, indices.shape[0]).to(torch.int64).to(indices.device) * self.n_entries
+            ]
+        )
 
     def drop_unused(self, inplace: bool = False) -> "GreedyLibrary":
         return self.drop_entries(hits_lt=1, inplace=inplace)

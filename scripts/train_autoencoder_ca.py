@@ -20,7 +20,7 @@ from torchvision.utils import make_grid
 from src import console
 from src.train.train_autoencoder import TrainAutoencoder
 from src.models.cnn import *
-from src.datasets import ImageFolder, ImageAugmentation, IterableShuffle, TotalCADataset
+from src.datasets import ImageFolderIterableDataset, ImageAugmentation, IterableShuffle, TotalCADataset
 from src.util.image import get_images_from_iterable
 
 
