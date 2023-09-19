@@ -1,4 +1,4 @@
-from typing import Union, Generator, Optional
+from typing import Union, Generator, Optional, Tuple
 
 import torch
 from torch.utils.data import IterableDataset, Dataset
@@ -18,21 +18,24 @@ class IterableImageFilterDataset(IterableDataset):
         self.filter = filter
         self.max_size = max_size
 
-    def __iter__(self) -> Generator[torch.Tensor, None, None]:
+    def __iter__(self) -> Generator[Union[torch.Tensor, Tuple[torch.Tensor, ...]], None, None]:
         count = 0
-        for image in self._iter_dataset():
+        for data in self.dataset:
+
+            is_tuple = isinstance(data, (tuple, list))
+            if is_tuple:
+                image = data[0]
+            else:
+                image = data
 
             if self.filter(image):
                 if self.max_size is None or count < self.max_size:
-                    yield image
+                    if is_tuple:
+                        yield image, *data[1:]
+                    else:
+                        yield image
+
                     count += 1
 
                 else:
                     break
-
-    def _iter_dataset(self) -> Generator[torch.Tensor, None, None]:
-        if isinstance(self.dataset, Dataset):
-            for i in range(len(self.dataset)):
-                yield self.dataset[i]
-        else:
-            yield from self.dataset

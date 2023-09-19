@@ -24,7 +24,7 @@ def iter_image_patches(
     None, None
 ]:
     """
-    Iterate through small patches of an image
+    Iterate through patches of an image
 
     :param image: Tensor of shape [C, H, W]
     :param shape: one or two ints defining the output shape
@@ -33,7 +33,6 @@ def iter_image_patches(
     :param fill: int/float padding value
     :param with_pos: bool, yield patch positions as well
     :param batch_size: optional int, if defined, N patches will be batched together
-    :return:
     """
     if image.ndim != 3:
         raise ValueError(f"image.ndim != 3 not supported, got {image.ndim}")
