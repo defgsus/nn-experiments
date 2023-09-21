@@ -55,18 +55,25 @@ def set_image_dtype(image: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:
 def set_image_channels(image: torch.Tensor, channels: int) -> torch.Tensor:
     assert channels in (1, 3), f"Got {channels}"
 
-    if len(image.shape) == 2:
+    if image.ndim == 2:
         image = image.unsqueeze(0)
 
     if image.shape[-3] != channels:
         if image.shape[-3] == 1:
-            image = image.repeat(3, 1, 1)
+            image = image.repeat(*(1 for _ in range(image.ndim - 3)), 3, 1, 1)
+
         elif image.shape[-3] == 2:
-            image = image[0, :, :].repeat(3, 1, 1)
+            if channels == 1:
+                image = image[..., :1, :, :]
+            else:
+                image = image[..., :1, :, :].repeat(*(1 for _ in range(image.ndim - 3)), 3, 1, 1)
+
         elif image.shape[-3] == 3:
-            image = image.mean(axis=0, keepdim=True)
+            image = VF.rgb_to_grayscale(image, num_output_channels=1)
+
         elif image.shape[-3] >= 4:
             image = image[..., :3, :, :]
+
         else:
             raise NotImplementedError(
                 f"Can't convert image.shape={image.shape} to channels={channels}"
@@ -75,13 +82,13 @@ def set_image_channels(image: torch.Tensor, channels: int) -> torch.Tensor:
     return image
 
 
-def signed_to_image(data: torch.Tensor) -> torch.Tensor:
+def signed_to_image(data: torch.Tensor, normalize: bool = True) -> torch.Tensor:
     if data.ndim == 2:
         data = data.unsqueeze(0)
     elif data.ndim == 3:
         data = data[:1]
     else:
-        raise NotImplementedError(f"Can't make image of data.shape={data.shape}")
+        raise NotImplementedError(f"Can't make signed image of data.shape={data.shape}")
 
     data_neg = (data < 0).squeeze(0)
     data = data.repeat(3, 1, 1)
@@ -89,9 +96,10 @@ def signed_to_image(data: torch.Tensor) -> torch.Tensor:
     data[0, torch.logical_not(data_neg)] = 0
     image = torch.abs(data)
 
-    max_value = image.max()
-    if max_value:
-        image /= max_value
+    if normalize:
+        max_value = image.max()
+        if max_value:
+            image /= max_value
     return image
 
 

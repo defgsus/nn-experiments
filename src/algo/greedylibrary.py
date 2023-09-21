@@ -12,6 +12,7 @@ from torchvision.utils import make_grid
 from IPython.display import display
 
 from src.util import to_torch_device
+from src.util.image import signed_to_image
 
 
 class GreedyLibrary:
@@ -176,7 +177,7 @@ class GreedyLibrary:
             skip_top_entries: Union[bool, int] = False,
             grow_if_distance_above: Optional[float] = None,
             max_entries: int = 1000,
-    ) -> None:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Partially fit a batch of patches.
 
@@ -185,6 +186,9 @@ class GreedyLibrary:
         :param zero_mean: True to subtract the mean from each patch in the batch
         :param skip_top_entries: bool or int,
             Do not match the top N entries (1 for True), sorted by number of hits
+        :return: tuple of
+            - Tensor of int64: entry indices
+            - Tensor of float: distances
         """
         batch = batch.to(self.device)
 
@@ -214,6 +218,8 @@ class GreedyLibrary:
             weight = 1. / (1 + self.hits[entry_id])
             self.entries[entry_id] += lr * weight * (batch[i] - self.entries[entry_id])
             self.hits[entry_id] += 1
+
+        return best_entry_ids, distances
 
     def convolve(
             self,
@@ -326,6 +332,7 @@ class GreedyLibrary:
             min_size: int = 300,
             with_hits: bool = True,
             sort_by: Optional[str] = None,
+            signed: bool = False,
     ) -> PIL.Image.Image:
         if len(self.shape) == 1:
             entries = self.entries.reshape(-1, 1, 1, *self.shape)
@@ -335,11 +342,20 @@ class GreedyLibrary:
             entries = self.entries
         else:
             raise RuntimeError(f"Can't plot entries with shape {self.shape} (ndim>3)")
+
         if entries.shape[0]:
 
-            e_min, e_max = entries.min(), entries.max()
-            if e_min != e_max:
-                entries = (entries - e_min) / (e_max - e_min)
+            if not signed:
+                # normalize
+                e_min, e_max = entries.min(), entries.max()
+                if e_min != e_max:
+                    entries = (entries - e_min) / (e_max - e_min)
+
+            else:
+                entries = torch.concat([signed_to_image(e, normalize=False).unsqueeze(0) for e in entries])
+                max_value = entries.max()
+                if max_value:
+                    entries /= max_value
 
             if with_hits:
                 max_hits = max(1, self.max_hits)
