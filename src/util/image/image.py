@@ -53,7 +53,8 @@ def set_image_dtype(image: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:
 
 
 def set_image_channels(image: torch.Tensor, channels: int) -> torch.Tensor:
-    assert channels in (1, 3), f"Got {channels}"
+    if channels not in (1, 3):
+        raise NotImplementedError(f"Conversion to {channels} channels not supported")
 
     if image.ndim == 2:
         image = image.unsqueeze(0)
