@@ -2,7 +2,7 @@ import math
 import argparse
 import random
 from pathlib import Path
-from typing import List, Iterable, Tuple, Optional, Callable
+from typing import List, Iterable, Tuple, Optional, Callable, Union
 
 import torchvision.models
 from tqdm import tqdm
@@ -166,7 +166,7 @@ class VariationalAutoencoderConv(VariationalAutoencoder):
             latent_dims: int,
             kernel_size: int = 15,
             channels: Iterable[int] = (16, 32),
-            encoder_dims: int = 1024,
+            encoder_dims: Optional[int] = None,
     ):
         channels = [shape[0], *channels]
         encoder = Conv2dBlock(
@@ -178,8 +178,12 @@ class VariationalAutoencoderConv(VariationalAutoencoder):
         encoder = nn.Sequential(
             encoder,
             nn.Flatten(),
-            nn.Linear(math.prod(encoded_shape), encoder_dims)
         )
+        if encoder_dims is None:
+            encoder_dims = math.prod(encoded_shape)
+        else:
+            nn.Linear(math.prod(encoded_shape), encoder_dims)
+
         encoder = VariationalEncoder(
             encoder=encoder,
             encoder_dims=encoder_dims,
@@ -204,12 +208,14 @@ class VariationalAutoencoderConv(VariationalAutoencoder):
         )
 
 
+
 def main():
     parser = argparse.ArgumentParser()
     TrainAutoencoder.add_parser_args(parser)
     kwargs = vars(parser.parse_args())
 
-    if 1:
+    test_ds = None
+    if 0:
         SHAPE = (3, 64, 64)
         #ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{SHAPE[-2]}x{SHAPE[-1]}.pt"))
         ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{128}x{128}.pt"))
@@ -223,22 +229,21 @@ def main():
             num_repeat=1,
         )
     else:
-        SHAPE = (1, 64, 64)
-        ds = TensorDataset(torch.load(f"./datasets/pattern-{SHAPE[-3]}x{SHAPE[-2]}x{SHAPE[-1]}-uint.pt")[:10])
-        ds = TransformDataset(
-            ds,
-            dtype=torch.float, multiply=1. / 255.,
-            num_repeat=2000,
+        SHAPE = (1, 32, 32)
+        ds = make_image_patch_dataset(shape=SHAPE, max_shuffle=100_000, path="~/Pictures/photos", recursive=True)
+        test_ds = make_image_patch_dataset(
+            shape=SHAPE, max_shuffle=100_000, path=Path("~/Pictures/diffusion", recursive=True).expanduser(),
+            max_size=2000,
         )
-        assert ds[0][0].shape[:3] == torch.Size(SHAPE), ds[0][0].shape
+        assert next(iter(ds))[0].shape[-3:] == torch.Size(SHAPE), next(iter(ds))[0].shape
 
-    train_ds, test_ds = torch.utils.data.random_split(ds, [0.99, 0.01], torch.Generator().manual_seed(42))
-
-    #train_ds = FontDataset(shape=SHAPE)
-    #test_ds = TensorDataset(torch.load("./datasets/fonts-32x32.pt")[:500])
+    if test_ds is None:
+        train_ds, test_ds = torch.utils.data.random_split(ds, [0.99, 0.01], torch.Generator().manual_seed(42))
+    else:
+        train_ds = ds
 
     # model = VariationalAutoencoderAlexMLP(SHAPE, 512, 128)  # not good in reproduction
-    model = VariationalAutoencoderConv(SHAPE, 128, channels=[32, 64, 128])
+    model = VariationalAutoencoderConv(SHAPE, channels=[16, 24, 32], kernel_size=7, latent_dims=128)
     #model = VariationalAutoencoderMLP(SHAPE, 10)
     print(model)
 
@@ -247,8 +252,8 @@ def main():
         model=model,
         #min_loss=0.001,
         num_epochs_between_validations=1,
-        #num_inputs_between_validations=10_000,
-        data_loader=DataLoader(train_ds, batch_size=64, shuffle=True),
+        num_inputs_between_validations=100_000 if isinstance(train_ds, IterableDataset) else None,
+        data_loader=DataLoader(train_ds, batch_size=64, shuffle=not isinstance(train_ds, IterableDataset)),
         validation_loader=DataLoader(test_ds, batch_size=64),
         freeze_validation_set=True,
         optimizers=[

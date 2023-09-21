@@ -36,7 +36,7 @@ class VariationalEncoder(nn.Module):
         self.last_mu: Optional[torch.Tensor] = None
         self.last_sigma: Optional[torch.Tensor] = None
 
-    def forward(self, x):
+    def forward(self, x, random: bool = True):
         assert isinstance(x, torch.Tensor), f"Expected Tensor, got '{type(x).__name__}'"
         
         # move sampler to GPU
@@ -61,7 +61,10 @@ class VariationalEncoder(nn.Module):
         self.last_mu = mu = self.linear_mu(x)
         self.last_sigma = sigma = torch.exp(self.linear_sigma(x))
 
-        z = mu + sigma * self.distribution.sample(mu.shape)
+        if random:
+            z = mu + sigma * self.distribution.sample(mu.shape)
+        else:
+            z = mu
 
         return z
 

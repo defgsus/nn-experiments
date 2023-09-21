@@ -26,7 +26,7 @@ class ImageFolderIterableDataset(IterableDataset):
             force_dtype: Optional[torch.dtype] = torch.float32,
     ):
         super().__init__()
-        self.root = Path(root)
+        self.root = Path(root).expanduser()
         self.recursive = recursive
         self.return_type = return_type
         self.force_channels = force_channels

@@ -60,6 +60,9 @@ def set_image_channels(image: torch.Tensor, channels: int) -> torch.Tensor:
         image = image.unsqueeze(0)
 
     if image.shape[-3] != channels:
+        if image.shape[-3] > 3:
+            image = image[..., :3, :, :]
+
         if image.shape[-3] == 1:
             image = image.repeat(*(1 for _ in range(image.ndim - 3)), 3, 1, 1)
 
@@ -71,9 +74,6 @@ def set_image_channels(image: torch.Tensor, channels: int) -> torch.Tensor:
 
         elif image.shape[-3] == 3:
             image = VF.rgb_to_grayscale(image, num_output_channels=1)
-
-        elif image.shape[-3] >= 4:
-            image = image[..., :3, :, :]
 
         else:
             raise NotImplementedError(

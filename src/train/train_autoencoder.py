@@ -68,3 +68,5 @@ class TrainAutoencoder(Trainer):
         image = make_grid(grid_images, nrow=8)
         self.log_image("validation_reconstruction", image)
 
+        features = self.model.encoder(images)
+        self.log_image("validation_features", signed_to_image(features))
