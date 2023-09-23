@@ -65,20 +65,20 @@ def iter_image_patches(
     patch_batch = []
     pos_batch = []
     height, width = image.shape[-2:]
-    for y in range(0, height - shape[0], stride[0]):
-        for x in range(0, width - shape[1], stride[1]):
+    for y in range(0, height - shape[0] + 1, stride[0]):
+        for x in range(0, width - shape[1] + 1, stride[1]):
             patch = image[:, y: y + shape[0], x: x + shape[1]]
 
             if batch_size is None:
                 if with_pos:
-                    yield patch, torch.Tensor([y, x])
+                    yield patch, torch.Tensor([y, x]).to(torch.int64)
                 else:
                     yield patch
 
             else:
                 patch_batch.append(patch.unsqueeze(0))
                 if with_pos:
-                    pos_batch.append(torch.Tensor([[y, x]]))
+                    pos_batch.append(torch.Tensor([[y, x]]).to(torch.int64))
 
                 if len(patch_batch) >= batch_size:
                     if with_pos:

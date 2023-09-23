@@ -178,6 +178,7 @@ class VariationalAutoencoderConv(VariationalAutoencoder):
         encoder = nn.Sequential(
             encoder,
             nn.Flatten(),
+            nn.Dropout(.5),
         )
         if encoder_dims is None:
             encoder_dims = math.prod(encoded_shape)
@@ -230,9 +231,26 @@ def main():
         )
     else:
         SHAPE = (1, 32, 32)
-        ds = make_image_patch_dataset(shape=SHAPE, max_shuffle=100_000, path="~/Pictures/photos", recursive=True)
+        def _stride(shape: Tuple[int, int]):
+            # print(shape)
+            size = min(shape)
+            if size <= 512:
+                return 5
+            return SHAPE[-2:]
+
+        ds = make_image_patch_dataset(
+            path="~/Pictures/photos", recursive=True,
+            shape=SHAPE,
+            scales=[1./12., 1./6, 1./3, 1.], stride=_stride,
+            interleave_images=20, image_shuffle=30,
+            # transforms=[lambda x: VF.resize(x, tuple(s // 6 for s in x.shape[-2:]))], stride=5,
+        )
         test_ds = make_image_patch_dataset(
-            shape=SHAPE, max_shuffle=100_000, path=Path("~/Pictures/diffusion", recursive=True).expanduser(),
+            path="~/Pictures/diffusion", recursive=True,
+            shape=SHAPE,
+            scales=[1./12., 1./6, 1./3, 1.], stride=_stride,
+            interleave_images=10, image_shuffle=10,
+            #transforms=[lambda x: VF.resize(x, tuple(s // 6 for s in x.shape[-2:]))], stride=5,
             max_size=2000,
         )
         assert next(iter(ds))[0].shape[-3:] == torch.Size(SHAPE), next(iter(ds))[0].shape
@@ -243,7 +261,7 @@ def main():
         train_ds = ds
 
     # model = VariationalAutoencoderAlexMLP(SHAPE, 512, 128)  # not good in reproduction
-    model = VariationalAutoencoderConv(SHAPE, channels=[16, 24, 32], kernel_size=7, latent_dims=128)
+    model = VariationalAutoencoderConv(SHAPE, channels=[16, 24, 32], kernel_size=5, latent_dims=128)
     #model = VariationalAutoencoderMLP(SHAPE, 10)
     print(model)
 
@@ -253,11 +271,12 @@ def main():
         #min_loss=0.001,
         num_epochs_between_validations=1,
         num_inputs_between_validations=100_000 if isinstance(train_ds, IterableDataset) else None,
-        data_loader=DataLoader(train_ds, batch_size=64, shuffle=not isinstance(train_ds, IterableDataset)),
+        data_loader=DataLoader(train_ds, batch_size=256, shuffle=not isinstance(train_ds, IterableDataset)),
         validation_loader=DataLoader(test_ds, batch_size=64),
         freeze_validation_set=True,
+        training_noise=.2,
         optimizers=[
-            torch.optim.Adam(model.parameters(), lr=.0001),#, weight_decay=0.00001),
+            torch.optim.Adam(model.parameters(), lr=.0001, weight_decay=0.000001),
             #torch.optim.Adadelta(model.parameters(), lr=.1),
         ],
         hparams={

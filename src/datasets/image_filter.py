@@ -6,7 +6,7 @@ from torch.utils.data import IterableDataset, Dataset
 from src.util.image import ImageFilter
 
 
-class IterableImageFilterDataset(IterableDataset):
+class ImageFilterIterableDataset(IterableDataset):
 
     def __init__(
             self,

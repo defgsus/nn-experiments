@@ -95,7 +95,7 @@ class VariationalAutoencoder(nn.Module):
             decoder: nn.Module,
             reproduction_loss: Union[str, Callable, nn.Module] = "l2",
             reconstruction_loss_weight: float = 1.,
-            kl_loss_weight: float = 1.,
+            kl_loss_weight: float = 10.,
     ):
         super().__init__()
         self.encoder = encoder

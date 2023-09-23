@@ -5,6 +5,7 @@
 *.npy
 *.pt
 *.df
+db/
 notebooks/
 checkpoints/
 runs/

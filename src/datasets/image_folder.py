@@ -21,16 +21,18 @@ class ImageFolderIterableDataset(IterableDataset):
             self,
             root: Union[str, Path],
             recursive: bool = False,
-            return_type: str = "tensor",
+            max_images: Optional[int] = None,
             force_channels: Optional[int] = None,
             force_dtype: Optional[torch.dtype] = torch.float32,
+            with_filename: bool = False,
     ):
         super().__init__()
         self.root = Path(root).expanduser()
         self.recursive = recursive
-        self.return_type = return_type
+        self.max_images = max_images
         self.force_channels = force_channels
         self.force_dtype = force_dtype
+        self.with_filename = with_filename
         self._filenames = None
 
     def __len__(self):
@@ -39,7 +41,10 @@ class ImageFolderIterableDataset(IterableDataset):
         files that can not be loaded by PIL will be skipped
         """
         self._get_filenames()
-        return len(self._filenames)
+        size = len(self._filenames)
+        if self.max_images is not None:
+            size = min(size, self.max_images)
+        return size
 
     # def __getitem__(self, index) -> Union[None, PIL.Image.Image, torch.Tensor]:
     #     """
@@ -49,7 +54,7 @@ class ImageFolderIterableDataset(IterableDataset):
     #     filename = self._filenames[index]
     #     return self._load_filename(filename)
 
-    def __iter__(self) -> Generator[Union[PIL.Image.Image, torch.Tensor], None, None]:
+    def __iter__(self) -> Generator[Union[torch.Tensor, Tuple[torch.Tensor, str]], None, None]:
         self._get_filenames()
 
         worker_info = torch.utils.data.get_worker_info()
@@ -59,10 +64,18 @@ class ImageFolderIterableDataset(IterableDataset):
             filenames = self._filenames[worker_info.id::worker_info.num_workers]
 
         # print("YIELDING", len(filenames), worker_info)
+        count = 0
         for filename in filenames:
             image = self._load_filename(filename)
             if image is not None:
-                yield image
+                if self.with_filename:
+                    yield image, filename
+                else:
+                    yield image
+
+                count += 1
+                if self.max_images is not None and count >= self.max_images:
+                    break
 
     def _load_filename(self, filename: str) -> Union[None, PIL.Image.Image, torch.Tensor]:
         try:
@@ -71,19 +84,15 @@ class ImageFolderIterableDataset(IterableDataset):
             warnings.warn(f"Error reading image '{filename}': {type(e).__name__}: {e}")
             return None
 
-        if self.return_type == "tensor":
-            image = pil_to_tensor(image)
+        image = pil_to_tensor(image)
 
-            if self.force_dtype is not None:
-                image = set_image_dtype(image, self.force_dtype)
+        if self.force_dtype is not None:
+            image = set_image_dtype(image, self.force_dtype)
 
-            if self.force_channels is not None:
-                image = set_image_channels(image, self.force_channels)
+        if self.force_channels is not None:
+            image = set_image_channels(image, self.force_channels)
 
-            return image
-
-        else:
-            return image
+        return image
 
     def _get_filenames(self):
         if self._filenames is None:

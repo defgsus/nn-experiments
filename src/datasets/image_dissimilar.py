@@ -140,13 +140,23 @@ class DissimilarImageIterableDataset(IterableDataset):
 
     def _encode(self, image_batch: torch.Tensor) -> torch.Tensor:
         if isinstance(self.encoder, str):
+
             if self.encoder == "flatten":
                 feature_batch = image_batch.flatten(1)
+
             elif self.encoder.startswith("clip"):
                 from src.models.clip import ClipSingleton
                 feature_batch = ClipSingleton.encode_image(image_batch)
+
+            elif self.encoder.startswith("encoderconv:"):
+                from src.models.encoder import EncoderConv2d
+                if not hasattr(self, "_encoderconv"):
+                    self._encoderconv = EncoderConv2d.from_torch(self.encoder.split(":", 1)[-1])
+                feature_batch = self._encoderconv.encode_image(image_batch)
+
             else:
                 raise ValueError(f"Unsupported encoder '{self.encoder}', expected 'flatten', 'clip'")
+
         elif callable(self.encoder):
             feature_batch = self.encoder(image_batch)
         else:
