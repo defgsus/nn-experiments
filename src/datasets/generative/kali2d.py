@@ -11,6 +11,15 @@ import torchvision.transforms.functional as VF
 from src.algo import Space2d, kali_2d
 from src.util.image import ImageFilter
 
+"""
+nice parameters:
+
+high-tech cave:
+increasing the iterations while zooming in will probably look amazing
+{'dtype': torch.float32, 'shape': (3, 128, 128), 'aa': 2, 'offset': tensor([1., 1., 1.]), 'scale': tensor(0.0655), 'param': tensor([0.5423, 0.7953, 0.8081]), 'accumulate': 'submin', 'iterations': 19, 'out_weights': tensor([[ 0.5363,  0.7098,  0.0898],
+        [ 0.1441,  0.7822,  0.3769],
+        [ 0.1168, -0.0425, -0.1233]])}
+"""
 
 class Kali2dDataset(Dataset):
     accumulation_choices = ["none", "mean", "max", "min", "submin", "alternate"]
@@ -29,6 +38,7 @@ class Kali2dDataset(Dataset):
             accumulation_modes: Optional[Iterable[str]] = None,
             dtype: torch.dtype = torch.float,
             aa: int = 0,
+            with_parameters: bool = False,
     ):
         super().__init__()
         self.shape = shape
@@ -43,6 +53,7 @@ class Kali2dDataset(Dataset):
         self.accumulation_modes = self.accumulation_choices if accumulation_modes is None else list(accumulation_modes)
         self.dtype = dtype
         self.aa = aa
+        self.with_parameters = with_parameters
 
     def __len__(self) -> int:
         return self._size
@@ -50,29 +61,46 @@ class Kali2dDataset(Dataset):
     def __getitem__(self, idx) -> torch.Tensor:
         rng = torch.Generator().manual_seed(idx ^ self.seed)
 
-        space = Space2d(
+        parameters = dict(
+            dtype=self.dtype,
             shape=self.shape,
+            aa=self.aa,
             offset=torch.rand(self.shape[0], dtype=self.dtype, generator=rng) * (self.min_offset - self.max_offset) + self.min_offset,
             scale=torch.pow(torch.rand(1, dtype=self.dtype, generator=rng)[0], 3.) * (self.max_scale - self.min_scale) + self.min_scale,
-            dtype=self.dtype,
+            param=torch.rand(self.shape[0], dtype=self.dtype, generator=rng) * 1.2,
+            accumulate=self.accumulation_modes[torch.randint(0, len(self.accumulation_modes), (1,), generator=rng)[0]],
         )
-
-        param=torch.rand(self.shape[0], dtype=self.dtype, generator=rng) * 1.2
-        accumulate = self.accumulation_modes[torch.randint(0, len(self.accumulation_modes), (1,), generator=rng)[0]]
-        iterations=max(self.min_iterations, min(self.max_iterations,
-                                                int(torch.randint(self.min_iterations, self.max_iterations, (1,), generator=rng)[0]) + int(1. / space.scale)
-                                                ))
-        out_weights = (
+        parameters.update(dict(
+            iterations=max(self.min_iterations, min(self.max_iterations,
+                int(torch.randint(self.min_iterations, self.max_iterations, (1,), generator=rng)[0]) + int(1. / parameters["scale"])
+            )),
+            out_weights = (
                 torch.rand((self.shape[0], self.shape[0]), dtype=self.dtype, generator=rng) / math.sqrt(self.shape[0])
                 + torch.randn((self.shape[0], self.shape[0]), dtype=self.dtype, generator=rng) * .2
+            )
+        ))
+
+        image = self.render(parameters)
+        if self.with_parameters:
+            return image, parameters
+        else:
+            return image
+
+    @classmethod
+    def render(cls, parameters: dict) -> torch.Tensor:
+        space = Space2d(
+            shape=parameters["shape"],
+            offset=parameters["offset"],
+            scale=parameters["scale"],
+            dtype=parameters["dtype"],
         )
         return kali_2d(
             space=space,
-            param=param,
-            iterations=iterations,
-            accumulate=accumulate,
-            out_weights=out_weights,
-            aa=self.aa,
+            param=parameters["param"],
+            iterations=parameters["iterations"],
+            accumulate=parameters["accumulate"],
+            out_weights=parameters["out_weights"],
+            aa=parameters["aa"],
         )
 
 
@@ -95,11 +123,13 @@ class Kali2dFilteredIterableDataset(IterableDataset):
             filter: Optional[ImageFilter] = None,
             filter_shape: Tuple[int, int] = (32, 32),
             filter_aa: int = 0,
+            with_parameters: bool = False,
     ):
         super().__init__()
+        self.size = size
         kwargs = dict(
             shape=shape,
-            size=size,
+            size=int(1e10),
             seed=seed,
             min_scale=min_scale,
             max_scale=max_scale,
@@ -110,6 +140,7 @@ class Kali2dFilteredIterableDataset(IterableDataset):
             accumulation_modes=accumulation_modes,
             dtype=dtype,
             aa=aa,
+            with_parameters=with_parameters,
         )
         self.filter = filter
         self.filter_shape = filter_shape
@@ -122,9 +153,11 @@ class Kali2dFilteredIterableDataset(IterableDataset):
                 **kwargs,
                 "shape": (self.target_dataset.shape[0], *self.filter_shape),
                 "aa": self.filter_aa,
+                "with_parameters": False,
             })
 
     def __iter__(self) -> Generator[torch.Tensor, None, None]:
+        count = 0
         for i in range(len(self.target_dataset)):
 
             if self.test_dataset is not None:
@@ -133,3 +166,7 @@ class Kali2dFilteredIterableDataset(IterableDataset):
                     continue
 
             yield self.target_dataset[i]
+
+            count += 1
+            if count >= self.size:
+                break
