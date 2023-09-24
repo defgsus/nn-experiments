@@ -16,6 +16,7 @@ import PIL.Image
 from tqdm import tqdm
 
 from src.util.image import *
+from src.models.encoder import EncoderConv2d
 
 
 class PatchDB:
@@ -30,6 +31,7 @@ class PatchDB:
             limit: Optional[int] = None,
             patch_shape: Optional[Tuple[int, int, int]] = None,
             interpolation: VF.InterpolationMode = VF.InterpolationMode.BILINEAR,
+            encoder: Optional[EncoderConv2d] = None,
     ):
         """
         Constructs a database instance around `filename`
@@ -48,7 +50,9 @@ class PatchDB:
         :param offset: optional int, skip first `offset` entries when reading
         :param limit: optional int, read at most `limit` entries
         :param patch_shape, optional CxHxW shape of desired patches,
-            returned by `PatchDBIndex.Patch.patch`.
+            returned by `PatchDBIndex.Patch.patch`. Default is None or the `encoder.shape´.
+        :param encoder: optional encoder to use for image encoding,
+            should match the encoder used for creating the embeddings
         :param interpolation: torchvision interpolation mode used when resizing patches to `patch_shape`.
         """
         self.filename = Path(filename)
@@ -57,8 +61,14 @@ class PatchDB:
         self._writeable = bool(writeable)
         self._offset = offset
         self._limit = limit
-        self.patch_shape = tuple(patch_shape) if patch_shape is not None else None
+        if patch_shape is not None:
+            self.patch_shape = tuple(patch_shape)
+        else:
+            self.patch_shape = None if encoder is None else encoder.shape
+
         self.interpolation = interpolation
+        self.encoder = encoder
+
         self._fp = None
         self._image_cache: Dict[Path, Dict] = {}
         self._cache_counter: int = 0
@@ -300,16 +310,36 @@ class PatchDBIndex:
 
     def similar_patches(
             self,
-            embedding: Iterable[float],
+            embedding_or_image: Union[Iterable[float], np.ndarray, torch.Tensor],
             count: int = 1,
             with_distance: bool = False,
     ) -> List[List[Union[Patch, Tuple[Patch, float]]]]:
 
-        embedding = self.db._to_numpy(embedding)
-        if embedding.ndim == 1:
-            embedding = embedding.reshape(1, -1)
+        embedding_or_image = self.db._to_numpy(embedding_or_image)
+        if embedding_or_image.ndim == 1:
+            embedding = embedding_or_image.reshape(1, -1)
+        elif embedding_or_image.ndim == 2:
+            embedding = embedding_or_image
+        elif embedding_or_image.ndim in (3, 4):
+            if embedding_or_image.ndim == 3:
+                image_batch = embedding_or_image.reshape(1, *embedding_or_image.shape)
+            else:
+                image_batch = embedding_or_image
 
+            if self.db.encoder is None:
+                raise ValueError(
+                    "PatchDBIndex.similar_patches() was passed an image vector but no PatchDB.encoder is defined"
+                )
+            else:
+                with torch.no_grad():
+                    embedding = self.db.encoder.encode_image(torch.Tensor(image_batch))
+                    embedding = self.db._to_numpy(embedding / embedding.norm())
+        else:
+            raise ValueError(
+                f"PatchDBIndex.similar_patches() expects 1-4 dim vector, got {embedding_or_image.ndim}"
+            )
         self._init()
+
         distances_batch, indices_batch = self._faiss.search(embedding, count)
 
         if with_distance:
