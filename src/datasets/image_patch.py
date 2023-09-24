@@ -174,7 +174,7 @@ def make_image_patch_dataset(
         shape: Tuple[int, int, int],
         path: Union[str, Path],
         recursive: bool = False,
-        scales: Optional[Iterable[float]] = None,
+        scales: Union[Iterable[float], Callable[[Tuple[int, int]], Iterable[float]]] = None,
         transforms: Optional[Iterable[Callable]] = None,
         stride: Union[None, int, Tuple[int, int], Callable[[Tuple[int, int]], Union[int, Iterable[int]]]] = None,
         padding: Union[int, Iterable[int]] = 0,
@@ -201,7 +201,7 @@ def make_image_patch_dataset(
         max_images=max_images,
     )
 
-    if scales:
+    if scales is not None:
         ds_images = ImageScaleIterableDataset(
             ds_images, scales=scales, with_scale=with_scale,
         )

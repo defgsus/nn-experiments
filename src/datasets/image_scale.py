@@ -11,7 +11,7 @@ class ImageScaleIterableDataset(IterableDataset):
     def __init__(
             self,
             dataset: Union[Dataset, IterableDataset],
-            scales: Iterable[float],
+            scales: Union[Iterable[float], Callable[[Tuple[int, int]], Iterable[float]]],
             min_size: Optional[int] = None,
             max_size: Optional[int] = None,
             interpolation: VT.InterpolationMode = VT.InterpolationMode.BILINEAR,
@@ -19,7 +19,7 @@ class ImageScaleIterableDataset(IterableDataset):
     ):
         super().__init__()
         self.dataset = dataset
-        self.scales = tuple(scales)
+        self.scales = scales if callable(scales) else tuple(scales)
         self.min_size = min_size
         self.max_size = max_size
         self.interpolation = interpolation
@@ -33,7 +33,11 @@ class ImageScaleIterableDataset(IterableDataset):
             else:
                 image = data
 
-            for scale in self.scales:
+            scales = self.scales
+            if callable(scales):
+                scales = scales(image.shape[-2:])
+
+            for scale in scales:
 
                 scaled_shape = tuple(int(s * scale) for s in image.shape[-2:])
 
