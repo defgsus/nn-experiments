@@ -184,9 +184,11 @@ def make_image_patch_dataset(
         patch_shuffle: int = 0,
         max_size: Optional[int] = None,
         max_images: Optional[int] = None,
+        max_image_bytes: Optional[int] = None,
         with_pos: bool = False,
         with_scale: bool = False,
         with_filename: bool = False,
+        verbose_image: bool = False,
 ):
     from src.datasets import (
         TransformIterableDataset, ImageFolderIterableDataset, IterableShuffle,
@@ -199,6 +201,8 @@ def make_image_patch_dataset(
         recursive=recursive,
         with_filename=with_filename,
         max_images=max_images,
+        max_bytes=max_image_bytes,
+        verbose=verbose_image,
     )
 
     if scales is not None:

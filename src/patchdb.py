@@ -155,7 +155,7 @@ class PatchDB:
             "embedding": base64.b64encode(embedding.data).decode("ascii"),
         })
 
-    def iter_patches(self) -> Generator[Dict, None, None]:
+    def iter_patches(self, desc: Optional[str] = None) -> Generator[Dict, None, None]:
         """
         Yields all stored patches (limited by `offset` and `limit`).
 
@@ -163,11 +163,12 @@ class PatchDB:
 
         Use `PatchDB.index()` for loading all patches to memory.
 
+        :param desc: optional str for `tqdm` progress bar, if `verbose` is True.
         :return: Generator of dict
         """
         iterable = self._read_lines()
         if self.verbose:
-            iterable = tqdm(iterable, desc="reading PatchDB")
+            iterable = tqdm(iterable, desc=desc or "reading PatchDB")
         for data in iterable:
             yield {
                 **data,

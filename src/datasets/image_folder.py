@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 import glob
 import warnings
@@ -22,17 +23,21 @@ class ImageFolderIterableDataset(IterableDataset):
             root: Union[str, Path],
             recursive: bool = False,
             max_images: Optional[int] = None,
+            max_bytes: Optional[int] = None,
             force_channels: Optional[int] = None,
             force_dtype: Optional[torch.dtype] = torch.float32,
             with_filename: bool = False,
+            verbose: bool = False,
     ):
         super().__init__()
         self.root = Path(root).expanduser()
         self.recursive = recursive
         self.max_images = max_images
+        self.max_bytes = max_bytes
         self.force_channels = force_channels
         self.force_dtype = force_dtype
         self.with_filename = with_filename
+        self.verbose = verbose
         self._filenames = None
 
     def __len__(self):
@@ -65,16 +70,30 @@ class ImageFolderIterableDataset(IterableDataset):
 
         # print("YIELDING", len(filenames), worker_info)
         count = 0
+        count_bytes = 0
         for filename in filenames:
             image = self._load_filename(filename)
             if image is not None:
+
+                count += 1
+                count_bytes += math.prod(image.shape) * 4
+                if self.verbose:
+                    shape_str = "x".join(str(s) for s in image.shape)
+                    print(f"{self.__class__.__name__}: images={count:,}, bytes={count_bytes:,}, image={shape_str} {filename}")
+
                 if self.with_filename:
                     yield image, filename
                 else:
                     yield image
 
-                count += 1
                 if self.max_images is not None and count >= self.max_images:
+                    if self.verbose:
+                        print(f"{self.__class__.__name__}: break because num images {count:,} >= {self.max_images:,}")
+                    break
+
+                if self.max_bytes is not None and count_bytes >= self.max_bytes:
+                    if self.verbose:
+                        print(f"{self.__class__.__name__}: break because num bytes {count_bytes:,} >= {self.max_bytes:,}")
                     break
 
     def _load_filename(self, filename: str) -> Union[None, PIL.Image.Image, torch.Tensor]:

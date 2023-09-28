@@ -10,9 +10,10 @@ import torch.utils.data
 from src.models.cnn import Conv2dBlock
 from src.util.image import set_image_channels, image_resize_crop
 from src.util import to_torch_device
+from .base import Encoder2d
 
 
-class EncoderConv2d(nn.Module):
+class EncoderConv2d(Encoder2d):
 
     def __init__(
             self,
@@ -23,11 +24,9 @@ class EncoderConv2d(nn.Module):
             code_size: int = 1024,
             act_fn: Optional[nn.Module] = nn.ReLU(),
     ):
-        super().__init__()
-        self.shape = tuple(shape)
+        super().__init__(shape=shape, code_size=code_size)
         self.channels = tuple(channels)
         self.kernel_size = int(kernel_size)
-        self.code_size = int(code_size)
         self.stride = stride
         # self.act_fn = act_fn
 
@@ -50,23 +49,14 @@ class EncoderConv2d(nn.Module):
 
     def get_extra_state(self):
         return {
-            "shape": self.shape,
+            **super().get_extra_state(),
             "kernel_size": self.kernel_size,
             "channels": self.channels,
-            "code_size": self.code_size,
             "act_fn": self.convolution._act_fn,
         }
 
-    def set_extra_state(self, state):
-        pass
-
     @classmethod
-    def from_torch(cls, f, device: Union[None, str, torch.device] = "cpu"):
-        if isinstance(f, (dict, OrderedDict)):
-            data = f
-        else:
-            data = torch.load(f)
-
+    def _from_data(cls, data: dict):
         extra = data["_extra_state"]
         model = cls(
             shape=extra["shape"],
@@ -77,11 +67,4 @@ class EncoderConv2d(nn.Module):
             act_fn=extra["act_fn"],
         )
         model.load_state_dict(data)
-        return model.to(to_torch_device(device))
-
-    def encode_image(self, image: torch.Tensor) -> torch.Tensor:
-        if image.shape[-3:] != self.shape:
-            image = image_resize_crop(image, self.shape[-2:])
-            image = set_image_channels(image, self.shape[-3])
-
-        return self(image)
+        return model
