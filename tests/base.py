@@ -23,3 +23,18 @@ class TestBase(unittest.TestCase):
             real = real.tolist()
 
         self.assertEqual(expected, real, f"\nExpected:\n{expected}\nGot:\n{real}")
+
+    def assertTensorNotEqual(self, expected: Union[list, torch.Tensor], real: Union[list, torch.Tensor]):
+        if isinstance(expected, list):
+            expected = torch.Tensor(expected).tolist()
+
+        if isinstance(expected, torch.Tensor):
+            expected = expected.tolist()
+
+        if isinstance(real, list):
+            real = torch.Tensor(real).tolist()
+
+        if isinstance(real, torch.Tensor):
+            real = real.tolist()
+
+        self.assertNotEqual(expected, real, f"\nExpected unequal to:\n{expected}\nGot:\n{real}")

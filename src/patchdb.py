@@ -16,7 +16,7 @@ import PIL.Image
 from tqdm import tqdm
 
 from src.util.image import *
-from src.models.encoder import EncoderConv2d
+from src.models.encoder import Encoder2d
 
 
 class PatchDB:
@@ -31,7 +31,7 @@ class PatchDB:
             limit: Optional[int] = None,
             patch_shape: Optional[Tuple[int, int, int]] = None,
             interpolation: VF.InterpolationMode = VF.InterpolationMode.BILINEAR,
-            encoder: Optional[EncoderConv2d] = None,
+            encoder: Optional[Encoder2d] = None,
     ):
         """
         Constructs a database instance around `filename`
@@ -126,8 +126,8 @@ class PatchDB:
     def add_patch(
             self,
             filename: Union[str, Path],
-            rect: Tuple[int, int, int, int],
-            embedding: Iterable[float],
+            rect: Union[Tuple[int, int, int, int], Iterable[int]],
+            embedding: Optional[Iterable[float]] = None,
     ):
         """
         Add a patch to the database.
@@ -136,22 +136,33 @@ class PatchDB:
 
         :param filename: str/Path, the image filename
         :param rect: sequence of ints: (top, left, height, width)
-            The rectangle of the image matching the embedding.
+            The rectangle of the image patch matching the embedding.
             The values can be directly passed to `torchvision.transforms.function.crop`.
         :param embedding:
             A 1-dimensional vector. All embeddings must have the same length!
+            Can be None if `PatchDB.encoder` is defined, in which case the image is loaded
+            and the patch is cropped and encoded.
         :return:
         """
+        rect = [int(r) for r in rect]
+
         if not self._writeable:
             warnings.warn("PatchDB.add_patch called on non-writeable db")
             return
+
+        if embedding is None:
+            if self.encoder is None:
+                raise RuntimeError(f"Must specify `embedding` when no encoder is defined")
+            image = self.image(filename)
+            patch = VF.crop(image, *rect)
+            embedding = self.encoder.encode_image(patch.unsqueeze(0))[0]
 
         embedding = self._to_numpy(embedding)
         
         filename = Path(filename).resolve()
         self._write({
             "filename": str(filename),
-            "rect": list(rect),
+            "rect": rect,
             "embedding": base64.b64encode(embedding.data).decode("ascii"),
         })
 
@@ -216,6 +227,85 @@ class PatchDB:
         img = self._image_cache[filename]
         img["age"] = self._cache_counter
         return img["image"]
+
+    def to_new_patchdb(
+            self,
+            filename: Union[str, Path],
+            include_filenames: Optional[Iterable[str]] = None,
+            exclude_filenames: Optional[Iterable[str]] = None,
+            offset: int = 0,
+            limit: Optional[int] = None,
+            encoder: Optional[Encoder2d] = None,
+    ):
+        if include_filenames is not None:
+            include_filenames = set(include_filenames)
+        if exclude_filenames is not None:
+            exclude_filenames = set(exclude_filenames)
+
+        def _iter_patches(batch_size: int = 100):
+            count = 0 if offset is None else -offset
+            patch_batch, image_patch_batch, embedding_batch = [], [], []
+            for patch in self.iter_patches(desc="copying database"):
+
+                if include_filenames is not None and patch["filename"] not in include_filenames:
+                    continue
+                if exclude_filenames is not None and patch["filename"] in exclude_filenames:
+                    continue
+
+                count = count + 1
+
+                if count < 0:
+                    continue
+
+                if limit is not None and count >= limit:
+                    break
+
+                if encoder is not None:
+                    image = self.image(patch["filename"])
+                    image_patch = VF.crop(image, *patch["rect"])
+                    image_patch = VF.resize(image_patch, self.patch_shape[-2:])
+
+                    image_patch_batch.append(image_patch.unsqueeze(0))
+                else:
+                    embedding_batch.append(patch["embedding"])
+
+                patch_batch.append({
+                    "filename": patch["filename"],
+                    "rect": patch["rect"],
+                })
+
+                if len(patch_batch) >= batch_size:
+                    if image_patch_batch:
+                        embedding_batch = encoder.encode_image(torch.concat(image_patch_batch))
+                        image_patch_batch.clear()
+
+                    yield patch_batch, embedding_batch
+                    patch_batch.clear()
+                    embedding_batch = []
+
+            if len(patch_batch):
+                if image_patch_batch:
+                    embedding_batch = encoder.encode_image(torch.concat(image_patch_batch))
+
+                yield patch_batch, embedding_batch
+
+        db = PatchDB(
+            filename=filename,
+            writeable=True,
+            verbose=self.verbose,
+            patch_shape=self.patch_shape,
+            interpolation=self.interpolation,
+            encoder=self.encoder if encoder is None else encoder,
+        )
+        with db:
+            for patch_batch, embedding_batch in _iter_patches():
+                for patch, embedding in zip(patch_batch, embedding_batch):
+                    db.add_patch(
+                        filename=patch["filename"],
+                        rect=patch["rect"],
+                        embedding=embedding,
+                    )
+        return db
 
     def _write(self, data: dict):
         if not self._writeable:

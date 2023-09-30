@@ -1,6 +1,6 @@
 import math
 from collections import OrderedDict
-from typing import List, Iterable, Tuple, Optional, Callable, Union
+from typing import List, Iterable, Tuple, Optional, Callable, Union, Dict, Type
 
 import torch
 import torch.nn as nn
@@ -16,6 +16,12 @@ class Encoder2d(nn.Module):
     """
     Abstract base class for image encoders
     """
+
+    _registered_encoder_classes: Dict[str, Type["Encoder2d"]] = {}
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        Encoder2d._registered_encoder_classes[cls.__name__] = cls
 
     def __init__(
             self,
@@ -34,8 +40,12 @@ class Encoder2d(nn.Module):
         raise NotImplementedError
 
     @classmethod
-    def _from_data(cls, data: dict):
-        """Create new instance from a state_dict"""
+    def from_data(cls, data: dict):
+        """
+        Create new instance from a state_dict
+
+        Use extra_data to store class instantiation variables
+        """
         raise NotImplementedError
 
     # ---- public API ----
@@ -79,16 +89,22 @@ class Encoder2d(nn.Module):
     def from_torch(cls, f, device: Union[None, str, torch.device] = "cpu"):
         """
         Instantiate a model from a dict or file
+
         :param f: dict (from `Model.state_dict`) or filename of a saved state_dict in torch format
         :param device: device to put the encoder to
         :return: new instance
         """
+        device = to_torch_device(device)
+
         if isinstance(f, (dict, OrderedDict)):
             data = f
         else:
-            data = torch.load(f)
+            data = torch.load(f, map_location=device)
 
-        return cls._from_data(data).to(to_torch_device(device))
+        if "state_dict" in data:
+            data = data["state_dict"]
+
+        return cls.from_data(data).to(device)
 
     # --- internal API ---
 
@@ -97,6 +113,7 @@ class Encoder2d(nn.Module):
         Override this and ADD your own.
         """
         return {
+            "class": self.__class__.__name__,
             "shape": self.shape,
             "code_size": self.code_size,
         }

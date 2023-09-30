@@ -56,7 +56,7 @@ class EncoderConv2d(Encoder2d):
         }
 
     @classmethod
-    def _from_data(cls, data: dict):
+    def from_data(cls, data: dict):
         extra = data["_extra_state"]
         model = cls(
             shape=extra["shape"],

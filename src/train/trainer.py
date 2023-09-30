@@ -291,7 +291,7 @@ class Trainer:
         if self.validation_loader is None:
             return
 
-        print(f"validation @ {self.num_input_steps}")
+        print(f"validation @ {self.num_input_steps:,}")
         with torch.no_grad():
             self.model.for_validation = True
 
@@ -358,7 +358,7 @@ class Trainer:
                 images[image_idx] = VF.pad(image, [0, 0, max_shape[-1] - image.shape[-1], max_shape[0] - image.shape[0]])
 
         norm_grid = make_grid(
-            [i.unsqueeze(0) for i in images],
+            [i.unsqueeze(0) if i.ndim == 2 else i for i in images],
             nrow=nrow, normalize=True
         )
         signed_grid = make_grid(
