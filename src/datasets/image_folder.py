@@ -2,6 +2,7 @@ import math
 from pathlib import Path
 import glob
 import warnings
+import random
 from typing import Union, Generator, Optional, Callable, Any, Dict, List, Tuple
 
 import PIL.Image
@@ -22,6 +23,7 @@ class ImageFolderIterableDataset(IterableDataset):
             self,
             root: Union[str, Path],
             recursive: bool = False,
+            shuffle: bool = False,
             max_images: Optional[int] = None,
             max_bytes: Optional[int] = None,
             force_channels: Optional[int] = None,
@@ -37,6 +39,7 @@ class ImageFolderIterableDataset(IterableDataset):
         self.force_channels = force_channels
         self.force_dtype = force_dtype
         self.with_filename = with_filename
+        self.shuffle = shuffle
         self.verbose = verbose
         self._filenames = None
 
@@ -67,6 +70,10 @@ class ImageFolderIterableDataset(IterableDataset):
             filenames = self._filenames
         else:
             filenames = self._filenames[worker_info.id::worker_info.num_workers]
+
+        if self.shuffle:
+            filenames = filenames.copy()
+            random.shuffle(filenames)
 
         # print("YIELDING", len(filenames), worker_info)
         count = 0
@@ -116,16 +123,20 @@ class ImageFolderIterableDataset(IterableDataset):
     def _get_filenames(self):
         if self._filenames is None:
 
-            glob_path = self.root
-            if self.recursive:
-                glob_path /= "**/*"
+            if self.root.is_file():
+                self._filenames = [str(self.root)]
+
             else:
-                glob_path /= "*"
+                glob_path = self.root
+                if self.recursive:
+                    glob_path /= "**/*"
+                else:
+                    glob_path /= "*"
 
-            self._filenames = []
-            for filename in glob.glob(str(glob_path), recursive=self.recursive):
-                if is_image_file(filename):
-                    self._filenames.append(filename)
+                self._filenames = []
+                for filename in glob.glob(str(glob_path), recursive=self.recursive):
+                    if is_image_file(filename):
+                        self._filenames.append(filename)
 
-            self._filenames.sort()
+                self._filenames.sort()
 

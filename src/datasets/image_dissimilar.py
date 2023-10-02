@@ -69,7 +69,8 @@ class DissimilarImageIterableDataset(IterableDataset):
                     yield from _process(data)
 
                     progress.desc = (
-                        f"filtering unsimilar images (features={self.features.shape[0] if self.features is not None else 0}"
+                        f"filtering dissimilar images"
+                        f" (features={self.features.shape[0] if self.features is not None else 0}"
                         f", passed={self._num_passed})"
                     )
                     progress.update(1)

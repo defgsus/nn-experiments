@@ -5,8 +5,14 @@ from torch.utils.data import Dataset, IterableDataset
 
 
 def iter_dataset(dataset: Union[Dataset, IterableDataset]) -> Generator:
-    if hasattr(dataset, "__len__") and hasattr(dataset, "__getitem__"):
-        for i in range(len(dataset)):
+    try:
+        total = len(dataset)
+        dataset[0]
+    except:
+        total = None
+
+    if total:
+        for i in range(total):
             yield dataset[i]
 
     elif hasattr(dataset, "__iter__"):

@@ -236,11 +236,31 @@ class PatchDB:
             offset: int = 0,
             limit: Optional[int] = None,
             encoder: Optional[Encoder2d] = None,
+            transforms: Optional[Iterable[Callable]] = None
     ):
+        """
+        Creates a new database from the existing one.
+
+        :param filename: filename of new database.
+            If it exists, data will be appended.
+        :param include_filenames: optional set of image filenames to filter for.
+        :param exclude_filenames: optional set of image filenames to exclude.
+        :param offset: int, skip first N entries
+        :param limit: int, limit size of new database
+        :param encoder: optional Encoder to re-create the embeddings
+        :param transforms: optional list of callables that transform an image patch
+            before it is passed to the encoder.
+            Wither `encoder` or `PatchDB.encoder` must be defined for this.
+
+        :return: new PatchDB instance
+        """
         if include_filenames is not None:
             include_filenames = set(include_filenames)
         if exclude_filenames is not None:
             exclude_filenames = set(exclude_filenames)
+
+        if transforms is not None:
+            transforms = list(transforms)
 
         def _iter_patches(batch_size: int = 100):
             count = 0 if offset is None else -offset
@@ -260,10 +280,14 @@ class PatchDB:
                 if limit is not None and count >= limit:
                     break
 
-                if encoder is not None:
+                if encoder is not None or transforms is not None:
                     image = self.image(patch["filename"])
                     image_patch = VF.crop(image, *patch["rect"])
                     image_patch = VF.resize(image_patch, self.patch_shape[-2:])
+
+                    if transforms is not None:
+                        for tr in transforms:
+                            image_patch = tr(image_patch)
 
                     image_patch_batch.append(image_patch.unsqueeze(0))
                 else:
@@ -276,6 +300,9 @@ class PatchDB:
 
                 if len(patch_batch) >= batch_size:
                     if image_patch_batch:
+                        assert encoder is not None or self.encoder is not None, \
+                            "Encoder must be present when transforming patches"
+
                         embedding_batch = encoder.encode_image(torch.concat(image_patch_batch))
                         image_patch_batch.clear()
 

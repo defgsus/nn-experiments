@@ -162,6 +162,9 @@ class Trainer:
     def log_image(self, tag: str, image: torch.Tensor):
         self.writer.add_image(tag=tag, img_tensor=image, global_step=self.num_input_steps)
 
+    def log_embedding(self, tag: str, embedding: torch.Tensor):
+        self.writer.add_embedding(tag=tag, mat=embedding, global_step=self.num_input_steps)
+
     def train(self):
         print(f"---- training '{self.experiment_name}' on {self.device} ----")
         print(f"trainable params: {self.num_trainable_parameters():,}")
@@ -203,7 +206,7 @@ class Trainer:
                             input_batch[0] = input_batch[0] + self.training_noise * torch.randn_like(input_batch[0])
 
                     if self.epoch == 0 and batch_idx == 0:
-                        print("BATCH", ", ".join(str(b.shape) for b in input_batch))
+                        print("BATCH", ", ".join(str(b.shape) if hasattr(b, "shape") else "?" for b in input_batch))
 
                     loss_result = self._train_step(tuple(input_batch))
                     if not isinstance(loss_result, dict):
@@ -334,6 +337,21 @@ class Trainer:
         if not hasattr(self.model, "weight_images"):
             return
 
+        def _make2d(vec):
+            size = vec.shape[-1]
+            center = int(math.sqrt(size))
+            div = 1
+            for i in range(size - center):
+                f = size / (center + i)
+                if f == int(f):
+                    div = center + i
+                    break
+                f = size / (center - i)
+                if f == int(f):
+                    div = center - i
+                    break
+            return vec.view(div, size // div)
+
         images = self.model.weight_images(**(self.weight_image_kwargs or {}))
         if images is None:
             return
@@ -341,6 +359,9 @@ class Trainer:
         max_shape = None
         max_single_shape = list(max_single_shape)
         for image_idx, image in enumerate(images):
+
+            if image.ndim == 1:
+                images[image_idx] = image = _make2d(image)
 
             if any(a > b for a, b in zip(image.shape, max_single_shape)):
                 image = VF.crop(image, 0, 0, min(image.shape[-2], max_single_shape[-2]), min(image.shape[-1], max_single_shape[-1]))

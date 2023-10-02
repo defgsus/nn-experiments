@@ -14,7 +14,7 @@ from src.models.rbm import RBM
 from .base import Encoder2d
 
 
-class BoltzmanEncoder(Encoder2d):
+class BoltzmanEncoder2d(Encoder2d):
     """
     A stack of Restricted Boltzman Machines
     """
@@ -24,6 +24,7 @@ class BoltzmanEncoder(Encoder2d):
             code_size: int,
             hidden_size: Iterable[int] = (),
             dropout: float = 0.,
+            train_max_similarity: float = 0.,
     ):
         super().__init__(shape, code_size)
 
@@ -34,7 +35,7 @@ class BoltzmanEncoder(Encoder2d):
         self.rbms = nn.Sequential()
         for code_size, next_code_size in zip([math.prod(shape)] + code_sizes, code_sizes):
             self.rbms.append(
-                RBM(code_size, next_code_size, dropout=dropout)
+                RBM(code_size, next_code_size, dropout=dropout, train_max_similarity=train_max_similarity)
             )
 
     @property
@@ -51,11 +52,22 @@ class BoltzmanEncoder(Encoder2d):
         data = input_batch
         if isinstance(data, (tuple, list)):
             data = data[0]
+
         loss = None
-        for rbm in self.rbms:
+        for i, rbm in enumerate(self.rbms):
             loss_ = rbm.train_step(data)
-            loss = loss_ if loss is None else loss + loss_
-            data = rbm.forward(data)
+            if loss is None:
+                loss = loss_
+            else:
+                if isinstance(loss, dict):
+                    for key, value in loss.items():
+                        loss[key] = loss[key] + loss_[key]
+                else:
+                    loss = loss + loss_
+
+            if i < len(self.rbms) - 1:
+                data = rbm.forward(data)
+
         return loss
 
     def weight_images(self, **kwargs):
@@ -66,6 +78,7 @@ class BoltzmanEncoder(Encoder2d):
             **super().get_extra_state(),
             "hidden_size": self._hidden,
             "dropout": self._dropout,
+            "train_max_similarity": self.rbms[0].train_max_similarity,
         }
 
     @classmethod
@@ -76,7 +89,9 @@ class BoltzmanEncoder(Encoder2d):
             code_size=extra["code_size"],
             hidden_size=extra.get("hidden_size") or extra.get("hidden") or [],
             dropout=extra.get("dropout") or 0.,
+            train_max_similarity=extra.get("train_max_similarity") or 0.,
         )
+        # backward-compat
         if "rbm.weight" in data:
             data = {
                 "_extra_state": data["_extra_state"],

@@ -172,7 +172,7 @@ class ImagePatchIterableDataset(IterableDataset):
 
 def make_image_patch_dataset(
         shape: Tuple[int, int, int],
-        path: Union[str, Path],
+        path: Union[str, Path, Iterable[Union[str, Path]]],
         recursive: bool = False,
         scales: Union[Iterable[float], Callable[[Tuple[int, int]], Iterable[float]]] = None,
         transforms: Optional[Iterable[Callable]] = None,
@@ -180,6 +180,7 @@ def make_image_patch_dataset(
         padding: Union[int, Iterable[int]] = 0,
         fill: Union[int, float] = 0,
         interleave_images: Optional[int] = None,
+        file_shuffle: bool = False,
         image_shuffle: int = 0,
         patch_shuffle: int = 0,
         max_size: Optional[int] = None,
@@ -192,18 +193,33 @@ def make_image_patch_dataset(
 ):
     from src.datasets import (
         TransformIterableDataset, ImageFolderIterableDataset, IterableShuffle,
-        ImageScaleIterableDataset
+        ImageScaleIterableDataset, InterleaveIterableDataset
     )
     from src.util.image import set_image_channels
 
-    ds_images = ImageFolderIterableDataset(
-        path,
-        recursive=recursive,
-        with_filename=with_filename,
-        max_images=max_images,
-        max_bytes=max_image_bytes,
-        verbose=verbose_image,
-    )
+    if isinstance(path, (str, Path)):
+        ds_images = ImageFolderIterableDataset(
+            path,
+            recursive=recursive,
+            with_filename=with_filename,
+            max_images=max_images,
+            max_bytes=max_image_bytes,
+            verbose=verbose_image,
+            shuffle=file_shuffle,
+        )
+    else:
+        ds_images = []
+        for path in path:
+            ds_images.append(ImageFolderIterableDataset(
+                path,
+                recursive=recursive,
+                with_filename=with_filename,
+                max_images=max_images,
+                max_bytes=max_image_bytes,
+                verbose=verbose_image,
+                shuffle=file_shuffle,
+            ))
+        ds_images = InterleaveIterableDataset(ds_images)
 
     if scales is not None:
         ds_images = ImageScaleIterableDataset(

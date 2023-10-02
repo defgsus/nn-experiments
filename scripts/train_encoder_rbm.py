@@ -27,80 +27,12 @@ from src.datasets import *
 from src.util.image import *
 from src.util import num_module_parameters
 from src.algo import Space2d
-from src.models.encoder import Encoder2d
+from src.models.encoder import Encoder2d, BoltzmanEncoder2d
 from src.models.transform import *
+from scripts.datasets import *
 
 
-class BoltzmanEncoder(Encoder2d):
-    def __init__(
-            self,
-            shape: Tuple[int, int, int],
-            code_size: int,
-            hidden: Iterable[int] = (),
-            dropout: float = 0.,
-    ):
-        self._hidden = list(hidden)
-        self._dropout = dropout
-        code_sizes = [code_size]
-        if hidden is not None:
-            code_sizes += self._hidden
-        super().__init__(shape, code_size)
-        self.rbms = nn.Sequential()
-        for code_size, next_code_size in zip([math.prod(shape)] + code_sizes, code_sizes):
-            self.rbms.append(
-                RBM(code_size, next_code_size, dropout=dropout)
-            )
-
-    @property
-    def device(self):
-        return self.rbms[0].weight.device
-
-    def forward(self, x):
-        for rbm in self.rbms:
-            x = rbm(x)
-        return x
-
-    def train_step(self, input_batch) -> torch.Tensor:
-        data = input_batch
-        if isinstance(data, (tuple, list)):
-            data = data[0]
-        loss = None
-        for rbm in self.rbms:
-            loss_ = rbm.train_step(data)
-            loss = loss_ if loss is None else loss + loss_
-            data = rbm.forward(data)
-        return loss
-
-    def weight_images(self, **kwargs):
-        return self.rbms[0].weight_images(**kwargs)
-
-    def get_extra_state(self):
-        return {
-            **super().get_extra_state(),
-            "hidden": self._hidden,
-            "dropout": self._dropout,
-        }
-    @classmethod
-    def from_data(cls, data: dict):
-        extra = data["_extra_state"]
-        model = cls(
-            shape=extra["shape"],
-            code_size=extra["code_size"],
-            hidden=extra.get("hidden") or [],
-            dropout=extra.get("dropout") or 0.,
-        )
-        if "rbm.weight" in data:
-            data = {
-                "_extra_state": data["_extra_state"],
-                "rbms.0.weight": data["rbm.weight"],
-                "rbms.0.bias_visible": data["rbm.bias_visible"],
-                "rbms.0.bias_hidden": data["rbm.bias_hidden"],
-            }
-        model.load_state_dict(data)
-        return model
-
-
-class TrainerEncoder(Trainer):
+class TrainerRBM(Trainer):
     def write_step(self):
         shape = self.hparams["shape"]
         images = []
@@ -114,15 +46,18 @@ class TrainerEncoder(Trainer):
 
         outputs = self.model.forward(images)
         self.log_image("validation_features", outputs.unsqueeze(0))
+        self.log_embedding("validation_embedding", outputs)
 
-        org, recon = self.model.contrastive_divergence(images[:8])
-        recon2 = self.model.gibbs_sample(images[:8], num_steps=20)
-        self.log_image("reconstruction", make_grid(
-            get_images_from_iterable(org.view(8, *shape), squeezed=True, num=8)
-            + get_images_from_iterable(recon.view(8, *shape), squeezed=True, num=8)
-            + get_images_from_iterable(recon2.view(8, *shape), squeezed=True, num=8),
-            nrow=8
-        ))
+        if hasattr(self.model, "rbms"):
+            org, recon = self.model.rbms[0].contrastive_divergence(images[:8])
+            recon2 = self.model.rbms[0].gibbs_sample(images[:8], num_steps=20)
+            self.log_image("reconstruction", make_grid(
+                get_images_from_iterable(org.view(8, *shape), squeezed=True, num=8)
+                + get_images_from_iterable(recon.view(8, *shape), squeezed=True, num=8)
+                + get_images_from_iterable(recon2.view(8, *shape), squeezed=True, num=8),
+                nrow=8
+            ))
+
 
 
 def main():
@@ -146,24 +81,13 @@ def main():
         )
     else:
         SHAPE = (1, 32, 32)
-        def _stride(shape: Tuple[int, int]):
-            # print(shape)
-            size = min(shape)
-            if size <= 512:
-                return 5
-            return SHAPE[-2:]
 
-        ds = make_image_patch_dataset(
-            path="~/Pictures/photos", recursive=True,
-            shape=SHAPE,
-            scales=[1./12., 1./6, 1./3, 1.], stride=_stride,
-            interleave_images=20, image_shuffle=30,
-            # transforms=[lambda x: VF.resize(x, tuple(s // 6 for s in x.shape[-2:]))], stride=5,
-        )
+        ds = all_patch_dataset(SHAPE)
+
         test_ds = make_image_patch_dataset(
             path="~/Pictures/diffusion", recursive=True,
             shape=SHAPE,
-            scales=[1./12., 1./6, 1./3, 1.], stride=_stride,
+            scales=[1./12., 1./6, 1./3, 1.], stride=SHAPE[-2:],
             interleave_images=10, image_shuffle=10,
             #transforms=[lambda x: VF.resize(x, tuple(s // 6 for s in x.shape[-2:]))], stride=5,
             max_size=2000,
@@ -175,11 +99,19 @@ def main():
     else:
         train_ds = ds
 
-    #model = VariationalAutoencoderConv(SHAPE, channels=[16, 24, 32], kernel_size=5, latent_dims=128)
-    model = BoltzmanEncoder(SHAPE, 128, [1024])
+    if 0:
+        pre_encoder = BoltzmanEncoder2d.from_torch("./checkpoints/rbm-k1/snapshot.pt")
+        train_ds = ImageEncodeIterableDataset(train_ds, pre_encoder)
+        test_ds = ImageEncodeIterableDataset(test_ds, pre_encoder)
+
+        model = RBM(pre_encoder.code_size, 128, train_max_similarity=0.5)
+    else:
+        #model = VariationalAutoencoderConv(SHAPE, channels=[16, 24, 32], kernel_size=5, latent_dims=128)
+        model = BoltzmanEncoder2d(SHAPE, 128, train_max_similarity=0.5)
+        #model = BoltzmanEncoder(SHAPE, 128, [800, 500, 500, 250])
     print(model)
 
-    trainer = Trainer(
+    trainer = TrainerRBM(
         **kwargs,
         model=model,
         #min_loss=0.001,
@@ -190,8 +122,8 @@ def main():
         freeze_validation_set=True,
         training_noise=.2,
         optimizers=[
-            torch.optim.Adam(model.parameters(), lr=.0001),# weight_decay=0.000001),
-            #torch.optim.Adadelta(model.parameters(), lr=.1),
+            #torch.optim.Adam(model.parameters(), lr=.0001),# weight_decay=0.000001),
+            torch.optim.Adadelta(model.parameters(), lr=1.),
         ],
         hparams={
             "shape": SHAPE,

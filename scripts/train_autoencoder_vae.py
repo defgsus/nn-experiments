@@ -30,6 +30,7 @@ from src.models.vae import *
 from src.models.transform import *
 
 from scripts.train_classifier_dataset import AlexNet
+from scripts import datasets
 
 
 class ConvEncoder(nn.Module):
@@ -231,24 +232,13 @@ def main():
         )
     else:
         SHAPE = (1, 32, 32)
-        def _stride(shape: Tuple[int, int]):
-            # print(shape)
-            size = min(shape)
-            if size <= 512:
-                return 5
-            return SHAPE[-2:]
 
-        ds = make_image_patch_dataset(
-            path="~/Pictures/photos", recursive=True,
-            shape=SHAPE,
-            scales=[1./12., 1./6, 1./3, 1.], stride=_stride,
-            interleave_images=20, image_shuffle=30,
-            # transforms=[lambda x: VF.resize(x, tuple(s // 6 for s in x.shape[-2:]))], stride=5,
-        )
+        ds = datasets.all_patch_dataset(SHAPE)
+
         test_ds = make_image_patch_dataset(
             path="~/Pictures/diffusion", recursive=True,
             shape=SHAPE,
-            scales=[1./12., 1./6, 1./3, 1.], stride=_stride,
+            scales=[1./12., 1./6, 1./3, 1.], stride=SHAPE[-2:],
             interleave_images=10, image_shuffle=10,
             #transforms=[lambda x: VF.resize(x, tuple(s // 6 for s in x.shape[-2:]))], stride=5,
             max_size=2000,
