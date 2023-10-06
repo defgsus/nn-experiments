@@ -29,7 +29,8 @@ class TrainAutoencoder(Trainer):
         self.train_display_batch: Optional[torch.Tensor] = None
 
     def train_step(self, input_batch) -> torch.Tensor:
-        input_batch = input_batch[0]
+        if isinstance(input_batch, (list, tuple)):
+            input_batch = input_batch[0]
 
         output_batch = self.model(input_batch)
 

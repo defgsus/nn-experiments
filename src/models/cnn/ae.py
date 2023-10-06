@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .cnn import Conv2dBlock
+from .block2d import Conv2dBlock
 
 
 class ConvAutoEncoder(torch.nn.Module):

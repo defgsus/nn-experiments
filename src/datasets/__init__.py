@@ -1,3 +1,4 @@
+from .audio_slice import AudioSliceIterableDataset
 from .ca import TotalCADataset
 from .classfeatures import ClassFeaturesDataset
 from .contrastive_image import ContrastiveImageDataset
@@ -9,6 +10,7 @@ from .image_folder import ImageFolderIterableDataset
 from .image_patch import ImagePatchIterableDataset, make_image_patch_dataset
 from .image_scale import ImageScaleIterableDataset
 from .interleave import InterleaveIterableDataset
+from .limit import LimitIterableDataset
 from .generative import (
     Kali2dDataset, Kali2dFilteredIterableDataset
 )

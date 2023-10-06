@@ -1,2 +1,3 @@
 from .ae import ConvAutoEncoder
-from .cnn import Conv2dBlock
+from .block1d import Conv1dBlock
+from .block2d import Conv2dBlock

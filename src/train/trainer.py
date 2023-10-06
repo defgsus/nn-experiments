@@ -206,7 +206,7 @@ class Trainer:
                             input_batch[0] = input_batch[0] + self.training_noise * torch.randn_like(input_batch[0])
 
                     if self.epoch == 0 and batch_idx == 0:
-                        print("BATCH", ", ".join(str(b.shape) if hasattr(b, "shape") else "?" for b in input_batch))
+                        print(" BATCH", ", ".join(str(b.shape) if hasattr(b, "shape") else "?" for b in input_batch))
 
                     loss_result = self._train_step(tuple(input_batch))
                     if not isinstance(loss_result, dict):
@@ -269,6 +269,7 @@ class Trainer:
 
         if not self.freeze_validation_set:
             yield from self.validation_loader
+            return
 
         if self._validation_batches is None:
             self._validation_batches = list(self.validation_loader)
@@ -297,20 +298,25 @@ class Trainer:
         print(f"validation @ {self.num_input_steps:,}")
         with torch.no_grad():
             self.model.for_validation = True
+            try:
+                losses = []
+                for validation_batch in self.iter_validation_batches():
+                    if not isinstance(validation_batch, (tuple, list)):
+                        validation_batch = validation_batch,
 
-            losses = []
-            for validation_batch in self.iter_validation_batches():
-                validation_batch = tuple(
-                    i.to(self.device) if isinstance(i, torch.Tensor) else i
-                    for i in validation_batch
-                )
-                loss = self.validation_step(validation_batch)
-                if isinstance(loss, dict):
-                    loss = loss["loss"]
-                losses.append(loss)
-            loss = torch.Tensor(losses).mean()
+                    validation_batch = tuple(
+                        i.to(self.device) if isinstance(i, torch.Tensor) else i
+                        for i in validation_batch
+                    )
 
-            self.model.for_validation = False
+                    loss = self.validation_step(validation_batch)
+                    if isinstance(loss, dict):
+                        loss = loss["loss"]
+                    losses.append(loss)
+                loss = torch.Tensor(losses).mean()
+
+            finally:
+                self.model.for_validation = False
 
             # print(f"\nVALIDATION loss {float(loss)}")
             self.log_scalar("validation_loss", loss)
@@ -377,6 +383,9 @@ class Trainer:
 
             if any(a < b for a, b in zip(image.shape, max_shape)):
                 images[image_idx] = VF.pad(image, [0, 0, max_shape[-1] - image.shape[-1], max_shape[0] - image.shape[0]])
+
+        if not len(images):
+            return
 
         norm_grid = make_grid(
             [i.unsqueeze(0) if i.ndim == 2 else i for i in images],

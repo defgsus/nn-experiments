@@ -105,19 +105,19 @@ class TransformIterableDataset(IterableDataset):
             raise NotImplementedError("__iter__ with features currently not supported")
 
         for item in self.source_dataset:
-            if isinstance(item, (tuple, int)):
+            is_tuple = isinstance(item, (tuple, int))
+            if is_tuple:
                 item, features = item[0], item[1:]
-
             else:
                 item, features = item, None
 
             for repeat_index in range(self.num_repeat):
                 trans_item = self._transform(item)
 
-                if features is not None:
+                if is_tuple:
                     yield trans_item, *features
                 else:
-                    yield trans_item,
+                    yield trans_item
 
     def _transform(self, tensor: torch.Tensor) -> torch.Tensor:
         if self.dtype is not None:

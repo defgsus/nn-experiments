@@ -11,7 +11,7 @@ from src.models.cnn import Conv2dBlock
 from src.util.image import set_image_channels, image_resize_crop
 from src.util import to_torch_device
 from src.models.rbm import RBM
-from .base import Encoder2d
+from .base2d import Encoder2d
 
 
 class BoltzmanEncoder2d(Encoder2d):

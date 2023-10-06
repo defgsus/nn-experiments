@@ -7,17 +7,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data
 
-from src.models.cnn import Conv2dBlock
-from src.util.image import set_image_channels, image_resize_crop
+from src.models.cnn import Conv1dBlock
 from src.util import to_torch_device
-from .base import Encoder2d
+from .base1d import Encoder1d
 
 
-class EncoderConv2d(Encoder2d):
+class EncoderConv1d(Encoder1d):
 
     def __init__(
             self,
-            shape: Tuple[int, int, int],
+            shape: Tuple[int, int],
             kernel_size: int = 15,
             stride: int = 1,
             channels: Iterable[int] = (16, 32),
@@ -28,10 +27,9 @@ class EncoderConv2d(Encoder2d):
         self.channels = tuple(channels)
         self.kernel_size = int(kernel_size)
         self.stride = stride
-        # self.act_fn = act_fn
 
         channels = [self.shape[0], *self.channels]
-        self.convolution = Conv2dBlock(
+        self.convolution = Conv1dBlock(
             channels=channels,
             kernel_size=self.kernel_size,
             act_fn=act_fn,

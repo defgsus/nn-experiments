@@ -1,3 +1,4 @@
+import warnings
 from typing import List, Iterable, Tuple, Optional, Callable, Union
 
 import torch
@@ -93,15 +94,15 @@ class VariationalAutoencoder(nn.Module):
             self,
             encoder: VariationalEncoder,
             decoder: nn.Module,
-            reproduction_loss: Union[str, Callable, nn.Module] = "l2",
+            reconstruction_loss: Union[str, Callable, nn.Module] = "l2",
             reconstruction_loss_weight: float = 1.,
-            kl_loss_weight: float = 10.,
+            kl_loss_weight: float = 1.,
     ):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
-        self._reproduction_loss = get_loss_callable(reproduction_loss)
-        self.reproduction_loss_weight = reconstruction_loss_weight
+        self._reconstruction_loss = get_loss_callable(reconstruction_loss)
+        self.reconstruction_loss_weight = reconstruction_loss_weight
         self.kl_loss_weight = kl_loss_weight
 
     def forward(self, x):
@@ -115,20 +116,26 @@ class VariationalAutoencoder(nn.Module):
         return self.decoder(z)
 
     def train_step(self, batch):
-        x = batch[0]
+        if isinstance(batch, (list, tuple)):
+            x = batch[0]
+        else:
+            x = batch
 
         recon = self.forward(x)
+
+        if x.shape != recon.shape:
+            warnings.warn(f"XXX {x.shape} {recon.shape} {getattr(self, 'for_validation', 'X')}")
         mu, sigma = self.encoder.last_mu, self.encoder.last_sigma
 
-        loss_recon = self._reproduction_loss(x, recon)
+        loss_recon = self._reconstruction_loss(x, recon)
 
         #loss_kl = (sigma ** 2 + mu ** 2 - torch.log(sigma) - .5).mean()
-        loss_kl = torch.mean(-0.5 * torch.sum(1 + sigma - mu ** 2 - sigma.exp(), dim = 1), dim = 0)
+        loss_kl = torch.mean(-0.5 * torch.sum(1 + sigma - mu ** 2 - sigma.exp(), dim=1), dim=0)
 
         return {
             "loss": (
-                self.reproduction_loss_weight * loss_recon
-                + self.kl_loss_weight * loss_kl
+                    self.reconstruction_loss_weight * loss_recon
+                    + self.kl_loss_weight * loss_kl
             ),
             "loss_reconstruction": loss_recon,
             "loss_kl": loss_kl,
