@@ -47,6 +47,9 @@ def iter_audio_slices(
         if max_slices is not None and num_slices >= max_slices:
             break
 
+    if buffer is None:
+        return
+
     while buffer.shape[0]:
         if max_slices is not None and num_slices >= max_slices:
             break

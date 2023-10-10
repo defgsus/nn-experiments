@@ -22,11 +22,13 @@ class EncoderConv1d(Encoder1d):
             channels: Iterable[int] = (16, 32),
             code_size: int = 1024,
             act_fn: Optional[nn.Module] = nn.ReLU(),
+            reverse: bool = False,
     ):
         super().__init__(shape=shape, code_size=code_size)
         self.channels = tuple(channels)
         self.kernel_size = int(kernel_size)
         self.stride = stride
+        self.reverse = reverse
 
         channels = [self.shape[0], *self.channels]
         self.convolution = Conv1dBlock(
@@ -35,15 +37,30 @@ class EncoderConv1d(Encoder1d):
             act_fn=act_fn,
             stride=self.stride,
         )
-        encoded_shape = self.convolution.get_output_shape(shape)
-        self.linear = nn.Linear(math.prod(encoded_shape), self.code_size)
+        self.encoded_shape = self.convolution.get_output_shape(shape)
+        self.linear = nn.Linear(math.prod(self.encoded_shape), self.code_size)
+
+        if self.reverse:
+            self.linear = nn.Linear(self.code_size, math.prod(self.encoded_shape))
+            channels = [*self.channels, self.shape[0]]
+            self.convolution = Conv1dBlock(
+                channels=channels,
+                kernel_size=self.kernel_size,
+                act_fn=act_fn,
+                stride=self.stride,
+                transpose=True,
+                act_last_layer=False,
+            )
 
     @property
     def device(self):
         return self.linear.weight.device
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.linear(self.convolution(x).flatten(1))
+        if self.reverse:
+            return self.convolution(self.linear(x).view(-1, *self.encoded_shape))
+        else:
+            return self.linear(self.convolution(x).flatten(1))
 
     def get_extra_state(self):
         return {
@@ -51,6 +68,7 @@ class EncoderConv1d(Encoder1d):
             "kernel_size": self.kernel_size,
             "channels": self.channels,
             "act_fn": self.convolution._act_fn,
+            "reverse": self.reverse,
         }
 
     @classmethod
@@ -63,6 +81,7 @@ class EncoderConv1d(Encoder1d):
             channels=extra["channels"],
             code_size=extra["code_size"],
             act_fn=extra["act_fn"],
+            reverse=extra.get("reverse", False),
         )
         model.load_state_dict(data)
         return model

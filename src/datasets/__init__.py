@@ -14,5 +14,6 @@ from .limit import LimitIterableDataset
 from .generative import (
     Kali2dDataset, Kali2dFilteredIterableDataset
 )
+from .normalize import NormalizeMaxIterableDataset
 from .shuffle import IterableShuffle
 from .transform import TransformDataset, TransformIterableDataset

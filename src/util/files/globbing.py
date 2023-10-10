@@ -1,9 +1,9 @@
 from pathlib import Path
-from typing import Union, Generator
+from typing import Union, Generator, Iterable
 
 
 def iter_filenames(
-        path: Union[str, Path],
+        path: Union[str, Path, Iterable[Union[str, Path]]],
         recursive: bool = False,
 ) -> Generator[Path, None, None]:
     """
@@ -13,11 +13,17 @@ def iter_filenames(
         1. filename
         2. a path
         3. a path and a glob pattern, e.g. `/path/*.txt`
+        4. an iterable of any of the above
 
     :param recursive: bool, glob files recursively
 
     :return: Generator of Path
     """
+    if not isinstance(path, (str, Path)):
+        for p in path:
+            yield from iter_filenames(p, recursive=recursive)
+        return
+
     path = Path(path).expanduser()
 
     if path.is_file():

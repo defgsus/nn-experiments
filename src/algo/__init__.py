@@ -1,3 +1,4 @@
+from .audiounderstander import AudioUnderstander
 from .greedylibrary import GreedyLibrary
 from .ifs import IFS
 from .kali2d import kali_2d

@@ -6,6 +6,7 @@ import random
 import itertools
 import argparse
 import shutil
+import warnings
 from pathlib import Path
 from typing import List, Iterable, Tuple, Optional, Callable, Union, Generator
 
@@ -41,6 +42,7 @@ class Trainer:
             optimizers: Iterable[torch.optim.Optimizer] = tuple(),
             num_inputs_between_validations: Optional[int] = None,
             num_epochs_between_validations: Optional[int] = None,
+            num_inputs_between_checkpoints: Optional[int] = None,
             training_noise: float = 0.,
             loss_function: Union[str, Callable, torch.nn.Module] = "l1",
             reset: bool = False,
@@ -65,6 +67,7 @@ class Trainer:
         self.weight_image_kwargs = weight_image_kwargs
         self.num_inputs_between_validations = num_inputs_between_validations
         self.num_epochs_between_validations = num_epochs_between_validations
+        self.num_inputs_between_checkpoints = num_inputs_between_checkpoints
         self.epoch = 0
         self.num_batch_steps = 0
         self.num_input_steps = 0
@@ -102,16 +105,18 @@ class Trainer:
     def write_step(self):
         pass
 
-    def load_checkpoint(self, name: str = "snapshot"):
+    def load_checkpoint(self, name: str = "snapshot") -> bool:
         checkpoint_filename = self.checkpoint_path / f"{name}.pt"
 
-        if checkpoint_filename.exists():
-            print(f"loading {checkpoint_filename}")
-            checkpoint_data = torch.load(checkpoint_filename)
-            self.model.load_state_dict(checkpoint_data["state_dict"])
-            self.epoch = checkpoint_data.get("epoch") or 0
-            self.num_batch_steps = checkpoint_data.get("num_batch_steps") or 0
-            self.num_input_steps = checkpoint_data.get("num_input_steps") or 0
+        if not checkpoint_filename.exists():
+            return False
+
+        print(f"loading {checkpoint_filename}")
+        checkpoint_data = torch.load(checkpoint_filename)
+        self.model.load_state_dict(checkpoint_data["state_dict"])
+        self.epoch = checkpoint_data.get("epoch") or 0
+        self.num_batch_steps = checkpoint_data.get("num_batch_steps") or 0
+        self.num_input_steps = checkpoint_data.get("num_input_steps") or 0
 
         best_filename = self.checkpoint_path / "best.json"
         if best_filename.exists():
@@ -120,6 +125,8 @@ class Trainer:
                 print(f"best validation loss so far: {self._best_validation_loss}")
             except (json.JSONDecodeError, KeyError):
                 pass
+
+        return True
 
     def save_checkpoint(self, name: str = "snapshot"):
         checkpoint_filename = self.checkpoint_path / f"{name}.pt"
@@ -160,7 +167,10 @@ class Trainer:
         self.writer.add_scalar(tag=tag, scalar_value=value, global_step=self.num_input_steps)
 
     def log_image(self, tag: str, image: torch.Tensor):
-        self.writer.add_image(tag=tag, img_tensor=image, global_step=self.num_input_steps)
+        try:
+            self.writer.add_image(tag=tag, img_tensor=image, global_step=self.num_input_steps)
+        except TypeError as e:
+            warnings.warn(f"logging image `{tag}` failed, {type(e).__name__}: {e}")
 
     def log_embedding(self, tag: str, embedding: torch.Tensor):
         self.writer.add_embedding(tag=tag, mat=embedding, global_step=self.num_input_steps)
@@ -175,6 +185,12 @@ class Trainer:
             last_validation_step = -self.num_inputs_between_validations
         if self.num_epochs_between_validations is not None:
             last_validation_epoch = -self.num_epochs_between_validations
+
+        last_checkpoint_step = None
+        if self.num_inputs_between_checkpoints is not None:
+            last_checkpoint_step = 0
+
+        self.model.train(True)
 
         self.running = True
         while self.running:
@@ -231,6 +247,11 @@ class Trainer:
                             last_validation_epoch = self.epoch
                             self.run_validation()
 
+                    if last_checkpoint_step is not None:
+                        if self.num_input_steps - last_checkpoint_step >= self.num_inputs_between_checkpoints:
+                            last_checkpoint_step = self.num_input_steps
+                            self.save_checkpoint()
+
                     # print(f"\nepoch {self.epoch}, batch {self.num_batch_steps}, image {self.num_input_steps}, loss {float(loss)}")
 
                     self._run_every_callbacks()
@@ -241,7 +262,7 @@ class Trainer:
                         break
 
             # self.save_checkpoint(f"epoch-{epoch:03d}")
-            self.save_checkpoint("snapshot")
+            self.save_checkpoint()
 
             if self.num_epochs_between_validations is not None:
                 if self.epoch - last_validation_epoch >= self.num_epochs_between_validations:
@@ -298,6 +319,7 @@ class Trainer:
         print(f"validation @ {self.num_input_steps:,}")
         with torch.no_grad():
             self.model.for_validation = True
+            self.model.train(False)
             try:
                 losses = []
                 for validation_batch in self.iter_validation_batches():
@@ -316,6 +338,7 @@ class Trainer:
                 loss = torch.Tensor(losses).mean()
 
             finally:
+                self.model.train(True)
                 self.model.for_validation = False
 
             # print(f"\nVALIDATION loss {float(loss)}")
@@ -414,6 +437,7 @@ class Trainer:
         )
 
     def _train_step(self, input_batch: Tuple[torch.Tensor, ...]) -> Union[torch.Tensor, dict]:
+        self.model.train(True)
         if hasattr(self.model, "train_step"):
             return self.model.train_step(input_batch)
         else:

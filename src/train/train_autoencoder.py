@@ -50,13 +50,17 @@ class TrainAutoencoder(Trainer):
         images = []
         count = 0
         for batch in self.iter_validation_batches():
-            images.append(batch[0])
-            count += batch[0].shape[0]
+            if isinstance(batch, (list, tuple)):
+                batch = batch[0]
+
+            images.append(batch)
+            count += batch.shape[0]
             if count >= 32:
                 break
         images = torch.cat(images)[:32].to(self.device)
 
         output_batch = self.model.forward(images).clamp(0, 1)
+
         grid_images = []
         for i in range(0, images.shape[0], 8):
             for j in range(8):

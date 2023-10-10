@@ -14,6 +14,7 @@ import torch.nn.functional as F
 import torch.utils.data
 import torchvision.transforms as VT
 import torchvision.transforms.functional as VF
+import torchaudio.transforms as AT
 from torch.utils.data import Dataset, DataLoader, TensorDataset, IterableDataset, ConcatDataset
 from torchvision.utils import make_grid
 
@@ -98,3 +99,85 @@ def _scales_from_image_shape(
         if s * size >= shape_size and s * size < 10_000:
             scale_list.append(s)
     return scale_list
+
+
+# 20,103 seconds
+AUDIO_FILENAMES_1 = ['~/Music/Alejandro Jodorowsky - [1971] El Topo OST (vinyl rip)/side1.mp3', '~/Music/Aphex Twin/Acoustica Alarm Will Sound Performs Aphex Twin/01 Cock_Ver 10.mp3', '~/Music/BR80-backup/ROLAND/LIVEREC/LIVE0000.WAV', '~/Music/BR80-backup/ROLAND/MASTERING/42FUNK.WAV', '~/Music/Bertolt Brecht & Kurt Weill - [1954] The Threepenny Opera (original off-broadway cast)/01 - prologue (spoken) gerald price.mp3', '~/Music/COIL - Absinthe/COIL - animal are you.mp3', '~/Music/COIL - Black Antlers/01-the gimp-sometimes.mp3', "~/Music/COIL - live at All Tomorrow's Parties, April 4, 2003...and the Ambulance Died in His Arms/01 - Triple Sun Introduction.mp3", "~/Music/Coil - [1991] Love's Secret Domain/01 - Disco Hospital.mp3", '~/Music/Crosby Stills  Nash & Young/carry on/Crosby Stills  Nash & Young - after the dolphin.mp3', '~/Music/Felix Kubin - Jane B. ertrinkt mit den Pferden/01 Wagner 99.mp3', "~/Music/Hitchhiker's Guide - Radio Play/Hitchhiker'sGuideEpisode-02,mp3", '~/Music/King Crimson/Discipline [30th Anniversary Edition] [Bonus Track]/01 Elephant Talk.mp3', "~/Music/King Crimson/Larks' Tongues in Aspic/01 Larks' Tongues in Aspic, Pt. 1.mp3", '~/Music/King Crimson/Three of a Perfect Pair- 30th Anniversary [Bonus Tracks]/01 Three of a Perfect Pair.mp3', '~/Music/King Crimson/Vrooom Vrooom Disc 1/01 Vrooom Vrooom.mp3', '~/Music/King Crimson/Vrooom Vrooom Disc 2/01 Conundrum.mp3', '~/Music/MODULE/42_modus.wav', '~/Music/MODULE/ATOMIK/INTRO.WAV', '~/Music/MODULE/FILMTHEA/sample.wav', '~/Music/MODULE/PATTERN/hoast84.wav', '~/Music/MODULE/TRIBB/02- MultiDrum_mp3.wav', '~/Music/MODULE/for_gonz/ATOMIK/INTRO.WAV', '~/Music/MODULE/sendung/UnitedSchneegl.wav', '~/Music/MODULE/werner/dolby/recycle samples/pianoarpeggio.wav', '~/Music/Primus/Primus - Antipop (Complete CD)(AlbumWrap)_ALBW.mp3', '~/Music/Ray Kurzweil The Age of Spiritual Machines/(audiobook) Ray Kurzweil - The Age of Spiritual Machines - 1 of 4.mp3', '~/Music/Scirocco/01 Zug.mp3', '~/Music/Symphony X/01 - Symphony X - The Damnation Game.mp3', '~/Music/VOLCANO THE BEAR - Amidst The Noise And Twigs (2007)/01 - Volcano The Bear - The Sting Of Haste.mp3', '~/Music/VOLCANO THE BEAR - Classic Erasmus Fusion (2006)/A01. Classic Erasmus Fusion.mp3', '~/Music/VOLCANO THE BEAR - Guess the Birds (2002)/01 - urchins at the harp.mp3', '~/Music/VOLCANO THE BEAR - Xvol/01. moon chorus.mp3', '~/Music/Volcano the bear - [2001] Five Hundred Boy Piano/01. Hairy Queen.mp3', '~/Music/Ys/01 emily.mp3', '~/Music/anke/DR-100_0809-mucke-tanja-traum-ist-aus.wav', '~/Music/diffusion/known-unknowns-02.wav', '~/Music/francis/scarlatti-k119.wav', '~/Music/grafft/Lotte/210429_1859.mp3', '~/Music/grafft/MUSIC/20200505_Bauchentscheidung.mp3', '~/Music/olli/24.07.19 eberhardt finaaaaaal.wav', '~/Music/record/20220624_untitled.wav', '~/Music/the who/Tommy/the who - 1921.mp3', '~/Music/theDropper/01 CD Track 01.mp3', '~/Music/yaggediyo.mp3']
+AUDIO_FILENAMES_2 = ['~/Music/Alejandro Jodorowsky - [1971] El Topo OST (vinyl rip)/side2.mp3', '~/Music/Aphex Twin/Acoustica Alarm Will Sound Performs Aphex Twin/02 Logon Rock Witch.mp3', '~/Music/BR80-backup/ROLAND/LIVEREC/LIVE0001.WAV', '~/Music/BR80-backup/ROLAND/MASTERING/44BOND.WAV', '~/Music/Bertolt Brecht & Kurt Weill - [1954] The Threepenny Opera (original off-broadway cast)/02 - overture.mp3', '~/Music/COIL - Black Antlers/02-sex with sun ra (part 1 - saturnalia).mp3', "~/Music/COIL - live at All Tomorrow's Parties, April 4, 2003...and the Ambulance Died in His Arms/02 - Snow Falls Into Military Temples.mp3", "~/Music/Coil - [1991] Love's Secret Domain/02 - Teenage Lightning 1.mp3", '~/Music/Crosby Stills  Nash & Young/carry on/Crosby Stills  Nash & Young - almost cut my hair.mp3', '~/Music/Felix Kubin - Jane B. ertrinkt mit den Pferden/02 Vater Muss Die Stube Peitschen.mp3', "~/Music/Hitchhiker's Guide - Radio Play/Hitchhiker'sGuideEpisode-03.mp3", '~/Music/King Crimson/Discipline [30th Anniversary Edition] [Bonus Track]/02 Frame by Frame.mp3', "~/Music/King Crimson/Larks' Tongues in Aspic/02 Book of Saturday.mp3", '~/Music/King Crimson/Three of a Perfect Pair- 30th Anniversary [Bonus Tracks]/02 Modelk Man.mp3', '~/Music/King Crimson/Vrooom Vrooom Disc 1/02 Coda- Marine 475.mp3', '~/Music/King Crimson/Vrooom Vrooom Disc 2/02 Thela Hun Ginjeet.mp3', '~/Music/MODULE/43_monkeys have reached___.wav', '~/Music/MODULE/TRIBB/03- Unbenannt003_wav.wav', '~/Music/MODULE/sendung/buchstab01.wav', '~/Music/Ray Kurzweil The Age of Spiritual Machines/(audiobook) Ray Kurzweil - The Age of Spiritual Machines - 2 of 4.mp3', '~/Music/Scirocco/02 Nini Toscanè.mp3', '~/Music/Symphony X/02 - Symphony X - Dressed To Kill.mp3', '~/Music/VOLCANO THE BEAR - Amidst The Noise And Twigs (2007)/02 - Volcano The Bear - Before We Came To This Religion.mp3', '~/Music/VOLCANO THE BEAR - Classic Erasmus Fusion (2006)/A02. Did You Ever Feel Like Jesus¿.mp3', '~/Music/VOLCANO THE BEAR - Guess the Birds (2002)/02 - maureen memorium.mp3', '~/Music/VOLCANO THE BEAR - Xvol/02. snang dushko.mp3', '~/Music/Volcano the bear - [2001] Five Hundred Boy Piano/02. Seeker.mp3', '~/Music/Ys/02 monkey & bear.mp3', '~/Music/anke/DR-100_0809-mucke-tanja.wav', '~/Music/diffusion/known-unknowns-03.wav', '~/Music/francis/urdance_gsm_movt1.wav', '~/Music/grafft/Lotte/210429_1959.mp3', '~/Music/grafft/MUSIC/20200505_Eingecremt.mp3', '~/Music/olli/Du Schweigst_REV2_=FSM=__44.1-24.wav', '~/Music/the who/Tommy/the who - Amazing journey.mp3', '~/Music/theDropper/02 CD Track 02.mp3']
+
+
+def audio_slice_dataset(
+        path: Union[None, str, Path, Iterable[Union[str, Path]]] = None,
+        recursive: bool = False,
+        sample_rate: int = 44100,
+        slice_size: int = 44100,
+        stride: Optional[int] = None,
+        interleave_files: Optional[int] = None,
+        shuffle_files: bool = False,
+        shuffle_slices: Optional[int] = None,
+        mono: bool = False,
+        seek_offset: float = 0.,
+        spectral_shape: Optional[Tuple[int, int]] = None,
+        spectral_patch_shape: Optional[Tuple[int, int]] = None,
+        spectral_patch_stride: Optional[Tuple[int, int]] = None,
+        spectral_normalize: Optional[int] = None,
+        with_filename: bool = False,
+        with_position: bool = False,
+):
+    assert interleave_files > 0, interleave_files
+
+    if path is None:
+        path = AUDIO_FILENAMES_1
+
+    ds = AudioSliceIterableDataset(
+        path=path, recursive=recursive,
+        sample_rate=sample_rate,
+        slice_size=slice_size,
+        stride=stride,
+        interleave_files=interleave_files,
+        shuffle_files=shuffle_files,
+        mono=mono,
+        seek_offset=seek_offset,
+        with_filename=with_filename,
+        with_position=with_position,
+        #verbose=True,
+    )
+    if shuffle_slices:
+        ds = IterableShuffle(ds, max_shuffle=shuffle_slices)
+
+    if spectral_shape is not None:
+        ds = TransformIterableDataset(
+            ds,
+            transforms=[
+                AT.MelSpectrogram(
+                    sample_rate=sample_rate,
+                    n_fft=1024 * 2,
+                    win_length=sample_rate // 30,
+                    hop_length=sample_rate // spectral_shape[-1],
+                    n_mels=spectral_shape[-2],
+                    power=1.,
+                ),
+                lambda x: x[:, :, :spectral_shape[-1]]
+            ],
+        )
+
+        if spectral_normalize:
+            ds = NormalizeMaxIterableDataset(ds, spectral_normalize, clamp=(0, 1))
+
+        if spectral_patch_shape is not None:
+            ds = ImagePatchIterableDataset(
+                ds,
+                shape=spectral_patch_shape,
+                stride=spectral_patch_stride,
+                interleave_images=interleave_files,
+            )
+
+        # shape to [H, W]
+        ds = TransformIterableDataset(
+            ds,
+            transforms=[
+                lambda x: x.squeeze(0),
+            ]
+        )
+
+    return ds
