@@ -58,6 +58,13 @@ class Conv1dBlock(nn.Module):
         y = self.layers.forward(x)
         return y
 
+    @property
+    def device(self):
+        for l in self.layers:
+            if hasattr(l, "weight"):
+                return l.weight.device
+        raise AssertionError("There should be a layer with weights")
+
     @torch.no_grad()
     def get_output_shape(
             self,
@@ -67,7 +74,7 @@ class Conv1dBlock(nn.Module):
             shape = (1, shape)
         elif len(shape) == 1:
             shape = (self.channels[0], *shape)
-        x = torch.zeros(1, *shape)
+        x = torch.zeros(1, *shape).to(self.device)
         y = self.forward(x)
         return tuple(y.shape[-2:])
 

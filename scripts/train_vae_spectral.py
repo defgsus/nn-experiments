@@ -63,12 +63,11 @@ def main():
     TrainAutoencoder.add_parser_args(parser)
     kwargs = vars(parser.parse_args())
 
-    SPEC_SHAPE = (128, 128)
-
     # train autoencoder on spec patches
     if 0:
         SHAPE = (1, 128, 8)
         STRIDE = (128, 1)
+        SPEC_SHAPE = (128, 128)
         PATCHES_PER_SLICE = math.prod(s1 // s2 for s1, s2 in zip(SPEC_SHAPE, STRIDE[-2:]))
         TOTAL_SLICES = 20103
         TOTAL_PATCHES = TOTAL_SLICES * PATCHES_PER_SLICE
@@ -105,41 +104,26 @@ def main():
 
     # train autoencoder on bag-of-words
     else:
-        train_ds = datasets.audio_slice_dataset(
-            path="~/Music/", recursive=True,
-            interleave_files=200,
-            mono=True,
-            spectral_shape=SPEC_SHAPE,
-            shuffle_files=True,
-            spectral_normalize=1_000,
-        )
-        audio_encoder = AudioUnderstander.load("./models/au/au-1sec-3x256.pt")
-        train_ds = TransformIterableDataset(
-            train_ds,
-            transforms=[lambda x: audio_encoder.encode_spectrum(x)]
-        )
-
-        test_ds = datasets.audio_slice_dataset(
-            path=datasets.AUDIO_FILENAMES_2,
-            interleave_files=200,
-            mono=True,
-            spectral_shape=SPEC_SHAPE,
-            seek_offset=30.,
-            #shuffle_slices=10_000,
-            spectral_normalize=1_000,
-        )
-        test_ds = LimitIterableDataset(test_ds, 1000)
-        test_ds = TransformIterableDataset(
-            test_ds,
-            transforms=[lambda x: audio_encoder.encode_spectrum(x)]
-        )
-
         SHAPE = (1, 256 * 3)
-        sample = next(iter(train_ds))
-        assert sample.shape == SHAPE, sample.shape
+        ds = TensorDataset(
+            torch.load("./datasets/embeddings-au-1sec-3x256.pt"),
+            torch.load("./datasets/embeddings-au-1sec-3x256-ids.pt"),
+        )
+        ds = TransformDataset(
+            ds,
+            transforms=[lambda x: x.view(SHAPE)]
+        )
 
-        model = SimpleVAE(SHAPE, latent_dims=math.prod(SHAPE) // 8, kl_loss_weight=0)
+        sample = next(iter(ds))
+        assert sample[0].shape == SHAPE, sample[0].shape
+
+        model = SimpleVAE(SHAPE, latent_dims=math.prod(SHAPE) // 12, kl_loss_weight=0.)
         print(model)
+
+        num_test = 2000
+        num_train = len(ds) - num_test
+        train_ds, test_ds = torch.utils.data.random_split(ds, [num_train, num_test], torch.Generator().manual_seed(42))
+        print(f"{len(test_ds)} validation samples")
 
     trainer = TrainAutoencoder(
         **kwargs,
@@ -147,7 +131,7 @@ def main():
         #min_loss=0.001,
         num_epochs_between_validations=1,
         num_inputs_between_validations=1_000_000 if isinstance(train_ds, IterableDataset) else None,
-        data_loader=DataLoader(train_ds, batch_size=1024, num_workers=2, shuffle=not isinstance(train_ds, IterableDataset)),
+        data_loader=DataLoader(train_ds, batch_size=1024, num_workers=0, shuffle=not isinstance(train_ds, IterableDataset)),
         validation_loader=DataLoader(test_ds, batch_size=64),
         freeze_validation_set=True,
         training_noise=.2,

@@ -9,18 +9,11 @@ import PIL.ImageDraw
 @torch.no_grad()
 def plot_audio(
         waves: Union[torch.Tensor, List[torch.Tensor]],
-        shape: Tuple[int, int],
+        shape: Union[int, Tuple[int, int]] = 128,
         colors: Optional[Iterable[Tuple[int, int, int]]] = None,
         tensor: bool = False,
+        rate: int = 44_100,
 ) -> Union[PIL.Image.Image, torch.Tensor]:
-    image = PIL.Image.new("RGB", (shape[-1], shape[-2]))
-    draw = PIL.ImageDraw.ImageDraw(image)
-
-    draw.line(
-        ((0, shape[-2] / 2), (shape[-1], shape[-2] / 2)),
-        fill=(128, 128, 128),
-        width=1,
-    )
 
     if isinstance(waves, (tuple, list)):
         waves = torch.concat([w.unsqueeze(0) for w in waves])
@@ -32,6 +25,22 @@ def plot_audio(
         colors = _DEFAULT_COLORS
     else:
         colors = tuple(colors)
+
+    length = waves.shape[-1]
+
+    if isinstance(shape, int):
+        shape = (shape, int(shape * length / rate))
+    else:
+        shape = tuple(shape)
+
+    image = PIL.Image.new("RGB", (shape[-1], shape[-2]))
+    draw = PIL.ImageDraw.ImageDraw(image)
+
+    draw.line(
+        ((0, shape[-2] / 2), (shape[-1], shape[-2] / 2)),
+        fill=(128, 128, 128),
+        width=1,
+    )
 
     for i, wave in enumerate(waves):
         x = torch.linspace(0, shape[-1] - 1, len(wave)).to(wave.device)

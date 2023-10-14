@@ -51,7 +51,7 @@ class AudioSliceIterableDataset(IterableDataset):
     def __iter__(self):
         if self._filenames is None:
             self._filenames = sorted(
-                f for f in iter_filenames(self.path, recursive=self.recursive)
+                str(f) for f in iter_filenames(self.path, recursive=self.recursive)
                 if is_audio_file(f)
             )
 
@@ -75,7 +75,7 @@ class AudioSliceIterableDataset(IterableDataset):
                     if self.verbose:
                         print(f"{self.__class__.__name__}: OPEN {filename}")
 
-                    reader = StreamReader(str(filename))
+                    reader = StreamReader(filename)
                     reader.add_basic_audio_stream(4096, sample_rate=self.sample_rate)
                     reader.seek(self.seek_offset)
                 except RuntimeError:

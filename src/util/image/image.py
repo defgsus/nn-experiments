@@ -1,3 +1,4 @@
+import math
 from typing import Tuple, Union, List, Iterable, Optional
 
 import PIL.Image
@@ -194,3 +195,26 @@ def make_grid_labeled(
         grid = VF.to_tensor(grid_pil)
 
     return grid
+
+
+def image_1d_to_2d(vector: torch.Tensor) -> torch.Tensor:
+    if vector.ndim != 1:
+        raise ValueError(f"image_1d_to_2d() expects tensor of 1 dimension, got {vector.shape}")
+    length = vector.shape[0]
+    if not length:
+        return vector.view(1, 1)
+
+    side = max(1, int(math.sqrt(length) + .9999999999))
+    full_length = side * side
+    if length >= full_length:
+        vector = vector[:full_length]
+    elif length < full_length:
+        vector = torch.concat([vector, torch.zeros(full_length - length).to(vector.dtype).to(vector.device)])
+
+    image = vector.view(side, side)
+
+    print(length, full_length)
+    if length <= full_length - side:
+        image = image[:-1]
+
+    return image

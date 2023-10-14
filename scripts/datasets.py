@@ -124,6 +124,8 @@ def audio_slice_dataset(
         with_filename: bool = False,
         with_position: bool = False,
 ):
+    if interleave_files is None:
+        interleave_files = 1
     assert interleave_files > 0, interleave_files
 
     if path is None:

@@ -8,7 +8,7 @@ import argparse
 import shutil
 import warnings
 from pathlib import Path
-from typing import List, Iterable, Tuple, Optional, Callable, Union, Generator
+from typing import List, Iterable, Tuple, Optional, Callable, Union, Generator, Dict
 
 from tqdm import tqdm
 import torch
@@ -87,7 +87,7 @@ class Trainer:
         self._every_callbacks = []
         self._setup_every_callbacks()
 
-    def train_step(self, input_batch) -> torch.Tensor:
+    def train_step(self, input_batch) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
         """
         Default implementation expects input_batch to be a tuple of two Tensors
         and returns the MSE loss between second tensor and model output.
@@ -99,7 +99,7 @@ class Trainer:
 
         return self.loss_function(output_features, target_features)
 
-    def validation_step(self, input_batch) -> torch.Tensor:
+    def validation_step(self, input_batch) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
         return self._train_step(input_batch)
 
     def write_step(self):

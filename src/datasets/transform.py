@@ -105,7 +105,7 @@ class TransformIterableDataset(IterableDataset):
             raise NotImplementedError("__iter__ with features currently not supported")
 
         for item in self.source_dataset:
-            is_tuple = isinstance(item, (tuple, int))
+            is_tuple = isinstance(item, (tuple, list))
             if is_tuple:
                 item, features = item[0], item[1:]
             else:
