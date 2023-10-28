@@ -1,4 +1,5 @@
 from .compression_ratio import ImageCompressionRatio
+from .hsv import hsv_to_rgb, rgb_to_hsv
 from .image import (
     get_images_from_iterable,
     image_1d_to_2d,

@@ -2,7 +2,7 @@ import math
 import argparse
 import random
 from pathlib import Path
-from typing import List, Iterable, Tuple, Optional, Callable
+from typing import List, Iterable, Tuple, Optional, Callable, Union, Dict, Type
 
 import torchvision.models
 from tqdm import tqdm
@@ -22,6 +22,7 @@ from src import console
 from src.train.train_autoencoder import TrainAutoencoder
 from src.models.cnn import *
 from src.models.generative import *
+from src.models.transform import *
 from src.datasets import *
 from src.util.image import *
 from src.util import num_module_parameters
@@ -163,19 +164,21 @@ class MLPAutoEncoder(nn.Module):
             if i < len(self.channels) - 2:
                 self.decoder.append(nn.ReLU())
                 # self.decoder.append(nn.Dropout())
+        self.decoder.append(Reshape(self.shape))
+
 
         print(f"encoder params: {num_module_parameters(self.encoder):,}")
         print(f"decoder params: {num_module_parameters(self.decoder):,}")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.decoder(self.encoder(x)).reshape(-1, *self.shape)
+        return self.decoder(self.encoder(x))
 
     def weight_images(self, **kwargs):
         images = []
         for w in self.encoder[1].weight.reshape(-1, *self.shape)[:32]:
             for w1 in w:
                 images.append(w1)
-        for w in self.decoder[-1].weight.T.reshape(-1, *self.shape)[:32]:
+        for w in self.decoder[-2].weight.T.reshape(-1, *self.shape)[:32]:
             for w1 in w:
                 images.append(w1)
         return images
@@ -223,15 +226,97 @@ class MLPDetailAutoEncoder(nn.Module):
         return images
 
 
+class DalleAutoencoder(nn.Module):
+    def __init__(
+            self,
+            shape: Tuple[int, int, int],
+            n_hid: int = 256,
+            vocab_size: int = 128,
+            input_channels: int = 1,
+            group_count: int = 4,
+            n_blk_per_group: int = 2,
+            use_mixed_precision: bool = False,
+            act_fn: Type[nn.Module] = nn.ReLU,
+    ):
+        from src.models.cnn import DalleEncoder, DalleDecoder
+        super().__init__()
+        self.shape = shape
+        encoder = DalleEncoder(
+            n_hid=n_hid, requires_grad=True, vocab_size=vocab_size,
+            input_channels=input_channels, use_mixed_precision=use_mixed_precision,
+            group_count=group_count, n_blk_per_group=n_blk_per_group,
+            act_fn=act_fn,
+        )
+        with torch.no_grad():
+            out_shape = encoder(torch.zeros(1, *self.shape)).shape
+        self.encoder = nn.Sequential(
+            encoder,
+            nn.Flatten(1),
+            nn.Linear(math.prod(out_shape), vocab_size)
+        )
+        self.decoder = nn.Sequential(
+            nn.Linear(vocab_size, math.prod(out_shape)),
+            Reshape(out_shape[-3:]),
+            DalleDecoder(
+                n_hid=n_hid, vocab_size=vocab_size, requires_grad=True,
+                output_channels=input_channels, use_mixed_precision=use_mixed_precision,
+                group_count=group_count,
+                n_blk_per_group=n_blk_per_group,
+                act_fn=act_fn,
+            ),
+        )
+        print(f"encoder params: {num_module_parameters(self.encoder):,}")
+        print(f"decoder params: {num_module_parameters(self.decoder):,}")
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.decoder(self.encoder(x))
+
+
+class Sobel(nn.Module):
+    def __init__(self, kernel_size: int = 5, sigma: float = 5.):
+        super().__init__()
+        self.kernel_size = kernel_size
+        self.sigma = sigma
+
+    def forward(self, x):
+        blurred = VF.gaussian_blur(x, [self.kernel_size, self.kernel_size], [self.sigma, self.sigma])
+        return (x - blurred).clamp_min(0)
+
+
 class TrainAutoencoderSpecial(TrainAutoencoder):
 
-    def train_step(self, input_batch) -> torch.Tensor:
+    def train_step(self, input_batch) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
         input_batch = input_batch[0]
-        feature_batch = self.model.encode(input_batch)
-        output_batch = self.model.decode(feature_batch)
+        if hasattr(self.model, "encode"):
+            feature_batch = self.model.encode(input_batch)
+        else:
+            feature_batch = self.model.encoder(input_batch)
+        if hasattr(self.model, "decode"):
+            output_batch = self.model.decode(feature_batch)
+        else:
+            output_batch = self.model.decoder(feature_batch)
+
+        if input_batch.shape != output_batch.shape:
+            raise ValueError(
+                f"input_batch = {input_batch.shape}"
+                f", output_batch = {output_batch.shape}"
+                f", feature_batch = {feature_batch.shape}"
+            )
 
         reconstruction_loss = self.loss_function(input_batch, output_batch)
-        return reconstruction_loss
+
+        if not hasattr(self, "_sobel_filter"):
+            self._sobel_filter = Sobel()
+
+        sobel_input_batch = self._sobel_filter(input_batch)
+        sobel_output_batch = self._sobel_filter(output_batch)
+        sobel_reconstruction_loss = self.loss_function(sobel_input_batch, sobel_output_batch)
+
+        return {
+            "loss": reconstruction_loss, # + 15. * sobel_reconstruction_loss,
+            "loss_reconstruction": reconstruction_loss,
+            "loss_reconstruction_sobel": sobel_reconstruction_loss,
+        }
 
         active_ratio = (feature_batch.abs()).sum() / math.prod(feature_batch.shape)
         sparsity_loss = (1./100. - active_ratio).abs()
@@ -249,16 +334,16 @@ def main():
     kwargs = vars(parser.parse_args())
 
     if 1:
-        SHAPE = (1, 64, 64)
+        SHAPE = (3, 64, 64)
         #ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{SHAPE[-2]}x{SHAPE[-1]}.pt"))
         ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{128}x{128}.pt"))
         ds = TransformDataset(
             ds,
             dtype=torch.float, multiply=1. / 255.,
             transforms=[
-                VT.CenterCrop(64),
-                #VT.RandomCrop(SHAPE[-2:])
-                VT.Grayscale(),
+                #VT.CenterCrop(64),
+                VT.RandomCrop(SHAPE[-2:]),
+                #VT.Grayscale(),
             ],
             num_repeat=1,
         )
@@ -273,13 +358,22 @@ def main():
     #test_ds = TensorDataset(torch.load("./datasets/fonts-32x32.pt")[:500])
 
     #model = NewAutoEncoder(SHAPE)
-    model = ConvAutoEncoder(SHAPE, channels=[8, 16, 24], kernel_size=7, code_size=128) # good one
-    model = ConvAutoEncoder(SHAPE, channels=[8, 16, 24], kernel_size=7, code_size=128, bias=False, linear_bias=False, act_last_layer=False)
+    #model = ConvAutoEncoder(SHAPE, channels=[8, 16, 24], kernel_size=7, code_size=128) # good one
+    #model = ConvAutoEncoder(SHAPE, channels=[8, 16, 24], kernel_size=7, code_size=128, bias=False, linear_bias=False, act_last_layer=False)
     #model = TransformerAutoencoder(SHAPE, channels=[8, 16, 24], kernel_size=7, code_size=64)
     #model = ConvAutoEncoder(SHAPE, channels=[32], kernel_size=7, code_size=64)
-    #model = MLPAutoEncoder(SHAPE, [512])
+    #model = MLPAutoEncoder(SHAPE, [128])
     #model = MLPDetailAutoEncoder(SHAPE, 128)
     #model = VariationalAutoencoder(SHAPE, 128)
+
+    #model = ConvAutoEncoder(SHAPE, channels=[32, 32, 32], kernel_size=[3, 6, 8], code_size=128, space_to_depth=True)
+    #model = ConvAutoEncoder(SHAPE, channels=[16, 16, 16], kernel_size=[3, 6, 4], code_size=128, space_to_depth=True)
+
+    # val: 0.0099 (200k), 0.0091 (1M)
+    #model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=64)
+
+    # val: 0.01 (200k), 0.00889 (2M), 0.00857 (5M)
+    model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=64, group_count=1, n_blk_per_group=1, act_fn=nn.GELU, input_channels=SHAPE[-3])
     print(model)
 
     trainer = TrainAutoencoderSpecial(
@@ -293,8 +387,8 @@ def main():
         freeze_validation_set=True,
         loss_function="l2",
         optimizers=[
-            #torch.optim.Adam(model.parameters(), lr=.001),#, weight_decay=0.00001),
-            torch.optim.Adadelta(model.parameters(), lr=1.),
+            torch.optim.Adam(model.parameters(), lr=.0002),#, weight_decay=0.00001),
+            #torch.optim.Adadelta(model.parameters(), lr=1.),
         ],
         hparams={
             "shape": SHAPE,

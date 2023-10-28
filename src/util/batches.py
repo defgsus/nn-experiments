@@ -1,6 +1,7 @@
-from typing import Iterable, Generator
+from typing import Iterable, Generator, Callable
 
 import torch
+from tqdm import tqdm
 
 
 def iter_batches(source: Iterable, batch_size: int) -> Generator:
@@ -35,3 +36,28 @@ def iter_batches(source: Iterable, batch_size: int) -> Generator:
                 _join([item[item_idx] for item in item_list])
                 for item_idx in range(len(item))
             )
+
+
+def batch_call(
+        func: Callable[[torch.Tensor], torch.Tensor],
+        data: torch.Tensor,
+        batch_size: int = 64,
+        verbose: bool = False,
+):
+    """
+    Call a function with a tensor, divide tensor into batches.
+
+    :param func: any callable that expects a single Tensor argument
+    :param data: Tensor with ndim >= 2, batched along the first dimension
+    :param batch_size: int, size of one batch
+    :param verbose: bool, show progress
+    :return: Tensor, the concatenated batches
+    """
+    with tqdm(total=data.shape[0], disable=not verbose) as progress:
+        results = []
+        for batch_idx in range(0, data.shape[0], batch_size):
+            batch_data = data[batch_idx: batch_idx + batch_size]
+            results.append(func(batch_data))
+            progress.update(batch_data.shape[0])
+
+        return torch.concat(results)

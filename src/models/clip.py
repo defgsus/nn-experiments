@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union, Iterable
 
 import torch
 import torchvision.transforms as VT
@@ -42,7 +42,7 @@ class ClipSingleton:
             model: Optional[str] = None,
             device: str = "auto",
             interpolation: VT.InterpolationMode = VT.InterpolationMode.NEAREST,
-            require_grad: bool = False,
+            requires_grad: bool = False,
     ):
         model, preproc = cls.get(model, device)
 
@@ -65,15 +65,31 @@ class ClipSingleton:
         device = image_batch.device
         model_device = cls._get_model_device(model)
 
-        if require_grad:
+        if requires_grad:
             feature_batch = model.encode_image(image_batch.to(model_device))
         else:
             with torch.no_grad():
                 feature_batch = model.encode_image(image_batch.to(model_device))
 
-        feature_batch_cpu = feature_batch.to(device).to(torch.float)
-        del feature_batch
-        return feature_batch_cpu
+        return feature_batch.to(device).to(image_batch.dtype)
+
+    @classmethod
+    def encode_text(
+            cls,
+            text: Union[str, Iterable[str]],
+            model: Optional[str] = None,
+            device: str = "auto",
+            requires_grad: bool = False,
+    ):
+        model, preproc = cls.get(model, device)
+
+        tokens = clip.tokenize(text).to(cls._get_model_device(model))
+
+        if requires_grad:
+            return model.encode_text(tokens)
+        else:
+            with torch.no_grad():
+                return model.encode_text(tokens)
 
     @classmethod
     def _get_model_device(cls, model: torch.nn.Module) -> torch.device:

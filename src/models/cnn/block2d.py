@@ -4,13 +4,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .spacedepth import SpaceToDepth2d
+
 
 class Conv2dBlock(nn.Module):
 
     def __init__(
             self,
             channels: Iterable[int],
-            kernel_size: int = 5,
+            kernel_size: Union[int, Iterable[int]] = 5,
             stride: int = 1,
             pool_kernel_size: int = 0,
             pool_type: str = "max",  # "max", "average"
@@ -19,11 +21,31 @@ class Conv2dBlock(nn.Module):
             bias: bool = True,
             transpose: bool = False,
             batch_norm: bool = False,
+            space_to_depth: bool = False,
     ):
-        super().__init__()
+        super().__init__() #channels, kernel_size, stride, pool_kernel_size, pool_type, act_fn, act_last_layer, bias, transpose, batch_norm, space_to_depth)
         self.channels = list(channels)
+        if len(self.channels) < 2:
+            raise ValueError(f"Expected `channels` to be of length >= 2, got: {self.channels}")
+
+        num_layers = len(self.channels) - 1
+
+        if isinstance(kernel_size, int):
+            self.kernel_size = [kernel_size for _ in range(num_layers)]
+        else:
+            self.kernel_size = list(kernel_size)
+            if len(self.kernel_size) != num_layers:
+                raise ValueError(f"Expected `kernel_size` to have {num_layers} elements, got {self.kernel_size}")
+
+        self.stride = stride
+        self._bias = bias
+        self._batch_norm = batch_norm
+        self._space_to_depth = space_to_depth
         self._act_fn = act_fn
-        assert len(self.channels) >= 2, f"Got: {channels}"
+        self._pool_kernel_size = pool_kernel_size
+        self._pool_type = pool_type
+        self._act_last_layer = act_last_layer
+        self._transpose = transpose
 
         self.layers = nn.Sequential()
 
@@ -32,17 +54,32 @@ class Conv2dBlock(nn.Module):
                 nn.BatchNorm2d(self.channels[0])
             )
 
-        for i, (channels, next_channels) in enumerate(zip(self.channels, self.channels[1:])):
+        in_channel_mult = 1
+        out_channel_mult = 1
+        for i, (in_channels, out_channels, kernel_size) in enumerate(
+                zip(self.channels, self.channels[1:], self.kernel_size)
+        ):
+            if space_to_depth and transpose:
+                self.layers.append(SpaceToDepth2d(transpose=transpose))
+                out_channel_mult = 1
+                if i < len(self.channels) - 2:
+                    out_channel_mult = 4
+
             self.layers.append(
                 self._create_layer(
-                    in_channels=channels,
-                    out_channels=next_channels,
+                    in_channels=in_channels * in_channel_mult,
+                    out_channels=out_channels * out_channel_mult,
                     kernel_size=kernel_size,
                     stride=stride,
                     bias=bias,
                     transpose=transpose,
                 )
             )
+
+            if space_to_depth and not transpose and i < len(self.channels) - 1:
+                self.layers.append(SpaceToDepth2d(transpose=transpose))
+                in_channel_mult = 4
+
             if pool_kernel_size and i == len(self.channels) - 2:
                 klass = {
                     "max": nn.MaxPool2d,
@@ -68,6 +105,24 @@ class Conv2dBlock(nn.Module):
         x = torch.zeros(1, *shape)
         y = self.forward(x)
         return tuple(y.shape[-3:])
+
+    def create_transposed(
+            self,
+            act_last_layer: Optional[bool] = None,
+    ) -> "Conv2dBlock":
+        return self.__class__(
+            channels=list(reversed(self.channels)),
+            kernel_size=list(reversed(self.kernel_size)),
+            stride=self.stride,
+            pool_kernel_size=self._pool_kernel_size,
+            pool_type=self._pool_type,
+            act_fn=self._act_fn,
+            act_last_layer=self._act_last_layer if act_last_layer is None else act_last_layer,
+            bias=self._bias,
+            transpose=not self._transpose,
+            batch_norm=self._batch_norm,
+            space_to_depth=self._space_to_depth,
+        )
 
     def add_input_layer(
             self,

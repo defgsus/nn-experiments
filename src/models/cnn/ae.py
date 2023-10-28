@@ -1,5 +1,5 @@
 import math
-from typing import Tuple, Optional, Iterable
+from typing import Tuple, Optional, Iterable, Union
 
 import torch
 import torch.nn as nn
@@ -14,13 +14,14 @@ class ConvAutoEncoder(torch.nn.Module):
             self,
             shape: Tuple[int, int, int],
             channels: Iterable[int] = None,
-            kernel_size: int = 5,
+            kernel_size: Union[int, Iterable[int]] = 5,
             code_size: int = 128,
             act_fn: Optional[torch.nn.Module] = torch.nn.GELU(),
             batch_norm: bool = False,
             bias: bool = True,
             linear_bias: bool = True,
             act_last_layer: bool = True,
+            space_to_depth: bool = False,
     ):
         super().__init__()
         self.shape = tuple(shape)
@@ -38,7 +39,7 @@ class ConvAutoEncoder(torch.nn.Module):
             act_fn=self._act_fn,
             batch_norm=batch_norm,
             bias=bias,
-            #act_last_layer=True,
+            space_to_depth=space_to_depth,
         )
         conv_shape = encoder_block.get_output_shape(self.shape)
         self.encoder = torch.nn.Sequential(
@@ -49,13 +50,7 @@ class ConvAutoEncoder(torch.nn.Module):
         self.decoder = torch.nn.Sequential(
             nn.Linear(code_size, math.prod(conv_shape), bias=linear_bias),
             nn.Unflatten(1, conv_shape),
-            Conv2dBlock(
-                channels=list(reversed(self.channels)),
-                kernel_size=self.kernel_size,
-                act_fn=self._act_fn,
-                batch_norm=batch_norm,
-                bias=bias,
-                transpose=True,
+            encoder_block.create_transposed(
                 act_last_layer=act_last_layer,
             )
         )
@@ -73,12 +68,11 @@ class ConvAutoEncoder(torch.nn.Module):
         return self.decode(code)
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.encoder.forward(x)
-        return x
+        return self.encoder.forward(x)
 
     def decode(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.decoder.forward(x).reshape(-1, *self.shape)
-        return x
+        y = self.decoder.forward(x)
+        return y.reshape(-1, *self.shape)
 
     def weight_images(self, **kwargs):
         images = []
