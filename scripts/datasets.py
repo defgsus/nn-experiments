@@ -183,3 +183,48 @@ def audio_slice_dataset(
         )
 
     return ds
+
+
+class RpgTileIterableDataset(IterableDataset):
+
+    def __init__(self, shape: Tuple[int, int, int] = (3, 32, 32)):
+        self.shape = shape
+
+    def __iter__(self):
+        yield from self._iter_tiles("~/prog/data/game-art/Castle2.png", (16, 16))
+        yield from self._iter_tiles("~/prog/data/game-art/PathAndObjects.png", (32, 32))
+        yield from self._iter_tiles("~/prog/data/game-art/mininicular.png", (8, 8))
+        yield from self._iter_tiles("~/prog/data/game-art/items.png", (16, 16))
+        yield from self._iter_tiles("~/prog/data/game-art/roguelikeitems.png", (16, 16))
+        yield from self._iter_tiles("~/prog/data/game-art/apocalypse.png", (16, 16))
+        yield from self._iter_tiles("~/prog/data/game-art/tileset_1bit.png", (16, 16))
+        yield from self._iter_tiles("~/prog/data/game-art/MeteorRepository1Icons_fixed.png", (16, 16), (8, 0), (17, 17))
+        yield from self._iter_tiles("~/prog/data/game-art/DENZI_CC0_32x32_tileset.png", (32, 32))
+        yield from self._iter_tiles("~/prog/data/game-art/overworld_tileset_grass.png", (16, 16))
+        yield from self._iter_tiles("~/prog/data/game-art/goodly-2x.png", (32, 32))
+        yield from self._iter_tiles("~/prog/data/game-art/Fruit.png", (16, 16))
+        yield from self._iter_tiles("~/prog/data/game-art/roguelikecreatures.png", (16, 16))
+        yield from self._iter_tiles("~/prog/data/game-art/metroid-like.png", (16, 16), limit=(128, 1000))
+        yield from self._iter_tiles("~/prog/data/game-art/tilesheet_complete.png", (64, 64))
+        yield from self._iter_tiles("~/prog/data/game-art/tiles-map.png", (16, 16))
+        yield from self._iter_tiles("~/prog/data/game-art/base_out_atlas.png", (32, 32))
+        yield from self._iter_tiles("~/prog/data/game-art/build_atlas.png", (32, 32))
+        yield from self._iter_tiles("~/prog/data/game-art/obj_misk_atlas.png", (32, 32))
+        yield from self._iter_tiles("~/prog/data/game-art/Tile-set - Toen's Medieval Strategy (16x16) - v.1.0.png", (16, 16))
+
+    def _iter_tiles(self, name: str, shape: Tuple[int, int], offset: Tuple[int, int] = None, stride=None, limit=None):
+        image = VF.to_tensor(PIL.Image.open(Path(name).expanduser()))
+
+        if image.shape[0] != self.shape[0]:
+            image = set_image_channels(image[:3], self.shape[0])
+
+        if limit:
+            image = image[..., :limit[0], :limit[1]]
+        if offset:
+            image = image[..., offset[0]:, offset[1]:]
+
+        for patch in iter_image_patches(image, shape, stride=stride):
+            if patch.std(1).mean() > 0.:
+                #print(patch.std(1).mean())
+                patch = VF.resize(patch, self.shape[-2:], VF.InterpolationMode.NEAREST, antialias=False)
+                return set_image_channels(patch, self.shape[0])

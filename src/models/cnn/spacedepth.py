@@ -1,6 +1,8 @@
 """
 inspired by https://github.com/LabSAINT/SPD-Conv / https://arxiv.org/pdf/2208.03641.pdf
 """
+from collections import OrderedDict
+
 import torch
 import torch.nn as nn
 
@@ -47,7 +49,7 @@ def depth_to_space(x: torch.Tensor) -> torch.Tensor:
     ], dim=-2).view(-1, nc, x.shape[-2] * 2, x.shape[-1] * 2)
 
 
-class SpaceToDepth2d(nn.Module):
+class SpaceToDepth(nn.Module):
 
     def __init__(self, transpose: bool = False):
         super().__init__()
@@ -62,3 +64,24 @@ class SpaceToDepth2d(nn.Module):
     def extra_repr(self):
         return "transpose=True" if self.transpose else ""
 
+
+
+class SpaceToDepthPool(nn.Module):
+    """
+    Replaces a Max/AvgPool2d with a stack of SpaceToDepth and Conv2d
+    """
+    def __init__(self, n_channels: int, kernel_size: int = 2):
+        if kernel_size % 2 != 0:
+            raise ValueError(f"`kernel_size` must be even, got {kernel_size}")
+
+        super().__init__()
+
+        layers = OrderedDict()
+        for i in range(kernel_size // 2):
+            layers[f"spd_{i + 1}"] = SpaceToDepth()
+            layers[f"conv_{i + 1}"] = nn.Conv2d(n_channels * 4, n_channels, kernel_size=1)
+
+        self.layers = nn.Sequential(layers)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.layers(x)

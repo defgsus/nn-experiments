@@ -1,5 +1,6 @@
 import math
-from typing import Tuple, Union, List, Iterable, Optional
+from functools import partial
+from typing import Tuple, Union, List, Iterable, Optional, Callable
 
 import PIL.Image
 import PIL.ImageDraw
@@ -218,3 +219,13 @@ def image_1d_to_2d(vector: torch.Tensor) -> torch.Tensor:
         image = image[:-1]
 
     return image
+
+
+def get_image_window(
+        shape: Tuple[int, int],
+        window_function: Callable = partial(torch.hamming_window, periodic=True),
+) -> torch.Tensor:
+    return (
+          window_function(shape[-1], periodic=True).unsqueeze(0).expand(shape[-2], -1)
+        * window_function(shape[-2], periodic=True).unsqueeze(0).expand(shape[-1], -1).T
+    )

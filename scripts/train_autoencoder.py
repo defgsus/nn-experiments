@@ -29,6 +29,7 @@ from src.util import num_module_parameters
 from src.algo import Space2d
 
 from scripts.train_classifier_dataset import AlexNet
+from scripts import datasets
 
 
 class Encoder(nn.Module):
@@ -232,20 +233,21 @@ class DalleAutoencoder(nn.Module):
             shape: Tuple[int, int, int],
             n_hid: int = 256,
             vocab_size: int = 128,
-            input_channels: int = 1,
             group_count: int = 4,
             n_blk_per_group: int = 2,
             use_mixed_precision: bool = False,
             act_fn: Type[nn.Module] = nn.ReLU,
+            space_to_depth: bool = False,
     ):
         from src.models.cnn import DalleEncoder, DalleDecoder
         super().__init__()
         self.shape = shape
         encoder = DalleEncoder(
             n_hid=n_hid, requires_grad=True, vocab_size=vocab_size,
-            input_channels=input_channels, use_mixed_precision=use_mixed_precision,
+            input_channels=self.shape[0], use_mixed_precision=use_mixed_precision,
             group_count=group_count, n_blk_per_group=n_blk_per_group,
             act_fn=act_fn,
+            space_to_depth=space_to_depth,
         )
         with torch.no_grad():
             out_shape = encoder(torch.zeros(1, *self.shape)).shape
@@ -259,7 +261,7 @@ class DalleAutoencoder(nn.Module):
             Reshape(out_shape[-3:]),
             DalleDecoder(
                 n_hid=n_hid, vocab_size=vocab_size, requires_grad=True,
-                output_channels=input_channels, use_mixed_precision=use_mixed_precision,
+                output_channels=self.shape[0], use_mixed_precision=use_mixed_precision,
                 group_count=group_count,
                 n_blk_per_group=n_blk_per_group,
                 act_fn=act_fn,
@@ -313,7 +315,7 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
         sobel_reconstruction_loss = self.loss_function(sobel_input_batch, sobel_output_batch)
 
         return {
-            "loss": reconstruction_loss, # + 15. * sobel_reconstruction_loss,
+            "loss": reconstruction_loss,# + 1. * sobel_reconstruction_loss,
             "loss_reconstruction": reconstruction_loss,
             "loss_reconstruction_sobel": sobel_reconstruction_loss,
         }
@@ -328,31 +330,75 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
         return reconstruction_loss + sparsity_loss
 
 
+def create_kali_rpg_dataset(shape: Tuple[int, int, int]) -> IterableDataset:
+    datasets_path = Path(__file__).resolve().parent.parent / "datasets"
+
+    ds_kali = TensorDataset(torch.load(datasets_path / f"kali-uint8-{128}x{128}.pt"))
+    ds_kali = TransformDataset(
+        ds_kali,
+        dtype=torch.float, multiply=1. / 255.,
+        transforms=[
+            #VT.CenterCrop(64),
+            VT.RandomCrop(shape[-2:]),
+        ],
+        num_repeat=1,
+    )
+
+    ds_rpg = datasets.RpgTileIterableDataset(shape)
+    ds_rpg = TransformIterableDataset(
+        ds_rpg,
+        transforms=[
+            VT.Pad(3),
+            VT.RandomCrop(shape[-2:]),
+            VT.RandomHorizontalFlip(.4),
+            VT.RandomVerticalFlip(.2),
+        ],
+        num_repeat=2,
+    )
+
+    ds = InterleaveIterableDataset(
+        [ds_kali, ds_rpg],
+    )
+    def _print(x):
+        print("X", x.shape)
+        if x.shape != torch.Size((1, 32, 32)):
+            print("XXX", x.shape)
+        return x
+
+    ds = TransformIterableDataset(
+        ds, transforms=[
+            lambda x: set_image_channels(x, shape[0]),
+            #lambda x: x[0] if isinstance(x, (list, tuple)) else x,
+            #_print,
+        ],
+        remove_tuple=True,
+    )
+    return IterableShuffle(ds, max_shuffle=5000)
+
+
 def main():
     parser = argparse.ArgumentParser()
     TrainAutoencoder.add_parser_args(parser)
     kwargs = vars(parser.parse_args())
 
-    if 1:
-        SHAPE = (3, 64, 64)
-        #ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{SHAPE[-2]}x{SHAPE[-1]}.pt"))
-        ds = TensorDataset(torch.load(f"./datasets/kali-uint8-{128}x{128}.pt"))
-        ds = TransformDataset(
-            ds,
-            dtype=torch.float, multiply=1. / 255.,
-            transforms=[
-                #VT.CenterCrop(64),
-                VT.RandomCrop(SHAPE[-2:]),
-                #VT.Grayscale(),
-            ],
-            num_repeat=1,
-        )
-    else:
-        SHAPE = (1, 32, 32)
-        ds = TensorDataset(torch.load(f"./datasets/fonts-regular-{SHAPE[-2]}x{SHAPE[-1]}.pt"))
-    assert ds[0][0].shape[:3] == torch.Size(SHAPE), ds[0][0].shape
+    SHAPE = (1, 32, 32)
+    ds = create_kali_rpg_dataset(SHAPE)
 
-    train_ds, test_ds = torch.utils.data.random_split(ds, [0.99, 0.01], torch.Generator().manual_seed(42))
+    if isinstance(ds, IterableDataset):
+        train_ds = ds
+        # NOT a true validation set!
+        test_ds = TensorDataset(torch.concat([
+            x[0].unsqueeze(0) if isinstance(x, (tuple, list)) else x.unsqueeze(0)
+            for i, x in zip(range(1000), ds)
+        ]))
+    else:
+        train_ds, test_ds = torch.utils.data.random_split(ds, [0.99, 0.01], torch.Generator().manual_seed(42))
+
+    sample = next(iter(train_ds))
+    assert sample.shape[:3] == torch.Size(SHAPE), sample.shape
+    sample = next(iter(test_ds))
+    assert sample[0].shape[:3] == torch.Size(SHAPE), sample[0].shape
+
 
     #train_ds = FontDataset(shape=SHAPE)
     #test_ds = TensorDataset(torch.load("./datasets/fonts-32x32.pt")[:500])
@@ -372,8 +418,10 @@ def main():
     # val: 0.0099 (200k), 0.0091 (1M)
     #model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=64)
 
-    # val: 0.01 (200k), 0.00889 (2M), 0.00857 (5M)
-    model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=64, group_count=1, n_blk_per_group=1, act_fn=nn.GELU, input_channels=SHAPE[-3])
+    # ae-d3: val: 0.01 (200k), 0.00889 (2M), 0.00857 (5M)
+    #model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=64, group_count=1, n_blk_per_group=1, act_fn=nn.GELU)
+    #model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=64, group_count=1, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True)
+    model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=96, group_count=4, n_blk_per_group=2, act_fn=nn.GELU, space_to_depth=True)
     print(model)
 
     trainer = TrainAutoencoderSpecial(
@@ -382,7 +430,7 @@ def main():
         #min_loss=0.001,
         num_epochs_between_validations=1,
         #num_inputs_between_validations=10_000,
-        data_loader=DataLoader(train_ds, batch_size=64, shuffle=True),
+        data_loader=DataLoader(train_ds, batch_size=64, shuffle=not isinstance(train_ds, IterableDataset)),
         validation_loader=DataLoader(test_ds, batch_size=64),
         freeze_validation_set=True,
         loss_function="l2",

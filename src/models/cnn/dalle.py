@@ -12,6 +12,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from src.models.cnn.spacedepth import SpaceToDepthPool
+
 
 @attr.s(eq=False)
 class DalleConv2d(nn.Module):
@@ -109,8 +111,9 @@ class DalleEncoder(nn.Module):
     vocab_size:      int = attr.ib(default=8192, validator=lambda i, a, x: x >= 512)
     act_fn:          Type[nn.Module] = attr.ib(default=nn.ReLU)
 
-    requires_grad:       bool         = attr.ib(default=False)
-    use_mixed_precision: bool         = attr.ib(default=True)
+    space_to_depth:      bool = attr.ib(default=False)
+    requires_grad:       bool = attr.ib(default=False)
+    use_mixed_precision: bool = attr.ib(default=True)
 
     def __attrs_post_init__(self) -> None:
         super().__init__()
@@ -124,15 +127,15 @@ class DalleEncoder(nn.Module):
             ('input', make_conv(self.input_channels, 1 * self.n_hid, 7)),
             ('group_1', nn.Sequential(OrderedDict([
                 *[(f'block_{i + 1}', make_blk(1 * self.n_hid, 1 * self.n_hid)) for i in blk_range],
-                ('pool', nn.MaxPool2d(kernel_size=2)),
+                ('pool', SpaceToDepthPool(1 * self.n_hid) if self.space_to_depth else nn.MaxPool2d(kernel_size=2)),
             ]))),
             ('group_2', nn.Sequential(OrderedDict([
                 *[(f'block_{i + 1}', make_blk(1 * self.n_hid if i == 0 else 2 * self.n_hid, 2 * self.n_hid)) for i in blk_range],
-                ('pool', nn.MaxPool2d(kernel_size=2)),
+                ('pool', SpaceToDepthPool(2 * self.n_hid) if self.space_to_depth else nn.MaxPool2d(kernel_size=2)),
             ]))),
             ('group_3', nn.Sequential(OrderedDict([
                 *[(f'block_{i + 1}', make_blk(2 * self.n_hid if i == 0 else 4 * self.n_hid, 4 * self.n_hid)) for i in blk_range],
-                ('pool', nn.MaxPool2d(kernel_size=2)),
+                ('pool', SpaceToDepthPool(4 * self.n_hid) if self.space_to_depth else nn.MaxPool2d(kernel_size=2)),
             ]))),
             ('group_4', nn.Sequential(OrderedDict([
                 *[(f'block_{i + 1}', make_blk(4 * self.n_hid if i == 0 else 8 * self.n_hid, 8 * self.n_hid)) for i in blk_range],
@@ -194,8 +197,8 @@ class DalleDecoder(nn.Module):
     vocab_size:      int = attr.ib(default=8192, validator=lambda i, a, x: x >= 512)
     act_fn:          Type[nn.Module] = attr.ib(default=nn.ReLU)
 
-    requires_grad:       bool         = attr.ib(default=False)
-    use_mixed_precision: bool         = attr.ib(default=True)
+    requires_grad:       bool = attr.ib(default=False)
+    use_mixed_precision: bool = attr.ib(default=True)
 
     def __attrs_post_init__(self) -> None:
         super().__init__()

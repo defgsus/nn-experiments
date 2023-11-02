@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .spacedepth import SpaceToDepth2d
+from .spacedepth import SpaceToDepth
 
 
 class Conv2dBlock(nn.Module):
@@ -60,7 +60,7 @@ class Conv2dBlock(nn.Module):
                 zip(self.channels, self.channels[1:], self.kernel_size)
         ):
             if space_to_depth and transpose:
-                self.layers.append(SpaceToDepth2d(transpose=transpose))
+                self.layers.append(SpaceToDepth(transpose=transpose))
                 out_channel_mult = 1
                 if i < len(self.channels) - 2:
                     out_channel_mult = 4
@@ -77,7 +77,7 @@ class Conv2dBlock(nn.Module):
             )
 
             if space_to_depth and not transpose and i < len(self.channels) - 1:
-                self.layers.append(SpaceToDepth2d(transpose=transpose))
+                self.layers.append(SpaceToDepth(transpose=transpose))
                 in_channel_mult = 4
 
             if pool_kernel_size and i == len(self.channels) - 2:

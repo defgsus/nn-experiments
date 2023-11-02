@@ -8,6 +8,7 @@ from .image import (
     set_image_channels,
     set_image_dtype,
     signed_to_image,
+    get_image_window,
 )
 from .image_filter import ImageFilter
 from .patches import iter_image_patches

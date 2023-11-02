@@ -88,6 +88,7 @@ class TransformIterableDataset(IterableDataset):
             transforms: Optional[Iterable[Callable]] = None,
             num_repeat: int = 1,
             features_dataframe: Optional[pd.DataFrame] = None,
+            remove_tuple: bool = False,
     ):
         super().__init__()
         self.source_dataset = source_dataset
@@ -96,6 +97,7 @@ class TransformIterableDataset(IterableDataset):
         self.transforms = list(transforms) if transforms is not None else None
         self.num_repeat = num_repeat
         self.features_dataframe = features_dataframe
+        self.remove_tuple = remove_tuple
 
     def __len__(self):
         return len(self.source_dataset) * self.num_repeat
@@ -114,7 +116,7 @@ class TransformIterableDataset(IterableDataset):
             for repeat_index in range(self.num_repeat):
                 trans_item = self._transform(item)
 
-                if is_tuple:
+                if is_tuple and not self.remove_tuple:
                     yield trans_item, *features
                 else:
                     yield trans_item
