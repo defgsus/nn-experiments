@@ -1,3 +1,15 @@
+from .mapper import (
+    wang_map_stochastic_scanline,
+)
+from .presets import (
+    get_wang_tile_colors,
+    WangTiles2E,
+    WangTiles2C,
+)
+from .render import (
+    render_wang_map,
+    render_wang_tile,
+)
 from .wangtemplate import (
     WangTemplate,
     WangTemplate2E,
@@ -5,6 +17,4 @@ from .wangtemplate import (
 )
 from .wangtiles import (
     WangTiles,
-    WangTiles2E,
-    WangTiles2C,
 )

@@ -1,2 +1,2 @@
 from .reshape import Reshape
-from .wang import RandomWangMap
+#from .wang import RandomWangMap

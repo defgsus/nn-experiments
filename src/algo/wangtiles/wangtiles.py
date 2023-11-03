@@ -1,4 +1,11 @@
-from typing import List, Set, Iterable
+import math
+from typing import List, Set, Iterable, Tuple, Optional
+
+import torch
+from torchvision.utils import make_grid
+
+from .wangtemplate import WangTemplate
+from .render import render_wang_tile
 
 
 class WangTiles:
@@ -134,20 +141,22 @@ class WangTiles:
         else:
             raise ValueError(f"`mode` must be one of e, edge, c, corner, ec, ce, edgecorner or corneredge, got '{mode}'")
 
-        self.mode = mode
         self.tiles = []
 
-        expected_length = 8 if mode == "edgecorner" else 4
+        expected_length = 8 if self.mode == "edgecorner" else 4
         for idx, row in enumerate(colors):
             row = list(row)
             if len(row) != expected_length:
                 raise ValueError(f"Item #{idx} in `colors` has length {len(row)}, expected {expected_length}")
-            if mode == "edgecorner":
+
+            if self.mode == "edgecorner":
                 colors = row
-            elif mode == "edge":
+
+            elif self.mode == "edge":
                 colors = [-1] * 8
                 for i, c in enumerate(row):
                     colors[i * 2] = c
+
             else:  # "corner":
                 colors = [-1] * 8
                 for i, c in enumerate(row):
@@ -166,57 +175,39 @@ class WangTiles:
                     if tile1.matches(tile2, direction):
                         tile1._matching_indices[direction].add(tile2.index)
 
+    def __len__(self):
+        return len(self.tiles)
+
     def __getitem__(self, idx: int) -> Tile:
         return self.tiles[idx]
 
+    def create_template(
+            self,
+            tile_shape: Tuple[int, int],
+            padding: float = 0.,
+            fade: float = 1.0,
+            image: Optional[torch.Tensor] = None,
+    ):
+        nrow = int(math.sqrt(len(self.tiles)))
 
-class WangTiles2E(WangTiles):
-    """All wang tiles with 2 colors (0 or 1) on edges"""
-    def __init__(self):
-        super().__init__(
-            colors=[
-                [0, 0, 0, 0],
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [1, 1, 0, 0],
-                [0, 0, 1, 0],
-                [1, 0, 1, 0],
-                [0, 1, 1, 0],
-                [1, 1, 1, 0],
-                [0, 0, 0, 1],
-                [1, 0, 0, 1],
-                [0, 1, 0, 1],
-                [1, 1, 0, 1],
-                [0, 0, 1, 1],
-                [1, 0, 1, 1],
-                [0, 1, 1, 1],
-                [1, 1, 1, 1],
-            ],
-            mode="edge",
-        )
+        if image is None:
+            tile_images = []
+            for i, tile in enumerate(self.tiles):
+                tile_images.append(
+                    render_wang_tile(
+                        assignments=tile.colors,
+                        shape=tile_shape,
+                        padding=padding,
+                        fade=fade,
+                    )
+                )
 
+            image = make_grid(
+                tile_images,
+                padding=0,
+                nrow=nrow,
+            )
 
-class WangTiles2C(WangTiles):
-    """All wang tiles with 2 colors (0 or 1) on corners"""
-    def __init__(self):
-        super().__init__(
-            colors=[
-                [0, 0, 0, 0],
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [1, 1, 0, 0],
-                [0, 0, 1, 0],
-                [1, 0, 1, 0],
-                [0, 1, 1, 0],
-                [1, 1, 1, 0],
-                [0, 0, 0, 1],
-                [1, 0, 0, 1],
-                [0, 1, 0, 1],
-                [1, 1, 0, 1],
-                [0, 0, 1, 1],
-                [1, 0, 1, 1],
-                [0, 1, 1, 1],
-                [1, 1, 1, 1],
-            ],
-            mode="corner",
-        )
+        indices = torch.linspace(0, nrow * nrow - 1, nrow * nrow).to(torch.int64).view(nrow, nrow)
+        indices[indices >= len(self.tiles)] = -1
+        return WangTemplate(indices, image)
