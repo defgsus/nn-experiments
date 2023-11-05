@@ -4,7 +4,7 @@ from typing import List, Set, Iterable, Tuple, Optional
 import torch
 from torchvision.utils import make_grid
 
-from .wangtemplate import WangTemplate
+from .wangtemplate import WangTemplate, OPTIMAL_WANG_INDICES_SQUARE
 from .render import render_wang_tile
 
 
@@ -142,10 +142,13 @@ class WangTiles:
             raise ValueError(f"`mode` must be one of e, edge, c, corner, ec, ce, edgecorner or corneredge, got '{mode}'")
 
         self.tiles = []
+        self.num_colors = 0
 
         expected_length = 8 if self.mode == "edgecorner" else 4
         for idx, row in enumerate(colors):
             row = list(row)
+            self.num_colors = max(self.num_colors, *row)
+
             if len(row) != expected_length:
                 raise ValueError(f"Item #{idx} in `colors` has length {len(row)}, expected {expected_length}")
 
@@ -168,6 +171,8 @@ class WangTiles:
                 colors=colors,
             ))
 
+        self.num_colors += 1  # e.g: 0 and 1 makes 2 colors
+
         for tile1 in self.tiles:
             for direction in range(8):
                 tile1._matching_indices[direction] = set()
@@ -181,21 +186,34 @@ class WangTiles:
     def __getitem__(self, idx: int) -> Tile:
         return self.tiles[idx]
 
+    @torch.no_grad()
     def create_template(
             self,
             tile_shape: Tuple[int, int],
             padding: float = 0.,
             fade: float = 1.0,
             image: Optional[torch.Tensor] = None,
+            optimal_indices: bool = True,
     ):
         nrow = int(math.sqrt(len(self.tiles)))
 
+        indices = None
+
+        if optimal_indices:
+            indices = OPTIMAL_WANG_INDICES_SQUARE.get((self.mode, self.num_colors))
+
+        if indices is None:
+            indices = [i if i < len(self.tiles) else - 1 for i in range(nrow * nrow)]
+
+        indices = torch.Tensor(indices).to(torch.int64).flatten(0)
+
         if image is None:
             tile_images = []
-            for i, tile in enumerate(self.tiles):
+            for idx in range(len(self.tiles)):
+                idx = indices[idx]
                 tile_images.append(
                     render_wang_tile(
-                        assignments=tile.colors,
+                        assignments=self.tiles[idx].colors,
                         shape=tile_shape,
                         padding=padding,
                         fade=fade,
@@ -208,6 +226,6 @@ class WangTiles:
                 nrow=nrow,
             )
 
-        indices = torch.linspace(0, nrow * nrow - 1, nrow * nrow).to(torch.int64).view(nrow, nrow)
-        indices[indices >= len(self.tiles)] = -1
+        indices = indices.view(nrow, nrow)
+
         return WangTemplate(indices, image)

@@ -75,3 +75,6 @@ class TrainAutoencoder(Trainer):
 
         features = self.model.encoder(images)
         self.log_image("validation_features", signed_to_image(features))
+
+        self.log_scalar("validation_features_mean", features.mean())
+        self.log_scalar("validation_features_std", features.std())

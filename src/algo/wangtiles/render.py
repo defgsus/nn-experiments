@@ -66,20 +66,20 @@ def render_wang_map(
     )
     if overlap != (0, 0):
         accum = torch.zeros_like(image)
-        window = get_image_window(tile_shape[-2:])
+        window = get_image_window(tile_shape[-2:]).to(image)
 
     for y, row in enumerate(tile_indices):
         for x, tile_idx in enumerate(row):
             if tile_idx < 0:
                 continue
 
-            template_patch = wang_template.tile(tile_idx)
+            template_patch = wang_template.tile(tile_idx).to(image)
 
             if overlap == (0, 0):
                 image[
-                :,
-                y * tile_shape[-2]: (y + 1) * tile_shape[-2],
-                x * tile_shape[-1]: (x + 1) * tile_shape[-1],
+                    :,
+                    y * tile_shape[-2]: (y + 1) * tile_shape[-2],
+                    x * tile_shape[-1]: (x + 1) * tile_shape[-1],
                 ] = template_patch
             else:
                 sy = slice(y * (tile_shape[-2] - overlap[-2]), (y + 1) * (tile_shape[-2] - overlap[-2]) + overlap[-2])

@@ -274,6 +274,90 @@ class DalleAutoencoder(nn.Module):
         return self.decoder(self.encoder(x))
 
 
+class DalleManifoldAutoencoder(nn.Module):
+    def __init__(
+            self,
+            shape: Tuple[int, int, int],
+            n_hid: int = 256,
+            vocab_size: int = 128,
+            group_count: int = 4,
+            n_blk_per_group: int = 2,
+            use_mixed_precision: bool = False,
+            act_fn: Type[nn.Module] = nn.ReLU,
+            space_to_depth: bool = False,
+            decoder_n_hid: int = 256,
+            decoder_n_blk: int = 2,
+            decoder_n_layer: int = 2,
+    ):
+        from src.models.cnn import DalleEncoder, DalleDecoder
+        from src.models.decoder.image_manifold import ImageManifoldDecoder
+
+        super().__init__()
+        self.shape = shape
+        encoder = DalleEncoder(
+            n_hid=n_hid, requires_grad=True, vocab_size=vocab_size,
+            input_channels=self.shape[0], use_mixed_precision=use_mixed_precision,
+            group_count=group_count, n_blk_per_group=n_blk_per_group,
+            act_fn=act_fn,
+            space_to_depth=space_to_depth,
+        )
+        with torch.no_grad():
+            out_shape = encoder(torch.zeros(1, *self.shape)).shape
+        self.encoder = nn.Sequential(
+            encoder,
+            nn.Flatten(1),
+            nn.Linear(math.prod(out_shape), vocab_size)
+        )
+        self.decoder = ImageManifoldDecoder(
+            num_input_channels=vocab_size,
+            num_output_channels=shape[0],
+            num_hidden=decoder_n_hid,
+            num_blocks=decoder_n_blk,
+            num_layers_per_block=decoder_n_layer,
+            default_shape=shape[-2:],
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.decoder(self.encoder(x))
+
+    def weight_images(self, **kwargs):
+        return self.decoder.weight_images(**kwargs)
+
+
+class ManifoldAutoencoder(nn.Module):
+    def __init__(
+            self,
+            shape: Tuple[int, int, int],
+            vocab_size: int = 128,
+            n_hid: int = 256,
+    ):
+        from src.models.decoder.image_manifold import ImageManifoldDecoder, ImageManifoldEncoder
+
+        super().__init__()
+        self.shape = shape
+        self.encoder = ImageManifoldEncoder(
+            num_input_channels=shape[0],
+            num_output_channels=vocab_size,
+            num_hidden=n_hid,
+            # num_blocks=
+            # num_layers_per_block=
+        )
+        self.decoder = ImageManifoldDecoder(
+            num_input_channels=vocab_size,
+            num_output_channels=shape[0],
+            num_hidden=n_hid,
+            # num_blocks=
+            # num_layers_per_block=
+            default_shape=shape[-2:],
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.decoder(self.encoder(x))
+
+    def weight_images(self, **kwargs):
+        return self.decoder.weight_images(**kwargs)
+
+
 class Sobel(nn.Module):
     def __init__(self, kernel_size: int = 5, sigma: float = 5.):
         super().__init__()
@@ -307,27 +391,28 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
 
         reconstruction_loss = self.loss_function(input_batch, output_batch)
 
-        if not hasattr(self, "_sobel_filter"):
-            self._sobel_filter = Sobel()
+        if 0:
+            if not hasattr(self, "_sobel_filter"):
+                self._sobel_filter = Sobel()
 
-        sobel_input_batch = self._sobel_filter(input_batch)
-        sobel_output_batch = self._sobel_filter(output_batch)
-        sobel_reconstruction_loss = self.loss_function(sobel_input_batch, sobel_output_batch)
+            sobel_input_batch = self._sobel_filter(input_batch)
+            sobel_output_batch = self._sobel_filter(output_batch)
+            sobel_reconstruction_loss = self.loss_function(sobel_input_batch, sobel_output_batch)
+
+        loss_batch_std = (.5 - feature_batch.std(0).mean()).abs()
+        loss_batch_mean = (0. - feature_batch.mean()).abs()
 
         return {
-            "loss": reconstruction_loss,# + 1. * sobel_reconstruction_loss,
+            "loss": (
+                reconstruction_loss
+                + .1 * (loss_batch_std + loss_batch_mean)
+                # + 1. * sobel_reconstruction_loss
+            ),
             "loss_reconstruction": reconstruction_loss,
-            "loss_reconstruction_sobel": sobel_reconstruction_loss,
+            #"loss_reconstruction_sobel": sobel_reconstruction_loss,
+            "loss_batch_std": loss_batch_std,
+            "loss_batch_mean": loss_batch_mean,
         }
-
-        active_ratio = (feature_batch.abs()).sum() / math.prod(feature_batch.shape)
-        sparsity_loss = (1./100. - active_ratio).abs()
-        #sparsity_loss = (0. - feature_batch.mean()).abs() + (1. - feature_batch.std()).abs()
-
-        self.log_scalar("reconstruction_loss", reconstruction_loss)
-        self.log_scalar("sparsity_loss", sparsity_loss)
-
-        return reconstruction_loss + sparsity_loss
 
 
 def create_kali_rpg_dataset(shape: Tuple[int, int, int]) -> IterableDataset:
@@ -421,8 +506,14 @@ def main():
     # ae-d3: val: 0.01 (200k), 0.00889 (2M), 0.00857 (5M)
     #model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=64, group_count=1, n_blk_per_group=1, act_fn=nn.GELU)
     #model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=64, group_count=1, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True)
-    model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=96, group_count=4, n_blk_per_group=2, act_fn=nn.GELU, space_to_depth=True)
+    #model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=96, group_count=4, n_blk_per_group=2, act_fn=nn.GELU, space_to_depth=True)
+    #model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True)
+    model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, decoder_n_blk=4, decoder_n_layer=3, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True)
+    #model = ManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=256)
     print(model)
+    for key in ("encoder", "decoder"):
+        if hasattr(model, key):
+            print(f"{key} params: {num_module_parameters(getattr(model, key)):,}")
 
     trainer = TrainAutoencoderSpecial(
         **kwargs,
@@ -435,7 +526,8 @@ def main():
         freeze_validation_set=True,
         loss_function="l2",
         optimizers=[
-            torch.optim.Adam(model.parameters(), lr=.0002),#, weight_decay=0.00001),
+            #torch.optim.Adam(model.parameters(), lr=.0002),#, weight_decay=0.00001),
+            torch.optim.AdamW(model.parameters(), lr=.0003),#, weight_decay=0.00001),
             #torch.optim.Adadelta(model.parameters(), lr=1.),
         ],
         hparams={

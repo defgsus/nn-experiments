@@ -14,6 +14,7 @@ from tqdm import tqdm
 import torch
 import torch.nn
 import torch.nn.functional as F
+import torch.nn.utils
 import torch.utils.data
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -45,6 +46,8 @@ class Trainer:
             num_inputs_between_checkpoints: Optional[int] = None,
             training_noise: float = 0.,
             loss_function: Union[str, Callable, torch.nn.Module] = "l1",
+            gradient_clipping: Optional[float] = None,
+            num_train_loss_steps: int = 1000,
             reset: bool = False,
             device: Union[None, str, torch.DeviceObjType] = None,
             hparams: Optional[dict] = None,
@@ -63,6 +66,8 @@ class Trainer:
         self.optimizers = list(optimizers)
         self.training_noise = training_noise
         self.loss_function = get_loss_callable(loss_function)
+        self.num_train_loss_steps = num_train_loss_steps
+        self.gradient_clipping = gradient_clipping
         self.hparams = hparams
         self.weight_image_kwargs = weight_image_kwargs
         self.num_inputs_between_validations = num_inputs_between_validations
@@ -74,6 +79,8 @@ class Trainer:
         self.tensorboard_path = Path("./runs/") / self.experiment_name
         self.checkpoint_path = Path("./checkpoints/") / self.experiment_name
         self.device = to_torch_device(device)
+        self._loss_history = []
+        self._loss_steps = 0
 
         self.model = self.model.to(self.device)
 
@@ -232,14 +239,35 @@ class Trainer:
 
                     self.model.zero_grad()
                     loss_result["loss"].backward()
+
+                    if self.gradient_clipping is not None:
+                        torch.nn.utils.clip_grad_value_(
+                            self.model.parameters(),
+                            self.gradient_clipping,
+                            #error_if_nonfinite=True,
+                        )
                     for opt in self.optimizers:
                         opt.step()
 
                     self.num_batch_steps += 1
                     self.num_input_steps += input_batch[0].shape[0]
 
-                    for key, value in loss_result.items():
-                        self.log_scalar(f"train_{key}", value)
+                    self._loss_history.append({
+                        key: float(value)
+                        for key, value in loss_result.items()
+                    })
+                    self._loss_steps += input_batch[0].shape[0]
+                    if self._loss_steps >= self.num_train_loss_steps:
+                        losses = {}
+                        for entry in self._loss_history:
+                            for key, value in entry.items():
+                                if key not in losses:
+                                    losses[key] = []
+                                losses[key].append(value)
+                        for key, values in losses.items():
+                            self.log_scalar(f"train_{key}", sum(values) / len(values))
+                        self._loss_history.clear()
+                        self._loss_steps = 0
 
                     if self.num_inputs_between_validations is not None:
                         if self.num_input_steps - last_validation_step >= self.num_inputs_between_validations:

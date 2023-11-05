@@ -30,3 +30,12 @@ class WangTiles2C(WangTiles):
             colors=get_wang_tile_colors(2),
             mode="corner",
         )
+
+
+class WangTiles3E(WangTiles):
+    """All wang tiles with 3 colors (0, 1 or 2) on edges"""
+    def __init__(self):
+        super().__init__(
+            colors=get_wang_tile_colors(3),
+            mode="edge",
+        )

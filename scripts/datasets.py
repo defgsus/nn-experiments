@@ -227,4 +227,4 @@ class RpgTileIterableDataset(IterableDataset):
             if patch.std(1).mean() > 0.:
                 #print(patch.std(1).mean())
                 patch = VF.resize(patch, self.shape[-2:], VF.InterpolationMode.NEAREST, antialias=False)
-                return set_image_channels(patch, self.shape[0])
+                yield set_image_channels(patch, self.shape[0])
