@@ -309,7 +309,8 @@ class Trainer:
         """
         Override to adjust the training data or labels
         """
-        yield from self.data_loader
+        for data in self.data_loader:
+            yield self._to_device(data)
 
     def iter_validation_batches(self) -> Generator:
         """Makes a copy of the validation set to memory if 'freeze_validation_set' is True"""
@@ -317,13 +318,15 @@ class Trainer:
             return
 
         if not self.freeze_validation_set:
-            yield from self.validation_loader
+            for data in self.validation_loader:
+                yield self._to_device(data)
             return
 
         if self._validation_batches is None:
             self._validation_batches = list(self.validation_loader)
 
-        yield from self._validation_batches
+        for data in self._validation_batches:
+            yield self._to_device(data)
 
     def validation_sample(self, index: int) -> Optional[tuple]:
         if self.validation_loader is None:
@@ -339,6 +342,14 @@ class Trainer:
         batch_tuple = self._validation_batches[index // batch_size]
         b_index = index % batch_size
         return tuple(b[b_index] for b in batch_tuple)
+
+    def _to_device(self, data):
+        if isinstance(data, (list, tuple)):
+            return tuple(self._to_device(d) for d in data)
+        elif isinstance(data, torch.Tensor):
+            return data.to(self.device)
+        else:
+            return data
 
     def run_validation(self):
         if self.validation_loader is None:
