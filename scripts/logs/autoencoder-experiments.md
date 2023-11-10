@@ -98,3 +98,19 @@ not seem to be enough for acceptable quality:
 It might get below 0.004 reconstruction loss with another 10 hours
 but i'm targeting < 0.001. Stopping it.
 
+### 2023-11-10: back to small dataset
+
+Changing residual logic to either add (like previous) or concat features:
+
+    decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=64, 
+        decoder_concat_residual=[True, False] * 4,
+        params: 3,502,785
+
+    which leads to hidden sizes per block:
+        64, 128, 128, 256, 256, 512, 512, 1024
+
+With no apparent difference within the first 80k steps (cyan)
+compared to the previous small-dataset-experiments. 
+Unless it's runtime, which is just terrible:
+
+![loss plots](./img/ae-manifold-smallds-b8l2-64-resTF.png)

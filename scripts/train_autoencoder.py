@@ -288,6 +288,7 @@ class DalleManifoldAutoencoder(nn.Module):
             decoder_n_hid: int = 256,
             decoder_n_blk: int = 2,
             decoder_n_layer: int = 2,
+            decoder_concat_residual: Union[bool, Iterable[bool]] = False,
     ):
         from src.models.cnn import DalleEncoder, DalleDecoder
         from src.models.decoder.image_manifold import ImageManifoldDecoder
@@ -315,6 +316,7 @@ class DalleManifoldAutoencoder(nn.Module):
             num_blocks=decoder_n_blk,
             num_layers_per_block=decoder_n_layer,
             default_shape=shape[-2:],
+            concat_residual=decoder_concat_residual,
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -484,8 +486,8 @@ def main():
     kwargs = vars(parser.parse_args())
 
     SHAPE = (1, 32, 32)
-    ds = create_kali_rpg_dataset(SHAPE)
-    #ds = create_rpg_dataset(SHAPE)
+    #ds = create_kali_rpg_dataset(SHAPE)
+    ds = create_rpg_dataset(SHAPE)
 
     if isinstance(ds, IterableDataset):
         train_ds = ds
@@ -530,7 +532,7 @@ def main():
     #model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True, decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=256)
     # ae-manifold-8
     #model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, n_blk_per_group=2, act_fn=nn.GELU, space_to_depth=True, decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=300)
-    model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True, decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=256)
+    model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True, decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=64, decoder_concat_residual=[True, False] * 4)
     state = torch.load("./checkpoints/ae-manifold-7/best.pt")
     model.encoder.load_state_dict({key[8:]: value for key, value in state["state_dict"].items() if key.startswith("encoder.")})
     #model = ManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=256)
@@ -546,7 +548,7 @@ def main():
     )
 
     BATCH_SIZE = 64
-    MAX_INPUTS = 10_000_000  # 10_000_000
+    MAX_INPUTS = 1_000_000  # 10_000_000
     print("MAX_INPUTS", MAX_INPUTS)
 
     trainer = TrainAutoencoderSpecial(

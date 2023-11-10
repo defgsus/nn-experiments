@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union, Iterable
 
 import torch
 import torch.nn as nn
@@ -13,8 +13,10 @@ class ResidualLinearBlock(nn.Module):
             num_hidden: int,
             num_layers: int,
             batch_norm: bool = True,
+            concat: bool = False,
     ):
         super().__init__()
+        self.do_concat = concat
         self.layers = nn.Sequential(OrderedDict([
             *(
                 (("norm", nn.BatchNorm1d(num_hidden)), ) if batch_norm else tuple()
@@ -29,7 +31,13 @@ class ResidualLinearBlock(nn.Module):
         ]))
 
     def forward(self, x):
-        return x + self.layers(x)
+        if self.do_concat:
+            return torch.concat([x, self.layers(x)], dim=-1)
+        else:
+            return x + self.layers(x)
+
+    def extra_repr(self):
+        return "concat=True" if self.do_concat else ""
 
 
 class ImageManifoldDecoder(nn.Module):
@@ -41,14 +49,31 @@ class ImageManifoldDecoder(nn.Module):
             num_hidden: int = 256,
             num_blocks: int = 2,
             num_layers_per_block: int = 2,
-            default_shape: Optional[Tuple[int, int]] = None,
+            concat_residual: Union[bool, Iterable[bool]] = False,
+            pos_embedding_freqs: Iterable[float] = (7, 17),
             batch_norm: bool = True,
+            default_shape: Optional[Tuple[int, int]] = None,
     ):
         super().__init__()
         self.num_input_channels = num_input_channels
         self.default_shape = default_shape
         self.num_output_channels = num_output_channels
-        self.pos_embedding_size = 6
+        self.pos_embedding_freqs = tuple(pos_embedding_freqs)
+        self.pos_embedding_size = (len(self.pos_embedding_freqs) + 1) * 2
+        if isinstance(concat_residual, bool):
+            self.concat_residual = (concat_residual, ) * num_blocks
+        else:
+            self.concat_residual = tuple(concat_residual)
+            if len(concat_residual) != num_blocks:
+                raise ValueError(f"len(concat_residual) must be {num_blocks}, got {len(self.concat_residual)}")
+
+        hidden_sizes = [num_hidden]
+        hs = num_hidden
+        for i, concat in enumerate(self.concat_residual):
+            if concat:
+                hs *= 2
+            hidden_sizes.append(hs)
+
         self.pos_to_color = nn.Sequential(OrderedDict([
             ("linear_in", nn.Linear(num_input_channels + self.pos_embedding_size, num_hidden)),
             ("act_in", nn.GELU()),
@@ -56,18 +81,28 @@ class ImageManifoldDecoder(nn.Module):
                 (
                     f"resblock_{i+1}",
                     ResidualLinearBlock(
-                        num_hidden=num_hidden,
+                        num_hidden=hs,
                         num_layers=num_layers_per_block,
                         batch_norm=batch_norm,
+                        concat=concat,
                     )
                 )
-                for i in range(num_blocks)
+                for i, (concat, hs) in enumerate(zip(self.concat_residual, hidden_sizes))
             ]))),
-            ("linear_out", nn.Linear(num_hidden, num_output_channels)),
+            ("linear_out", nn.Linear(hidden_sizes[-1], num_output_channels)),
             ("act_out", nn.Sigmoid()),
         ]))
         self._cur_space = None
         self._cur_space_shape = None
+
+    def extra_repr(self):
+        args = [
+            f"pos_embedding_freqs={self.pos_embedding_freqs}",
+            f"concat_residual={self.concat_residual}",
+        ]
+        if self.default_shape is not None:
+            args.append(f"default_shape={self.default_shape}")
+        return ", ".join(args)
 
     def forward(self, x: torch.Tensor, shape: Optional[Tuple[int, int]] = None) -> torch.Tensor:
         if x.ndim not in (1, 2):
@@ -98,8 +133,10 @@ class ImageManifoldDecoder(nn.Module):
             space = space.permute(1, 2, 0).view(-1, 2)
             space = torch.concat([
                 space,
-                (space * 7).sin(),
-                (space * 17).sin(),
+                *(
+                    (space * freq).sin()
+                    for freq in self.pos_embedding_freqs
+                )
             ], 1)
             self._cur_space = space.to(self.pos_to_color[0].weight)
             self._cur_space_shape = shape
@@ -109,14 +146,14 @@ class ImageManifoldDecoder(nn.Module):
     def weight_images(self, **kwargs):
         images = []
         for i, p in enumerate(self.parameters()):
-            if p.ndim == 2:
+            if p.ndim == 2 and any(s > 1 for s in p.shape):
                 images.append(p)
 
         return images
 
 
 class ImageManifoldEncoder(nn.Module):
-
+    """NOT REALLY TESTED YET"""
     def __init__(
             self,
             num_output_channels: int,
