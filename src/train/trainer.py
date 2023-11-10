@@ -41,6 +41,7 @@ class Trainer:
             max_epoch: Optional[int] = None,
             max_inputs: Optional[int] = None,
             optimizers: Iterable[torch.optim.Optimizer] = tuple(),
+            schedulers: Iterable[torch.optim.lr_scheduler.LRScheduler] = tuple(),
             num_inputs_between_validations: Optional[int] = None,
             num_epochs_between_validations: Optional[int] = None,
             num_inputs_between_checkpoints: Optional[int] = None,
@@ -64,6 +65,7 @@ class Trainer:
         self.max_epoch = max_epoch
         self.max_inputs = max_inputs
         self.optimizers = list(optimizers)
+        self.schedulers = list(schedulers)
         self.training_noise = training_noise
         self.loss_function = get_loss_callable(loss_function)
         self.num_train_loss_steps = num_train_loss_steps
@@ -121,9 +123,20 @@ class Trainer:
         print(f"loading {checkpoint_filename}")
         checkpoint_data = torch.load(checkpoint_filename)
         self.model.load_state_dict(checkpoint_data["state_dict"])
-        self.epoch = checkpoint_data.get("epoch") or 0
+        if checkpoint_data.get("epoch"):
+            self.epoch = checkpoint_data["epoch"] + 1
+        else:
+            self.epoch = 0
         self.num_batch_steps = checkpoint_data.get("num_batch_steps") or 0
         self.num_input_steps = checkpoint_data.get("num_input_steps") or 0
+
+        if checkpoint_data.get("optimizers"):
+            for opt, saved_state in zip(self.optimizers, checkpoint_data["optimizers"]):
+                opt.load_state_dict(saved_state)
+
+        if checkpoint_data.get("schedulers"):
+            for sched, saved_state in zip(self.schedulers, checkpoint_data["schedulers"]):
+                sched.load_state_dict(saved_state)
 
         best_filename = self.checkpoint_path / "best.json"
         if best_filename.exists():
@@ -146,6 +159,14 @@ class Trainer:
                 "epoch": self.epoch,
                 "num_batch_steps": self.num_batch_steps,
                 "num_input_steps": self.num_input_steps,
+                "optimizers": [
+                    opt.state_dict()
+                    for opt in self.optimizers
+                ],
+                "schedulers": [
+                    sched.state_dict()
+                    for sched in self.schedulers
+                ]
             },
             checkpoint_filename,
         )
@@ -246,8 +267,17 @@ class Trainer:
                             self.gradient_clipping,
                             #error_if_nonfinite=True,
                         )
+
                     for opt in self.optimizers:
                         opt.step()
+
+                    for i, sched in enumerate(self.schedulers):
+                        sched.step()
+
+                        lr = sched.get_last_lr()
+                        if isinstance(lr, (list, tuple)):
+                            lr = lr[0]
+                        self._loss_history.append({f"learnrate_{i+1}_{type(sched.optimizer).__name__}": lr})
 
                     self.num_batch_steps += 1
                     self.num_input_steps += input_batch[0].shape[0]

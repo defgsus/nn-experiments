@@ -405,7 +405,7 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
         return {
             "loss": (
                 reconstruction_loss
-                + .1 * (loss_batch_std + loss_batch_mean)
+                + .0001 * (loss_batch_std + loss_batch_mean)
                 # + 1. * sobel_reconstruction_loss
             ),
             "loss_reconstruction": reconstruction_loss,
@@ -461,6 +461,23 @@ def create_kali_rpg_dataset(shape: Tuple[int, int, int]) -> IterableDataset:
     return IterableShuffle(ds, max_shuffle=5000)
 
 
+def create_rpg_dataset(shape: Tuple[int, int, int]) -> IterableDataset:
+    ds_rpg = datasets.RpgTileIterableDataset(shape)
+    ds_rpg = TransformIterableDataset(
+        ds_rpg,
+        transforms=[
+            lambda x: set_image_channels(x, shape[0]),
+            #VT.Pad(3),
+            #VT.RandomCrop(shape[-2:]),
+            VT.RandomHorizontalFlip(.4),
+            VT.RandomVerticalFlip(.2),
+        ],
+        num_repeat=10,
+    )
+    ds_rpg = LimitIterableDataset(ds_rpg, 300 * 10)
+    return ds_rpg
+
+
 def main():
     parser = argparse.ArgumentParser()
     TrainAutoencoder.add_parser_args(parser)
@@ -468,6 +485,7 @@ def main():
 
     SHAPE = (1, 32, 32)
     ds = create_kali_rpg_dataset(SHAPE)
+    #ds = create_rpg_dataset(SHAPE)
 
     if isinstance(ds, IterableDataset):
         train_ds = ds
@@ -484,7 +502,6 @@ def main():
     sample = next(iter(test_ds))
     assert sample[0].shape[:3] == torch.Size(SHAPE), sample[0].shape
 
-
     #train_ds = FontDataset(shape=SHAPE)
     #test_ds = TensorDataset(torch.load("./datasets/fonts-32x32.pt")[:500])
 
@@ -499,6 +516,7 @@ def main():
 
     #model = ConvAutoEncoder(SHAPE, channels=[32, 32, 32], kernel_size=[3, 6, 8], code_size=128, space_to_depth=True)
     #model = ConvAutoEncoder(SHAPE, channels=[16, 16, 16], kernel_size=[3, 6, 4], code_size=128, space_to_depth=True)
+    #model = ConvAutoEncoder(SHAPE, channels=[16,], kernel_size=[3,], code_size=32, space_to_depth=True)
 
     # val: 0.0099 (200k), 0.0091 (1M)
     #model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=64)
@@ -508,12 +526,28 @@ def main():
     #model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=64, group_count=1, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True)
     #model = DalleAutoencoder(SHAPE, vocab_size=128, n_hid=96, group_count=4, n_blk_per_group=2, act_fn=nn.GELU, space_to_depth=True)
     #model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True)
-    model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, decoder_n_blk=4, decoder_n_layer=3, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True)
+    # ae-manifold-7
+    #model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True, decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=256)
+    # ae-manifold-8
+    #model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, n_blk_per_group=2, act_fn=nn.GELU, space_to_depth=True, decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=300)
+    model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True, decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=128)
+    state = torch.load("./checkpoints/ae-manifold-7/best.pt")
+    model.encoder.load_state_dict({key[8:]: value for key, value in state["state_dict"].items() if key.startswith("encoder.")})
     #model = ManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=256)
     print(model)
     for key in ("encoder", "decoder"):
         if hasattr(model, key):
             print(f"{key} params: {num_module_parameters(getattr(model, key)):,}")
+
+    optimizer = (
+        #torch.optim.Adam(model.parameters(), lr=.0002)#, weight_decay=0.00001)
+        torch.optim.AdamW(model.parameters(), lr=.0003)#, weight_decay=0.00001)
+        #torch.optim.Adadelta(model.parameters(), lr=1.)
+    )
+
+    BATCH_SIZE = 64
+    MAX_INPUTS = 10_000_000  # 10_000_000
+    print("MAX_INPUTS", MAX_INPUTS)
 
     trainer = TrainAutoencoderSpecial(
         **kwargs,
@@ -521,14 +555,14 @@ def main():
         #min_loss=0.001,
         num_epochs_between_validations=1,
         #num_inputs_between_validations=10_000,
-        data_loader=DataLoader(train_ds, batch_size=64, shuffle=not isinstance(train_ds, IterableDataset)),
+        max_inputs=MAX_INPUTS,
+        data_loader=DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=not isinstance(train_ds, IterableDataset)),
         validation_loader=DataLoader(test_ds, batch_size=64),
         freeze_validation_set=True,
         loss_function="l2",
-        optimizers=[
-            #torch.optim.Adam(model.parameters(), lr=.0002),#, weight_decay=0.00001),
-            torch.optim.AdamW(model.parameters(), lr=.0003),#, weight_decay=0.00001),
-            #torch.optim.Adadelta(model.parameters(), lr=1.),
+        optimizers=[optimizer],
+        schedulers=[
+            torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, MAX_INPUTS // BATCH_SIZE)
         ],
         hparams={
             "shape": SHAPE,
