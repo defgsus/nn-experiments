@@ -19,6 +19,15 @@ After preliminary experiments, running this setup:
     
 on only 300 (randomly h&v-flipped) images of the RPG-tiles dataset (/scripts/datasets.py).
 
+The encoder is a small version of the DALL-E VQ-VAE model. 
+The decoder is basically a function of 
+
+    encoding, pixel-position -> pixel-color
+
+which i call "manifold" for now until i stumble across a better name.
+It's made of X equal blocks of Y fully connected layers with 
+batch-normalization and residual skip connections per block.
+
 Besides l2 reconstruction loss there is an extra constraint on the distribution of the encoding:
 
     loss_batch_std = (.5 - feature_batch.std(0).mean()).abs()
@@ -59,3 +68,33 @@ Some (very short) tests with different block/layer settings:
     (magenta) decoder_n_blk=16, decoder_n_layer=2, decoder_n_hid=128, params: 549,889
 
 ![repros](./img/ae-manifold-std-constraint-block-level-compare.png)
+
+
+### back to "real" dataset
+
+The current dataset of choice for my autoencoders is a mixture of all
+the rpg tiles (about 8k, h&v-flipped) and kali-set fractal patches
+(about 50k, at 128x128 randomly cropped to 32x32).
+
+![loss plots](./img/ae-manifold-fullds-b8.png)
+
+    (light green) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=300, params: 1,490,401
+    (dark green)  decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=128, params: 283,649
+    (cyan)        sames as dark green but on above small dataset
+
+The light-green model above was quite unsuccessful in terms of 
+image quality. It still uses 0.1 factor for std/mean-loss. 
+Dark green model uses factor 0.0001 and performs a little better
+even though having less parameters. It's not getting close 
+to the desirable baseline of the 300-tile dataset (cyan), though.
+
+Increasing the number of hidden cells in the decoder to 256 does 
+not seem to be enough for acceptable quality:
+
+    (yellow) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=256, params: 1,091,585
+
+![loss plots](./img/ae-manifold-fullds-b8-h256.png)
+
+It might get below 0.004 reconstruction loss with another 10 hours
+but i'm targeting < 0.001. Stopping it.
+

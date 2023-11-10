@@ -530,7 +530,7 @@ def main():
     #model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True, decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=256)
     # ae-manifold-8
     #model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, n_blk_per_group=2, act_fn=nn.GELU, space_to_depth=True, decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=300)
-    model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True, decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=128)
+    model = DalleManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True, decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=256)
     state = torch.load("./checkpoints/ae-manifold-7/best.pt")
     model.encoder.load_state_dict({key[8:]: value for key, value in state["state_dict"].items() if key.startswith("encoder.")})
     #model = ManifoldAutoencoder(SHAPE, vocab_size=128, n_hid=256)
