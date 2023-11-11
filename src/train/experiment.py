@@ -4,14 +4,15 @@ import re
 import math
 import random
 import itertools
-import argparse
 import shutil
+import argparse
 import sys
 import warnings
 import ast
+from io import StringIO
 from pathlib import Path
 import importlib
-from typing import List, Iterable, Tuple, Optional, Callable, Union, Generator, Dict, Type
+from typing import List, Iterable, Tuple, Optional, Callable, Union, Generator, Dict, Type, Any
 
 import yaml
 from tqdm import tqdm
@@ -20,15 +21,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.utils
 import torch.utils.data
-from torch.utils.data import DataLoader, Dataset, IterableDataset
+from torch.utils.data import DataLoader, Dataset, IterableDataset, TensorDataset
 import torchvision.transforms as VT
 import torchvision.transforms.functional as VF
+import torchvision.models
 from torchvision.utils import make_grid
 
 from src import console
 from src.util import *
 from src.util.image import *
-from src.train.trainer import *
+from src.train import *
 from src.models.util import *
 from src.models.ca import *
 from src.models.cnn import *
@@ -51,35 +53,96 @@ def run_experiment_from_command_args():
     args = vars(parser.parse_args())
     experiment_file = args.pop("experiment_name")
 
-    with open(experiment_file) as fp:
-        data = yaml.safe_load(fp)
-
-    run_experiment({**data, **args})
+    run_experiment(experiment_file, extra_args=args)
 
 
-def run_experiment(data: Union[dict, str, Path]):
-    if isinstance(data, (str, Path)):
-        with open(data) as fp:
-            data = yaml.safe_load(fp)
+def run_experiment(filename: Union[str, Path], extra_args: Optional[dict] = None):
+    data = _load_yaml(filename)
 
-    trainer_klass, kwargs = get_trainer_kwargs_from_dict(data)
+    matrix = data.pop("matrix", None)
+    if not matrix:
+        matrix_entries = [{}]
+    else:
+        for key in ("matrix_slug",):
+            if key in matrix:
+                raise NameError(f"key '{key}' is not allowed in matrix")
 
-    model = kwargs["model"]
-    print(model)
-    for key in ("encoder", "decoder"):
-        if hasattr(model, key):
-            print(f"{key} params: {num_module_parameters(getattr(model, key)):,}")
+        matrix_entries = list(iter_matrix_permutations(matrix))
+        for i, entry in enumerate(matrix_entries):
+            entry["matrix_slug"] = get_matrix_slug(entry)
+            entry["matrix_id"] = f"{i + 1:0{int(math.ceil(math.log10(len(matrix_entries))))}}"
 
-    trainer = trainer_klass(**kwargs)
+    if len(matrix_entries) > 1:
+        print(json.dumps(matrix_entries, indent=2))
+        print(f"\nrunning {len(matrix_entries)} matrix experiments\n")
 
-    if not kwargs["reset"]:
-        trainer.load_checkpoint()
+    for matrix_entry in matrix_entries:
 
-    trainer.save_description()
-    trainer.train()
+        if len(matrix_entries) > 1:
+            print(f"\n--- matrix experiment '{matrix_entry['matrix_slug']}' ---\n")
+
+        data = _load_yaml(filename, matrix_entry)
+        data.pop("matrix", None)
+        if extra_args:
+            data.update(extra_args)
+
+        trainer_klass, kwargs = get_trainer_kwargs_from_dict(data, matrix_entry)
+
+        model = kwargs["model"]
+        print(model)
+        for key in ("encoder", "decoder"):
+            if hasattr(model, key):
+                print(f"{key} params: {num_module_parameters(getattr(model, key)):,}")
+
+        trainer = trainer_klass(**kwargs)
+
+        if not kwargs["reset"]:
+            trainer.load_checkpoint()
+
+        trainer.save_description()
+        trainer.train()
 
 
-def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
+def get_matrix_slug(entry: dict) -> str:
+    slug = "_".join(f"{key}-{str(value)[:10]}" for key, value in entry.items())
+    return "".join(
+        c for c in slug
+        if c.isalnum() or c in ".-_"
+    )
+
+
+def _load_yaml(filename: str, matrix_entry: Optional[Dict] = None):
+    if not matrix_entry:
+        with open(filename) as fp:
+            data = yaml.load(fp, YamlLoader)
+
+    else:
+        text = Path(filename).read_text()
+
+        re_variable = re.compile("\$\{([\w\d]+)}")
+        def _repl(match):
+            name = match.groups()[0]
+            if name not in matrix_entry:
+                raise NameError(f"Variable ${{{name}}} is not defined in matrix")
+
+            return str(matrix_entry[name])
+
+        text = re_variable.sub(_repl, text)
+
+        fp = StringIO(text)
+        data = yaml.load(fp, YamlLoader)
+
+    extends = data.pop("$extends", None)
+    if extends:
+        data = {
+            **_load_yaml(Path(filename).parent / extends, matrix_entry=matrix_entry),
+            **data,
+        }
+
+    return data
+
+
+def get_trainer_kwargs_from_dict(data: dict, matrix: dict) -> Tuple[Type[Trainer], dict]:
     required_keys = (
         "experiment_name",
         "model",
@@ -88,7 +151,6 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
         "batch_size",
         "learnrate",
         "optimizer",
-#        "scheduler",
     )
     for key in required_keys:
         if not data.get(key):
@@ -97,14 +159,13 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
     globals_ = data.pop("globals", None)
     if globals_:
         for key, value in globals_.items():
-            print("X", repr(value), repr(construct_from_code(str(value))))
-            globals()[key] = construct_from_code(str(value))
+            globals()[key] = construct_from_code(value)
 
+    # defaults
     kwargs = {
         "num_epochs_between_validations": 1,
     }
     for key, value in data.items():
-
         if key in (
                 "model",
                 "train_set",
@@ -188,3 +249,19 @@ def get_class(arg: str):
         return getattr(module, args[-1])
 
     return globals()[arg]
+
+
+class YamlLoader(yaml.SafeLoader):
+
+    def __init__(self, stream):
+        super().__init__(stream)
+        self._root = Path(stream.name).parent if hasattr(stream, "name") else None
+
+    def include(self, node):
+        if self._root is None:
+            raise ValueError(f"Can't !include in {type(self.stream).__name__}")
+
+        filename = self._root / self.construct_scalar(node)
+
+        with open(filename) as f:
+            return yaml.load(f, YamlLoader)

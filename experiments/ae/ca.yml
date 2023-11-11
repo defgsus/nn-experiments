@@ -1,0 +1,32 @@
+$extends: baseline.yml
+
+experiment_name: ae/ca1b
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(24, 32, 48), kernel_size=5)
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  
+  class CA(nn.Module):
+      def __init__(self):
+          super().__init__()
+          self.ca = TotalCALayer(
+              birth=  (0, 0, 0, 1, 0, 0, 0, 0, 0),
+              survive=(0, 0, 1, 1, 0, 0, 0, 0, 0),
+              iterations=3,
+              learn_rules=False,
+              learn_kernel=False,
+          )
+          self.conv = nn.Conv2d(48 * 2, 48, 1)
+  
+      def forward(self, x):
+          y = torch.concat([x, self.ca(x)], dim=-3)
+          return F.relu(self.conv(y))
+  
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      CA(),
+      encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)

@@ -42,14 +42,6 @@ class TotalCALayer(nn.Module):
         self.kernel = nn.Parameter(torch.Tensor([[[[1, 1, 1], [1, 0, 1], [1, 1, 1]]]]), requires_grad=learn_kernel)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if not hasattr(self, "_count"):
-            self._count = 0
-        else:
-            self._count += 1
-            if self._count >= 1000:
-                print(self.birth, self.survive)
-                self._count = 0
-
         ndim = x.ndim
         if ndim not in (3, 4):
             raise ValueError(f"Expected x.ndim == 3 or 4, got {x.shape}")

@@ -30,6 +30,7 @@ class RpgTileIterableDataset(IterableDataset):
             directory: str = "~/prog/data/game-art/",
             include: Optional[str] = None,
             exclude: Optional[str] = None,
+            even: Optional[bool] = None,
     ):
         self.shape = shape
         self.directory = directory
@@ -55,6 +56,11 @@ class RpgTileIterableDataset(IterableDataset):
             dict(name="obj_misk_atlas.png", shape=(32, 32)),
             dict(name="Tile-set - Toen's Medieval Strategy (16x16) - v.1.0.png", shape=(16, 16), limit_count=306),
         ]
+        if even is True:
+            self.tilesets = self.tilesets[::2]
+        elif even is False:
+            self.tilesets = self.tilesets[1::2]
+
         if include is not None:
             self.tilesets = list(filter(
                 lambda t: fnmatch.fnmatch(t["name"], include),
@@ -111,22 +117,36 @@ def rpg_tile_dataset(
         limit: Optional[int] = None,
         fake_size: int = 50_000,
         shuffle: bool = False,
+        random_shift: int = 0,
+        random_flip: bool = False,
 ) -> IterableDataset:
 
-    if limit is not None:
+    if validation:
+        num_repeat = 1
+    elif limit is not None:
         num_repeat = max(1, fake_size // limit)
     else:
-        num_repeat = max(1, fake_size // 8000)
+        num_repeat = max(1, fake_size // (8000 if validation is None else 4000))
 
-    ds = RpgTileIterableDataset(shape)
+    ds = RpgTileIterableDataset(
+        shape,
+        even=validation,
+    )
 
     transforms = [
         lambda x: set_image_channels(x, shape[0]),
-        #VT.Pad(3),
-        #VT.RandomCrop(shape[-2:]),
-        VT.RandomHorizontalFlip(.4),
-        VT.RandomVerticalFlip(.2),
     ]
+    if random_shift:
+        transforms.extend([
+            VT.Pad(random_shift),
+            VT.RandomCrop(shape[-2:]),
+        ])
+    if random_flip:
+        transforms.extend([
+            VT.RandomHorizontalFlip(.4),
+            VT.RandomVerticalFlip(.2),
+        ])
+
     ds = TransformIterableDataset(
         ds,
         transforms=transforms,

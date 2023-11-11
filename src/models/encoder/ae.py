@@ -13,3 +13,11 @@ class EncoderDecoder(nn.Module):
 
     def forward(self, x):
         return self.decoder(self.encoder(x))
+
+    def weight_images(self, **kwargs):
+        images = []
+        if hasattr(self.encoder, "weight_images"):
+            images.extend(self.encoder.weight_images(**kwargs))
+        if hasattr(self.decoder, "weight_images"):
+            images.extend(self.decoder.weight_images(**kwargs))
+        return images

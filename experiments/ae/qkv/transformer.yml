@@ -1,0 +1,29 @@
+$extends: ../baseline.yml
+
+experiment_name: ae/trans2-${matrix}
+
+matrix:
+  layers: [4, 8, 16]
+
+model: |
+  from experiments.ae.qkv.transformer import *
+  
+  encoder = TransformerEncoder(
+      shape=SHAPE,
+      num_out=CODE_SIZE,
+      num_hidden=128,
+      num_layers=8,
+  )
+  
+  # ----- decoder -----
+  
+  _encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(24, 32, 48), kernel_size=5)
+  encoded_shape = _encoder.convolution.get_output_shape(SHAPE)
+    
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      _encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)

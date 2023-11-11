@@ -22,6 +22,16 @@ def get_loss_callable(loss: Union[str, Callable, nn.Module]) -> Callable:
         raise ValueError(f"Unexpected loss function '{loss}'")
 
 
+class PrintLayer(nn.Module):
+    def __init__(self, name: str = "debug"):
+        super().__init__()
+        self.name = name
+
+    def forward(self, x):
+        print(f"{self.name}:", x.shape if isinstance(x, torch.Tensor) else type(x).__name__)
+        return x
+
+
 class ResidualAdd(nn.Module):
 
     def __init__(self, module: nn.Module):

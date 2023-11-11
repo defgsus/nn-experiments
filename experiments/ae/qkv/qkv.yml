@@ -1,0 +1,25 @@
+$extends: ../baseline.yml
+
+experiment_name: ae/qkv1
+
+model: |
+  from experiments.ae.qkv.qkv import *
+  
+  encoder = Encoder(
+      shape=SHAPE,
+      num_out=CODE_SIZE,
+      channels_ks=((16, 3), (32, 5), (32, 7)),
+  )
+  
+  # ----- decoder -----
+  
+  _encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(24, 32, 48), kernel_size=5)
+  encoded_shape = _encoder.convolution.get_output_shape(SHAPE)
+    
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      _encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)
