@@ -20,3 +20,24 @@ def get_loss_callable(loss: Union[str, Callable, nn.Module]) -> Callable:
 
     else:
         raise ValueError(f"Unexpected loss function '{loss}'")
+
+
+class ResidualAdd(nn.Module):
+
+    def __init__(self, module: nn.Module):
+        super().__init__()
+        self.module = module
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x + self.module(x)
+
+
+class ResidualConcat(nn.Module):
+
+    def __init__(self, module: nn.Module, dim: int = 1):
+        super().__init__()
+        self.module = module
+        self.dim = dim
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.concat([x, self.module(x)], dim=self.dim)

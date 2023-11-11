@@ -1,0 +1,35 @@
+experiment_name: ae/baseline2
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  from experiments.datasets import rpg_tile_dataset 
+  rpg_tile_dataset(SHAPE, validation=False, shuffle=True)
+
+freeze_validation_set: True
+validation_set: |
+  from experiments.datasets import rpg_tile_dataset 
+  rpg_tile_dataset(SHAPE, validation=True, shuffle=True)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+
+globals:
+  SHAPE: (1, 32, 32)
+  CODE_SIZE: 128
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE)
+
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)

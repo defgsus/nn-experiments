@@ -1,0 +1,40 @@
+experiment_name: ae
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  from experiments.datasets import rpg_tile_dataset 
+  rpg_tile_dataset(SHAPE, validation=False)
+
+validation_set: |
+  from experiments.datasets import rpg_tile_dataset 
+  rpg_tile_dataset(SHAPE, validation=True)
+
+batch_size: 64
+learnrate: 0.003
+optimizer: AdamW
+
+globals:
+  SHAPE: (1, 32, 32)
+  CODE_SIZE: 128
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE)
+
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      ResidualAdd(
+          TotalCALayer(
+              birth=  (0, 0, 0, 1, 0, 0, 0, 0, 0),
+              survive=(0, 0, 1, 1, 0, 0, 0, 0, 0),
+              iterations=1,
+              learn_rules=True,
+              learn_kernel=True,
+          ),
+      ),
+      encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)
+

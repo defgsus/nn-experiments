@@ -557,3 +557,12 @@ class Trainer:
                 every["callable"]()
                 every["last_num"] = num
 
+    @classmethod
+    def from_dict(cls, data: dict):
+        kwargs = cls.get_kwargs_from_dict(data)
+        return cls(**kwargs)
+
+    @classmethod
+    def get_kwargs_from_dict(cls, data: dict) -> dict:
+        from .experiment import get_trainer_kwargs_from_dict
+        return get_trainer_kwargs_from_dict(data)
