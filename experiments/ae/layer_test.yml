@@ -1,12 +1,17 @@
 matrix:
-  opt: ["Adam", "AdamW"]
+  opt: ["Adam"]
   lr: [0.001]
-  ks: [3, 5]
-  chan: [32, 64]
-  act: ["ReLU6"]
-  #act: ["CELU", "ELU", "GELU", "LeakyReLU", "ReLU", "ReLU6", "RReLU", "SELU", "SiLU", "Sigmoid"]
+  #ks: [[3, 5], [5, 3], [3, 5, 7], [7, 5, 3], [3, 3, 5, 7], [7, 5, 3, 3]]
+  #chan: [[16, 32], [32, 16], [16, 32, 64], [64, 32, 16], [16, 32, 64, 96], [96, 64, 32, 16]]
+  ks: [
+    [3, 3, 3, 3], [3, 5, 3, 3], [3, 3, 5, 3], [3, 3, 3, 5],
+    [3, 3, 5, 7], [3, 5, 7, 7], [7, 5, 3, 3], [3, 7, 3, 7],
+    [3, 5, 7, 11], [11, 7, 5, 3],
+  ]
+  chan: [[32, 32, 32, 32], [64, 64, 64, 64], [128, 128, 128, 128], [32, 64, 96, 128]]
+  $filter: len(${ks}) == len(${chan})
 
-experiment_name: mnist/mnist6_${matrix_slug}
+experiment_name: mnist/mnist8_${matrix_slug}
 
 trainer: TrainAutoencoder
 
@@ -34,7 +39,7 @@ loss_function: l1
 max_inputs: 1_000_000
 
 model: |
-  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=${chan}, kernel_size=${ks}, act_fn=nn.${act}())
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=${chan}, kernel_size=${ks}, act_fn=nn.ReLU6())
 
   encoded_shape = encoder.convolution.get_output_shape(SHAPE)
   decoder = nn.Sequential(

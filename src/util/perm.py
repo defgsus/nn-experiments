@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Generator
 
 
-def iter_matrix_permutations(
+def iter_parameter_permutations(
         matrix: Dict[str, List[Any]],
         exclude_keys: List[str] = tuple()
 ) -> Generator[Dict[str, Any], None, None]:
@@ -33,7 +33,7 @@ def iter_matrix_permutations(
             for v in values:
                 entry = {key: v}
                 yielded = False
-                for data in iter_matrix_permutations(matrix, exclude_keys + [key]):
+                for data in iter_parameter_permutations(matrix, exclude_keys + [key]):
                     yield {
                         **entry,
                         **data,

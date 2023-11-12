@@ -18,15 +18,15 @@ class EncoderConv2d(Encoder2d):
     def __init__(
             self,
             shape: Tuple[int, int, int],
-            kernel_size: int = 15,
+            code_size: int,
+            kernel_size: Union[int, Iterable[int]] = 3,
             stride: int = 1,
             channels: Iterable[int] = (16, 32),
-            code_size: int = 1024,
             act_fn: Optional[nn.Module] = nn.ReLU(),
     ):
         super().__init__(shape=shape, code_size=code_size)
         self.channels = tuple(channels)
-        self.kernel_size = int(kernel_size)
+        self.kernel_size = kernel_size
         self.stride = stride
         # self.act_fn = act_fn
 

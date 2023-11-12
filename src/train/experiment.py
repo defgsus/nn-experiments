@@ -46,9 +46,19 @@ from src.datasets import *
 from src.algo import *
 
 
+RESERVED_MATRIX_KEYS = (
+    "matrix_slug",
+    "matrix_id",
+)
+
+
 def run_experiment_from_command_args():
     parser = argparse.ArgumentParser()
     Trainer.add_parser_args(parser)
+    parser.add_argument(
+        "command", type=str,
+        choices=["run", "show"],
+    )
 
     args = vars(parser.parse_args())
     experiment_file = args.pop("experiment_name")
@@ -57,42 +67,42 @@ def run_experiment_from_command_args():
 
 
 def run_experiment(filename: Union[str, Path], extra_args: Optional[dict] = None):
+    command = extra_args.pop("command")
+
     data = _load_yaml(filename)
 
-    matrix = data.pop("matrix", None)
-    if not matrix:
-        matrix_entries = [{}]
-    else:
-        for key in ("matrix_slug",):
-            if key in matrix:
-                raise NameError(f"key '{key}' is not allowed in matrix")
-
-        matrix_entries = list(iter_matrix_permutations(matrix))
-        for i, entry in enumerate(matrix_entries):
-            entry["matrix_slug"] = get_matrix_slug(entry)
-            entry["matrix_id"] = f"{i + 1:0{int(math.ceil(math.log10(len(matrix_entries))))}}"
-
+    matrix_entries = get_matrix_entries(data.pop("matrix", None))
     if len(matrix_entries) > 1:
-        print(json.dumps(matrix_entries, indent=2))
-        print(f"\nrunning {len(matrix_entries)} matrix experiments\n")
+        print(f"\n{'running' if command == 'run' else 'showing'} {len(matrix_entries)} matrix experiments\n")
 
     for matrix_entry in matrix_entries:
 
         if len(matrix_entries) > 1:
             print(f"\n--- matrix experiment '{matrix_entry['matrix_slug']}' ---\n")
+            max_len = max(list(len(key) for key in matrix_entry.keys()))
+            for key, value in matrix_entry.items():
+                if key not in RESERVED_MATRIX_KEYS:
+                    print(f"{key:{max_len}}: {value}")
+            print()
 
         data = _load_yaml(filename, matrix_entry)
         data.pop("matrix", None)
         if extra_args:
             data.update(extra_args)
 
-        trainer_klass, kwargs = get_trainer_kwargs_from_dict(data, matrix_entry)
+        trainer_klass, kwargs = get_trainer_kwargs_from_dict(data)
+
+        if command == "show":
+            continue
 
         model = kwargs["model"]
         print(model)
         for key in ("encoder", "decoder"):
             if hasattr(model, key):
                 print(f"{key} params: {num_module_parameters(getattr(model, key)):,}")
+
+        if command != "run":
+            continue
 
         trainer = trainer_klass(**kwargs)
 
@@ -103,11 +113,39 @@ def run_experiment(filename: Union[str, Path], extra_args: Optional[dict] = None
         trainer.train()
 
 
+def get_matrix_entries(matrix: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
+    if not matrix:
+        matrix_entries = [{}]
+    else:
+        for key in RESERVED_MATRIX_KEYS:
+            if key in matrix:
+                raise NameError(f"key '{key}' is not allowed in matrix")
+
+        matrix_entries = list(iter_parameter_permutations(matrix, exclude_keys=["$filter"]))
+        for i, entry in enumerate(matrix_entries):
+            entry["matrix_slug"] = get_matrix_slug(entry)
+            entry["matrix_id"] = f"{i + 1:0{int(math.ceil(math.log10(len(matrix_entries))))}}"
+
+        if "$filter" in matrix:
+            matrix_entries = [
+                entry for entry in matrix_entries
+                if construct_from_code(apply_parameter_matrix(str(matrix["$filter"]), entry))
+            ]
+
+    return matrix_entries
+
+
 def get_matrix_slug(entry: dict) -> str:
-    slug = "_".join(f"{key}-{str(value)[:10]}" for key, value in entry.items())
+    def _value_str(value):
+        return str(value)[:20]
+
+    slug = "_".join(
+        f"{key}-{_value_str(value)}"
+        for key, value in entry.items()
+    )
     return "".join(
         c for c in slug
-        if c.isalnum() or c in ".-_"
+        if c.isalnum() or c in ".,-_"
     )
 
 
@@ -118,16 +156,7 @@ def _load_yaml(filename: str, matrix_entry: Optional[Dict] = None):
 
     else:
         text = Path(filename).read_text()
-
-        re_variable = re.compile("\$\{([\w\d]+)}")
-        def _repl(match):
-            name = match.groups()[0]
-            if name not in matrix_entry:
-                raise NameError(f"Variable ${{{name}}} is not defined in matrix")
-
-            return str(matrix_entry[name])
-
-        text = re_variable.sub(_repl, text)
+        text = apply_parameter_matrix(text, matrix_entry)
 
         fp = StringIO(text)
         data = yaml.load(fp, YamlLoader)
@@ -142,7 +171,19 @@ def _load_yaml(filename: str, matrix_entry: Optional[Dict] = None):
     return data
 
 
-def get_trainer_kwargs_from_dict(data: dict, matrix: dict) -> Tuple[Type[Trainer], dict]:
+def apply_parameter_matrix(text: str, params: dict):
+    re_variable = re.compile("\$\{([\w\d]+)}")
+    def _repl(match):
+        name = match.groups()[0]
+        if name not in params:
+            raise NameError(f"Variable ${{{name}}} is not defined in matrix")
+
+        return str(params[name])
+
+    return re_variable.sub(_repl, text)
+
+
+def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
     required_keys = (
         "experiment_name",
         "model",
