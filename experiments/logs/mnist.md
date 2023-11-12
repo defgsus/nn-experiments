@@ -216,3 +216,4 @@ model: |
 
   EncoderDecoder(encoder, decoder)
 ```
+![loss plots](./img/simple-ae-mnist-ks-chan.png)
