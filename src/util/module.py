@@ -1,11 +1,13 @@
 import math
+from typing import Optional
 
 import torch
 import torch.nn as nn
 
 
-def num_module_parameters(module: nn.Module) -> int:
+def num_module_parameters(module: nn.Module, trainable: Optional[bool] = None) -> int:
     count = 0
     for p in module.parameters():
-        count += math.prod(p.shape)
+        if trainable is None or trainable == p.requires_grad:
+            count += p.numel()
     return count

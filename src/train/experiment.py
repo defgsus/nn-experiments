@@ -19,6 +19,7 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.nn.modules
 import torch.nn.utils
 import torch.utils.data
 from torch.utils.data import DataLoader, Dataset, IterableDataset, TensorDataset
@@ -117,6 +118,7 @@ def get_matrix_entries(matrix: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
     if not matrix:
         matrix_entries = [{}]
     else:
+        nn.modules.TransformerDecoder
         for key in RESERVED_MATRIX_KEYS:
             if key in matrix:
                 raise NameError(f"key '{key}' is not allowed in matrix")
@@ -260,10 +262,13 @@ def construct_scheduler(optimizer: torch.optim.Optimizer, parameter: str, kwargs
     return klass(optimizer, kwargs["max_inputs"] // kwargs["batch_size"])
 
 
-def construct_from_code(code: str):
+def construct_from_code(code: Any):
     """
     https://stackoverflow.com/questions/39379331/python-exec-a-code-block-and-eval-the-last-line/39381428#39381428
     """
+    if not isinstance(code, str):
+        return code
+
     block = ast.parse(code, mode='exec')
 
     # assumes last node is an expression

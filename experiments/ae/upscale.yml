@@ -1,0 +1,54 @@
+matrix:
+  opt: ["Adam"]
+  lr: [0.001]
+  l: [3, 4]
+  #head: [8]
+  hid: [64, 128, 256]
+
+experiment_name: tests/rpg_up_${matrix_slug}
+
+trainer: TrainAutoencoder
+
+globals:
+  SHAPE: (1, 32, 32)
+  CODE_SIZE: 32 * 32 // 10
+
+train_set: |
+  from experiments.datasets import rpg_tile_dataset 
+  rpg_tile_dataset(SHAPE, validation=False, shuffle=True, random_shift=4, random_flip=True)
+  #import experiments.datasets.classic
+  #experiments.datasets.classic.fmnist_dataset(train=True, shape=SHAPE)
+
+validation_set: |
+  from experiments.datasets import rpg_tile_dataset 
+  rpg_tile_dataset(SHAPE, validation=True, shuffle=True, limit=500)
+  #import experiments.datasets.classic
+  #experiments.datasets.classic.fmnist_dataset(train=False, shape=SHAPE)
+
+batch_size: 64
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+
+model: |
+  from experiments.ae.transformer import *
+  
+  encoder = EncoderConv2d(SHAPE, CODE_SIZE, channels=(24, 32, 48), kernel_size=3)
+  
+  decoder = ConvUpscaleDecoder(SHAPE, CODE_SIZE, num_layers=${l}, num_hidden=${hid}, upscale_every=3)
+  
+  EncoderDecoder(encoder, decoder)
+
+  EncoderDecoder(
+  torchvision.models.resnet18(weights=torchvision.models.ResNet18_Weights.IMAGENET1K_V1),
+  ImageManifoldDecoder(
+  num_input_channels=1000,
+  num_output_channels=3,
+  default_shape=(64, 64),
+  num_hidden=256,
+  num_blocks=2,
+  num_layers_per_block=2,
+  )
+  )

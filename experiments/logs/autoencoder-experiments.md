@@ -114,3 +114,63 @@ compared to the previous small-dataset-experiments.
 Unless it's runtime, which is just terrible:
 
 ![loss plots](./img/ae-manifold-smallds-b8l2-64-resTF.png)
+
+
+# 2023-11-12: transformer on mnist
+
+clamped torch's TransformerEncoder/Decoder between a conv layer
+for image patches and tried a couple of parameters:
+
+```yaml
+matrix:
+  opt: ["Adam"]
+  lr: [0.001]
+  patch: [4, 8]
+  stride: [2, 4, 8]
+  $filter: ${stride} <= ${patch}
+  l: [2, 4, 8, 12, 16]
+  head: [4, 8]
+  hid: [64, 128, 256]
+
+experiment_name: mnist/tr1_${matrix_slug}
+
+trainer: TrainAutoencoder
+
+globals:
+  SHAPE: (1, 28, 28)
+  CODE_SIZE: 28 * 28 // 10
+
+train_set: |
+  TransformDataset(
+    TensorDataset(torchvision.datasets.MNIST("~/prog/data/datasets/", train=True).data),
+    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
+  )
+
+validation_set: |
+  TransformDataset(
+    TensorDataset(torchvision.datasets.MNIST("~/prog/data/datasets/", train=False).data),
+    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
+  )
+
+batch_size: 64
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+
+model: |
+  from experiments.ae.transformer import *
+  
+  TransformerAutoencoder(
+      shape=SHAPE, code_size=CODE_SIZE,
+      patch_size=${patch},
+      stride=${stride},
+      num_layers=${l},
+      num_hidden=${hid},
+      num_heads=${head},
+  )
+```
+
+![validation losses](./img/transformer-mnist-architecture.png)
+

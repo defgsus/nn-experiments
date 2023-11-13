@@ -18,4 +18,5 @@ from .generative import (
 )
 from .normalize import NormalizeMaxIterableDataset
 from .shuffle import IterableShuffle
+from .split import SplitIterableDataset
 from .transform import TransformDataset, TransformIterableDataset

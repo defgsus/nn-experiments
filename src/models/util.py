@@ -1,4 +1,5 @@
-from typing import List, Iterable, Tuple, Optional, Callable, Union
+import itertools
+from typing import List, Iterable, Tuple, Optional, Callable, Union, Type
 
 import torch
 import torch.nn as nn
@@ -51,3 +52,43 @@ class ResidualConcat(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.concat([x, self.module(x)], dim=self.dim)
+
+
+class Lambda(nn.Module):
+    def __init__(self, func: Callable):
+        super().__init__()
+        self.func = func
+
+    def forward(self, *args, **kwargs):
+        return self.func(*args, **kwargs)
+
+    def extra_repr(self):
+        return f"func={self.func}"
+
+
+def activation_to_module(
+        activation: Union[None, str, Callable, nn.Module, Type[nn.Module]]
+) -> Union[None, nn.Module]:
+    if isinstance(activation, nn.Module):
+        return activation
+
+    if callable(activation):
+        return Lambda(activation)
+
+    try:
+        if issubclass(activation, nn.Module):
+            return activation()
+    except TypeError:
+        pass
+
+    if isinstance(activation, str):
+        s = activation.lower()
+        for module in (torch.nn, ):
+            for key, value in vars(module).items():
+                try:
+                    if key.lower() == s and issubclass(value, nn.Module):
+                        return value()
+                except TypeError:
+                    pass
+
+    raise ValueError(f"Unrecognized activation: {repr(activation)}")

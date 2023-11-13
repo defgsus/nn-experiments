@@ -1,10 +1,11 @@
 from collections import OrderedDict
-from typing import Optional, Tuple, Union, Iterable
+from typing import Optional, Tuple, Union, Iterable, Callable
 
 import torch
 import torch.nn as nn
 
 from src.algo.space2d import Space2d
+from src.models.util import activation_to_module
 
 
 class ResidualLinearBlock(nn.Module):
@@ -14,6 +15,7 @@ class ResidualLinearBlock(nn.Module):
             num_layers: int,
             batch_norm: bool = True,
             concat: bool = False,
+            activation: Union[str, Callable, nn.Module] = "relu6",
     ):
         super().__init__()
         self.do_concat = concat
@@ -24,7 +26,7 @@ class ResidualLinearBlock(nn.Module):
             *(
                 (f"layer_{i + 1}", nn.Sequential(OrderedDict([
                     ("linear", nn.Linear(num_hidden, num_hidden)),
-                    ("act", nn.GELU()),
+                    ("act", activation_to_module(activation)),
                 ])))
                 for i in range(num_layers)
             )
@@ -53,13 +55,43 @@ class ImageManifoldDecoder(nn.Module):
             pos_embedding_freqs: Iterable[float] = (7, 17),
             batch_norm: bool = True,
             default_shape: Optional[Tuple[int, int]] = None,
+            activation: Union[str, Callable, nn.Module] = "gelu",
+            activation_out: Union[str, Callable, nn.Module] = "sigmoid",
+            cross_attention: bool = False,
+            cross_attention_heads: int = 4,
     ):
+        """
+        An implicit neural function of code + positional-embedding to color.
+
+        :param num_input_channels: int, size of the input embedding
+        :param num_output_channels: int, number of output color channels
+        :param num_hidden: int, size of hidden dimension
+        :param num_blocks: int, number of residual blocks
+        :param num_layers_per_block: int, number of MLP layers per block
+        :param concat_residual: bool or (bool, ...),
+            Option to concat the residual signal instead of adding it.
+            Can be defined for all blocks or for each block individually.
+            Note: This increases the size of the hidden dimension for following blocks.
+        :param pos_embedding_freqs: (float, ...), the multipliers for the position [-1, 1] before sin/cos
+        :param batch_norm: bool, apply batch normalisation in each block
+        :param default_shape: (H, W), the default shape to use when no shape is supplied in `forward`
+        :param activation: hidden activation function
+        :param activation_out: final activation function
+        :param cross_attention: bool
+            Following loosely the idea of https://arxiv.org/pdf/2310.05624.pdf
+                "Locality-Aware Generalizable Implicit Neural Representation"
+            to put the positional embedding into the query-part of an attention module.
+            The positional embedding is still concatenated to result of the attention layer.
+            However, performance drops drastically when using it.
+        :param cross_attention_heads: int, number of heads for cross-attention, if used
+        """
         super().__init__()
         self.num_input_channels = num_input_channels
         self.default_shape = default_shape
         self.num_output_channels = num_output_channels
         self.pos_embedding_freqs = tuple(pos_embedding_freqs)
-        self.pos_embedding_size = (len(self.pos_embedding_freqs) + 1) * 2
+        # x, y, sin-x, sin-y, cos-x, cos-y, ...
+        self.pos_embedding_size = (len(self.pos_embedding_freqs) * 2 + 1) * 2
         if isinstance(concat_residual, bool):
             self.concat_residual = (concat_residual, ) * num_blocks
         else:
@@ -74,24 +106,32 @@ class ImageManifoldDecoder(nn.Module):
                 hs *= 2
             hidden_sizes.append(hs)
 
-        self.pos_to_color = nn.Sequential(OrderedDict([
-            ("linear_in", nn.Linear(num_input_channels + self.pos_embedding_size, num_hidden)),
-            ("act_in", nn.GELU()),
-            ("resblocks", nn.Sequential(OrderedDict([
-                (
-                    f"resblock_{i+1}",
-                    ResidualLinearBlock(
-                        num_hidden=hs,
-                        num_layers=num_layers_per_block,
-                        batch_norm=batch_norm,
-                        concat=concat,
-                    )
+        if not cross_attention:
+            self.pos_to_color = nn.Sequential()
+            self.pos_to_color.add_module("linear_in", nn.Linear(num_input_channels + self.pos_embedding_size, hidden_sizes[0]))
+            self.pos_to_color.add_module("act_in", activation_to_module(activation))
+        else:
+            self.upscale_pos = nn.Linear(self.pos_embedding_size, self.num_input_channels)
+            self.cross_atn = nn.MultiheadAttention(self.num_input_channels, num_heads=cross_attention_heads)
+            self.proj = nn.Linear(self.num_input_channels + self.pos_embedding_size, hidden_sizes[0])
+            self.pos_to_color = nn.Sequential()
+
+        self.pos_to_color.add_module("resblocks", nn.Sequential(OrderedDict([
+            (
+                f"resblock_{i+1}",
+                ResidualLinearBlock(
+                    num_hidden=hs,
+                    num_layers=num_layers_per_block,
+                    batch_norm=batch_norm,
+                    concat=concat,
+                    activation=activation,
                 )
-                for i, (concat, hs) in enumerate(zip(self.concat_residual, hidden_sizes))
-            ]))),
-            ("linear_out", nn.Linear(hidden_sizes[-1], num_output_channels)),
-            ("act_out", nn.Sigmoid()),
-        ]))
+            )
+            for i, (concat, hs) in enumerate(zip(self.concat_residual, hidden_sizes))
+        ])))
+        self.pos_to_color.add_module("linear_out", nn.Linear(hidden_sizes[-1], num_output_channels))
+        self.pos_to_color.add_module("act_out", activation_to_module(activation_out))
+
         self._cur_space = None
         self._cur_space_shape = None
 
@@ -115,12 +155,23 @@ class ImageManifoldDecoder(nn.Module):
             ])
 
         space, shape = self.get_pos_embedding(shape)
+        input_codes = x.unsqueeze(0).expand(space.shape[0], x.shape[-1])
 
-        codes = torch.concat([
-            x.unsqueeze(0).expand(space.shape[0], x.shape[-1]),
-            space
-        ], dim=1)
-        return self.pos_to_color(codes).permute(1, 0).view(self.num_output_channels, *shape)
+        if getattr(self, "cross_atn", None) is None:
+            codes = torch.concat([input_codes, space], dim=1)
+            color = self.pos_to_color(codes)
+        else:
+            embedding = self.upscale_pos(space)
+            codes, code_weights = self.cross_atn(
+                query=embedding,
+                key=input_codes,
+                value=input_codes,
+            )
+            codes = torch.concat([codes, space], dim=1)
+            codes = self.proj(codes)
+            color = self.pos_to_color(codes)
+
+        return color.permute(1, 0).view(self.num_output_channels, *shape)
 
     def get_pos_embedding(self, shape: Optional[Tuple[int, int]] = None):
         if shape is None:
@@ -129,16 +180,20 @@ class ImageManifoldDecoder(nn.Module):
             raise ValueError("Must either define `default_shape` or `shape`")
 
         if shape != self._cur_space_shape:
-            space = Space2d(shape=(2, *shape)).space().to(self.pos_to_color[0].weight)
+            space = Space2d(shape=(2, *shape)).space().to(self.pos_to_color[-2].weight)
             space = space.permute(1, 2, 0).view(-1, 2)
             space = torch.concat([
                 space,
                 *(
                     (space * freq).sin()
                     for freq in self.pos_embedding_freqs
+                ),
+                *(
+                    (space * freq).cos()
+                    for freq in self.pos_embedding_freqs
                 )
             ], 1)
-            self._cur_space = space.to(self.pos_to_color[0].weight)
+            self._cur_space = space.to(self.pos_to_color[-2].weight)
             self._cur_space_shape = shape
 
         return self._cur_space, shape
@@ -152,7 +207,7 @@ class ImageManifoldDecoder(nn.Module):
         return images
 
 
-class ImageManifoldEncoder(nn.Module):
+class ImageManifoldEncoderXXX(nn.Module):
     """NOT REALLY TESTED YET"""
     def __init__(
             self,

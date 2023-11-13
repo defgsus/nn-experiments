@@ -185,10 +185,16 @@ class Trainer:
             **(extra or {}),
         }, indent=2))
 
-    def num_trainable_parameters(self) -> int:
-        return sum(
-            sum(math.prod(p.shape) for p in g["params"])
-            for g in self.optimizers[0].param_groups
+    def num_trainable_parameters(self) -> (int, int):
+        return (
+            sum(
+                sum(math.prod(p.shape) for p in g["params"] if p.requires_grad)
+                for g in self.optimizers[0].param_groups
+            ),
+            sum(
+                sum(math.prod(p.shape) for p in g["params"])
+                for g in self.optimizers[0].param_groups
+            )
         )
 
     def log_scalar(self, tag: str, value):
@@ -205,7 +211,11 @@ class Trainer:
 
     def train(self):
         print(f"---- training '{self.experiment_name}' on {self.device} ----")
-        print(f"trainable params: {self.num_trainable_parameters():,}")
+        num_train_params, num_params = self.num_trainable_parameters()
+        if num_train_params == num_params:
+            print(f"trainable params: {num_train_params:,}")
+        else:
+            print(f"trainable params: {num_train_params:,} of {num_params:,}")
 
         last_validation_step = None
         last_validation_epoch = None

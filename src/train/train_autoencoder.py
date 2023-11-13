@@ -34,6 +34,11 @@ class TrainAutoencoder(Trainer):
 
         output_batch = self.model(input_batch)
 
+        if input_batch.shape != output_batch.shape:
+            raise ValueError(
+                f"shapes differ after autoencoding: in={input_batch.shape}, out={output_batch.shape}"
+            )
+
         #def _transform(x):
         #    f = torch.fft.fft2(x)
         #    #return f.real + f.imag

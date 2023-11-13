@@ -30,7 +30,7 @@ class RpgTileIterableDataset(IterableDataset):
             directory: str = "~/prog/data/game-art/",
             include: Optional[str] = None,
             exclude: Optional[str] = None,
-            even: Optional[bool] = None,
+            even_files: Optional[bool] = None,
     ):
         self.shape = shape
         self.directory = directory
@@ -56,9 +56,9 @@ class RpgTileIterableDataset(IterableDataset):
             dict(name="obj_misk_atlas.png", shape=(32, 32)),
             dict(name="Tile-set - Toen's Medieval Strategy (16x16) - v.1.0.png", shape=(16, 16), limit_count=306),
         ]
-        if even is True:
+        if even_files is True:
             self.tilesets = self.tilesets[::2]
-        elif even is False:
+        elif even_files is False:
             self.tilesets = self.tilesets[1::2]
 
         if include is not None:
@@ -130,8 +130,12 @@ def rpg_tile_dataset(
 
     ds = RpgTileIterableDataset(
         shape,
-        even=validation,
     )
+
+    if validation is True:
+        ds = SplitIterableDataset(ds, ratio=10, train=False)
+    elif validation is False:
+        ds = SplitIterableDataset(ds, ratio=10, train=True)
 
     transforms = [
         lambda x: set_image_channels(x, shape[0]),
@@ -146,6 +150,9 @@ def rpg_tile_dataset(
             VT.RandomHorizontalFlip(.4),
             VT.RandomVerticalFlip(.2),
         ])
+
+    if shuffle:
+        ds = IterableShuffle(ds, 10_000)
 
     ds = TransformIterableDataset(
         ds,
