@@ -13,6 +13,7 @@ class DissimilarImageIterableDataset(IterableDataset):
             max_age: Optional[int] = None,
             encoder: Union[str, torch.nn.Module, Callable[[torch.Tensor], torch.Tensor]] = "flatten",
             batch_size: int = 10,
+            yield_bool: bool = False,
             verbose: bool = False,
     ):
         self.dataset = dataset
@@ -20,6 +21,7 @@ class DissimilarImageIterableDataset(IterableDataset):
         self.max_age = max_age
         self.encoder = encoder
         self.batch_size = int(batch_size)
+        self.yield_bool = yield_bool
         self.verbose = bool(verbose)
         self.features: Optional[torch.Tensor] = None
         self._ages: Optional[List[int]] = None
@@ -84,10 +86,16 @@ class DissimilarImageIterableDataset(IterableDataset):
 
         # store first image feature
         if self.features is None:
-            if tuple_batch[0]:
-                yield image_batch[0], *tuple_batch[0]
+            if not self.yield_bool:
+                if tuple_batch[0]:
+                    yield image_batch[0], *tuple_batch[0]
+                else:
+                    yield image_batch[0]
             else:
-                yield image_batch[0]
+                if tuple_batch[0]:
+                    yield image_batch[0], True, *tuple_batch[0]
+                else:
+                    yield image_batch[0], True
 
             self._num_passed += 1
             self.features = feature_batch[0].unsqueeze(0)
@@ -106,11 +114,18 @@ class DissimilarImageIterableDataset(IterableDataset):
                 similarity2 = self._highest_similarities(feature.unsqueeze(0), features_to_add)
                 similarity = torch.max(similarity, similarity2)
 
-            if similarity <= self.max_similarity:
-                if tup:
-                    yield image, *tup
+            if similarity <= self.max_similarity or self.yield_bool:
+                if not self.yield_bool:
+                    if tup:
+                        yield image, *tup
+                    else:
+                        yield image
                 else:
-                    yield image
+                    does_pass = similarity <= self.max_similarity
+                    if tup:
+                        yield image, does_pass, *tup
+                    else:
+                        yield image, does_pass
 
                 self._num_passed += 1
                 self._ages.append(self._age)
