@@ -61,7 +61,7 @@ class ImageManifoldDecoder(nn.Module):
             cross_attention_heads: int = 4,
     ):
         """
-        An implicit neural function of code + positional-embedding to color.
+        An implicit neural function of `code + positional-embedding -> color`.
 
         :param num_input_channels: int, size of the input embedding
         :param num_output_channels: int, number of output color channels

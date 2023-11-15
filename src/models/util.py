@@ -72,14 +72,14 @@ def activation_to_module(
     if isinstance(activation, nn.Module):
         return activation
 
-    if callable(activation):
-        return Lambda(activation)
-
     try:
         if issubclass(activation, nn.Module):
             return activation()
     except TypeError:
         pass
+
+    if callable(activation):
+        return Lambda(activation)
 
     if isinstance(activation, str):
         s = activation.lower()

@@ -75,3 +75,53 @@ did **not** provide a benefit on the 7k rpg tile dataset.
 All larger versions performed worse:
 
 ![loss plots](./img/ae-manifold-rpg-size.png)
+
+And, actually, it turns out that a simple 3-layer CNN (ks=3, channels=[16, 24, 32])
+as the encoder performs much better than the resnet:
+
+```
+(encoder): EncoderConv2d(
+    (convolution): Conv2dBlock(
+      (_act_fn): ReLU()
+      (layers): Sequential(
+        (0): Conv2d(3, 16, kernel_size=(3, 3), stride=(1, 1))
+        (1): ReLU()
+        (2): Conv2d(16, 24, kernel_size=(3, 3), stride=(1, 1))
+        (3): ReLU()
+        (4): Conv2d(24, 32, kernel_size=(3, 3), stride=(1, 1))
+        (5): ReLU()
+      )
+    )
+    (linear): Linear(in_features=21632, out_features=102, bias=True)
+  )
+```
+
+![loss plots](./img/ae-manifold-rpg-simple-cnn.png)
+
+#### Update
+
+Everything i tried in the last couple of days is performing 
+worse, e.g. changing the pos-embedding frequencies, 
+using FFTs in some way and incresing the encoder params.
+
+By the way, running the tests for 1M steps (about 20 epochs
+with the current RPG tile dataset) might not be 
+enough either... but i'm actually looking for methods that
+enhance performance already before 1M steps. For the sake
+of logging: 
+
+![loss plots](./img/ae-manifold-rpg-7M.png)
+
+The gray line is the reference with simple CNN encoder from 
+above and yellow has increased the encoder channels from 
+`(16, 24, 32)` to `(24, 32, 48)` which, if course!, performed
+a little worse in the beginning. Made it run for 7M steps, 
+which is over 200 epochs (on a randomly flipped and shifted 
+dataset). It went below 0.04 l1 validation loss, but this
+is still bad:
+
+![repros](./img/ae-manifold-rpg-7M-repros.png)
+
+The idea behind using the implicit generation is to be
+able to increase the resolution, but if it already looks
+blurry in the original resolution...

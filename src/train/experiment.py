@@ -139,7 +139,7 @@ def get_matrix_entries(matrix: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
 
 def get_matrix_slug(entry: dict) -> str:
     def _value_str(value):
-        return str(value)[:20]
+        return str(value)[:40]
 
     slug = "_".join(
         f"{key}-{_value_str(value)}"

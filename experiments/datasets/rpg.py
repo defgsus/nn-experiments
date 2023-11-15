@@ -25,15 +25,17 @@ from src.util.image import *
 class RpgTileIterableDataset(IterableDataset):
 
     def __init__(
-            self, 
+            self,
             shape: Tuple[int, int, int] = (3, 32, 32),
             directory: str = "~/prog/data/game-art/",
             include: Optional[str] = None,
             exclude: Optional[str] = None,
             even_files: Optional[bool] = None,
+            interleave: bool = False,
     ):
         self.shape = shape
         self.directory = directory
+        self.interleave = interleave
         self.tilesets = [
             dict(name="Castle2.png", shape=(16, 16)),
             dict(name="overworld_tileset_grass.png", shape=(16, 16)),
@@ -73,8 +75,23 @@ class RpgTileIterableDataset(IterableDataset):
             ))
 
     def __iter__(self):
-        for params in self.tilesets:
-            yield from self._iter_tiles(**params)
+        if not self.interleave:
+            for params in self.tilesets:
+                yield from self._iter_tiles(**params)
+        else:
+            iterables = [
+                self._iter_tiles(**params)
+                for params in self.tilesets
+            ]
+            while iterables:
+                next_iterables = []
+                for it in iterables:
+                    try:
+                        yield next(it)
+                        next_iterables.append(it)
+                    except StopIteration:
+                        pass
+                iterables = next_iterables
 
     def _iter_tiles(
             self, name: str,
@@ -117,6 +134,7 @@ def rpg_tile_dataset(
         limit: Optional[int] = None,
         fake_size: int = 50_000,
         shuffle: bool = False,
+        interleave: bool = False,
         random_shift: int = 0,
         random_flip: bool = False,
 ) -> IterableDataset:
@@ -130,6 +148,7 @@ def rpg_tile_dataset(
 
     ds = RpgTileIterableDataset(
         shape,
+        interleave=interleave,
     )
 
     if validation is True:
