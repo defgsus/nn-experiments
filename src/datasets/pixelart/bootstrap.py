@@ -11,12 +11,17 @@ Bootstrapping a pixel-art dataset
    equal tiles.
 
 """
+from pathlib import Path
+import requests
+import os
+import zipfile
 import argparse
 import fnmatch
 import json
 from pathlib import Path
 from typing import List, Iterable, Tuple, Optional, Union
 
+import bs4
 import torch
 from torch.utils.data import IterableDataset
 import torchvision.transforms.functional as VF
@@ -313,12 +318,12 @@ TILE_CONFIGS = [
     dict(name="64x64-isometric-roguelike-tiles/rltiles-pack/gallery.png", shape=(64, 64)),
     dict(name="64x64-isometric-roguelike-tiles/rltiles-pack/lair.png", shape=(64, 64)),
     dict(name="abandonauts-8x8-tile-assets/abandonauts_assets/tiles.png", shape=(8, 8)),
-    dict(name="/home/bergi/prog/data/game-art/DOWN/a-blocky-dungeon/dungeon_sheet_0.png", shape=(16, 16)),
+    dict(name="a-blocky-dungeon/dungeon_sheet_0.png", shape=(16, 16)),
     dict(name="a-cute-dungeon/sheet_14.png", shape=(32, 32)),
     dict(name="basic-map-32x32-by-ivan-voirol/32x32_map_tile%20v3.1%20%5BMARGINLESS%5D.png", shape=(32, 32), ignore_lines=(0, 15), ignore_tiles=((16, 4), (16, 5), (16, 14), (16, 15))),
     dict(name="castle-tiles-for-rpgs/Castle2_5.png", shape=(32, 32)),
     dict(name="cave-tileset-0/cave.png", shape=(16, 16)),
-    dict(name="/home/bergi/prog/data/game-art/DOWN/classical-ruin-tiles/classical_ruin_tiles_1.png", shape=(16, 16), offset=(0, 200)),
+    dict(name="classical-ruin-tiles/classical_ruin_tiles_1.png", shape=(16, 16), offset=(0, 200)),
     dict(name="denzis-public-domain-art/DENZI_CC0_32x32_tileset.png", shape=(32, 32)),
     dict(name="desert-tileset-0/desert_1.png", shape=(16, 16)),
     dict(name="dungeon-crawl-32x32-tiles/ProjectUtumno_full_0.png", shape=(32, 32)),
@@ -610,13 +615,6 @@ def download_all(
         urls: List[str],
         root_path: str = STORAGE_DIRECTORY,
 ):
-    from pathlib import Path
-
-    import requests
-    import bs4
-    import os
-    import zipfile
-
     for url in urls:
         name = url.split("/")[-1]
 
@@ -668,7 +666,7 @@ class RpgTileBootstrapIterableDataset(IterableDataset):
             interleave: bool = False,
     ):
         self.shape = shape
-        self.directory = directory
+        self.directory = Path(directory).expanduser()
         self.interleave = interleave
         self.tilesets = tile_configs
 
@@ -714,6 +712,8 @@ class RpgTileBootstrapIterableDataset(IterableDataset):
             image = image.convert("RGBA")
         image = VF.to_tensor(image)
 
+        url = self._get_url(name)
+
         if image.shape[0] != self.shape[0]:
             if image.shape[0] == 4 and remove_transparent:
                 image = image[:3] * image[3].unsqueeze(0)
@@ -743,8 +743,28 @@ class RpgTileBootstrapIterableDataset(IterableDataset):
                     "limit": limit,
                     "ignore_lines": list(ignore_lines) if ignore_lines else None,
                     "ignore_tiles": list(ignore_tiles) if ignore_tiles else None,
+                    "url": url,
                 }
                 yield patch, config, pos
+
+    def _get_url(self, name: str) -> str:
+        path_parts = name.split("/")
+        try:
+            soup = bs4.BeautifulSoup(
+                (self.directory / path_parts[0] / "index.html").read_text(),
+                features="html.parser",
+            )
+        except FileNotFoundError as e:
+            raise FileNotFoundError(f"{e}, for name `{name}`")
+
+        div = soup.find("div", {"class": "field-name-field-art-files"})
+        for a in div.find_all("a"):
+            url = a.attrs["href"]
+            url_filename = url.split("/")[-1].lower()
+            if path_parts[1].lower() == url_filename or f"{path_parts[1]}.zip".lower() == url_filename:
+                return url
+
+        raise RuntimeError(f"Did not find url for `{name}`")
 
 
 def filter_dataset(
@@ -755,8 +775,9 @@ def filter_dataset(
         tile_configs=tile_configs,
         shape=(1, 16, 16),
     )
-    ds_dissimilar = DissimilarImageIterableDataset(
-        ds, max_similarity=.99, yield_bool=True,
+    ds = DissimilarImageIterableDataset(
+        ds, max_similarity=.99,
+        yield_bool=True,
         verbose=True,
     )
 
@@ -764,13 +785,13 @@ def filter_dataset(
     used_files = set()
     ignore_tiles = {}
     try:
-        for patch, dissimilar, config, pos in ds_dissimilar:
+        for patch, dissimilar, config, pos in ds:
 
             # a single file might be used multiple times
-            #   so we need to consider the slicing config as well
+            #   so consider the slicing config as well
             key = (config["name"], json.dumps(config))
 
-            if not dissimilar:
+            if dissimilar:
                 count += 1
                 used_files.add(key)
             else:
@@ -790,7 +811,10 @@ def filter_dataset(
                 if not config["ignore_tiles"]:
                     config["ignore_tiles"] = []
                 # merge the ignored tiles from dissimilarity test
-                config["ignore_tiles"] = set(config["ignore_tiles"]) | set(ignore_tiles[key])
+                config["ignore_tiles"] = (
+                    set([tuple(p) for p in config["ignore_tiles"]])
+                    | set(ignore_tiles[key])
+                )
 
             if config["ignore_tiles"]:
                 config["ignore_tiles"] = sorted(config["ignore_tiles"])
@@ -799,8 +823,8 @@ def filter_dataset(
                 key: value for key, value in config.items()
                 if value is not None
             }
-            print(f"\n{config}")
             print(json.dumps(config), file=fp)
+            #print(f"\n{config}")
 
     print(f"dataset tiles: {count:,}")
     print(f"ignored tiles: {sum(len(i) for i in ignore_tiles.values()):,}")

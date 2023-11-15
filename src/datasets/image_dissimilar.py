@@ -3,6 +3,8 @@ from typing import Union, Optional, Callable, List, Tuple, Generator
 import torch
 from torch.utils.data import Dataset, IterableDataset
 
+from src.util.embedding import normalize_embedding
+
 
 class DissimilarImageIterableDataset(IterableDataset):
 
@@ -16,6 +18,9 @@ class DissimilarImageIterableDataset(IterableDataset):
             yield_bool: bool = False,
             verbose: bool = False,
     ):
+        if isinstance(encoder, str):
+            assert encoder in ("flatten", "flatten-norm"), f"Got '{encoder}'"
+
         self.dataset = dataset
         self.max_similarity = float(max_similarity)
         self.max_age = max_age
@@ -114,18 +119,21 @@ class DissimilarImageIterableDataset(IterableDataset):
                 similarity2 = self._highest_similarities(feature.unsqueeze(0), features_to_add)
                 similarity = torch.max(similarity, similarity2)
 
-            if similarity <= self.max_similarity or self.yield_bool:
+            does_pass = similarity <= self.max_similarity
+
+            # always yield when required
+            if self.yield_bool:
+                if tup:
+                    yield image, does_pass, *tup
+                else:
+                    yield image, does_pass
+
+            if does_pass:
                 if not self.yield_bool:
                     if tup:
                         yield image, *tup
                     else:
                         yield image
-                else:
-                    does_pass = similarity <= self.max_similarity
-                    if tup:
-                        yield image, does_pass, *tup
-                    else:
-                        yield image, does_pass
 
                 self._num_passed += 1
                 self._ages.append(self._age)
@@ -159,6 +167,9 @@ class DissimilarImageIterableDataset(IterableDataset):
 
             if self.encoder == "flatten":
                 feature_batch = image_batch.flatten(1)
+
+            elif self.encoder == "flatten-norm":
+                feature_batch = normalize_embedding(image_batch.flatten(1))
 
             elif self.encoder.startswith("clip"):
                 from src.models.clip import ClipSingleton
