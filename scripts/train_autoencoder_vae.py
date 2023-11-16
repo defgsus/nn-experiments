@@ -230,7 +230,7 @@ def main():
             ],
             num_repeat=1,
         )
-    else:
+    elif 0:
         SHAPE = (1, 32, 32)
 
         ds = datasets.all_patch_dataset(SHAPE)
@@ -244,6 +244,13 @@ def main():
             max_size=2000,
         )
         assert next(iter(ds))[0].shape[-3:] == torch.Size(SHAPE), next(iter(ds))[0].shape
+
+    else:
+        SHAPE = (3, 32, 32)
+
+        ds = RpgTileIterableDataset()
+        test_ds = SplitIterableDataset(ds, ratio=20, train=False)
+        ds = SplitIterableDataset(ds, ratio=20, train=True)
 
     if test_ds is None:
         train_ds, test_ds = torch.utils.data.random_split(ds, [0.99, 0.01], torch.Generator().manual_seed(42))

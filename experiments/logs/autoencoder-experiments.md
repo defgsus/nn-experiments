@@ -1,176 +1,33 @@
 
 
-# "manifold" decoder
+# variational auto-encoder on RPG Tile dataset
 
-## 2023-11-09
+There is a *deep* love/hate relationships with neural networks.
+Why the heck do i need to train a small network like this
 
-After preliminary experiments, running this setup:
+```python
+model = VariationalAutoencoderConv(
+    shape=(3, 32, 32), channels=[16, 24, 32], kernel_size=5, 
+    latent_dims=128,
+)
 
-    DalleManifoldAutoencoder(
-        shape=(1, 32, 32), 
-        vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True, 
-        decoder_n_blk=4, decoder_n_layer=2, decoder_n_hid=64,
-    )
-    encoder params: 1,725,264
-    decoder params: 42,497
-    batch_size: 64
-    steps: 1M
-    learnrate: .0003 AdamW, CosineAnnealingLR 
-    
-on only 300 (randomly h&v-flipped) images of the RPG-tiles dataset (/scripts/datasets.py).
-
-The encoder is a small version of the DALL-E VQ-VAE model. 
-The decoder is basically a function of 
-
-    encoding, pixel-position -> pixel-color
-
-which i call "manifold" for now until i stumble across a better name.
-It's made of X equal blocks of Y fully connected layers with 
-batch-normalization and residual skip connections per block.
-
-Besides l2 reconstruction loss there is an extra constraint on the distribution of the encoding:
-
-    loss_batch_std = (.5 - feature_batch.std(0).mean()).abs()
-    loss_batch_mean = (0. - feature_batch.mean()).abs()
-
-The three runs add these losses with factor 0.1 (green), 0.001 (orange) and 0.0 (gray). 
-
-![loss plots](./img/ae-manifold-std-constraint.png)
-
-Below are reproduced (right) samples of the orange model. 
-
-![repros](./img/ae-manifold-std-constraint-001-repros.png)
-
-and rendered to 64x64 resolution:
-![repros](./img/ae-manifold-std-constraint-001-repros-64.png)
-
-### upgrade decoder
-
-fixed the std/mean loss factor to 0.0001 and increased number of decoder blocks:
-
-    decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649
-
-plots in x = steps (top) and relative time (bottom):
-![loss plots](./img/ae-manifold-std-constraint-plus-b8.png)
-
-The reproductions from the training set look good enough. 
-other tiles can hardly be reproduced:
-
-![repros](./img/ae-manifold-std-constraint-0001-b8-l2-repros.png)
-![repros](./img/ae-manifold-std-constraint-0001-b8-l2-repros-64.png)
-
-
-Some (very short) tests with different block/layer settings: 
-
-    (cyan)    decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649 
-    (yellow)  decoder_n_blk=8,  decoder_n_layer=4, decoder_n_hid=128, params: 547,841
-    (brown)   decoder_n_blk=16, decoder_n_layer=1, decoder_n_hid=128, params: 285,697 
-    (magenta) decoder_n_blk=16, decoder_n_layer=2, decoder_n_hid=128, params: 549,889
-
-![repros](./img/ae-manifold-std-constraint-block-level-compare.png)
-
-
-### back to "real" dataset
-
-The current dataset of choice for my autoencoders is a mixture of all
-the rpg tiles (about 8k, h&v-flipped) and kali-set fractal patches
-(about 50k, at 128x128 randomly cropped to 32x32).
-
-![loss plots](./img/ae-manifold-fullds-b8.png)
-
-    (light green) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=300, params: 1,490,401
-    (dark green)  decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=128, params: 283,649
-    (cyan)        sames as dark green but on above small dataset
-
-The light-green model above was quite unsuccessful in terms of 
-image quality. It still uses 0.1 factor for std/mean-loss. 
-Dark green model uses factor 0.0001 and performs a little better
-even though having less parameters. It's not getting close 
-to the desirable baseline of the 300-tile dataset (cyan), though.
-
-Increasing the number of hidden cells in the decoder to 256 does 
-not seem to be enough for acceptable quality:
-
-    (yellow) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=256, params: 1,091,585
-
-![loss plots](./img/ae-manifold-fullds-b8-h256.png)
-
-It might get below 0.004 reconstruction loss with another 10 hours
-but i'm targeting < 0.001. Stopping it.
-
-### 2023-11-10: back to small dataset
-
-Changing residual logic to either add (like previous) or concat features:
-
-    decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=64, 
-        decoder_concat_residual=[True, False] * 4,
-        params: 3,502,785
-
-    which leads to hidden sizes per block:
-        64, 128, 128, 256, 256, 512, 512, 1024
-
-With no apparent difference within the first 80k steps (cyan)
-compared to the previous small-dataset-experiments. 
-Unless it's runtime, which is just terrible:
-
-![loss plots](./img/ae-manifold-smallds-b8l2-64-resTF.png)
-
-
-# 2023-11-12: transformer on mnist
-
-clamped torch's TransformerEncoder/Decoder between a conv layer
-for image patches and tried a couple of parameters:
-
-```yaml
-matrix:
-  opt: ["Adam"]
-  lr: [0.001]
-  patch: [4, 8]
-  stride: [2, 4, 8]
-  $filter: ${stride} <= ${patch}
-  l: [2, 4, 8, 12, 16]
-  head: [4, 8]
-  hid: [64, 128, 256]
-
-experiment_name: mnist/tr1_${matrix_slug}
-
-trainer: TrainAutoencoder
-
-globals:
-  SHAPE: (1, 28, 28)
-  CODE_SIZE: 28 * 28 // 10
-
-train_set: |
-  TransformDataset(
-    TensorDataset(torchvision.datasets.MNIST("~/prog/data/datasets/", train=True).data),
-    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
-  )
-
-validation_set: |
-  TransformDataset(
-    TensorDataset(torchvision.datasets.MNIST("~/prog/data/datasets/", train=False).data),
-    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
-  )
-
-batch_size: 64
-learnrate: ${lr}
-optimizer: ${opt}
-scheduler: CosineAnnealingLR
-loss_function: l1
-max_inputs: 1_000_000
-
-model: |
-  from experiments.ae.transformer import *
-  
-  TransformerAutoencoder(
-      shape=SHAPE, code_size=CODE_SIZE,
-      patch_size=${patch},
-      stride=${stride},
-      num_layers=${l},
-      num_hidden=${hid},
-      num_heads=${head},
-  )
+optimizer = Adam(model.parameters(), lr=.0001, weight_decay=0.000001)
 ```
 
-![validation losses](./img/transformer-mnist-architecture.png)
+for 10 hours and it still does not reach the optimum?
+
+![loss plots](./img/vae-rpg-conv16-24-32-40M.png)
+
+And how could one tell after 30 minutes where this is going
+to go? The plot shows the l1 validation loss (right) over
+**1700 epochs!** Why does this network need to look at 
+things 1700 times???
+
+Well, it's a complicated dataset, for sure.
+
+![reproductions](./img/vae-rpg-conv16-24-32-40M-repros.png)
+
+But i feel there is something wrong in the method. 
+This *backpropagation gradient descent*, although
+mathematically grounded, feels like a brute-force approach.
 

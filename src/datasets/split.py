@@ -23,13 +23,14 @@ class SplitIterableDataset(IterableDataset):
         self.train = train
 
     def __iter__(self):
-        count = 0
+        count = self.ratio
         train = True
         for item in self.ds:
             if train == self.train:
                 yield item
 
-            count += 1
-            if count >= self.ratio:
-                count = 0
+            count -= 1
+            if count <= 0:
                 train = not train
+                count = 1 if not train else self.ratio
+
