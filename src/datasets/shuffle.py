@@ -20,10 +20,12 @@ class IterableShuffle(IterableDataset):
             self,
             source_dataset: Union[Dataset, IterableDataset],
             max_shuffle: int = 100,
+            seed: Optional[int] = None,
     ):
         super().__init__()
         self.source_dataset = source_dataset
         self.max_shuffle = max_shuffle
+        self.rng = random.Random(seed) if seed is not None else random
 
     def __len__(self):
         return len(self.source_dataset)
@@ -34,11 +36,11 @@ class IterableShuffle(IterableDataset):
             items.append(item)
 
             if len(items) >= self.max_shuffle:
-                idx = random.randrange(len(items))
+                idx = self.rng.randrange(len(items))
                 yield items[idx]
                 items.pop(idx)
 
         while items:
-            idx = random.randrange(len(items))
+            idx = self.rng.randrange(len(items))
             yield items[idx]
             items.pop(idx)

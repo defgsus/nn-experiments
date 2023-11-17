@@ -69,6 +69,9 @@ class Lambda(nn.Module):
 def activation_to_module(
         activation: Union[None, str, Callable, nn.Module, Type[nn.Module]]
 ) -> Union[None, nn.Module]:
+    if activation is None:
+        return None
+
     if isinstance(activation, nn.Module):
         return activation
 

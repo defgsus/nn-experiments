@@ -15,6 +15,7 @@ def _uint_dataset(
         ds: Dataset,
         shape: Tuple[int, int, int] = (1, 28, 28),
         default_shape: Tuple[int, int, int] = (1, 28, 28),
+        interpolation: bool = True,
 ) -> Dataset:
     transforms = [
         lambda x: x.unsqueeze(0).float() / 255.,
@@ -22,20 +23,26 @@ def _uint_dataset(
     if shape[0] != default_shape[0]:
         transforms.append(lambda x: set_image_channels(x, shape[0]))
     if shape[-2:] != default_shape[-2:]:
-        transforms.append(lambda x: VF.resize(x, shape[-2:], VF.InterpolationMode.BILINEAR, antialias=True))
+        transforms.append(lambda x: VF.resize(
+            x, shape[-2:],
+            VF.InterpolationMode.BILINEAR if interpolation else VF.InterpolationMode.NEAREST,
+            antialias=interpolation
+        ))
 
     return TransformDataset(ds, transforms=transforms)
 
 
-def mnist_dataset(train: bool, shape: Tuple[int, int, int] = (1, 28, 28)) -> Dataset:
+def mnist_dataset(train: bool, shape: Tuple[int, int, int] = (1, 28, 28), interpolation: bool = True) -> Dataset:
     return _uint_dataset(
         TensorDataset(torchvision.datasets.MNIST("~/prog/data/datasets/", train=train).data),
         shape=shape,
+        interpolation=interpolation,
     )
 
 
-def fmnist_dataset(train: bool, shape: Tuple[int, int, int] = (1, 28, 28)) -> Dataset:
+def fmnist_dataset(train: bool, shape: Tuple[int, int, int] = (1, 28, 28), interpolation: bool = True) -> Dataset:
     return _uint_dataset(
         TensorDataset(torchvision.datasets.FashionMNIST("~/prog/data/datasets/", train=train).data),
         shape=shape,
+        interpolation=interpolation,
     )

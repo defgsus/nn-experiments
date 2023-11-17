@@ -83,6 +83,7 @@ class Trainer:
         self.device = to_torch_device(device)
         self._loss_history = []
         self._loss_steps = 0
+        self.last_validation_loss: Optional[float] = None
 
         self.model = self.model.to(self.device)
 
@@ -182,6 +183,7 @@ class Trainer:
             "max_inputs": self.max_inputs,
             "model": repr(self.model),
             "optimizers": [repr(o) for o in self.optimizers],
+            "num_inputs": self.num_input_steps,
             **(extra or {}),
         }, indent=2))
 
@@ -423,12 +425,14 @@ class Trainer:
             # print(f"\nVALIDATION loss {float(loss)}")
             self.log_scalar("validation_loss", loss)
 
-            loss = float(loss)
+            loss = self.last_validation_loss = float(loss)
 
             if self._best_validation_loss is None or loss < self._best_validation_loss:
                 self._best_validation_loss = loss
                 self.save_checkpoint("best")
                 self.save_description("best", extra={"validation_loss": loss})
+
+            self.save_description("snapshot", extra={"validation_loss": loss})
 
             self.save_weight_image()
             self._write_step()

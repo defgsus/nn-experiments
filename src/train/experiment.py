@@ -9,6 +9,7 @@ import argparse
 import sys
 import warnings
 import ast
+from copy import deepcopy
 from io import StringIO
 from pathlib import Path
 import importlib
@@ -27,6 +28,7 @@ import torchvision.transforms as VT
 import torchvision.transforms.functional as VF
 import torchvision.models
 from torchvision.utils import make_grid
+import pandas as pd
 
 from src import console
 from src.util import *
@@ -45,6 +47,10 @@ from src.models.vae import *
 from src.models.clip import ClipSingleton
 from src.datasets import *
 from src.algo import *
+try:
+    from experiments.datasets import *
+except ImportError:
+    pass
 
 
 RESERVED_MATRIX_KEYS = (
@@ -58,7 +64,19 @@ def run_experiment_from_command_args():
     Trainer.add_parser_args(parser)
     parser.add_argument(
         "command", type=str,
-        choices=["run", "show"],
+        choices=["run", "show", "results"],
+    )
+    parser.add_argument(
+        "-s", "--skip", type=bool, nargs="?", default=False, const=True,
+        help="Skip experiment if checkpoint exists"
+    )
+    parser.add_argument(
+        "-ec", "--exclude-column", type=str, nargs="*", default=[],
+        help="one or more columns to exclude from experiment results"
+    )
+    parser.add_argument(
+        "-sc", "--sort-column", type=str, nargs="*", default=[],
+        help="one or more columns to sort"
     )
 
     args = vars(parser.parse_args())
@@ -67,8 +85,11 @@ def run_experiment_from_command_args():
     run_experiment(experiment_file, extra_args=args)
 
 
-def run_experiment(filename: Union[str, Path], extra_args: Optional[dict] = None):
+def run_experiment(filename: Union[str, Path], extra_args: dict):
     command = extra_args.pop("command")
+    skip_existing = extra_args.pop("skip")
+    exclude_columns = extra_args.pop("exclude_column")
+    sort_columns = extra_args.pop("sort_column")
 
     data = _load_yaml(filename)
 
@@ -76,25 +97,40 @@ def run_experiment(filename: Union[str, Path], extra_args: Optional[dict] = None
     if len(matrix_entries) > 1:
         print(f"\n{'running' if command == 'run' else 'showing'} {len(matrix_entries)} matrix experiments\n")
 
-    for matrix_entry in matrix_entries:
+    experiment_results = []
 
-        if len(matrix_entries) > 1:
-            print(f"\n--- matrix experiment '{matrix_entry['matrix_slug']}' ---\n")
-            max_len = max(list(len(key) for key in matrix_entry.keys()))
-            for key, value in matrix_entry.items():
-                if key not in RESERVED_MATRIX_KEYS:
-                    print(f"{key:{max_len}}: {value}")
-            print()
+    for matrix_entry in matrix_entries:
 
         data = _load_yaml(filename, matrix_entry)
         data.pop("matrix", None)
         if extra_args:
             data.update(extra_args)
 
+        if len(matrix_entries) > 1:
+            print(f"\n--- matrix experiment '{data['experiment_name']}' ---\n")
+            max_len = max(list(len(key) for key in matrix_entry.keys()))
+            for key, value in matrix_entry.items():
+                if key not in RESERVED_MATRIX_KEYS:
+                    print(f"{key:{max_len}}: {value}")
+            print()
+
+        checkpoint_path = Path("./checkpoints") / data["experiment_name"]
+        snapshot_json_file = checkpoint_path / "snapshot.json"
+
+        if command == "results":
+            if snapshot_json_file.exists():
+                experiment_results.append((matrix_entry, json.loads(snapshot_json_file.read_text())))
+            continue
+
         trainer_klass, kwargs = get_trainer_kwargs_from_dict(data)
 
         if command == "show":
             continue
+
+        if skip_existing:
+            if (checkpoint_path / "snapshot.pt").exists():
+                print("skipping", data["experiment_name"])
+                continue
 
         model = kwargs["model"]
         print(model)
@@ -113,12 +149,72 @@ def run_experiment(filename: Union[str, Path], extra_args: Optional[dict] = None
         trainer.save_description()
         trainer.train()
 
+        if snapshot_json_file.exists():
+            experiment_results.append((matrix_entry, json.loads(snapshot_json_file.read_text())))
+
+    if experiment_results:
+        dump_experiments_results(experiment_results, exclude_columns=exclude_columns, sort_columns=sort_columns)
+
+
+def dump_experiments_results(
+        experiment_results: List[Tuple[dict, dict]],
+        exclude_columns: List[str],
+        sort_columns: List[str],
+):
+    rows = []
+    min_loss = None
+    max_loss = None
+    for matrix_entry, snapshot_data in experiment_results:
+        row = deepcopy(matrix_entry)
+        num_inputs = snapshot_data["num_inputs"]
+        validation_loss = snapshot_data["validation_loss"]
+
+        if snapshot_data.get("max_inputs"):
+            num_inputs = min(num_inputs, snapshot_data["max_inputs"])
+
+        row[f"validation loss ({num_inputs:,} steps)"] = validation_loss
+        if max_loss is None:
+            max_loss = min_loss = validation_loss
+        else:
+            max_loss = max(max_loss, validation_loss)
+            min_loss = min(min_loss, validation_loss)
+        rows.append(row)
+
+    if max_loss is not None and max_loss != min_loss:
+        for row in rows:
+            for key, value in list(row.items()):
+                if key.startswith("validation loss") and math.isfinite(value):
+                    length = int((value - min_loss) / (max_loss - min_loss) * 20 + 1)
+                    row["meter"] = "*" * length
+
+    df = pd.DataFrame(rows)
+
+    for key in reversed(sort_columns):
+        ascending = True
+        if key.startswith("-"):
+            key = key[1:]
+            ascending = False
+        df.sort_values(key, ascending=ascending, inplace=True, kind="stable")
+
+    for key in exclude_columns:
+        try:
+            df.drop(key, axis=1, inplace=True)
+        except KeyError:
+            pass
+
+    try:
+        df.set_index("matrix_id", inplace=True)
+        show_index = True
+    except KeyError:
+        show_index = False
+
+    print(df.to_markdown(index=show_index))
+
 
 def get_matrix_entries(matrix: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
     if not matrix:
         matrix_entries = [{}]
     else:
-        nn.modules.TransformerDecoder
         for key in RESERVED_MATRIX_KEYS:
             if key in matrix:
                 raise NameError(f"key '{key}' is not allowed in matrix")
@@ -174,7 +270,7 @@ def _load_yaml(filename: str, matrix_entry: Optional[Dict] = None):
 
 
 def apply_parameter_matrix(text: str, params: dict):
-    re_variable = re.compile("\$\{([\w\d]+)}")
+    re_variable = re.compile("\$\{([^}]+)}")
     def _repl(match):
         name = match.groups()[0]
         if name not in params:

@@ -1,9 +1,10 @@
-from typing import Tuple, Optional, Iterable, Union
+from typing import Tuple, Optional, Iterable, Union, Callable
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from src.models.util import activation_to_module
 from .spacedepth import SpaceToDepth
 
 
@@ -17,7 +18,7 @@ class Conv2dBlock(nn.Module):
             pool_kernel_size: int = 0,
             pool_type: str = "max",  # "max", "average"
             act_fn: Optional[nn.Module] = None,
-            act_last_layer: bool = True,
+            act_last_layer: Union[None, bool, str, nn.Module, Callable] = True,
             bias: bool = True,
             transpose: bool = False,
             batch_norm: bool = False,
@@ -88,8 +89,12 @@ class Conv2dBlock(nn.Module):
                 self.layers.append(
                     klass(pool_kernel_size)
                 )
+
             if self._act_fn and (act_last_layer or i + 2 < len(self.channels)):
-                self.layers.append(act_fn)
+                if not isinstance(act_last_layer, bool):
+                    act_fn = activation_to_module(act_last_layer)
+                if act_fn:
+                    self.layers.append(act_fn)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = self.layers.forward(x)
@@ -105,6 +110,14 @@ class Conv2dBlock(nn.Module):
         x = torch.zeros(1, *shape)
         y = self.forward(x)
         return tuple(y.shape[-3:])
+
+    @torch.no_grad()
+    def get_input_shape(
+            self,
+            shape: Union[Tuple[int, int], Tuple[int, int, int]],
+    ) -> Tuple[int, int, int]:
+        trans_self = self.create_transposed()
+        return trans_self.get_output_shape(shape)
 
     def create_transposed(
             self,

@@ -124,7 +124,10 @@ class VariationalAutoencoder(nn.Module):
         recon = self.forward(x)
 
         if x.shape != recon.shape:
-            warnings.warn(f"XXX {x.shape} {recon.shape} {getattr(self, 'for_validation', 'X')}")
+            warnings.warn(
+                f"Input shape {x.shape} and reconstruction shape {recon.shape} do not match"
+                f", for_validation={getattr(self, 'for_validation', 'False')}"
+            )
         mu, sigma = self.encoder.last_mu, self.encoder.last_sigma
 
         loss_recon = self._reconstruction_loss(x, recon)
