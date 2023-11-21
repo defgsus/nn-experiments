@@ -33,6 +33,8 @@ class TrainAutoencoder(Trainer):
             input_batch = input_batch[0]
 
         output_batch = self.model(input_batch)
+        if isinstance(output_batch, (list, tuple)):
+            output_batch = output_batch[0]
 
         if input_batch.shape != output_batch.shape:
             raise ValueError(
@@ -64,7 +66,11 @@ class TrainAutoencoder(Trainer):
                 break
         images = torch.cat(images)[:32].to(self.device)
 
-        output_batch = self.model.forward(images).clamp(0, 1)
+        output_batch = self.model.forward(images)
+        if isinstance(output_batch, (list, tuple)):
+            output_batch = output_batch[0]
+
+        output_batch = output_batch.clamp(0, 1)
 
         grid_images = []
         for i in range(0, images.shape[0], 8):
@@ -78,8 +84,18 @@ class TrainAutoencoder(Trainer):
         image = make_grid(grid_images, nrow=8)
         self.log_image("validation_reconstruction", image)
 
-        features = self.model.encoder(images)
-        self.log_image("validation_features", signed_to_image(features))
+        if hasattr(self.model, "encode"):
+            features = self.model.encode(images)
+        else:
+            features = self.model.encoder(images)
+
+        if isinstance(features, (list, tuple)):
+            features = features[0]
+
+        if "int" in str(features.dtype):
+            features = features.to(images.dtype)
+
+        self.log_image("validation_features", signed_to_image(features.flatten(1)))
 
         self.log_scalar("validation_features_mean", features.mean())
         self.log_scalar("validation_features_std", features.std())

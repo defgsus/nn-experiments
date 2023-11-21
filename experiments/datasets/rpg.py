@@ -22,6 +22,9 @@ from src.datasets import *
 from src.util.image import *
 
 
+DATASET_PATH = Path(__file__).resolve().parent.parent.parent / "datasets"
+
+
 def rpg_tile_dataset_3x32x32(
         shape: Tuple[int, int, int] = (3, 32, 32),
         validation: Optional[bool] = None,
@@ -30,7 +33,7 @@ def rpg_tile_dataset_3x32x32(
         num_repeat: int = 1,
         interpolation: bool = True,
 ) -> Dataset:
-    filename = f"./datasets/rpg-3x32x32-uint-{'test' if validation else 'train'}.pt"
+    filename = DATASET_PATH / f"rpg-3x32x32-uint-{'test' if validation else 'train'}.pt"
     ds = TensorDataset(torch.load(filename))
 
     transforms = []

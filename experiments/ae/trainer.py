@@ -20,12 +20,19 @@ from src.train.train_autoencoder import TrainAutoencoder
 
 class TrainAutoencoderSpecial(TrainAutoencoder):
 
+    def __init__(self, *args, feature_loss_weight: float = 0.0001, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.feature_loss_weight = feature_loss_weight
+
     def train_step(self, input_batch) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
-        input_batch = input_batch[0]
+        if isinstance(input_batch, (tuple, list)):
+            input_batch = input_batch[0]
+
         if hasattr(self.model, "encode"):
             feature_batch = self.model.encode(input_batch)
         else:
             feature_batch = self.model.encoder(input_batch)
+
         if hasattr(self.model, "decode"):
             output_batch = self.model.decode(feature_batch)
         else:
@@ -38,7 +45,7 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
                 f", feature_batch = {feature_batch.shape}"
             )
 
-        reconstruction_loss = self.loss_function(input_batch, output_batch)
+        reconstruction_loss = self.loss_function(output_batch, input_batch)
 
         if 0:
             if not hasattr(self, "_sobel_filter"):
@@ -48,15 +55,18 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
             sobel_output_batch = self._sobel_filter(output_batch)
             sobel_reconstruction_loss = self.loss_function(sobel_input_batch, sobel_output_batch)
 
+        if "int" in str(feature_batch.dtype):
+            feature_batch = feature_batch.to(input_batch.dtype)
+
         loss_batch_std = (.5 - feature_batch.std(0).mean()).abs()
         loss_batch_mean = (0. - feature_batch.mean()).abs()
 
+        loss = reconstruction_loss
+        if self.feature_loss_weight:
+            loss = loss + self.feature_loss_weight * (loss_batch_std + loss_batch_mean)
+
         return {
-            "loss": (
-                    reconstruction_loss
-                    + .0001 * (loss_batch_std + loss_batch_mean)
-                # + 1. * sobel_reconstruction_loss
-            ),
+            "loss": loss,
             "loss_reconstruction": reconstruction_loss,
             #"loss_reconstruction_sobel": sobel_reconstruction_loss,
             "loss_batch_std": loss_batch_std,

@@ -23,6 +23,7 @@ class EncoderConv2d(Encoder2d):
             stride: int = 1,
             channels: Iterable[int] = (16, 32),
             act_fn: Optional[nn.Module] = nn.ReLU(),
+            space_to_depth: bool = False,
     ):
         super().__init__(shape=shape, code_size=code_size)
         self.channels = tuple(channels)
@@ -36,6 +37,7 @@ class EncoderConv2d(Encoder2d):
             kernel_size=self.kernel_size,
             act_fn=act_fn,
             stride=self.stride,
+            space_to_depth=space_to_depth,
         )
         encoded_shape = self.convolution.get_output_shape(shape)
         self.linear = nn.Linear(math.prod(encoded_shape), self.code_size)

@@ -1,0 +1,64 @@
+experiment_name: ae/test2-b2-c64
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  rpg_tile_dataset_3x32x32(SHAPE, validation=False)
+
+freeze_validation_set: True
+validation_set: |
+  rpg_tile_dataset_3x32x32(SHAPE, validation=True)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+#feature_loss_weight: 0.0001
+feature_loss_weight: 0.0
+
+globals:
+  SHAPE: (1, 32, 32)
+  CODE_SIZE: 128
+
+model: |  
+  class Autoencoder(nn.Module):
+      def __init__(
+              self, 
+              shape: Tuple[int, int, int],
+              code_size: int,
+              channel=128,
+              n_res_block=2,
+              n_res_channel=64,
+      ):
+          from src.models.encoder.vqvae import Encoder, Decoder
+          
+          super().__init__()
+          self.encoder = nn.Sequential()
+          self.encoder.add_module("enc_b", Encoder(shape[0], channel, n_res_block, n_res_channel, stride=4))
+          self.encoder.add_module("enc_t", Encoder(channel, channel, n_res_block, n_res_channel, stride=2))
+
+          with torch.no_grad():
+              enc_shape = self.encoder(torch.empty(1, *shape)).shape[-3:]
+              print(enc_shape)
+
+          self.encoder.add_module("flatten", nn.Flatten(1))
+          self.encoder.add_module("linear", nn.Linear(math.prod(enc_shape), code_size))
+
+          self.decoder = nn.Sequential()
+          self.decoder.add_module("linear", nn.Linear(code_size, math.prod(enc_shape)))
+          self.decoder.add_module("reshape", Reshape(enc_shape))
+          self.decoder.add_module("dec", Decoder(
+              channel,
+              shape[0],
+              channel,
+              n_res_block,
+              n_res_channel,
+              stride=6,
+          ))
+
+      def forward(self, x):
+          return self.decoder(self.encoder(x))
+
+  Autoencoder(SHAPE, 128)

@@ -372,8 +372,9 @@ def construct_from_code(code: Any):
 
     try:
         _locals = {}
-        exec(compile(block, '<string>', mode='exec'), globals(), _locals)
-        return eval(compile(last, '<string>', mode='eval'), globals(), _locals)
+        _globals = globals().copy()
+        exec(compile(block, '<string>', mode='exec'), _globals, _locals)
+        return eval(compile(last, '<string>', mode='eval'), _globals, _locals)
 
     except:
         print("\n".join(

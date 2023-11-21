@@ -19,6 +19,9 @@ def get_loss_callable(loss: Union[str, Callable, nn.Module]) -> Callable:
     elif loss in ("l2", "mse"):
         return nn.MSELoss()
 
+    elif loss in ("bce", "binary_cross_entropy"):
+        return F.binary_cross_entropy
+
     else:
         raise ValueError(f"Unexpected loss function '{loss}'")
 

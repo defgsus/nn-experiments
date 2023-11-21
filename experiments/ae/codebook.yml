@@ -1,0 +1,64 @@
+experiment_name: ae/codebook9
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  rpg_tile_dataset_3x32x32(SHAPE, validation=False)
+
+freeze_validation_set: True
+validation_set: |
+  rpg_tile_dataset_3x32x32(SHAPE, validation=True)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+#feature_loss_weight: 0.0001
+feature_loss_weight: 0.0
+
+globals:
+  SHAPE: (1, 32, 32)
+  CODE_SIZE: 128
+
+model: |
+  class CodebookAutoencoder(nn.Module):
+      def __init__(
+              self, 
+              shape: Tuple[int, int, int],
+              code_size: int,
+              code_dim: int,
+              channels: Iterable[int] = (16, 24, 32),
+              kernel_size: Union[int, Iterable[int]] = (3, 4, 3),
+              space_to_depth: bool = True,
+      ):
+          super().__init__()
+          self.shape = shape
+          self.code_size = code_size
+          self.code_dim = code_dim
+          self.encoder = EncoderConv2d(shape=shape, code_size=code_size * code_dim, channels=channels, kernel_size=kernel_size, space_to_depth=space_to_depth)
+          self.decoder = DecoderConv2d(shape=shape, code_size=code_size * code_dim, channels=list(reversed(channels)), kernel_size=kernel_size, space_to_depth=space_to_depth)
+          self.code_book = nn.Embedding(code_size, code_dim)
+      
+      def encode(self, x: torch.Tensor) -> torch.Tensor:
+          codes = self.encoder(x).view(-1, self.code_size, self.code_dim)
+          sim = codes @ self.code_book.weight.T
+          indices = sim.argmax(dim=-1)
+          return indices
+
+      def encode_X(self, x: torch.Tensor) -> torch.Tensor:
+          codes = self.encoder(x).view(-1, self.code_size, self.code_dim)
+          code_book_expanded = self.code_book.weight.unsqueeze(0).expand(x.shape[0], *self.code_book.weight.shape)
+          dist = (codes - code_book_expanded).abs()
+          _, indices = dist.min(dim=-2)
+          return indices
+    
+      def decode(self, x: torch.Tensor) -> torch.Tensor:
+          codes = self.code_book(x).view(-1, self.code_size * self.code_dim)
+          return self.decoder(codes)
+  
+      def forward(self, x: torch.Tensor) -> torch.Tensor:
+          return self.decode(self.encode(x))        
+  
+  CodebookAutoencoder(SHAPE, CODE_SIZE, 1024)

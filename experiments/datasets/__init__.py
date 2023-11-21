@@ -2,6 +2,9 @@ from .classic import (
     mnist_dataset,
     fmnist_dataset,
 )
+from .noise import (
+    noise_dataset
+)
 from .rpg import (
     RpgTileIterableDataset,
     rpg_tile_dataset,

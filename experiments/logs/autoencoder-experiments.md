@@ -155,3 +155,45 @@ learning rates (**lr**):
 
 (No entry in **aa** means that there was no resizing necessary)
 
+It confirms the strong correlation of the dataset difficulty
+and the interpolation method. It gave me some headache in 
+the beginning but looking at resized examples makes it 
+understandable:
+
+Original MNIST image (28x28), resized to 32x32 **without**, and **with** bilinear filtering. 
+
+![original](./img/resize-mnist-28-orig.png)
+![original](./img/resize-mnist-32.png)
+![original](./img/resize-mnist-32-aa.png)
+
+Original FMNIST image (28x28), resized to 32x32 **without**, and **with** bilinear filtering. 
+
+![original](./img/resize-fmnist-28-orig.png)
+![original](./img/resize-fmnist-32.png)
+![original](./img/resize-fmnist-32-aa.png)
+
+Original RPG image (32x32), resized to 28x28 **without**, and **with** bilinear filtering.
+
+![original](./img/resize-rpg-32-orig.png)
+![original](./img/resize-rpg-28.png)
+![original](./img/resize-rpg-28-aa.png)
+
+The bilinear filter blurs out a lot of the single pixel 
+details and makes the images *"easier"* to auto-encode.
+Ignoring the `aa = True` runs in the table above we can see
+that the RPG dataset is, in comparison, equally *"hard*" 
+when down-scaled to the FMNIST size and a little harder 
+when FMNIST is up-scaled (because some pixels are just
+repeated).
+
+Side note: Many of the images in RPG are originally 16x16
+but there is a good percentage of images that were 32x32
+or larger. All of them have been resized to 32x32 **without**
+interpolation.
+
+For comparison, below is a run on a dataset of 60,000
+noise images (mean=0.5, std=0.5, clamped to range [0, 1]),
++10,000 for validation (green). 
+
+![loss plots](img/vae-32-noise.png)
+

@@ -1,0 +1,39 @@
+trainer: src.train.TrainAutoencoder
+
+matrix:
+  res:
+    - 32
+  lr:
+    - 0.001
+
+experiment_name: vae-test/vae_noise_${matrix_slug}
+
+train_set: |
+  noise_dataset(SHAPE, 60000)
+
+validation_set: |
+  noise_dataset(SHAPE, 10000)
+
+batch_size: 64
+learnrate: ${lr}
+optimizer: Adam
+scheduler: CosineAnnealingLR
+max_inputs: 1_000_000
+
+globals:
+  SHAPE: (1, ${res}, ${res})
+  CODE_SIZE: 128
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(16, 24, 32), kernel_size=3)
+  decoder = DecoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(32, 24, 16), kernel_size=3)
+  
+  VariationalAutoencoder(
+      encoder = VariationalEncoder(
+          encoder, CODE_SIZE, CODE_SIZE
+      ),
+      decoder = decoder,
+      reconstruction_loss = "l1",
+      reconstruction_loss_weight = 1.,
+      kl_loss_weight = 1.,
+  )

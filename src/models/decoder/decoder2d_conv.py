@@ -24,6 +24,7 @@ class DecoderConv2d(nn.Module):
             channels: Iterable[int] = (16, 32),
             activation: Union[None, str, Callable, nn.Module, Type[nn.Module]] = "relu",
             activation_last_layer: Union[None, bool, str, Callable, nn.Module, Type[nn.Module]] = None,
+            space_to_depth: bool = False,
     ):
         super().__init__()
         self.channels = tuple(channels)
@@ -42,6 +43,7 @@ class DecoderConv2d(nn.Module):
             stride=self.stride,
             transpose=True,
             act_last_layer=activation_last_layer,
+            space_to_depth=space_to_depth,
         )
         self.encoded_shape = self.convolution.get_input_shape(shape)
         self.linear = nn.Linear(self.code_size, math.prod(self.encoded_shape))
@@ -60,6 +62,9 @@ class DecoderConv2d(nn.Module):
             "channels": self.channels,
             "act_fn": self.convolution._act_fn,
         }
+
+    def set_extra_state(self, state):
+        pass
 
     @classmethod
     def from_data(cls, data: dict):

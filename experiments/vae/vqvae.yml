@@ -1,0 +1,35 @@
+experiment_name: ae/vqvae5
+
+#trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+trainer: src.train.train_autoencoder.TrainAutoencoder
+
+train_set: |
+  rpg_tile_dataset_3x32x32(SHAPE, validation=False)
+
+freeze_validation_set: True
+validation_set: |
+  rpg_tile_dataset_3x32x32(SHAPE, validation=True)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+#feature_loss_weight: 0.0001
+#feature_loss_weight: 0.0
+
+globals:
+  SHAPE: (1, 32, 32)
+  CODE_SIZE: 128
+
+model: |
+  from src.models.encoder.vqvae import VQVAE
+  VQVAE(
+    in_channel=SHAPE[0],
+    channel=256,
+    n_res_block=2,
+    n_res_channel=64,
+    embed_dim=2,
+    n_embed=1024,
+  )
