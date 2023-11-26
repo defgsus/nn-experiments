@@ -33,16 +33,18 @@ def _uint_dataset(
 
 
 def mnist_dataset(train: bool, shape: Tuple[int, int, int] = (1, 28, 28), interpolation: bool = True) -> Dataset:
+    ds = torchvision.datasets.MNIST("~/prog/data/datasets/", train=train)
     return _uint_dataset(
-        TensorDataset(torchvision.datasets.MNIST("~/prog/data/datasets/", train=train).data),
+        TensorDataset(ds.data, ds.targets),
         shape=shape,
         interpolation=interpolation,
     )
 
 
 def fmnist_dataset(train: bool, shape: Tuple[int, int, int] = (1, 28, 28), interpolation: bool = True) -> Dataset:
+    ds = torchvision.datasets.FashionMNIST("~/prog/data/datasets/", train=train)
     return _uint_dataset(
-        TensorDataset(torchvision.datasets.FashionMNIST("~/prog/data/datasets/", train=train).data),
+        TensorDataset(ds.data, ds.targets),
         shape=shape,
         interpolation=interpolation,
     )

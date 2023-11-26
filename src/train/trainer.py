@@ -46,6 +46,7 @@ class Trainer:
             num_epochs_between_validations: Optional[int] = None,
             num_inputs_between_checkpoints: Optional[int] = None,
             training_noise: float = 0.,
+            train_input_transforms: Optional[Iterable[Callable]] = None,
             loss_function: Union[str, Callable, torch.nn.Module] = "l1",
             gradient_clipping: Optional[float] = None,
             num_train_loss_steps: int = 1000,
@@ -78,6 +79,9 @@ class Trainer:
         self.epoch = 0
         self.num_batch_steps = 0
         self.num_input_steps = 0
+        self._train_input_transforms = None if train_input_transforms is None else list(train_input_transforms)
+        self.for_validation = False
+
         self.tensorboard_path = Path("./runs/") / self.experiment_name
         self.checkpoint_path = Path("./checkpoints/") / self.experiment_name
         self.device = to_torch_device(device)
@@ -103,8 +107,16 @@ class Trainer:
         and returns the MSE loss between second tensor and model output.
 
         Override to implement something else and return a 0-dim loss tensor
+        or a dict with multiple losses (for logging), e.g:
+            {
+                "loss": real_loss + additional_loss,
+                "loss_real": real_loss,
+                "additional_loss": additional_loss,
+            }
         """
-        input, target_features = input_batch
+        input, target_features = input_batch[:2]
+        if not self.for_validation:
+            input = self.transform_input_batch(input)
         output_features = self.model(input)
 
         return self.loss_function(output_features, target_features)
@@ -393,14 +405,29 @@ class Trainer:
         else:
             return data
 
+    def transform_input_batch(self, input_batch):
+        if self._train_input_transforms is not None:
+            for transform in self._train_input_transforms:
+                if isinstance(input_batch, (list, tuple)):
+                    try:
+                        input_batch = transform(input_batch)
+                    except TypeError:
+                        input_batch = transform(input_batch[0]), *input_batch[1:]
+                else:
+                    input_batch = transform(input_batch)
+
+        return input_batch
+
     def run_validation(self):
         if self.validation_loader is None:
             return
 
         print(f"validation @ {self.num_input_steps:,}")
         with torch.no_grad():
+            self.for_validation = True
             self.model.for_validation = True
-            self.model.train(False)
+            self.model.eval()
+
             try:
                 losses = []
                 for validation_batch in self.iter_validation_batches():
@@ -421,6 +448,7 @@ class Trainer:
             finally:
                 self.model.train(True)
                 self.model.for_validation = False
+                self.for_validation = False
 
             # print(f"\nVALIDATION loss {float(loss)}")
             self.log_scalar("validation_loss", loss)
@@ -447,6 +475,7 @@ class Trainer:
             nrow: int = 16,
     ):
         if not hasattr(self.model, "weight_images"):
+            self._save_default_weight_image()
             return
 
         def _make2d(vec):
@@ -491,6 +520,7 @@ class Trainer:
                 images[image_idx] = VF.pad(image, [0, 0, max_shape[-1] - image.shape[-1], max_shape[0] - image.shape[0]])
 
         if not len(images):
+            self._save_default_weight_image()
             return
 
         norm_grid = make_grid(
@@ -503,6 +533,13 @@ class Trainer:
         )
 
         self.log_image("weights", make_grid([signed_grid, norm_grid]))
+
+    def _save_default_weight_image(self):
+        from src.models.util import get_model_weight_images
+        kwargs = self.weight_image_kwargs or {}
+        grid1 = get_model_weight_images(self.model, **{**kwargs, "normalize": "each"})
+        grid2 = get_model_weight_images(self.model, **{**kwargs, "normalize": "all"})
+        self.log_image("weights", make_grid([grid1, grid2], nrow=1))
 
     @classmethod
     def add_parser_args(cls, parser: argparse.ArgumentParser):

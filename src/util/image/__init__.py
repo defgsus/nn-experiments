@@ -1,3 +1,4 @@
+from .combine import random_combine_image_crops
 from .compression_ratio import ImageCompressionRatio
 from .hsv import hsv_to_rgb, rgb_to_hsv
 from .image import (

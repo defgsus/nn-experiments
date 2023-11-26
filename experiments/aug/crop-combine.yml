@@ -1,0 +1,37 @@
+experiment_name: aug/comb10-do
+
+train_set: |
+  CombineImageAugmentIterableDataset(
+      rpg_tile_dataset_3x32x32(SHAPE, validation=False),
+      #mnist_dataset(train=True, shape=SHAPE),
+      crop_ratio=(.4, .6),
+      batch_size=1024,
+  )
+
+freeze_validation_set: True
+validation_set: |
+  CombineImageAugmentIterableDataset(
+      rpg_tile_dataset_3x32x32(SHAPE, validation=True),
+      #mnist_dataset(train=False, shape=SHAPE),
+      crop_ratio=(.4, .6),
+      batch_size=1024,
+  )
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 5_000_000
+weight_image_kwargs:
+  normalize: "shape"
+
+globals:
+  SHAPE: (3, 32, 32)
+  CLASSES: 2
+
+model: |
+  EncoderConv2d(SHAPE, code_size=CLASSES, channels=(16, 16, 16, 16), kernel_size=5, dropout=.3)
+  
+  #from torchvision.models.resnet import resnet18, ResNet
+  #resnet18(num_classes=2)

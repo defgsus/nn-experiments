@@ -1,5 +1,6 @@
 import itertools
-from typing import List, Iterable, Tuple, Optional, Callable, Union, Type
+import math
+from typing import List, Iterable, Tuple, Optional, Callable, Union, Type, Dict
 
 import torch
 import torch.nn as nn
@@ -98,3 +99,81 @@ def activation_to_module(
                     pass
 
     raise ValueError(f"Unrecognized activation: {repr(activation)}")
+
+
+@torch.no_grad()
+def get_model_weight_images(
+        model: nn.Module,
+        grad_only: bool = True,
+        max_channels: int = 16,
+        min_size: int = 2,
+        max_size: int = 128,
+        normalize: str = "all",  # "each", "shape", "all", "none"
+        size_to_scale: Dict[int, float] = {10: 4, 20: 2},
+):
+    from torchvision.utils import make_grid
+    from src.util.image import signed_to_image
+
+    # yield 2d shapes
+    def _iter_params():
+        for param in model.parameters():
+            if not param.requires_grad and grad_only:
+                continue
+            if param.ndim == 2:
+                yield param
+            elif param.ndim == 4:
+                for ch in range(min(max_channels, param.shape[0])):
+                    yield param[ch, 0]
+                for ch in range(min(max_channels, param.shape[1])):
+                    yield param[0, ch]
+
+    shape_dict = {}
+    for param in _iter_params():
+        if any(s < min_size for s in param.shape):
+            continue
+        param = param[:max_size, :max_size]
+
+        scale = None
+        for key in sorted(size_to_scale):
+            value = size_to_scale[key]
+            if all(s <= key for s in param.shape):
+                scale = value
+                break
+
+        if scale:
+            param = VF.resize(
+                param.unsqueeze(0),
+                [s * scale for s in param.shape], VF.InterpolationMode.NEAREST, antialias=False
+            ).squeeze(0)
+
+        if param.shape not in shape_dict:
+            shape_dict[param.shape] = []
+        shape_dict[param.shape].append(param)
+
+    grids = []
+    for shape in sorted(shape_dict):
+        params = shape_dict[shape]
+        nrow = max(1, int(math.sqrt(len(params)) * 2))
+        if normalize == "each":
+            grids.append(make_grid([signed_to_image(p) for p in params], nrow=nrow))
+        else:
+            grids.append(make_grid([p.unsqueeze(0) for p in params], nrow=nrow))
+
+    max_width = max(g.shape[-1] for g in grids)
+
+    for image_idx, image in enumerate(grids):
+        if image.shape[-1] < max_width:
+            grids[image_idx] = VF.pad(image, [0, 0, max_width - image.shape[-1], 0])
+
+    if normalize == "shape":
+        grids = [signed_to_image(g) for g in grids]
+
+    grids = torch.concat([
+        VF.pad(grid, [0, 0, 0, 2])
+        for grid in grids
+    ], dim=-2)
+
+    if normalize == "all":
+        grids = signed_to_image(grids)
+
+    return grids

@@ -1,0 +1,54 @@
+matrix:
+  ks: [ 5 ]
+  ch: [ [32, 32, 32] ]
+  drop: [0.]
+  cs: [128]
+
+experiment_name: aug/fmnist_rot_${matrix_slug}
+
+train_set: |
+  ImageAugmentClassDataset(
+  #ClassFeaturesDataset(
+      fmnist_dataset(train=True, shape=SHAPE),
+      #num_classes=CLASSES, tuple_position=1, label_to_index=True,
+  )
+
+freeze_validation_set: True
+validation_set: |
+  ImageAugmentClassDataset(
+  #ClassFeaturesDataset(
+      fmnist_dataset(train=False, shape=SHAPE),
+      #num_classes=CLASSES, tuple_position=1, label_to_index=True,
+  )
+
+trainer: experiments.reptrainer.RepresentationClassTrainer
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l2
+max_inputs: 2_000_000
+train_input_transforms: |
+  [
+      VT.RandomPerspective(.6, .6),
+  ]
+
+globals:
+  SHAPE: (1, 28, 28)
+  CODE_SIZE: ${cs}
+  CLASSES: 4
+
+model: |
+  class Encoder(nn.Module):
+      def __init__(self):
+          super().__init__()
+          self.encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=${ch}, kernel_size=${ks}, dropout=${drop})
+          self.linear = nn.Linear(CODE_SIZE, CLASSES)
+      
+      def forward(self, x):
+          return self.linear(self.encoder(x))
+    
+  #from torchvision.models.resnet import resnet18, ResNet
+  #resnet18(num_classes=2)
+
+  Encoder()

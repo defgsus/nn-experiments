@@ -17,6 +17,7 @@ class ClassFeaturesDataset(Dataset):
             off_value: float = 0.,
             on_value: float = 1.,
             tuple_position: int = 0,
+            label_to_index: bool = False,
     ):
         super().__init__()
         self.source_dataset = source_dataset
@@ -25,6 +26,7 @@ class ClassFeaturesDataset(Dataset):
         self.off_value = off_value
         self.on_value = on_value
         self.tuple_position = tuple_position
+        self.label_to_index = label_to_index
         self._label_mapping = {}
 
     def __len__(self):
@@ -39,7 +41,13 @@ class ClassFeaturesDataset(Dataset):
             if self.num_classes is None:
                 self.num_classes = self._count_classes()
 
-            idx = len(self._label_mapping)
+            if self.label_to_index:
+                idx = int(label)
+                if idx < 0 or idx >= self.num_classes:
+                    raise ValueError(f"label {label} used as index is out of range, num_classes=={self.num_classes}")
+            else:
+                idx = len(self._label_mapping)
+
             label_features = [self.off_value] * self.num_classes
             label_features[idx] = self.on_value
 
@@ -73,7 +81,7 @@ class ClassFeaturesDataset(Dataset):
         else:
             if self.tuple_position:
                 raise ValueError(
-                    f"tuple_position is {self.tuple_position} but dataset item is {type(item).__name__}"
+                    f"tuple_position is {self.tuple_position} but dataset item is type {type(item).__name__}"
                 )
 
         label = item
@@ -84,6 +92,6 @@ class ClassFeaturesDataset(Dataset):
         elif label.ndim == 1 and label.shape == (1,):
             label = label[0].item()
         else:
-            raise ValueError(f"Can't create class features from label {label}")
+            raise ValueError(f"Can't create class features from label with shape {label.shape}")
 
         return label

@@ -1,5 +1,9 @@
 from .audio_slice import AudioSliceIterableDataset
 from .audio_spec import AudioSpecIterableDataset
+from .aug import (
+    CombineImageAugmentIterableDataset,
+    ImageAugmentClassDataset,
+)
 from .ca import TotalCADataset
 from .classfeatures import ClassFeaturesDataset
 from .contrastive import ContrastiveIterableDataset
@@ -15,7 +19,7 @@ from .image_folder import ImageFolderIterableDataset
 from .image_patch import ImagePatchIterableDataset, make_image_patch_dataset
 from .image_scale import ImageScaleIterableDataset
 from .interleave import InterleaveIterableDataset
-from .limit import LimitIterableDataset
+from .limit import LimitDataset, LimitIterableDataset
 from .normalize import NormalizeMaxIterableDataset
 from .shuffle import IterableShuffle
 from .split import SplitIterableDataset

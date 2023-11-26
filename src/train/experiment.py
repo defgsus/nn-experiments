@@ -312,6 +312,10 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
         ):
             value = construct_from_code(value)
 
+        # interpret multiline strings as code
+        elif isinstance(value, str) and "\n" in value:
+            value = construct_from_code(value)
+
         kwargs[key] = value
 
     trainer_class = kwargs.pop("trainer", None)
@@ -368,7 +372,11 @@ def construct_from_code(code: Any):
     block = ast.parse(code, mode='exec')
 
     # assumes last node is an expression
-    last = ast.Expression(block.body.pop().value)
+    stmt = block.body.pop()
+    try:
+        last = ast.Expression(stmt.value)
+    except AttributeError as e:
+        raise AttributeError(f"{e}, in code:\n{code}") from e
 
     try:
         _locals = {}

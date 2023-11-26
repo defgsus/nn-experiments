@@ -1,4 +1,8 @@
-experiment_name: ae/baseline-sobel4
+matrix:
+  #noise: [0.0, 0.01, 0.05, 0.1, 0.2]
+  scale: [.5, 0.05, 0.1, 0.3]
+
+experiment_name: ae/perspec1_${matrix_slug}
 
 trainer: experiments.ae.trainer.TrainAutoencoderSpecial
 
@@ -9,11 +13,17 @@ validation_set: |
   rpg_tile_dataset_3x32x32(SHAPE, validation=True)
 
 batch_size: 64
-learnrate: 0.0003
-optimizer: AdamW
+learnrate: 0.0005
+optimizer: Adam
 scheduler: CosineAnnealingLR
 loss_function: l1
-max_inputs: 1_000_000
+max_inputs: 2_000_000
+train_input_transforms: |
+  [
+      #lambda x: x + torch.randn_like(x) * {noise}
+      #VT.RandomErasing(p=1., scale=(${scale}, ${scale}))
+      VT.RandomPerspective(p=1., distortion_scale=${scale})
+  ]
 
 globals:
   SHAPE: (1, 32, 32)

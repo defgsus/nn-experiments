@@ -5,6 +5,13 @@ from tqdm import tqdm
 
 
 def iter_batches(source: Iterable, batch_size: int) -> Generator:
+    """
+    Iterate `source` and combine to batches, similar to DataLoader
+
+    :param source: any iterable
+    :param batch_size: int, max size of each batch
+    :return: generator of batches
+    """
     assert batch_size >= 1, f"Batch size must be >= 1, got {batch_size}"
 
     def _iter_lists():

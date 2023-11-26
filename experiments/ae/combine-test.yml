@@ -1,0 +1,49 @@
+matrix:
+  ks: [7]
+  ch: [[16, 16, 16]]
+  ratio: [1.]
+  size: [[.5, .8]]
+  alpha: [[.5, 1.]]
+  dropout: [.0]
+
+experiment_name: ae/combine/mnist_${matrix_slug}
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  #rpg_tile_dataset_3x32x32(SHAPE, validation=False)
+  mnist_dataset(shape=SHAPE, train=True)
+
+validation_set: |
+  #rpg_tile_dataset_3x32x32(SHAPE, validation=True)
+  mnist_dataset(shape=SHAPE, train=False)
+
+batch_size: 64
+learnrate: 0.0005
+optimizer: Adam
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 2_000_000
+train_input_transforms: |
+  [
+      lambda x: random_combine_image_crops(x, ratio=${ratio}, crop_ratio=${size}, alpha=${alpha}),
+  ]
+
+globals:
+  SHAPE: (1, 28, 28)
+  CODE_SIZE: 128
+
+model: |
+  encoder = EncoderConv2d(
+      SHAPE, code_size=CODE_SIZE, channels=${ch}, kernel_size=${ks}, dropout=${dropout}
+  )
+
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      nn.Dropout(${dropout}),
+      Reshape(encoded_shape),
+      encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)

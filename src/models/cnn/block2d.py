@@ -23,6 +23,7 @@ class Conv2dBlock(nn.Module):
             transpose: bool = False,
             batch_norm: bool = False,
             space_to_depth: bool = False,
+            dropout: float = 0.,
     ):
         super().__init__() #channels, kernel_size, stride, pool_kernel_size, pool_type, act_fn, act_last_layer, bias, transpose, batch_norm, space_to_depth)
         self.channels = list(channels)
@@ -47,6 +48,7 @@ class Conv2dBlock(nn.Module):
         self._pool_type = pool_type
         self._act_last_layer = act_last_layer
         self._transpose = transpose
+        self._dropout = dropout
 
         self.layers = nn.Sequential()
 
@@ -60,6 +62,8 @@ class Conv2dBlock(nn.Module):
         for i, (in_channels, out_channels, kernel_size) in enumerate(
                 zip(self.channels, self.channels[1:], self.kernel_size)
         ):
+            is_last_layer = i == len(self.channels) - 2
+
             if space_to_depth and transpose:
                 self.layers.append(SpaceToDepth(transpose=transpose))
                 out_channel_mult = 1
@@ -76,12 +80,14 @@ class Conv2dBlock(nn.Module):
                     transpose=transpose,
                 )
             )
+            if dropout and not is_last_layer:
+                self.layers.append(nn.Dropout2d(dropout))
 
             if space_to_depth and not transpose and i < len(self.channels) - 1:
                 self.layers.append(SpaceToDepth(transpose=transpose))
                 in_channel_mult = 4
 
-            if pool_kernel_size and i == len(self.channels) - 2:
+            if pool_kernel_size and is_last_layer:
                 klass = {
                     "max": nn.MaxPool2d,
                     "average": nn.AvgPool2d,
@@ -90,7 +96,7 @@ class Conv2dBlock(nn.Module):
                     klass(pool_kernel_size)
                 )
 
-            if self._act_fn and (act_last_layer or i + 2 < len(self.channels)):
+            if self._act_fn and (act_last_layer or not is_last_layer):
                 if not isinstance(act_last_layer, bool):
                     act_fn = activation_to_module(act_last_layer)
                 if act_fn:
@@ -135,6 +141,7 @@ class Conv2dBlock(nn.Module):
             transpose=not self._transpose,
             batch_norm=self._batch_norm,
             space_to_depth=self._space_to_depth,
+            dropout=self._dropout,
         )
 
     def add_input_layer(

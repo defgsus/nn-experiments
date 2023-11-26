@@ -24,7 +24,11 @@ from .trainer import Trainer
 
 class TrainAutoencoder(Trainer):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+            self,
+            *args,
+            **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.train_display_batch: Optional[torch.Tensor] = None
 
@@ -32,7 +36,8 @@ class TrainAutoencoder(Trainer):
         if isinstance(input_batch, (list, tuple)):
             input_batch = input_batch[0]
 
-        output_batch = self.model(input_batch)
+        output_batch = self.model(self.transform_input_batch(input_batch))
+
         if isinstance(output_batch, (list, tuple)):
             output_batch = output_batch[0]
 
@@ -54,35 +59,45 @@ class TrainAutoencoder(Trainer):
         return loss
 
     def write_step(self):
-        images = []
-        count = 0
-        for batch in self.iter_validation_batches():
-            if isinstance(batch, (list, tuple)):
-                batch = batch[0]
 
-            images.append(batch)
-            count += batch.shape[0]
-            if count >= 32:
-                break
-        images = torch.cat(images)[:32].to(self.device)
+        def _get_reconstruction(batch_iterable, transform: bool = False, max_count: int = 32):
+            images = []
+            count = 0
+            for batch in batch_iterable:
+                if isinstance(batch, (list, tuple)):
+                    batch = batch[0]
 
-        output_batch = self.model.forward(images)
-        if isinstance(output_batch, (list, tuple)):
-            output_batch = output_batch[0]
+                images.append(batch)
+                count += batch.shape[0]
+                if count >= max_count:
+                    break
+            images = torch.cat(images)[:max_count].to(self.device)
 
-        output_batch = output_batch.clamp(0, 1)
+            if transform:
+                images = self.transform_input_batch(images)
 
-        grid_images = []
-        for i in range(0, images.shape[0], 8):
-            for j in range(8):
-                if i + j < images.shape[0]:
-                    grid_images.append(images[i + j])
-            for j in range(8):
-                if i + j < images.shape[0]:
-                    grid_images.append(output_batch[i + j])
+            output_batch = self.model.forward(images)
+            if isinstance(output_batch, (list, tuple)):
+                output_batch = output_batch[0]
 
-        image = make_grid(grid_images, nrow=8)
-        self.log_image("validation_reconstruction", image)
+            output_batch = output_batch.clamp(0, 1)
+
+            grid_images = []
+            for i in range(0, images.shape[0], 8):
+                for j in range(8):
+                    if i + j < images.shape[0]:
+                        grid_images.append(images[i + j])
+                for j in range(8):
+                    if i + j < images.shape[0]:
+                        grid_images.append(output_batch[i + j])
+
+            return images, output_batch, make_grid(grid_images, nrow=8)
+
+        images, output_batch, grid = _get_reconstruction(self.iter_training_batches(), transform=True)
+        self.log_image("train_reconstruction", grid)
+
+        images, output_batch, grid = _get_reconstruction(self.iter_validation_batches())
+        self.log_image("validation_reconstruction", grid)
 
         if hasattr(self.model, "encode"):
             features = self.model.encode(images)

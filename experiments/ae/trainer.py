@@ -16,6 +16,7 @@ from torchvision.utils import make_grid
 from src import console
 from src.util.image import signed_to_image, get_images_from_iterable
 from src.train.train_autoencoder import TrainAutoencoder
+from src.models.transform import Sobel
 
 
 class TrainAutoencoderSpecial(TrainAutoencoder):
@@ -28,10 +29,12 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
         if isinstance(input_batch, (tuple, list)):
             input_batch = input_batch[0]
 
+        transformed_batch = self.transform_input_batch(input_batch)
+
         if hasattr(self.model, "encode"):
-            feature_batch = self.model.encode(input_batch)
+            feature_batch = self.model.encode(transformed_batch)
         else:
-            feature_batch = self.model.encoder(input_batch)
+            feature_batch = self.model.encoder(transformed_batch)
 
         if hasattr(self.model, "decode"):
             output_batch = self.model.decode(feature_batch)
@@ -47,13 +50,15 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
 
         reconstruction_loss = self.loss_function(output_batch, input_batch)
 
+        # print("XX", float(reconstruction_loss), float(self.loss_function(output_batch, transformed_batch)), float(self.loss_function(input_batch, transformed_batch)))
+
         if 0:
             if not hasattr(self, "_sobel_filter"):
-                self._sobel_filter = Sobel()
+                self._sobel_filter = Sobel(direction=True).to(self.device)
 
             sobel_input_batch = self._sobel_filter(input_batch)
             sobel_output_batch = self._sobel_filter(output_batch)
-            sobel_reconstruction_loss = self.loss_function(sobel_input_batch, sobel_output_batch)
+            sobel_reconstruction_loss = self.loss_function(sobel_output_batch, sobel_input_batch)
 
         if "int" in str(feature_batch.dtype):
             feature_batch = feature_batch.to(input_batch.dtype)
@@ -68,7 +73,7 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
         return {
             "loss": loss,
             "loss_reconstruction": reconstruction_loss,
-            #"loss_reconstruction_sobel": sobel_reconstruction_loss,
+            # "loss_reconstruction_sobel": sobel_reconstruction_loss,
             "loss_batch_std": loss_batch_std,
             "loss_batch_mean": loss_batch_mean,
         }
