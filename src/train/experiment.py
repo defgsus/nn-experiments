@@ -178,6 +178,10 @@ def dump_experiments_results(
         else:
             max_loss = max(max_loss, validation_loss)
             min_loss = min(min_loss, validation_loss)
+
+        if snapshot_data.get("trainable_parameters"):
+            row["model params"] = "{:,}".format(snapshot_data["trainable_parameters"][0])
+
         rows.append(row)
 
     if max_loss is not None and max_loss != min_loss:

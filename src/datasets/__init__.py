@@ -5,7 +5,7 @@ from .aug import (
     ImageAugmentClassDataset,
 )
 from .ca import TotalCADataset
-from .classfeatures import ClassFeaturesDataset
+from .classlogits import ClassLogitsDataset
 from .contrastive import ContrastiveIterableDataset
 from .contrastive_image import ContrastiveImageDataset
 from .generative import (

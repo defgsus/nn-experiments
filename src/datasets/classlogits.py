@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
 
-class ClassFeaturesDataset(Dataset):
+class ClassLogitsDataset(Dataset):
     """
     Transforms a Dataset with a single label to an n-dim feature vector
     """

@@ -1,21 +1,23 @@
 matrix:
-  ks: [ 5 ]
-  ch: [ [32, 48, 64] ]
+  patch: [7]
+  layer: [4] #8 , 16]
+  head: [32] #4, 8, 12, 16]
+  hidden: [256] #, 768]
+  mlp: [512] #, 1024]
   drop: [0.]
-  cs: [128]
+  cs: [128] #, 784]
+  $filter: ${hidden} / ${head} == ${hidden} // ${head} and (${head} != 8 or ${layer} == 4)
 
-experiment_name: aug/fmnist_vit2_trivaug_${matrix_slug}
+experiment_name: aug/fmnist_vit_trivaug_${matrix_slug}
 
 train_set: |
-  #ImageAugmentClassDataset(
   ClassLogitsDataset(
       fmnist_dataset(train=True, shape=SHAPE),
       num_classes=CLASSES, tuple_position=1, label_to_index=True,
   )
 
-freeze_validation_set: True
+# freeze_validation_set: True
 validation_set: |
-  #ImageAugmentClassDataset(
   ClassLogitsDataset(
       fmnist_dataset(train=False, shape=SHAPE),
       num_classes=CLASSES, tuple_position=1, label_to_index=True,
@@ -45,21 +47,18 @@ model: |
   class Encoder(nn.Module):
       def __init__(self):
           super().__init__()
-  
-          #from torchvision.models import resnet
-          #self.encoder = resnet.resnet50(num_classes=CODE_SIZE)
-  
+    
           from torchvision.models import VisionTransformer
           self.encoder = VisionTransformer(
               image_size=SHAPE[-1],
-              patch_size=7,
-              num_layers=4,
-              num_heads=8,
-              hidden_dim=256,
-              mlp_dim=512,
+              patch_size=${patch},
+              num_layers=${layer},
+              num_heads=${head},
+              hidden_dim=${hidden},
+              mlp_dim=${mlp},
               num_classes=CODE_SIZE,
+              dropout=${drop},
           )
-          # self.encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=${ch}, kernel_size=${ks}, dropout=${drop})
           self.linear = nn.Linear(CODE_SIZE, CLASSES)
       
       def forward(self, x):

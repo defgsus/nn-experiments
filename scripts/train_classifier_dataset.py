@@ -100,7 +100,7 @@ def main():
     NUM_CLASSES = 1000
     ds = ConcatDataset(
         [
-            ClassFeaturesDataset(
+            ClassLogitsDataset(
                 TransformDataset(
                     TensorDataset(
                         torch.load(f"./datasets/ifs-1x128x128-uint8-1000x32.pt"),

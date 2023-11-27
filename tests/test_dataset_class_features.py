@@ -5,16 +5,16 @@ from typing import List
 
 import torch
 from torch.utils.data import TensorDataset, DataLoader
-from src.datasets import ClassFeaturesDataset
+from src.datasets import ClassLogitsDataset
 
 
-class TestClassFeaturesDataset(unittest.TestCase):
+class TestClassLogitsDataset(unittest.TestCase):
 
     def test_100_pure(self):
         ds = TensorDataset(torch.Tensor([
             23, 42, 66, 42, 66,
         ]).to(torch.int32))
-        ds = ClassFeaturesDataset(ds, dtype=torch.float16)
+        ds = ClassLogitsDataset(ds, dtype=torch.float16)
         self.assertEqual(
             [
                 ([1.0, 0.0, 0.0], 23),
@@ -33,7 +33,7 @@ class TestClassFeaturesDataset(unittest.TestCase):
         ds = TensorDataset(torch.Tensor([
             23, 42, 66, 42, 66,
         ]).to(torch.int32))
-        ds = ClassFeaturesDataset(ds, num_classes=5)
+        ds = ClassLogitsDataset(ds, num_classes=5)
         self.assertEqual(
             [
                 ([1.0, 0.0, 0.0, 0.0, 0.0], 23),
@@ -48,13 +48,13 @@ class TestClassFeaturesDataset(unittest.TestCase):
             ]
         )
         with self.assertRaises(ValueError):
-            list(ClassFeaturesDataset(ds, num_classes=2))
+            list(ClassLogitsDataset(ds, num_classes=2))
 
     def test_200_dataloader(self):
         ds = TensorDataset(torch.Tensor([
             23, 42, 66, 42, 66,
         ]).to(torch.int32))
-        ds = ClassFeaturesDataset(ds, dtype=torch.float16)
+        ds = ClassLogitsDataset(ds, dtype=torch.float16)
         dl = DataLoader(ds, batch_size=2)
         self.assertEqual(
             [
@@ -75,7 +75,7 @@ class TestClassFeaturesDataset(unittest.TestCase):
             # labels
             torch.Tensor([2, 0, 1, 0, 2]).to(torch.int32)
         )
-        ds = ClassFeaturesDataset(ds, tuple_position=1, num_classes=3, label_to_index=True)
+        ds = ClassLogitsDataset(ds, tuple_position=1, num_classes=3, label_to_index=True)
         self.assertEqual(
             [
                 ([1.], [0.0, 0.0, 1.0], 2),
@@ -97,7 +97,7 @@ class TestClassFeaturesDataset(unittest.TestCase):
             # labels
             torch.Tensor([23, 42, 66, 42, 66]).to(torch.int32)
         )
-        ds = ClassFeaturesDataset(ds, tuple_position=1)
+        ds = ClassLogitsDataset(ds, tuple_position=1)
         self.assertEqual(
             [
                 ([1], [1.0, 0.0, 0.0], 23),

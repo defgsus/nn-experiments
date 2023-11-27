@@ -6,6 +6,7 @@ import random
 import itertools
 import argparse
 import shutil
+import time
 import warnings
 from pathlib import Path
 from typing import List, Iterable, Tuple, Optional, Callable, Union, Generator, Dict
@@ -81,6 +82,8 @@ class Trainer:
         self.num_input_steps = 0
         self._train_input_transforms = None if train_input_transforms is None else list(train_input_transforms)
         self.for_validation = False
+        self._train_start_time = 0.
+        self._logged_scalars = {}
 
         self.tensorboard_path = Path("./runs/") / self.experiment_name
         self.checkpoint_path = Path("./checkpoints/") / self.experiment_name
@@ -196,6 +199,8 @@ class Trainer:
             "model": repr(self.model),
             "optimizers": [repr(o) for o in self.optimizers],
             "num_inputs": self.num_input_steps,
+            "training_time": time.time() - self._train_start_time,
+            "scalars": self._logged_scalars,
             **(extra or {}),
         }, indent=2))
 
@@ -213,6 +218,9 @@ class Trainer:
 
     def log_scalar(self, tag: str, value):
         self.writer.add_scalar(tag=tag, scalar_value=value, global_step=self.num_input_steps)
+        if isinstance(value, torch.Tensor):
+            value = float(value.detach())
+        self._logged_scalars[tag] = {"step": self.num_input_steps, "value": value}
 
     def log_image(self, tag: str, image: torch.Tensor):
         try:
@@ -230,6 +238,9 @@ class Trainer:
             print(f"trainable params: {num_train_params:,}")
         else:
             print(f"trainable params: {num_train_params:,} of {num_params:,}")
+
+        self._train_start_time = time.time()
+        self._logged_scalars.clear()
 
         last_validation_step = None
         last_validation_epoch = None
@@ -429,7 +440,7 @@ class Trainer:
             self.model.eval()
 
             try:
-                losses = []
+                losses = {}
                 for validation_batch in self.iter_validation_batches():
                     if not isinstance(validation_batch, (tuple, list)):
                         validation_batch = validation_batch,
@@ -440,10 +451,18 @@ class Trainer:
                     )
 
                     loss = self.validation_step(validation_batch)
-                    if isinstance(loss, dict):
-                        loss = loss["loss"]
-                    losses.append(loss)
-                loss = torch.Tensor(losses).mean()
+                    if not isinstance(loss, dict):
+                        loss = {"loss": loss}
+
+                    for key, value in loss.items():
+                        if key not in losses:
+                            losses[key] = []
+                        losses[key].append(value)
+
+                losses = {
+                    key: float(torch.Tensor(value).mean())
+                    for key, value in losses.items()
+                }
 
             finally:
                 self.model.train(True)
@@ -451,9 +470,10 @@ class Trainer:
                 self.for_validation = False
 
             # print(f"\nVALIDATION loss {float(loss)}")
-            self.log_scalar("validation_loss", loss)
+            for key, value in losses.items():
+                self.log_scalar(f"validation_{key}", value)
 
-            loss = self.last_validation_loss = float(loss)
+            loss = self.last_validation_loss = losses["loss"]
 
             if self._best_validation_loss is None or loss < self._best_validation_loss:
                 self._best_validation_loss = loss

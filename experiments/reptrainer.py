@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.fft
 import torch.nn.functional as F
 import torch.utils.data
+import torchvision.models
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import torchvision.transforms as VT
@@ -35,6 +36,15 @@ class RepresentationClassTrainer(Trainer):
 
     @torch.no_grad()
     def write_step(self):
+        inputs = []
+        count = 0
+        for batch in self.iter_training_batches():
+            inputs.append(batch[0].cpu())
+            count += batch[0].shape[0]
+            if count >= 8*8:
+                break
+        inputs = torch.concat(inputs)[:8*8]
+        self.log_image("train_input_sample", make_grid(inputs, nrow=8))
 
         inputs = []
         targets = []
