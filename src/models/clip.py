@@ -77,13 +77,14 @@ class ClipSingleton:
     def encode_text(
             cls,
             text: Union[str, Iterable[str]],
+            truncate: bool = False,
             model: Optional[str] = None,
             device: str = "auto",
             requires_grad: bool = False,
     ):
         model, preproc = cls.get(model, device)
 
-        tokens = clip.tokenize(text).to(cls._get_model_device(model))
+        tokens = clip.tokenize(text, truncate=truncate).to(cls._get_model_device(model))
 
         if requires_grad:
             return model.encode_text(tokens)
