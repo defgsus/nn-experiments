@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 import glob
 import os
@@ -26,6 +27,7 @@ class GHArchive:
             day: datetime.date,
             event_type: Optional[str] = None,
             hours: Union[None, int, Iterable[int]] = None,
+            probability: float = 1.,
     ) -> Generator[dict, None, None]:
         id_set = set()
 
@@ -46,7 +48,7 @@ class GHArchive:
             if not filename:
                 continue
 
-            for event in iter_ndjson(filename, filter=filter):
+            for event in iter_ndjson(filename, filter=filter, probability=probability):
 
                 # skip the old events
                 if not event.get("id"):
@@ -79,7 +81,22 @@ class GHArchive:
                 return
         return local_filename
 
-    def _download(self, filename: str, local_filename: Path, chunk_size: int = 64_000) -> bool:
+    def _download(self, filename: str, local_filename: Path, chunk_size: int = 64_000, num_tries: int = 5) -> bool:
+        if self.verbose:
+            print(f"Downloading https://data.gharchive.org/{filename}")
+
+        for i in range(num_tries):
+            try:
+                return self._download_impl(filename, local_filename, chunk_size)
+            except requests.ConnectionError as e:
+                if i == num_tries - 1:
+                    raise
+
+                if self.verbose:
+                    print(f"retrying after {type(e).__name__}: {e}")
+                    time.sleep(.5)
+
+    def _download_impl(self, filename: str, local_filename: Path, chunk_size: int = 64_000) -> bool:
         with requests.get(f"https://data.gharchive.org/{filename}", stream=True) as r:
             if r.status_code != 200:
                 if self.verbose:

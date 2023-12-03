@@ -101,6 +101,35 @@ def activation_to_module(
     raise ValueError(f"Unrecognized activation: {repr(activation)}")
 
 
+def activation_to_callable(
+        activation: Union[None, str, Callable, nn.Module, Type[nn.Module]]
+) -> Optional[Callable]:
+    if activation is None:
+        return None
+
+    if isinstance(activation, nn.Module):
+        return activation
+
+    try:
+        if issubclass(activation, nn.Module):
+            return activation()
+    except TypeError:
+        pass
+
+    if callable(activation):
+        return activation
+
+    if isinstance(activation, str):
+        s = activation.lower()
+        # catch `torch.tanh` before `nn.tanh`
+        for module in (torch, torch.nn):
+            for key, value in vars(module).items():
+                if key.lower() == s and callable(value):
+                    return value
+
+    raise ValueError(f"Unrecognized activation: {repr(activation)}")
+
+
 @torch.no_grad()
 def get_model_weight_images(
         model: nn.Module,

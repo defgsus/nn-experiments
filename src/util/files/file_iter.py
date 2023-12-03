@@ -3,6 +3,7 @@ import gzip
 import glob
 import csv
 import io
+import random
 from pathlib import Path
 from typing import Union, Generator, IO, Optional, Callable
 
@@ -11,8 +12,9 @@ def iter_ndjson(
         file: Union[str, Path, IO],
         raise_error: bool = False, skip: int = 0,
         filter: Optional[Callable[[str], bool]] = None,
+        probability: float = 1.,
 ) -> Generator[dict, None, None]:
-    for line in iter_lines(file, skip=skip):
+    for line in iter_lines(file, skip=skip, probability=probability):
         try:
             if filter is None or filter(line):
                 yield json.loads(line)
@@ -28,7 +30,12 @@ def iter_csv(file: Union[str, Path, IO], skip: int = 0) -> Generator[dict, None,
     yield from reader
 
 
-def iter_lines(file: Union[str, Path, IO], skip: int = 0, keep_first: bool = False) -> Generator[dict, None, None]:
+def iter_lines(
+        file: Union[str, Path, IO],
+        skip: int = 0,
+        keep_first: bool = False,
+        probability: float = 1.,
+) -> Generator[dict, None, None]:
     if isinstance(file, (str, Path)):
         filename = str(file)
 
@@ -36,7 +43,7 @@ def iter_lines(file: Union[str, Path, IO], skip: int = 0, keep_first: bool = Fal
             if skip:
                 raise ValueError("globbing and 'skip' currently not supported")
             for fn in sorted(glob.glob(filename)):
-                yield from iter_lines(fn)
+                yield from iter_lines(fn, skip=skip, keep_first=keep_first, probability=probability)
 
         else:
             if filename.lower().endswith(".gz"):
@@ -49,11 +56,12 @@ def iter_lines(file: Union[str, Path, IO], skip: int = 0, keep_first: bool = Fal
                                 yield line
                             continue
 
-                        yield line
+                        if probability >= 1. or random.random() < probability:
+                            yield line
 
             else:
                 with open(file, "rt") as fp:
-                    yield from iter_lines(fp, skip=skip)
+                    yield from iter_lines(fp, skip=skip, keep_first=keep_first, probability=probability)
 
     else:
         count = 0
@@ -64,7 +72,8 @@ def iter_lines(file: Union[str, Path, IO], skip: int = 0, keep_first: bool = Fal
                     yield line
                 continue
 
-            yield line
+            if probability >= 1. or random.random() < probability:
+                yield line
 
 
 def iter_file(file: Union[str, Path], skip: int = 0) -> Generator[dict, None, None]:

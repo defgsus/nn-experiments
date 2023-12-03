@@ -1,12 +1,12 @@
 matrix:
-  patch: [7]
+  patch: [4]
   layer: [4] #8 , 16]
-  head: [32] #4, 8, 12, 16]
+  head: [8] #4, 8, 12, 16]
   hidden: [256] #, 768]
   mlp: [512] #, 1024]
   drop: [0.]
   cs: [128] #, 784]
-  $filter: ${hidden} / ${head} == ${hidden} // ${head} and (${head} != 8 or ${layer} == 4)
+  $filter: ${hidden} / ${head} == ${hidden} // ${head}
 
 experiment_name: aug/fmnist_vit_trivaug_${matrix_slug}
 
