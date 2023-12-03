@@ -125,6 +125,11 @@ def activation_to_callable(
         for module in (torch, torch.nn):
             for key, value in vars(module).items():
                 if key.lower() == s and callable(value):
+                    try:
+                        if issubclass(value, nn.Module):
+                            return value()
+                    except TypeError:
+                        pass
                     return value
 
     raise ValueError(f"Unrecognized activation: {repr(activation)}")

@@ -7,16 +7,17 @@ from src.models.reservoir import *
 
 class TestReservoirReadout(unittest.TestCase):
 
-    def get_predict_sequence(self, timesteps: int, forward_steps: int = 1, channels: int = 1):
+    def get_predict_sequence(self, timesteps: int, forward_steps: int = 1, channels: int = 1, batch_size: int = 1):
         t = torch.linspace(0, 10 * torch.pi, timesteps + forward_steps)
         seq = torch.sin(t)[None, :, None]
         if channels > 1:
-            seq = seq.expand(1, -1, channels)
+            seq = seq.expand(-1, -1, channels)
+        if batch_size > 1:
+            seq = seq.expand(batch_size, -1, -1)
         return (
             seq[:, :-forward_steps, :],
             seq[:, forward_steps:, :],
         )
-
 
     def run_readout(self, esn: ReservoirReadout, num_inputs: int, num_states: int):
         self.assertEqual(esn.reservoir.num_inputs, num_inputs)
@@ -25,6 +26,18 @@ class TestReservoirReadout(unittest.TestCase):
         # run for T steps
         state = esn.run_reservoir(steps=11)
         self.assertEqual(torch.Size((1, 11, num_states)), state.shape)
+
+        # run with input
+        input, target = self.get_predict_sequence(11, channels=num_inputs, batch_size=3)
+        state = esn.run_reservoir(input=input)
+        self.assertEqual(torch.Size((3, 11, num_states)), state.shape)
+
+        # run with input and steps parameter
+        state = esn.run_reservoir(input=input, steps=5)
+        self.assertEqual(torch.Size((3, 5, num_states)), state.shape)
+
+        state = esn.run_reservoir(input=input, steps=15)
+        self.assertEqual(torch.Size((3, 15, num_states)), state.shape)
 
         # train to predict next sequence value
         input, target = self.get_predict_sequence(100, channels=num_inputs)
