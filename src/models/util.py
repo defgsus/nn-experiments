@@ -23,6 +23,12 @@ def get_loss_callable(loss: Union[str, Callable, nn.Module]) -> Callable:
     elif loss in ("bce", "binary_cross_entropy"):
         return F.binary_cross_entropy
 
+    elif loss in ("ce", "cross_entropy"):
+        return F.cross_entropy
+
+    elif hasattr(F, loss) and callable(getattr(F, loss)):
+        return getattr(F, loss)
+
     else:
         raise ValueError(f"Unexpected loss function '{loss}'")
 

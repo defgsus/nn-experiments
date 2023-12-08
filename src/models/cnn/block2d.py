@@ -52,11 +52,6 @@ class Conv2dBlock(nn.Module):
 
         self.layers = nn.Sequential()
 
-        if batch_norm:
-            self.layers.append(
-                nn.BatchNorm2d(self.channels[0])
-            )
-
         in_channel_mult = 1
         out_channel_mult = 1
         for i, (in_channels, out_channels, kernel_size) in enumerate(
@@ -80,6 +75,11 @@ class Conv2dBlock(nn.Module):
                     transpose=transpose,
                 )
             )
+            if batch_norm:
+                self.layers.append(
+                    nn.BatchNorm2d(out_channels * out_channel_mult)
+                )
+
             if dropout and not is_last_layer:
                 self.layers.append(nn.Dropout2d(dropout))
 
@@ -96,11 +96,16 @@ class Conv2dBlock(nn.Module):
                     klass(pool_kernel_size)
                 )
 
-            if self._act_fn and (act_last_layer or not is_last_layer):
-                if not isinstance(act_last_layer, bool):
-                    act_fn = activation_to_module(act_last_layer)
-                if act_fn:
-                    self.layers.append(act_fn)
+            if not is_last_layer:
+                if self._act_fn:
+                    self.layers.append(self._act_fn)
+            else:
+                if act_last_layer:
+                    act_fn = self._act_fn
+                    if not isinstance(act_last_layer, bool):
+                        act_fn = activation_to_module(act_last_layer)
+                    if act_fn:
+                        self.layers.append(act_fn)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = self.layers.forward(x)

@@ -14,6 +14,8 @@ class TotalCALayer(nn.Module):
             learn_kernel: bool = False,
             learn_rules: bool = False,
             wrap: bool = False,
+            threshold: float = .5,
+            alpha: float = 1.,
     ):
         """
         Totalitarian Cellular Automaton as torch layer.
@@ -24,6 +26,8 @@ class TotalCALayer(nn.Module):
         :param learn_kernel: do train the neighbourhood kernel 
         :param learn_rules: do train the rules
         :param wrap: if True, edges wrap around
+        :param threshold: float threshold on which a cell is considered alive
+        :param alpha: float mix of the calculation result [0, 1]
         """
         super().__init__()
         for name, value in (("birth", birth), ("survive", survive)):
@@ -39,7 +43,9 @@ class TotalCALayer(nn.Module):
 
         self.iterations = iterations
         self.wrap = wrap
+        self.threshold = threshold
         self.kernel = nn.Parameter(torch.Tensor([[[[1, 1, 1], [1, 0, 1], [1, 1, 1]]]]), requires_grad=learn_kernel)
+        self.alpha = alpha
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         ndim = x.ndim
@@ -59,19 +65,25 @@ class TotalCALayer(nn.Module):
         if ch != 1:
             y = y.view(x.shape)
 
+        if self.alpha != 1.:
+            y = x * (1. - self.alpha) + self.alpha * y
+
         return y if ndim == 4 else y.squeeze(0)
 
     def _ca_step(self, x: torch.Tensor) -> torch.Tensor:
+
+        cells = (x >= self.threshold).float()
+
         if self.wrap:
-            xp = torch.concat([x[..., -1, None], x, x[..., 0, None]], dim=-1)
-            xp = torch.concat([xp[..., -1, None, :], xp, xp[..., 0, None, :]], dim=-2)
-            neighbour_count = F.conv2d(xp, self.kernel)
+            cellsp = torch.concat([cells[..., -1, None], cells, cells[..., 0, None]], dim=-1)
+            cellsp = torch.concat([cellsp[..., -1, None, :], cellsp, cellsp[..., 0, None, :]], dim=-2)
+            neighbour_count = F.conv2d(cellsp, self.kernel)
         else:
-            neighbour_count = F.conv2d(x, self.kernel, padding=1)
+            neighbour_count = F.conv2d(cells, self.kernel, padding=1)
 
         neighbour_count = neighbour_count.long().clamp(0, 8)
 
         birth = torch.index_select(self.birth, 0, neighbour_count.flatten(0)).view(x.shape)
         survive = torch.index_select(self.survive, 0, neighbour_count.flatten(0)).view(x.shape)
 
-        return birth * (x < 1.) + survive * (x >= 1.)
+        return birth * (1. - cells) + survive * cells
