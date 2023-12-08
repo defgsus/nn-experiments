@@ -1,0 +1,10 @@
+# the usual pytorch stack via https://pytorch.org/get-started/locally/
+
+git+https://github.com/openai/CLIP.git
+jupyterlab
+pandas
+plotly
+scikit-learn
+tabulate
+tensorboard
+tqdm

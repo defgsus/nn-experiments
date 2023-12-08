@@ -30,6 +30,7 @@ import torchvision.models
 from torchvision.utils import make_grid
 import pandas as pd
 
+# make all the local stuff available to experiments
 from src import console
 from src.util import *
 from src.util.image import *
@@ -45,6 +46,8 @@ from src.models.recursive import *
 from src.models.transform import *
 from src.models.vae import *
 from src.models.clip import ClipSingleton
+from src.models.loss import *
+from src.models.util import *
 from src.datasets import *
 from src.algo import *
 try:
@@ -386,6 +389,7 @@ def construct_from_code(code: Any):
         _locals = {}
         _globals = globals().copy()
         exec(compile(block, '<string>', mode='exec'), _globals, _locals)
+        _globals.update(_locals)
         return eval(compile(last, '<string>', mode='eval'), _globals, _locals)
 
     except:

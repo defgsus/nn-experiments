@@ -14,6 +14,9 @@ def get_loss_callable(loss: Union[str, Callable, nn.Module]) -> Callable:
     if isinstance(loss, nn.Module) or callable(loss):
         return loss
 
+    elif loss == "kl_div":
+        return nn.KLDivLoss(reduction="batchmean")
+
     elif loss in ("l1", "mae"):
         return nn.L1Loss()
 

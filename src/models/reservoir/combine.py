@@ -66,6 +66,7 @@ class SequentialReservoirs(nn.Module):
         super().__init__()
         self.reservoirs = nn.ModuleList()
         self.num_states = 0
+
         self._state_slices = []
         for res in reservoirs:
             check_valid_reservoir(res)
@@ -77,7 +78,7 @@ class SequentialReservoirs(nn.Module):
         self.num_inputs = self.reservoirs[0].num_inputs
 
     def forward(self, state: torch.Tensor, input: Optional[torch.Tensor] = None) -> torch.Tensor:
-        assert state.ndim == 2, f"Expected `state` to have shape (B, num_state), got {state.shape}"
+        assert state.ndim == 2, f"Expected `state` to have shape (B, num_states), got {state.shape}"
         assert state.shape[-1] == self.num_states, \
             f"Expected final dimension of `state` to match `num_states` {self.num_states}, got {state.shape}"
 

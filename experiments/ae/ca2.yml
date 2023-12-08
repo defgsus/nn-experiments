@@ -1,0 +1,37 @@
+$extends: baseline.yml
+
+experiment_name: ae/ca9
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(24, 32, 48), kernel_size=5)
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+
+  class CADecoder(nn.Module):
+      def __init__(self, code_size: int, channels=(64, 64, 64, 64, SHAPE[0])):
+          super().__init__()
+          self.layers = nn.Sequential(
+              nn.Linear(code_size, channels[0] * 4 * 4),
+              Reshape((channels[0], 4, 4)),
+          )
+    
+          for i, (chan, next_chan) in enumerate(zip(channels, channels[1:])):
+              is_last = i + 2 == len(channels) 
+              if not is_last:
+                  self.layers.add_module(f"conv{i+1}", nn.ConvTranspose2d(chan, next_chan * 4, kernel_size=1))
+                  self.layers.add_module(f"pix{i+1}", nn.PixelShuffle(2))
+                  self.layers.add_module(f"ca{i+1}", TotalCALayer(
+                      birth=   (0, 1, 0, 1, 0, 0, 0, 0, 0),
+                      survive= (0, 0, 1, 1, 0, 0, 0, 0, 0),
+                      iterations=3,
+                      threshold=0.2,
+                      alpha=.3,
+                  ))
+              else:
+                  self.layers.add_module(f"conv{i+1}", nn.ConvTranspose2d(chan, next_chan, kernel_size=1))
+    
+      def forward(self, x):
+          y = self.layers(x)
+          return y
+  
+  
+  EncoderDecoder(encoder, CADecoder(CODE_SIZE))

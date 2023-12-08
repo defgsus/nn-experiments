@@ -1,4 +1,4 @@
-experiment_name: ae/baseline-sobel4
+experiment_name: ae/baseline
 
 trainer: experiments.ae.trainer.TrainAutoencoderSpecial
 

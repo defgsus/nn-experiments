@@ -24,7 +24,7 @@ import torchvision.transforms.functional as VF
 from torchvision.utils import make_grid
 
 from src import console
-from src.util import to_torch_device
+from src.util import to_torch_device, num_module_parameters
 from src.util.image import signed_to_image, get_images_from_iterable
 from src.models.util import get_loss_callable
 
@@ -88,6 +88,7 @@ class Trainer:
         self.tensorboard_path = Path("./runs/") / self.experiment_name
         self.checkpoint_path = Path("./checkpoints/") / self.experiment_name
         self.device = to_torch_device(device)
+        self._skip_optimizer: Optional[List[bool]] = None
         self._loss_history = []
         self._loss_steps = 0
         self.last_validation_loss: Optional[float] = None
@@ -205,15 +206,16 @@ class Trainer:
         }, indent=2))
 
     def num_trainable_parameters(self) -> (int, int):
-        return (
-            sum(
+        trainable_count = 0
+        for opt in self.optimizers:
+            trainable_count += sum(
                 sum(math.prod(p.shape) for p in g["params"] if p.requires_grad)
-                for g in self.optimizers[0].param_groups
-            ),
-            sum(
-                sum(math.prod(p.shape) for p in g["params"])
-                for g in self.optimizers[0].param_groups
+                for g in opt.param_groups
             )
+
+        return (
+            trainable_count,
+            num_module_parameters(self.model)
         )
 
     def log_scalar(self, tag: str, value):
@@ -303,16 +305,18 @@ class Trainer:
                             #error_if_nonfinite=True,
                         )
 
-                    for opt in self.optimizers:
-                        opt.step()
+                    for i, opt in enumerate(self.optimizers):
+                        if not self._skip_optimizer or not self._skip_optimizer[i]:
+                            opt.step()
 
                     for i, sched in enumerate(self.schedulers):
-                        sched.step()
+                        if not self._skip_optimizer or not self._skip_optimizer[i]:
+                            sched.step()
 
-                        lr = sched.get_last_lr()
-                        if isinstance(lr, (list, tuple)):
-                            lr = lr[0]
-                        self._loss_history.append({f"learnrate_{i+1}_{type(sched.optimizer).__name__}": lr})
+                            lr = sched.get_last_lr()
+                            if isinstance(lr, (list, tuple)):
+                                lr = lr[0]
+                            self._loss_history.append({f"learnrate_{i+1}_{type(sched.optimizer).__name__}": lr})
 
                     self.num_batch_steps += 1
                     self.num_input_steps += input_batch[0].shape[0]

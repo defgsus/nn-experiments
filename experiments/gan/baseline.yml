@@ -1,0 +1,88 @@
+experiment_name: gan/baseline12
+
+trainer: experiments.gan.trainer.TrainGAN
+
+train_set: |
+    mnist_dataset(train=True, shape=SHAPE, interpolation=False)
+    #rpg_tile_dataset_3x32x32(SHAPE, validation=False)
+
+validation_set: |
+    mnist_dataset(train=False, shape=SHAPE, interpolation=False)
+    #rpg_tile_dataset_3x32x32(SHAPE, validation=True)
+
+batch_size: 64
+learnrate: 0.0001
+optimizer: Adam
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 20_000_000
+
+globals:
+  SHAPE: (3, 32, 32)
+  CODE_SIZE: 128  #* 8 * 4 * 4
+
+model: |
+    class DCGAN(nn.Module):
+        def __init__(
+                self,
+                num_inputs: int = CODE_SIZE,
+                channels: int = 128,
+                channels_out: int = SHAPE[0],
+        ):
+            super().__init__()
+            self.num_inputs = num_inputs
+            self.layers = nn.Sequential()
+            # self.layers.add_module("project", nn.Linear(self.num_inputs, channels * 8 * 4 * 4))
+            self.layers.add_module("reshape", Reshape((channels * 8, 4, 4)))
+      
+            self.layers.add_module("conv1", nn.ConvTranspose2d(channels * 8, channels * 4, kernel_size=2, stride=2))
+            self.layers.add_module("bn1", nn.BatchNorm2d(channels * 4))
+            self.layers.add_module("act1", nn.LeakyReLU())
+      
+            self.layers.add_module("conv2", nn.ConvTranspose2d(channels * 4, channels * 2, kernel_size=2, stride=2))
+            self.layers.add_module("bn2", nn.BatchNorm2d(channels * 2))
+            self.layers.add_module("act2", nn.LeakyReLU())
+      
+            self.layers.add_module("conv3", nn.ConvTranspose2d(channels * 2, channels_out, kernel_size=2, stride=2))
+            self.layers.add_module("act3", nn.Tanh())
+      
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            return self.layers(x)
+      
+    class GANSetup(nn.Module):
+        def __init__(self):
+            super().__init__()
+            
+            if 1:
+                self.generator = DecoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(24, 24, 24), kernel_size=3, activation="relu", activation_last_layer="tanh") 
+                self.generator.num_inputs = CODE_SIZE
+            else:
+                self.generator = DCGAN()
+          
+            if 1:
+                self.discriminator = nn.Sequential(
+                    EncoderConv2d(SHAPE, code_size=2, channels=(24, 24, 24), kernel_size=3, act_fn=nn.LeakyReLU(), batch_norm=True),
+                    nn.Softmax(dim=-1),
+                )
+            else:
+                discriminator = resnet.resnet18_open(weights=torchvision.models.ResNet18_Weights.IMAGENET1K_V1)
+                with torch.no_grad():
+                    out_shape = discriminator(torch.empty(2, *SHAPE)).shape[-3:]
+      
+                self.discriminator = nn.Sequential(
+                    discriminator,
+                    nn.Flatten(1),
+                    nn.Linear(math.prod(out_shape), 2),
+                    nn.Softmax(dim=-1),
+                )
+    
+    model = GANSetup()
+  
+    def init_weights(m):
+        if hasattr(m, "weight"):
+            print(f"init weight {m.weight.shape} of {m}")
+            torch.nn.init.normal_(m.weight, std=.1)
+    
+    model.apply(init_weights)
+  
+    model
