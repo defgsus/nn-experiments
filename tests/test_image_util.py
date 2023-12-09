@@ -89,6 +89,22 @@ class TestImageUtil(TestBase):
                 ]
             ), 3)
         )
+        # 4xHxW > 3xHxW
+        self.assertTensorEqual(
+            [
+                [[1, 0], [0, 1], [.5, 0]],
+                [[2, 0], [0, 2], [1.5, 0]],
+                [[0, 3], [.4, 3], [0, .6]],
+            ],
+            set_image_channels(torch.Tensor(
+                [
+                    [[1, 0], [0, 1], [.5, 0]],
+                    [[2, 0], [0, 2], [1.5, 0]],
+                    [[0, 3], [.4, 3], [0, .6]],
+                    [[0, 4], [.5, 4], [0, .7]],
+                ]
+            ), 3)
+        )
 
     def test_110_set_image_channels_to_1_batched(self):
         # 1xHxW > 1xHxW

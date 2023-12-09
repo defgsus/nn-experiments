@@ -18,4 +18,4 @@ class HistogramLayer(nn.Module):
         return soft_histogram(x, self.bins, self.min_value, self.max_value, self.sigma)
 
     def extra_repr(self):
-        return f"bins={self.bins}, min={self.min}, max={self.max}, sigma={self.sigma}"
+        return f"bins={self.bins}, min={self.min_value}, max={self.max_value}, sigma={self.sigma}"

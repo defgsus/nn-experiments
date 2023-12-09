@@ -1,7 +1,9 @@
 # the usual pytorch stack via https://pytorch.org/get-started/locally/
 
 git+https://github.com/openai/CLIP.git
+github-slugger
 jupyterlab
+marko
 pandas
 plotly
 scikit-learn
