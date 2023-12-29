@@ -22,8 +22,13 @@ class TestBase(unittest.TestCase):
         if isinstance(real, list):
             real = torch.Tensor(real)
 
-        expected = expected.round(decimals=places).tolist()
-        real = real.round(decimals=places).tolist()
+        if "int" not in str(expected.dtype):
+            expected = expected.round(decimals=places)
+        expected = expected.tolist()
+
+        if "int" not in str(real.dtype):
+            real = real.round(decimals=places)
+        real = real.tolist()
 
         self.assertEqual(expected, real, f"\nExpected:\n{expected}\nGot:\n{real}" + (f", {msg}" if msg else ""))
 
