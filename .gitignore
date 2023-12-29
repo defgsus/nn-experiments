@@ -1,5 +1,5 @@
-*.json
-*.ndjson
+*.json*
+*.ndjson*
 *.memmap
 *.pkl
 *.npy

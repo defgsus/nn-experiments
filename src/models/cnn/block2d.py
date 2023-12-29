@@ -17,7 +17,7 @@ class Conv2dBlock(nn.Module):
             stride: int = 1,
             pool_kernel_size: int = 0,
             pool_type: str = "max",  # "max", "average"
-            act_fn: Optional[nn.Module] = None,
+            act_fn: Union[None, str, nn.Module] = None,
             act_last_layer: Union[None, bool, str, nn.Module, Callable] = True,
             bias: bool = True,
             transpose: bool = False,
@@ -43,7 +43,7 @@ class Conv2dBlock(nn.Module):
         self._bias = bias
         self._batch_norm = batch_norm
         self._space_to_depth = space_to_depth
-        self._act_fn = act_fn
+        self._act_fn = activation_to_module(act_fn)
         self._pool_kernel_size = pool_kernel_size
         self._pool_type = pool_type
         self._act_last_layer = act_last_layer

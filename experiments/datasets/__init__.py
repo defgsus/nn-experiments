@@ -10,3 +10,7 @@ from .rpg import (
     rpg_tile_dataset,
     rpg_tile_dataset_3x32x32,
 )
+from .teletext import (
+    TeletextIterableDataset,
+    TeletextMatrixIterableDataset,
+)

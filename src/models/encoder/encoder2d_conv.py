@@ -22,7 +22,7 @@ class EncoderConv2d(Encoder2d):
             kernel_size: Union[int, Iterable[int]] = 3,
             stride: int = 1,
             channels: Iterable[int] = (16, 32),
-            act_fn: Optional[nn.Module] = nn.ReLU(),
+            act_fn: Union[None, str, nn.Module] = nn.ReLU(),
             space_to_depth: bool = False,
             dropout: float = 0.,
             batch_norm: bool = False,

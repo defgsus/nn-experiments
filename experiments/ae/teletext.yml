@@ -1,0 +1,35 @@
+experiment_name: ae/teletext/tt3
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  TeletextMatrixIterableDataset(meta=False)
+
+#validation_set: |
+#  rpg_tile_dataset_3x32x32(SHAPE, validation=True)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 100_000_000
+num_inputs_between_checkpoints: 20_000
+num_workers: 4
+
+globals:
+  SHAPE: (TeletextMatrixIterableDataset.DIM, 20, 40)
+  CODE_SIZE: 128
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(128, 64, 32), kernel_size=5, act_fn="leakyrelu")
+
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      encoder.convolution.create_transposed(act_last_layer=False),
+      nn.Softmax(-3),
+  )
+
+  EncoderDecoder(encoder, decoder)

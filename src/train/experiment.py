@@ -52,7 +52,8 @@ from src.datasets import *
 from src.algo import *
 try:
     from experiments.datasets import *
-except ImportError:
+except ImportError as e:
+    warnings.warn(str(e))
     pass
 
 
@@ -332,6 +333,7 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
     learnrate = kwargs.pop("learnrate")
     optimizer = kwargs.pop("optimizer")
     scheduler = kwargs.pop("scheduler", None)
+    num_workers = kwargs.pop("num_workers", None)
 
     if trainer_class is not None:
         trainer_class = get_class(trainer_class)
@@ -342,6 +344,7 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
         train_set,
         batch_size=batch_size,
         shuffle=not isinstance(train_set, IterableDataset),
+        num_workers=num_workers,
     )
 
     if validation_set is not None:
