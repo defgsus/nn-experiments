@@ -1,4 +1,7 @@
+import unittest
+
 import torch
+import torch.nn as nn
 
 from tests.base import *
 
@@ -52,7 +55,6 @@ class TestReplaceCa1(TestBase):
             ca1.ca1_replace_step(
                 input=torch.Tensor([0, 0, 0, 1, 0, 0, 0]).to(torch.uint8),
                 lookup=ca1.Ca1ReplaceRules(num_states=2, num_neighbours=1).lookup(30),
-                num_states=2,
                 num_neighbours=1,
                 iterations=6,
                 wrap=False,
@@ -72,7 +74,6 @@ class TestReplaceCa1(TestBase):
             ca1.ca1_replace_step(
                 input=torch.Tensor([0, 0, 0, 1, 0, 0, 0]).to(torch.uint8),
                 lookup=ca1.Ca1ReplaceRules(num_states=2, num_neighbours=1).lookup(30),
-                num_states=2,
                 num_neighbours=1,
                 iterations=6,
                 wrap=True,
@@ -86,7 +87,6 @@ class TestReplaceCa1(TestBase):
             state = ca1.ca1_replace_step(
                 input=input,
                 lookup=ca1.Ca1ReplaceRules(num_states=2, num_neighbours=1).lookup(30),
-                num_states=2,
                 num_neighbours=1,
                 iterations=steps,
                 wrap=True,
@@ -97,21 +97,90 @@ class TestReplaceCa1(TestBase):
                     "X" if c else "." for c in row
                 ))
 
+    def test_210_run_batched(self):
+        self.assertTensorEqual(
+            torch.Tensor([
+                [
+                    [0, 0, 0, 1, 0, 0, 0],
+                    [0, 0, 1, 1, 1, 0, 0],
+                    [0, 1, 0, 0, 1, 1, 0],
+                    [1, 1, 1, 1, 0, 1, 1],
+                    [0, 0, 0, 1, 0, 0, 1],
+                    [0, 0, 1, 1, 1, 1, 1],
+                    [0, 1, 0, 0, 0, 0, 1],
+                ],
+                [
+                    [0, 0, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 1, 1, 1, 0],
+                    [0, 0, 1, 0, 0, 1, 1],
+                    [0, 1, 1, 1, 1, 0, 1],
+                    [1, 0, 0, 0, 1, 0, 1],
+                    [1, 1, 0, 1, 1, 0, 1],
+                    [0, 1, 0, 0, 1, 0, 1]
+                ]
+            ]).to(torch.uint8),
+            ca1.ca1_replace_step(
+                input=torch.Tensor([[0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0]]).to(torch.uint8),
+                lookup=ca1.Ca1ReplaceRules(num_states=2, num_neighbours=1).lookup(30),
+                num_neighbours=1,
+                iterations=6,
+            ),
+        )
+
     def test_300_fuzzing(self):
         for num_states in (2, 3):
             for num_neighbours in (1, 2, 3):
                 for input_size in (1, 2, 3, 4, 5, 6, 7, 8):
-                    try:
-                        ca1.ca1_replace_step(
-                            input=torch.linspace(0, input_size - 1, input_size, dtype=torch.uint8) % num_states,
-                            lookup=ca1.Ca1ReplaceRules(num_states=num_states, num_neighbours=num_neighbours).lookup(30),
-                            num_states=num_states,
-                            num_neighbours=num_neighbours,
-                            iterations=10,
-                            wrap=False,
-                        )
-                    except Exception as e:
-                        e.args += (
-                            f"num_states={num_states}, num_n={num_neighbours}, input_size={input_size}",
-                        )
-                        raise e
+                    for wrap in (False, True):
+                        try:
+                            ca1.ca1_replace_step(
+                                input=torch.linspace(0, input_size - 1, input_size, dtype=torch.uint8) % num_states,
+                                lookup=ca1.Ca1ReplaceRules(num_states=num_states, num_neighbours=num_neighbours).lookup(30),
+                                num_neighbours=num_neighbours,
+                                iterations=10,
+                                wrap=wrap,
+                            )
+                        except Exception as e:
+                            e.args += (
+                                f"num_states={num_states}, num_n={num_neighbours}, input_size={input_size}, wrap={wrap}",
+                            )
+                            raise e
+
+    def test_400_module(self):
+        self.assertTensorEqual(
+            torch.Tensor([
+                [0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 1, 1, 1, 0, 0],
+                [0, 1, 0, 0, 1, 1, 0],
+                [1, 1, 1, 1, 0, 1, 1],
+                [0, 0, 0, 1, 0, 0, 1],
+                [0, 0, 1, 1, 1, 1, 1],
+                [0, 1, 0, 0, 0, 0, 1],
+            ]).to(torch.uint8),
+            ca1.CA1Replace(rule=30)(
+                input=torch.Tensor([0, 0, 0, 1, 0, 0, 0]).to(torch.uint8),
+                iterations=6,
+                wrap=False,
+            ),
+        )
+
+    # this is currently not working
+    @unittest.expectedFailure
+    def test_410_module_autograd(self):
+        data = nn.Parameter(
+            torch.Tensor([0, 0, 0, 1, 0, 0, 0]),
+            requires_grad=True,
+        )
+        optimizer = torch.optim.Adam([data])
+
+        module = ca1.CA1Replace(rule=30)
+
+        output = module(
+            input=data,
+            iterations=6,
+            wrap=False,
+        )
+        loss = output.sum()
+        loss.backward()
+        optimizer.step()
+
