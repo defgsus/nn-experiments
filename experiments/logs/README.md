@@ -38,6 +38,9 @@ and look at its parameters and results.
       - [:arrow_forward:](reservoir-computing.md#baseline-without-reservoir) Baseline without reservoir
       - [:arrow_forward:](reservoir-computing.md#reservoirnum_inputs16-num_cells100) Reservoir(num_inputs=16, num_cells=100)
       - [:arrow_forward:](reservoir-computing.md#reservoirnum_inputs16-num_cells1000) Reservoir(num_inputs=16, num_cells=1000)
+  - [:arrow_forward:](reservoir-computing.md#reproducing-connectionist-symbolic-machine-intelligence-using-cellular-automata-based-reservoir-hyperdimensional-computing) reproducing "Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing"
+      - [:arrow_forward:](reservoir-computing.md#5-bit-xor) 5-bit xor
+      - [:arrow_forward:](reservoir-computing.md#8-bit-square) 8-bit square
 
 
 - [transformers.md](transformers.md)
