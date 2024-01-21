@@ -1,8 +1,9 @@
-experiment_name: ae/stacked-sym-ae_e2_${matrix_slug}
+experiment_name: ae/stacked-sym-ae_e3_${matrix_slug}
 
 matrix:
   ch: [32]
   nl: [25]
+  sym: [False]
 
 trainer: experiments.ae.trainer.TrainAutoencoderSpecial
 
@@ -33,12 +34,13 @@ globals:
 model: |
   class Autoencoder(StackedSymmetricAutoencoderConv2d):
       def before_train_step(self, trainer):
-          new_index = (trainer.epoch // 2) * 2
-          if new_index != self.layer_index:
+          new_index = trainer.num_input_steps // 8_000
+          if new_index != self.layer_index and new_index < len(self.layers):
               print("SETTING LAYER_INDEX", new_index)
           self.layer_index = new_index
-    
+  
   Autoencoder(
       SHAPE, CODE_SIZE, 
       channels=(${ch}, ) * ${nl},
+      symmetric=${sym},
   )

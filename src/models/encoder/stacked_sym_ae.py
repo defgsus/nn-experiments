@@ -11,15 +11,19 @@ class SymmetricLinear(nn.Module):
             in_channels: int,
             out_channels: int,
             activation: Union[None, str, nn.Module] = None,
+            symmetric: bool = True,
             #dropout: float = 0.,
             #batch_norm: bool = False,
     ):
         super().__init__()
         self.activation = activation_to_callable(activation)
         self.linear = nn.Linear(in_channels, out_channels)
-        self.bias_out = nn.Parameter(
-            torch.randn(in_channels) * self.linear.bias.std()
-        )
+        if symmetric:
+            self.bias_out = nn.Parameter(
+                torch.randn(in_channels) * self.linear.bias.std()
+            )
+        else:
+            self.linear_out = nn.Linear(out_channels, in_channels)
 
     def forward(self, x, transpose: bool = False):
         if not transpose:
@@ -27,7 +31,10 @@ class SymmetricLinear(nn.Module):
             if self.activation:
                 y = self.activation(y)
         else:
-            y = F.linear(x, self.linear.weight.T, self.bias_out)
+            if hasattr(self, "linear_out"):
+                y = self.linear_out(x)
+            else:
+                y = F.linear(x, self.linear.weight.T, self.bias_out)
             if self.activation:
                 y = self.activation(y)
         return y
@@ -42,6 +49,7 @@ class SymmetricConv2d(nn.Module):
             stride: int = 1,
             groups: int = 1,
             activation: Union[None, str, nn.Module] = "leaky_relu",
+            symmetric: bool = True,
             #space_to_depth: bool = False,
             #dropout: float = 0.,
             #batch_norm: bool = False,
@@ -53,8 +61,9 @@ class SymmetricConv2d(nn.Module):
         self.activation = activation_to_callable(activation)
         self.conv_in = nn.Conv2d(in_channels, out_channels, kernel_size, stride)
         self.conv_out = nn.ConvTranspose2d(out_channels, in_channels, kernel_size, stride, output_padding=stride - 1)
-        # make weights symmetric
-        self.conv_out.weight = self.conv_in.weight
+        # make weights symmetric by copying whole parameter
+        if symmetric:
+            self.conv_out.weight = self.conv_in.weight
 
     def forward(self, x, transpose: bool = False):
         if not transpose:
@@ -78,6 +87,7 @@ class StackedSymmetricAutoencoderConv2d(nn.Module):
             groups: int = 1,
             channels: Iterable[int] = (16, 32),
             activation: Union[None, str, nn.Module] = "leaky_relu",
+            symmetric: bool = True,
             space_to_depth: bool = False,
             dropout: float = 0.,
             batch_norm: bool = False,
@@ -111,6 +121,7 @@ class StackedSymmetricAutoencoderConv2d(nn.Module):
                 kernel_size=ks,
                 stride=stride,
                 activation=activation,
+                symmetric=symmetric,
             ))
 
         self.conv_shapes = []
@@ -123,6 +134,7 @@ class StackedSymmetricAutoencoderConv2d(nn.Module):
 
         self.layers.add_module("linear", SymmetricLinear(
             math.prod(self.conv_shapes[-1]), self.code_size,
+            symmetric=symmetric,
         ))
 
     def forward(self, x):

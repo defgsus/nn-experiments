@@ -13,6 +13,7 @@ and look at its parameters and results.
   - [:arrow_forward:](autoencoder-experiments.md#variational-auto-encoder-on-rpg-tile-dataset) variational auto-encoder on RPG Tile dataset
   - [:arrow_forward:](autoencoder-experiments.md#comparing-different-datasets) comparing different datasets
   - [:arrow_forward:](autoencoder-experiments.md#2023-12-08-autoencoder-with-histogram-loss) 2023-12-08 autoencoder with histogram loss
+  - [:arrow_forward:](autoencoder-experiments.md#2024-01-21-stacked-symmetric-one-layer-at-a-time) 2024-01-21 stacked symmetric one-layer-at-a-time
 
 
 - [lm-gen.md](lm-gen.md)
