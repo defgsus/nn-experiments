@@ -15,6 +15,12 @@ and look at its parameters and results.
   - [:arrow_forward:](autoencoder-experiments.md#2023-12-08-autoencoder-with-histogram-loss) 2023-12-08 autoencoder with histogram loss
 
 
+- [lm-gen.md](lm-gen.md)
+  - [:arrow_forward:](lm-gen.md#text-generation-with-microsoftphi-2) text generation with microsoft/phi-2
+    - [:arrow_forward:](lm-gen.md#text-completion) text completion
+    - [:arrow_forward:](lm-gen.md#code-completion) code completion
+
+
 - [manifold.md](manifold.md)
     - [:arrow_forward:](manifold.md#2023-11-09) 2023-11-09
       - [:arrow_forward:](manifold.md#upgrade-decoder) upgrade decoder
@@ -39,8 +45,10 @@ and look at its parameters and results.
       - [:arrow_forward:](reservoir-computing.md#reservoirnum_inputs16-num_cells100) Reservoir(num_inputs=16, num_cells=100)
       - [:arrow_forward:](reservoir-computing.md#reservoirnum_inputs16-num_cells1000) Reservoir(num_inputs=16, num_cells=1000)
   - [:arrow_forward:](reservoir-computing.md#reproducing-connectionist-symbolic-machine-intelligence-using-cellular-automata-based-reservoir-hyperdimensional-computing) reproducing "Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing"
+      - [:arrow_forward:](reservoir-computing.md#2023-12-29) 2023-12-29
       - [:arrow_forward:](reservoir-computing.md#5-bit-xor) 5-bit xor
       - [:arrow_forward:](reservoir-computing.md#8-bit-square) 8-bit square
+      - [:arrow_forward:](reservoir-computing.md#2023-12-30) 2023-12-30
 
 
 - [transformers.md](transformers.md)

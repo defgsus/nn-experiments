@@ -239,6 +239,8 @@ Repeat everything with 1000 reservoir cells. Full runtime 67min.
 
 by Ozgur Yilmaz, [arxiv.org/abs/1503.00851](https://arxiv.org/abs/1503.00851)
 
+### 2023-12-29
+
 So, maybe i miss-read something but one experiment is supposed to input a
 few binary values then run it few hundred iterations and feed a batch of 
 the last CA states to a ridge linear readout to recover the inputs.
@@ -444,3 +446,89 @@ Below are plots of the state history (100 iterations, toroid 101-cell state)
 for these particular rules, starting from a single seed cell:
 
 ![ca state history](img/ca1-repl-good-rules.png)
+
+### 2023-12-30
+
+Tried a couple of things :rofl:
+
+Among them is feeding the input data sequentially to the CA state. 
+For the following table, the input sequence is placed in the first state slice
+as above, then every `seq_input_stride` steps the input is inserted again to
+the running CA state. Either a copy of the first input slice or sequentially:
+every input bit one after another, at their respective fixed random positions.
+
+Training objective was to reproduce the binary float representation of the
+input number (0 to 511). Only tried the 23 *strong* rules from above and
+`iterations` and `output_steps` where fixed after preliminary tests.
+
+
+|   rule |   iterations |   output_steps | wrap   | seq_input   |   seq_input_stride |   readout_var |   correct_train |   mae_train |   correct_test |   mae_test |
+|-------:|-------------:|---------------:|:-------|:------------|-------------------:|--------------:|----------------:|------------:|---------------:|-----------:|
+|    105 |          200 |            100 | False  | none        |                  0 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    105 |          200 |            100 | False  | sequential  |                  1 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    105 |          200 |            100 | False  | repeat      |                  7 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    105 |          200 |            100 | False  | sequential  |                  7 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    150 |          200 |            100 | False  | repeat      |                  1 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    150 |          200 |            100 | False  | sequential  |                  1 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    105 |          200 |            100 | False  | repeat      |                  1 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    150 |          200 |            100 | False  | repeat      |                  3 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    105 |          200 |            100 | False  | repeat      |                  3 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    150 |          200 |            100 | False  | repeat      |                  7 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    150 |          200 |            100 | False  | sequential  |                  7 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    150 |          200 |            100 | False  | none        |                  0 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    150 |          200 |            100 | False  | sequential  |                  3 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    105 |          200 |            100 | False  | sequential  |                  3 |      0.000482 |             412 |    0.000057 |             96 |   0.032667 |
+|    105 |          200 |            100 | True   | sequential  |                  3 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|     18 |          200 |            100 | False  | repeat      |                  3 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|    150 |          200 |            100 | True   | sequential  |                  1 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|    150 |          200 |            100 | True   | repeat      |                  1 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|    150 |          200 |            100 | True   | sequential  |                  3 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|    146 |          200 |            100 | False  | none        |                  0 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|    150 |          200 |            100 | True   | sequential  |                  7 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|     18 |          200 |            100 | False  | none        |                  0 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|    105 |          200 |            100 | True   | repeat      |                  3 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|    146 |          200 |            100 | False  | repeat      |                  1 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|    150 |          200 |            100 | True   | repeat      |                  3 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|    105 |          200 |            100 | True   | repeat      |                  1 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|    105 |          200 |            100 | True   | sequential  |                  7 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|    105 |          200 |            100 | True   | sequential  |                  1 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|     18 |          200 |            100 | False  | sequential  |                  3 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|    146 |          200 |            100 | False  | repeat      |                  3 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|     18 |          200 |            100 | False  | repeat      |                  1 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|    105 |          200 |            100 | True   | repeat      |                  7 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|     18 |          200 |            100 | False  | sequential  |                  1 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|    146 |          200 |            100 | False  | sequential  |                  1 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|    146 |          200 |            100 | False  | sequential  |                  3 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|     18 |          200 |            100 | False  | repeat      |                  7 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|    105 |          200 |            100 | True   | none        |                  0 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|    150 |          200 |            100 | True   | none        |                  0 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|     18 |          200 |            100 | False  | sequential  |                  7 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|    146 |          200 |            100 | False  | sequential  |                  7 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|    150 |          200 |            100 | True   | repeat      |                  7 |      0.000511 |             412 |    0.000058 |             91 |   0.043323 |
+|    146 |          200 |            100 | False  | repeat      |                  7 |      0.000642 |             412 |    0.000077 |             91 |   0.033158 |
+|     60 |          200 |            100 | True   | sequential  |                  1 |      0.000764 |             412 |    0.016511 |             90 |   0.040892 |
+|    102 |          200 |            100 | True   | sequential  |                  1 |      0.000764 |             412 |    0.016511 |             90 |   0.040892 |
+|    102 |          200 |            100 | True   | none        |                  0 |      0.000764 |             412 |    0.016511 |             90 |   0.040892 |
+|    153 |          200 |            100 | True   | repeat      |                  3 |      0.000764 |             412 |    0.016511 |             90 |   0.040892 |
+|    153 |          200 |            100 | True   | repeat      |                  7 |      0.000764 |             412 |    0.016511 |             90 |   0.040892 |
+|    195 |          200 |            100 | True   | repeat      |                  7 |      0.000764 |             412 |    0.016511 |             90 |   0.040892 |
+|    102 |          200 |            100 | True   | sequential  |                  3 |      0.000764 |             412 |    0.016511 |             90 |   0.040892 |
+|     60 |          200 |            100 | True   | sequential  |                  3 |      0.000764 |             412 |    0.016511 |             90 |   0.040892 |
+
+(`readout_var` is the variance of the linear readout matrix)
+
+It can generalize to a high degree in this task. Although all the 
+sequential-input-or-not and even the different rules do not change the
+numbers too much. For the *square of number* experiment above
+this setup still does not get better than 6 correct validation samples out of 100.
+
+Mhh, so what a about higher order CAs? If we allow 3 states instead of 2, the
+1D replacement CA suddenly has astonishing **3^3^3**, or **3^27** possible 
+rules. A do-nothing python loop through that number already takes 300 hours:
+
+```
+for r in tqdm(range(7_625_597_484_987)):
+    pass
+
+0%|                  | 567,067,242/7,625,597,484,987 [01:24<314:10:54, 6,741,520.98it/s]
+```
