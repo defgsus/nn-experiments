@@ -1,0 +1,44 @@
+experiment_name: ae/ensemble_${matrix_slug}
+
+matrix: {}
+  #libs: [512]
+  #bl: [1]
+  #mlp: [512]
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  ImageCombinePatchIterableDataset(
+      rpg_tile_dataset_3x32x32(validation=False),
+      shape=SHAPE[-2:],
+  )
+
+validation_set: |
+  ImageCombinePatchIterableDataset(
+      rpg_tile_dataset_3x32x32(validation=True),
+      shape=SHAPE[-2:],
+  )
+
+batch_size: 16
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+freeze_validation_set: True
+
+globals:
+  SHAPE: (3, 64, 64)
+  CODE_SIZE: 128
+
+model: |
+  from experiments.ae.models.ensemble import EnsembleDecoder2d
+  
+  encoder = EncoderConv2d(
+      SHAPE, code_size=CODE_SIZE, channels=(32, 48, 64), kernel_size=3, stride=[1, 2, 2]
+  )   
+  decoder = EnsembleDecoder2d(
+      SHAPE, CODE_SIZE,
+  )
+  
+  EncoderDecoder(encoder, decoder)

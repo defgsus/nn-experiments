@@ -12,6 +12,7 @@ from .generative import (
     Kali2dDataset, Kali2dFilteredIterableDataset
 )
 from .image_augmentation import ImageAugmentation
+from .image_combine import ImageCombinePatchIterableDataset
 from .image_dissimilar import DissimilarImageIterableDataset
 from .image_encode import ImageEncodeIterableDataset
 from .image_filter import ImageFilterIterableDataset

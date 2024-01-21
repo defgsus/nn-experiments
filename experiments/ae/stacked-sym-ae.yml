@@ -1,0 +1,44 @@
+experiment_name: ae/stacked-sym-ae_e2_${matrix_slug}
+
+matrix:
+  ch: [32]
+  nl: [25]
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  ImageCombinePatchIterableDataset(
+      rpg_tile_dataset_3x32x32(validation=False),
+      shape=SHAPE[-2:],
+  )
+
+validation_set: |
+  ImageCombinePatchIterableDataset(
+      rpg_tile_dataset_3x32x32(validation=True),
+      shape=SHAPE[-2:],
+  )
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 2_000_000
+freeze_validation_set: True
+
+globals:
+  SHAPE: (3, 64, 64)
+  CODE_SIZE: 128
+
+model: |
+  class Autoencoder(StackedSymmetricAutoencoderConv2d):
+      def before_train_step(self, trainer):
+          new_index = (trainer.epoch // 2) * 2
+          if new_index != self.layer_index:
+              print("SETTING LAYER_INDEX", new_index)
+          self.layer_index = new_index
+    
+  Autoencoder(
+      SHAPE, CODE_SIZE, 
+      channels=(${ch}, ) * ${nl},
+  )

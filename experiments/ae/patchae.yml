@@ -1,0 +1,65 @@
+experiment_name: ae/patchae_${matrix_slug}
+
+matrix:
+  libs: [512]
+  bl: [1]
+  mlp: [512]
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  ImageCombinePatchIterableDataset(
+      rpg_tile_dataset_3x32x32(validation=False),
+      shape=SHAPE[-2:],
+  )
+
+validation_set: |
+  ImageCombinePatchIterableDataset(
+      rpg_tile_dataset_3x32x32(validation=True),
+      shape=SHAPE[-2:],
+  )
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+freeze_validation_set: True
+
+globals:
+  SHAPE: (3, 64, 64)
+  CODE_SIZE: 128
+
+model: |
+  #from torchvision.models import shufflenetv2  
+  #encoder = nn.Sequential(
+  #    shufflenetv2.shufflenet_v2_x2_0(weights=shufflenetv2.ShuffleNet_V2_X2_0_Weights.DEFAULT),
+  #    nn.Linear(1000, CODE_SIZE),
+  #)
+
+  #from experiments.ae.models.resae import ResConv2dDecoder
+  #decoder = ResConv2dDecoder(SHAPE, CODE_SIZE, kernel_size=5, groups=8)
+  
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(32, 48, 64), kernel_size=3, stride=[1, 2, 2])
+  #encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(128, 256, 256), kernel_size=3, stride=[1, 2, 2], groups=[1, 8, 8])
+  
+  #from experiments.ae.models.libdecoder import LibDecoder2d
+  #decoder = LibDecoder2d(SHAPE, CODE_SIZE, ${libs}, (16, 16))#, patch_filename="./datasets/pca-128x3x16x16.pt")
+
+  #decoder = DecoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(256, 256, 128), kernel_size=3, stride=[2, 2, 1], groups=[8, 8, 1])
+  #decoder = nn.Sequential(
+  #    decoder,
+  #    nn.ConvTranspose2d(3, 3, 2),
+  #)
+  #EncoderDecoder(encoder, decoder)
+  
+  from experiments.ae.models.patchae import PatchAutoencoder2d
+  
+  PatchAutoencoder2d(
+      SHAPE, CODE_SIZE,
+      lib_size=${libs},
+      patch_size=(16, 16),
+      mlp_blocks=${bl},
+      mlp_cells=${mlp},
+  )

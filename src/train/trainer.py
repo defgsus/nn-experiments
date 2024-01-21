@@ -582,6 +582,10 @@ class Trainer:
 
     def _train_step(self, input_batch: Tuple[torch.Tensor, ...]) -> Union[torch.Tensor, dict]:
         self.model.train(True)
+
+        if callable(getattr(self.model, "before_train_step", None)):
+            self.model.before_train_step(self)
+
         if hasattr(self.model, "train_step"):
             return self.model.train_step(input_batch)
         else:

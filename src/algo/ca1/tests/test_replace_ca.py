@@ -55,6 +55,7 @@ class TestReplaceCa1(TestBase):
             ca1.ca1_replace_step(
                 input=torch.Tensor([0, 0, 0, 1, 0, 0, 0]).to(torch.uint8),
                 lookup=ca1.Ca1ReplaceRules(num_states=2, num_neighbours=1).lookup(30),
+                num_states=2,
                 num_neighbours=1,
                 iterations=6,
                 wrap=False,
@@ -74,6 +75,7 @@ class TestReplaceCa1(TestBase):
             ca1.ca1_replace_step(
                 input=torch.Tensor([0, 0, 0, 1, 0, 0, 0]).to(torch.uint8),
                 lookup=ca1.Ca1ReplaceRules(num_states=2, num_neighbours=1).lookup(30),
+                num_states=2,
                 num_neighbours=1,
                 iterations=6,
                 wrap=True,
@@ -87,6 +89,7 @@ class TestReplaceCa1(TestBase):
             state = ca1.ca1_replace_step(
                 input=input,
                 lookup=ca1.Ca1ReplaceRules(num_states=2, num_neighbours=1).lookup(30),
+                num_states=2,
                 num_neighbours=1,
                 iterations=steps,
                 wrap=True,
@@ -122,8 +125,100 @@ class TestReplaceCa1(TestBase):
             ca1.ca1_replace_step(
                 input=torch.Tensor([[0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0]]).to(torch.uint8),
                 lookup=ca1.Ca1ReplaceRules(num_states=2, num_neighbours=1).lookup(30),
+                num_states=2,
                 num_neighbours=1,
                 iterations=6,
+            ),
+        )
+
+    def test_250_run_seq_input(self):
+        self.assertTensorEqual(
+            torch.Tensor([
+                [0, 0, 0, 1, 0, 0, 0],
+                [0, 1, 0, 1, 0, 0, 0],
+                [0, 1, 0, 1, 0, 1, 0],
+                [0, 1, 0, 1, 0, 1, 0],
+                [0, 1, 0, 1, 0, 1, 0],
+                [0, 1, 0, 1, 0, 1, 0],
+                [0, 1, 0, 1, 0, 1, 0],
+            ]).to(torch.uint8),
+            ca1.ca1_replace_step(
+                input=torch.Tensor([0, 0, 0, 1, 0, 0, 0]).to(torch.uint8),
+                lookup=ca1.Ca1ReplaceRules(num_states=2, num_neighbours=1).lookup(4),
+                num_neighbours=1,
+                num_states=2,
+                iterations=6,
+                wrap=False,
+                seq_input=torch.Tensor([
+                    [0, 1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 1, 0],
+                ]).to(torch.uint8)
+            ),
+        )
+        self.assertTensorEqual(
+            torch.Tensor([
+                [0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0],
+                [0, 1, 0, 1, 0, 0, 0],
+                [0, 1, 0, 1, 0, 0, 0],
+                [0, 1, 0, 1, 0, 1, 0],
+                [0, 1, 0, 1, 0, 1, 0],
+            ]).to(torch.uint8),
+            ca1.ca1_replace_step(
+                input=torch.Tensor([0, 0, 0, 1, 0, 0, 0]).to(torch.uint8),
+                lookup=ca1.Ca1ReplaceRules(num_states=2, num_neighbours=1).lookup(4),
+                num_neighbours=1,
+                num_states=2,
+                iterations=6,
+                wrap=False,
+                seq_input=torch.Tensor([
+                    [0, 0, 0, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 1, 0],
+                ]).to(torch.uint8),
+                seq_input_stride=2,
+            ),
+        )
+
+    def test_260_run_seq_input_batched(self):
+        self.assertTensorEqual(
+            torch.Tensor([
+                [
+                    [0, 0, 0, 1, 0, 0, 0],
+                    [0, 1, 0, 1, 0, 0, 0],
+                    [0, 1, 0, 1, 0, 1, 0],
+                    [0, 1, 0, 1, 0, 1, 0],
+                    [0, 1, 0, 1, 0, 1, 0],
+                    [0, 1, 0, 1, 0, 1, 0],
+                    [0, 1, 0, 1, 0, 1, 0],
+                ],
+                [
+                    [0, 0, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 1, 0, 1],
+                    [0, 0, 1, 0, 1, 0, 1],
+                    [0, 0, 1, 0, 1, 0, 1],
+                    [0, 0, 1, 0, 1, 0, 1],
+                    [0, 0, 1, 0, 1, 0, 1],
+                    [0, 0, 1, 0, 1, 0, 1],
+                ]
+            ]).to(torch.uint8),
+            ca1.ca1_replace_step(
+                input=torch.Tensor([[0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0]]).to(torch.uint8),
+                lookup=ca1.Ca1ReplaceRules(num_states=2, num_neighbours=1).lookup(4),
+                num_states=2,
+                num_neighbours=1,
+                iterations=6,
+                seq_input=torch.Tensor([
+                    [
+                        [0, 1, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 1, 0],
+                    ],
+                    [
+                        [0, 0, 0, 0, 0, 0, 1],
+                        [0, 0, 1, 0, 0, 0, 0],
+                    ]
+                ]).to(torch.uint8),
             ),
         )
 
@@ -136,6 +231,7 @@ class TestReplaceCa1(TestBase):
                             ca1.ca1_replace_step(
                                 input=torch.linspace(0, input_size - 1, input_size, dtype=torch.uint8) % num_states,
                                 lookup=ca1.Ca1ReplaceRules(num_states=num_states, num_neighbours=num_neighbours).lookup(30),
+                                num_states=num_states,
                                 num_neighbours=num_neighbours,
                                 iterations=10,
                                 wrap=wrap,

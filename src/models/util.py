@@ -131,7 +131,7 @@ def activation_to_callable(
     if isinstance(activation, str):
         s = activation.lower()
         # catch `torch.tanh` before `nn.tanh`
-        for module in (torch, torch.nn):
+        for module in (torch, F, torch.nn):
             for key, value in vars(module).items():
                 if key.lower() == s and callable(value):
                     try:

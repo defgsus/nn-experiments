@@ -68,3 +68,19 @@ def batch_call(
             progress.update(batch_data.shape[0])
 
         return torch.concat(results)
+
+
+def batch_call_iterable(
+        func: Callable[[torch.Tensor], torch.Tensor],
+        data: Iterable[torch.Tensor],
+        batch_size: int = 64,
+        verbose: bool = False,
+):
+    outputs = []
+    with tqdm(disable=not verbose) as progress:
+        for batch in iter_batches(data, batch_size):
+            output_batch = func(batch)
+            outputs.append(output_batch)
+            progress.update(output_batch.shape[0])
+
+    return torch.concat(outputs)

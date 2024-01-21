@@ -55,8 +55,8 @@ class ImageManifoldDecoder(nn.Module):
             pos_embedding_freqs: Iterable[float] = (7, 17),
             batch_norm: bool = True,
             default_shape: Optional[Tuple[int, int]] = None,
-            activation: Union[str, Callable, nn.Module] = "gelu",
-            activation_out: Union[str, Callable, nn.Module] = "sigmoid",
+            activation: Union[None, str, Callable, nn.Module] = "gelu",
+            activation_out: Union[None, str, Callable, nn.Module] = "sigmoid",
             cross_attention: bool = False,
             cross_attention_heads: int = 4,
     ):
@@ -130,7 +130,8 @@ class ImageManifoldDecoder(nn.Module):
             for i, (concat, hs) in enumerate(zip(self.concat_residual, hidden_sizes))
         ])))
         self.pos_to_color.add_module("linear_out", nn.Linear(hidden_sizes[-1], num_output_channels))
-        self.pos_to_color.add_module("act_out", activation_to_module(activation_out))
+        if activation_out:
+            self.pos_to_color.add_module("act_out", activation_to_module(activation_out))
 
         self._cur_space = None
         self._cur_space_shape = None

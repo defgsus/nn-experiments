@@ -17,6 +17,10 @@ class Ca1ReplaceRules:
         self.num_neighbours = num_neighbours
         self.kernel_size = 1 + 2 * num_neighbours
         self.num_rules = num_states ** num_states ** self.kernel_size
+        self.strong_rules = [
+            18,  22,  30,  45,  60,  75,  86,  89, 101, 102, 105, 124,
+            126, 129, 135, 146, 149, 150, 153, 161, 182, 193, 195
+        ]
 
     def __len__(self):
         return self.num_rules
@@ -32,14 +36,25 @@ class Ca1ReplaceRules:
 def ca1_replace_step(
         input: torch.Tensor,
         lookup: torch.Tensor,
+        num_states: int,
         num_neighbours: int,
         iterations: int,
         wrap: bool = False,
+        seq_input: Optional[torch.Tensor] = None,
+        seq_input_mode: 'Literal["add", "xor", "replace"]' = "replace",
+        seq_input_stride: int = 1,
 ) -> torch.Tensor:
     if input.ndim not in (1, 2):
         raise ValueError(f"Expected input.ndim=1 or 2, got {input.shape}")
     if lookup.ndim != 1:
         raise ValueError(f"Expected lookup.ndim=1, got {lookup.shape}")
+    if seq_input is not None:
+        if seq_input.ndim not in (2, 3):
+            raise ValueError(f"Expected seq_input.ndim=1 or 2, got {seq_input.shape}")
+        if seq_input.shape[-1] != input.shape[-1]:
+            raise ValueError(f"Expected `seq_input.shape[-1]={input.shape[-1]}, got {seq_input.shape}`")
+        if seq_input.ndim == 2:
+            seq_input = seq_input.unsqueeze(0)
 
     width = input.shape[-1]
     n_size = 1 + 2 * num_neighbours             # size of neighbourhood
@@ -69,6 +84,12 @@ def ca1_replace_step(
         state = torch.index_select(lookup, 0, index.flatten(0)).view(batch_size, -1)
         state = state[:, :width]
 
+        if seq_input is not None:
+            if it % seq_input_stride == 0:
+                idx = it // seq_input_stride
+                if idx < seq_input.shape[-2]:
+                    _seq_input_to_state(state, seq_input[:, idx, :], seq_input_mode, num_states=num_states)
+
         history.append(state.unsqueeze(0))
 
     state = torch.concat(history)
@@ -77,6 +98,26 @@ def ca1_replace_step(
     else:
         state = state.permute(1, 0, 2).view(batch_size, -1, state.shape[-1])
     return state
+
+
+def _seq_input_to_state(
+        state: torch.Tensor,
+        seq_input: torch.Tensor,
+        seq_input_mode: 'Literal["add", "xor", "replace"]',
+        num_states: int,
+):
+    if seq_input_mode == "replace":
+        mask = seq_input > 0
+        state[..., mask] = seq_input[mask] % num_states
+
+    elif seq_input_mode == "xor":
+        state[..., :] = (state[..., :] ^ seq_input) % num_states
+
+    elif seq_input_mode == "add":
+        state[..., :] = (state[..., :] + seq_input) % num_states
+
+    else:
+        raise ValueError(f"Invalid `seq_input_mode` '{seq_input_mode}'")
 
 
 class CA1Replace(nn.Module):
@@ -128,6 +169,7 @@ class CA1Replace(nn.Module):
         state = ca1_replace_step(
             input=input,
             lookup=self.lookup,
+            num_states=self.num_states,
             num_neighbours=self.num_neighbours,
             iterations=iterations,
             wrap=wrap,

@@ -14,7 +14,8 @@ class Conv2dBlock(nn.Module):
             self,
             channels: Iterable[int],
             kernel_size: Union[int, Iterable[int]] = 5,
-            stride: int = 1,
+            stride: Union[int, Iterable[int]] = 1,
+            groups: Union[int, Iterable[int]] = 1,
             pool_kernel_size: int = 0,
             pool_type: str = "max",  # "max", "average"
             act_fn: Union[None, str, nn.Module] = None,
@@ -39,7 +40,20 @@ class Conv2dBlock(nn.Module):
             if len(self.kernel_size) != num_layers:
                 raise ValueError(f"Expected `kernel_size` to have {num_layers} elements, got {self.kernel_size}")
 
-        self.stride = stride
+        if isinstance(stride, int):
+            self.stride = [stride for _ in range(num_layers)]
+        else:
+            self.stride = list(stride)
+            if len(self.stride) != num_layers:
+                raise ValueError(f"Expected `stride` to have {num_layers} elements, got {self.stride}")
+
+        if isinstance(groups, int):
+            self.groups = [groups for _ in range(num_layers)]
+        else:
+            self.groups = list(groups)
+            if len(self.groups) != num_layers:
+                raise ValueError(f"Expected `groups` to have {num_layers} elements, got {self.groups}")
+
         self._bias = bias
         self._batch_norm = batch_norm
         self._space_to_depth = space_to_depth
@@ -54,8 +68,8 @@ class Conv2dBlock(nn.Module):
 
         in_channel_mult = 1
         out_channel_mult = 1
-        for i, (in_channels, out_channels, kernel_size) in enumerate(
-                zip(self.channels, self.channels[1:], self.kernel_size)
+        for i, (in_channels, out_channels, kernel_size, stride, groups) in enumerate(
+                zip(self.channels, self.channels[1:], self.kernel_size, self.stride, self.groups)
         ):
             is_last_layer = i == len(self.channels) - 2
 
@@ -71,6 +85,7 @@ class Conv2dBlock(nn.Module):
                     out_channels=out_channels * out_channel_mult,
                     kernel_size=kernel_size,
                     stride=stride,
+                    groups=groups,
                     bias=bias,
                     transpose=transpose,
                 )
@@ -137,7 +152,8 @@ class Conv2dBlock(nn.Module):
         return self.__class__(
             channels=list(reversed(self.channels)),
             kernel_size=list(reversed(self.kernel_size)),
-            stride=self.stride,
+            stride=list(reversed(self.stride)),
+            groups=list(reversed(self.groups)),
             pool_kernel_size=self._pool_kernel_size,
             pool_type=self._pool_type,
             act_fn=self._act_fn,
@@ -191,20 +207,25 @@ class Conv2dBlock(nn.Module):
             out_channels: int,
             kernel_size: int,
             stride: int = 1,
+            groups: int = 1,
             bias: bool = True,
             transpose: bool = False,
     ) -> nn.Module:
-        return (nn.ConvTranspose2d if transpose else nn.Conv2d)(
+        kwargs = dict(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=kernel_size,
             stride=stride,
             padding=0,
             dilation=1,
-            groups=1,
+            groups=groups,
             bias=bias,
             padding_mode="zeros",
         )
+        if transpose:
+            return nn.ConvTranspose2d(**kwargs, output_padding=stride-1)
+        else:
+            return nn.Conv2d(**kwargs)
 
     def weight_images(self, **kwargs):
         images = []

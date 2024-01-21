@@ -6,4 +6,5 @@ from .encoder2d_conv import EncoderConv2d
 from .encoder_rbm import BoltzmanEncoder2d
 from .number_embedding import SinusoidalNumberEmbedding
 from .resnet import resnet18_open
+from .stacked_sym_ae import StackedSymmetricAutoencoderConv2d
 from .vqvae import VQVAE

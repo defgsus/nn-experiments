@@ -20,7 +20,8 @@ class EncoderConv2d(Encoder2d):
             shape: Tuple[int, int, int],
             code_size: int,
             kernel_size: Union[int, Iterable[int]] = 3,
-            stride: int = 1,
+            stride: Union[int, Iterable[int]] = 1,
+            groups: int = 1,
             channels: Iterable[int] = (16, 32),
             act_fn: Union[None, str, nn.Module] = nn.ReLU(),
             space_to_depth: bool = False,
@@ -31,6 +32,7 @@ class EncoderConv2d(Encoder2d):
         self.channels = tuple(channels)
         self.kernel_size = kernel_size
         self.stride = stride
+        self.groups = groups
         # self.act_fn = act_fn
 
         channels = [self.shape[0], *self.channels]
@@ -39,6 +41,7 @@ class EncoderConv2d(Encoder2d):
             kernel_size=self.kernel_size,
             act_fn=act_fn,
             stride=self.stride,
+            groups=groups,
             space_to_depth=space_to_depth,
             dropout=dropout,
             batch_norm=batch_norm,

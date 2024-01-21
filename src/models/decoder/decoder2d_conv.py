@@ -21,6 +21,7 @@ class DecoderConv2d(nn.Module):
             code_size: int,
             kernel_size: Union[int, Iterable[int]] = 3,
             stride: int = 1,
+            groups: int = 1,
             channels: Iterable[int] = (16, 32),
             activation: Union[None, str, Callable, nn.Module, Type[nn.Module]] = "relu",
             activation_last_layer: Union[None, bool, str, Callable, nn.Module, Type[nn.Module]] = None,
@@ -30,23 +31,26 @@ class DecoderConv2d(nn.Module):
         self.channels = tuple(channels)
         self.kernel_size = kernel_size
         self.stride = stride
+        self.groups = groups
         self.shape = shape
         self.code_size = code_size
         act_fn = activation_to_module(activation)
         # self.act_fn = act_fn
 
         channels = [*self.channels, self.shape[0]]
-        self.convolution = Conv2dBlock(
+        convolution = Conv2dBlock(
             channels=channels,
             kernel_size=self.kernel_size,
             act_fn=act_fn,
             stride=self.stride,
+            groups=groups,
             transpose=True,
             act_last_layer=activation_last_layer,
             space_to_depth=space_to_depth,
         )
-        self.encoded_shape = self.convolution.get_input_shape(shape)
+        self.encoded_shape = convolution.get_input_shape(shape)
         self.linear = nn.Linear(self.code_size, math.prod(self.encoded_shape))
+        self.convolution = convolution
 
     @property
     def device(self):

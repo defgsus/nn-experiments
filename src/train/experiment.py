@@ -333,7 +333,7 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
     learnrate = kwargs.pop("learnrate")
     optimizer = kwargs.pop("optimizer")
     scheduler = kwargs.pop("scheduler", None)
-    num_workers = kwargs.pop("num_workers", None)
+    num_workers = kwargs.pop("num_workers", 1)
 
     if trainer_class is not None:
         trainer_class = get_class(trainer_class)
