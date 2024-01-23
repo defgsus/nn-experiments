@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<title>CHAT LM</title>
+<script type="text/javascript">
+
+    const websocket_url = "ws://__WEBSOCKET_URL__";
+    let chat_window = null;
+    let chat_window_owner = null;
+    let ws = null;
+
+    function post(who, text) {
+        console.log({who, text});
+        if (!chat_window || chat_window_owner !== who)
+            new_chat_window(who);
+        chat_window.innerText += text;
+        chat_window_owner = who;
+    }
+
+    function new_chat_window(who) {
+        const $elem = document.createElement("div");
+        $elem.classList.add("chat-window");
+        $elem.classList.add(`chat-window-${who}`);
+
+        document.querySelector(".prompt").insertAdjacentElement("beforebegin", $elem);
+        chat_window = $elem;
+    }
+
+    function hook_websocket() {
+        ws = new WebSocket(websocket_url);
+        ws.onopen = (event) => {
+        };
+        ws.onclose = (event) => {
+            hook_websocket();
+        };
+        ws.onerror = (event) => {
+        };
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.text)
+                post("ai", data.text)
+        };
+    }
+
+    function user_post(text) {
+        post("who", text);
+        ws.send(JSON.stringify({"prompt": text}));
+    }
+
+    function hook() {
+        const $input = document.querySelector(".prompt-input");
+        $input.addEventListener("keypress", (event) => {
+            if ((event.code === "Enter" || event.code === "Return") && event.ctrlKey)
+                user_post($input.value);
+        });
+        hook_websocket();
+    }
+
+    window.addEventListener("DOMContentLoaded", hook);
+
+</script>
+<style type="text/css">
+    body, textarea {
+        background: #272727;
+        color: #e8e8e8;
+        font-family: monospace;
+        font-size: 1rem;
+        padding: 0;
+    }
+    .page-content {
+        position: relative;
+        width: 100%;
+    }
+    .content {
+        position: relative;
+        max-width: 70%;
+        margin: 0 auto;
+        background: rgba(0, 0, 0, .3);
+    }
+    .prompt .info {
+        color: #aaa;
+    }
+    .prompt .prompt-input {
+        width: 100%;
+        border: 1px solid #aaa;
+        border-radius: .5rem;
+        padding: .5rem;
+    }
+    .prompt .prompt-input:focus-visible {
+        border-width: 2px;
+        outline: none;
+    }
+    .chat-window {
+        border: 1px solid #aaa;
+        border-radius: .5rem;
+        padding: .5rem;
+        white-space: pre-wrap;
+    }
+    .chat-window-ai {
+        background: #272767;
+    }
+    .chat-window-you {
+        background: #274727;
+    }
+</style>
+<body>
+
+<div class="page-content">
+    <div class="content">
+
+        <div class="prompt">
+            <div class="info">prompt: Ctrl+Enter to submit</div>
+            <textarea class="prompt-input"></textarea>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
