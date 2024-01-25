@@ -6,6 +6,7 @@ import threading
 import time
 import queue
 from pathlib import Path
+from typing import Callable
 
 import torch
 from IPython.terminal.prompts import Prompts
@@ -22,7 +23,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--model", type=str, nargs="?", default="blueapple8259/TinyStories-Alpaca",
+        "--model", type=str, nargs="?",
+        #default="blueapple8259/TinyStories-Alpaca",
+        default="microsoft/phi-1_5",
     )
     parser.add_argument(
         "--device", type=str, nargs="?", default="cpu",
@@ -64,21 +67,25 @@ class Chat:
         self.model = AutoModelForCausalLM.from_pretrained(model, trust_remote_code=True)
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name, trust_remote_code=True)
 
-
-class CustomTextStreamer(TextStreamer):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.text_content = []
-
-    def on_finalized_text(self, text: str, stream_end: bool = False):
-        self.text_content.append(text)
-        print(f"{CC.rgb(.6, .8, 1.)}{text}{CC.Off}", flush=True, end="" if not stream_end else None)
+    def iter_response(self, prompt: str):
+        input_ids = self.tokenizer.encode(prompt, return_tensors="pt")
+        while True:
+            output_ids = self.model.generate(
+                input_ids,
+                max_length=input_ids.shape[-1] + 10,
+                num_beams=self.num_beams,
+                temperature=self.temperature,
+                do_sample=self.temperature != 1,
+            )
+            output_ids = output_ids[:, input_ids.shape[-1]:]
+            input_ids = torch.concat([input_ids, output_ids], dim=-1)
+            output_text = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
+            yield output_text
 
 
 class FakeChat:
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         print("loading FakeChat...")
         time.sleep(3)
         print("FakeChat loaded")
@@ -92,10 +99,17 @@ class FakeChat:
 
 class ChatWorker:
 
-    def __init__(self):
+    def __init__(
+            self,
+            model: str,
+            device: str,
+    ):
         self._thread = None
         self.chat = None
         self._queue = queue.Queue()
+        self.model = model
+        self.device = device
+        self._do_stop = False
 
     def __enter__(self):
         self.start()
@@ -128,13 +142,22 @@ class ChatWorker:
         self._thread.join()
         self._thread = None
 
-    def prompt(self, prompt: str):
-        self._queue.put({"prompt": prompt})
+    def prompt(self, prompt: str, callback: Callable):
+        self._queue.put({"prompt": prompt, "callback": callback})
+
+    def break_generation(self):
+        self._queue.put({"break": True})
 
     def _main_loop(self):
+        self.chat = Chat(model=self.model, device=self.device)
+        try:
+            self._main_loop_impl()
+        except KeyboardInterrupt:
+            pass
 
-        self.chat = FakeChat()
+    def _main_loop_impl(self):
         response_iterable = None
+        cur_callback = None
 
         while not self._do_stop:
             try:
@@ -142,30 +165,48 @@ class ChatWorker:
 
                 if action.get("prompt"):
                     response_iterable = iter(self.chat.iter_response(prompt=action["prompt"]))
+                    cur_callback = action["callback"]
+
+                if action.get("break"):
+                    if cur_callback:
+                        cur_callback({"message": "<break>"})
+                    response_iterable = None
+                    cur_callback = None
+
+                self._queue.task_done()
 
                 if action.get("stop"):
                     self._do_stop = True
+                    break
 
-                else:
-                    if response_iterable is not None:
-                        try:
-                            response = next(response_iterable)
-                            self._queue.put({"response": response})
-
-                        except StopIteration:
-                            response_iterable = None
-
-                self._queue.task_done()
             except queue.Empty:
                 pass
 
+            if response_iterable is not None:
+                try:
+                    response = next(response_iterable)
+                    cur_callback({"text": response})
+
+                except StopIteration:
+                    response_iterable = None
+                    cur_callback = None
+
 
 def run_server(
+        model: str,
+        device: str,
         host: str = "127.0.0.1",
         port: int = 8000,
 ):
-    ws_connection = None
-    chat_worker = ChatWorker()
+    state = {}
+
+    def _callback(text: dict):
+        if state.get("ioloop"):
+            state["ioloop"].call_soon_threadsafe(
+                lambda: state.get("ws") and state["ws"].write_message(json.dumps(text))
+            )
+
+    chat_worker = ChatWorker(model=model, device=device)
     chat_worker.start()
 
     class MainHandler(tornado.web.RequestHandler):
@@ -178,20 +219,24 @@ def run_server(
 
     class WebSocketHandler(tornado.websocket.WebSocketHandler):
         def open(self):
-            nonlocal ws_connection
-            ws_connection = self.ws_connection
+            state["ws"] = self.ws_connection
+            state["ioloop"] = asyncio.get_event_loop()
             print("WebSocket opened")
-            self.write_message(json.dumps({"text": "Hi there!\n"}))
+            self.write_message(json.dumps({"message": f"Connected to model {model}\n"}))
 
         def on_message(self, message):
             message = json.loads(message)
             print("INCOMING", message)
             if message.get("prompt"):
-                chat_worker.prompt(message["prompt"])
+                chat_worker.prompt(
+                    prompt=message["prompt"],
+                    callback=_callback,
+                )
+            if message.get("break"):
+                chat_worker.break_generation()
 
         def on_close(self):
-            nonlocal ws_connection
-            ws_connection = None
+            state.pop("ws", None)
             print("WebSocket closed")
 
     async def main():
@@ -211,5 +256,4 @@ def run_server(
 
 
 if __name__ == "__main__":
-    #chat(**parse_args())
-    run_server()
+    run_server(**parse_args())
