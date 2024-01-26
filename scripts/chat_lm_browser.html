@@ -8,13 +8,14 @@
     let chat_window = null;
     let chat_window_owner = null;
     let ws = null;
+    let current_status = {};
 
     function post(who, text) {
-        console.log({who, text});
+        // console.log({who, text});
         if (!chat_window || chat_window_owner !== who)
             new_chat_window(who);
 
-        const is_at_bottom = (window.innerHeight + Math.round(window.scrollY)) >= document.body.offsetHeight;
+        const is_at_bottom = (window.innerHeight + Math.round(window.scrollY)) >= document.body.offsetHeight / 1.05;
 
         chat_window.innerText += text;
         chat_window_owner = who;
@@ -33,12 +34,21 @@
         chat_window = $elem;
     }
 
+    function update_status(status) {
+        current_status = {...current_status, ...status};
+        // console.log(current_status, status)
+        let text = JSON.stringify(current_status, null, 2);
+        document.querySelector(".status").innerText = text.slice(2, -1);
+    }
+
     function hook_websocket() {
         ws = new WebSocket(websocket_url);
         ws.onopen = (event) => {
+            update_status({"connected": true});
         };
         ws.onclose = (event) => {
-            hook_websocket();
+            update_status({"connected": false});
+            setTimeout(hook_websocket, 1000);
         };
         ws.onerror = (event) => {
         };
@@ -48,6 +58,8 @@
                 post("ai", data.text)
             if (data.message)
                 post("message", data.message)
+            if (data.status)
+                update_status(data.status);
         };
     }
 
@@ -61,6 +73,7 @@
         $input.addEventListener("keypress", (event) => {
             if ((event.code === "Enter" || event.code === "Return") && event.ctrlKey) {
                 user_post($input.value);
+                window.scrollTo(0, document.body.scrollHeight);
             }
         });
         window.addEventListener("keydown", (event) => {
@@ -83,6 +96,7 @@
         font-family: monospace;
         font-size: 1rem;
         padding: 0;
+        margin: 0;
     }
     .page-content {
         position: relative;
@@ -92,6 +106,22 @@
         position: relative;
         max-width: 70%;
         margin: 0 auto;
+    }
+    .status-container {
+        position: sticky;
+        z-index: 100;
+        top: 0;
+    }
+    .status {
+        white-space: pre-wrap;
+        background: rgba(0, 0, 0, 0.5);
+        font-size: 85%;
+        padding: .3rem;
+        right: 0;
+        position: absolute;
+        display: inline-block;
+        color: #a0a0a0;
+        padding-right: 1rem;
     }
     .prompt .info {
         color: #aaa;
@@ -120,7 +150,7 @@
         background: #365036;
     }
     .chat-window-message {
-        background: #858585;
+        background: #4c4c4c;
         border: none;
         color: #000;
         padding: 0.2rem .5rem;
@@ -129,8 +159,8 @@
 <body>
 
 <div class="page-content">
+    <div class="status-container"><div class="status"></div></div>
     <div class="content">
-
         <div class="prompt">
             <div class="info">prompt: Ctrl+Enter to submit</div>
             <textarea class="prompt-input" spellcheck="true" rows="10"></textarea>

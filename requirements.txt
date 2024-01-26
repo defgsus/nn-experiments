@@ -1,5 +1,8 @@
 # the usual pytorch stack via https://pytorch.org/get-started/locally/
 
+accelerate
+bitsandbytes
+faiss-cpu
 git+https://github.com/openai/CLIP.git
 github-slugger
 jupyterlab

@@ -29,3 +29,29 @@ python exp.py experiments/the-name.yml run
 
 Create a github issue if you are interested in playing with it and
 need some documentation.
+
+
+### hf language model chat
+
+There's a small tool to put prompts into the 
+[huggingface language generators](https://huggingface.co/models?pipeline_tag=text-generation) 
+using a browser, which is much nicer than a command line interface. 
+
+```shell
+python scripts/chat_lm_browser.py [--model <hf-model-name>]
+# and visit http://127.0.0.1:8000
+```
+
+I'm currently having fun with 
+
+```shell
+python scripts/chat_lm_browser.py \
+    --model microsoft/phi-1_5
+    --device auto
+    --bits 8
+```
+
+`bits` reduces the precision of the weights
+([doc](https://huggingface.co/docs/transformers/llm_tutorial_optimization#1-lower-precision))
+which reduces memory requirements and let's you actually put some of the models
+on a normal GPU.

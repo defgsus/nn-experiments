@@ -16,7 +16,6 @@ from transformers.configuration_utils import PretrainedConfig
 import tornado, tornado.websocket, tornado.web
 
 from src.util import to_torch_device
-from src.console import CC
 
 
 def parse_args():
@@ -26,24 +25,30 @@ def parse_args():
         "--model", type=str, nargs="?",
         #default="blueapple8259/TinyStories-Alpaca",
         default="microsoft/phi-1_5",
+        help="One of the models listed on https://huggingface.co/models?pipeline_tag=text-generation",
     )
     parser.add_argument(
         "--device", type=str, nargs="?", default="cpu",
+        help="A torch device name like 'cpu', 'cuda' or 'auto'"
+    )
+    parser.add_argument(
+        "--bits", type=int, nargs="?", default=16,
+        choices=[4, 8, 16],
+        help="Weight precision reduction. See https://huggingface.co/docs/transformers/llm_tutorial_optimization#1-lower-precision"
     )
 
     return vars(parser.parse_args())
 
 
 class Chat:
-
+    """
+    Wrapper around huggingface AutoModelForCausalLM that features iterating the generated tokens.
+    """
     def __init__(
             self,
             model: str,
             device: str,
-
-            temperature: float = 1.,
-            max_length: int = 10_000,
-            num_beams: int = 1,
+            bits: int = 16,
     ):
         if model == "phi-2":
             model = "microsoft/phi-2"
@@ -51,9 +56,6 @@ class Chat:
             model = "microsoft/phi-1_5"
         self.model_name = model
         self.device = to_torch_device(device)
-        self.temperature = temperature
-        self.max_length = max_length
-        self.num_beams = num_beams
 
         self.tokenizer_name = self.model_name
         if "tinystories" in self.model_name.lower():
@@ -64,27 +66,48 @@ class Chat:
 
         torch.set_default_device(device)
 
-        self.model = AutoModelForCausalLM.from_pretrained(model, trust_remote_code=True)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model,
+            trust_remote_code=True,
+            load_in_8bit=bits==8,
+            load_in_4bit=bits==4,
+        )
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name, trust_remote_code=True)
 
     def iter_response(self, prompt: str):
+        # check example code at https://huggingface.co/docs/transformers/llm_tutorial_optimization#1-lower-precision
+        next_id = self.tokenizer.encode(prompt, return_tensors="pt")
+        past_key_values = None
+        with torch.no_grad():
+            while True:
+                next_logits, past_key_values = self.model(
+                    next_id, use_cache=True, past_key_values=past_key_values,
+                ).to_tuple()
+                next_logits = next_logits[:, -1:]
+
+                next_id = next_logits.argmax(dim=-1)
+
+                if next_id == self.tokenizer.eos_token_id:
+                    break
+
+                yield self.tokenizer.decode(next_id.item())
+
+    # using model.generate() which is not really interactive..
+    def iter_response_DEV(self, prompt: str):
         input_ids = self.tokenizer.encode(prompt, return_tensors="pt")
         while True:
             output_ids = self.model.generate(
                 input_ids,
                 max_length=input_ids.shape[-1] + 10,
-                num_beams=self.num_beams,
-                temperature=self.temperature,
-                do_sample=self.temperature != 1,
             )
             output_ids = output_ids[:, input_ids.shape[-1]:]
             input_ids = torch.concat([input_ids, output_ids], dim=-1)
-            output_text = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
-            yield output_text
+            for id in output_ids[0]:
+                yield self.tokenizer.decode(id, skip_special_tokens=True)
 
 
 class FakeChat:
-
+    """Just for testing the ChatWorker"""
     def __init__(self, **kwargs):
         print("loading FakeChat...")
         time.sleep(3)
@@ -98,18 +121,21 @@ class FakeChat:
 
 
 class ChatWorker:
-
+    """
+    Worker thread with chat model and simple queue.
+    """
     def __init__(
             self,
-            model: str,
-            device: str,
+            **kwargs,
     ):
         self._thread = None
         self.chat = None
         self._queue = queue.Queue()
-        self.model = model
-        self.device = device
+        self.kwargs = kwargs
         self._do_stop = False
+        self._last_token_time = None
+        self._token_count = 0
+        self._avg_tokens_per_sec = 0.
 
     def __enter__(self):
         self.start()
@@ -143,13 +169,19 @@ class ChatWorker:
         self._thread = None
 
     def prompt(self, prompt: str, callback: Callable):
+        """
+        Put prompt to LM and call `callback` for each generated token.
+        """
         self._queue.put({"prompt": prompt, "callback": callback})
 
     def break_generation(self):
+        """
+        Stop text completion and forget last callback
+        """
         self._queue.put({"break": True})
 
     def _main_loop(self):
-        self.chat = Chat(model=self.model, device=self.device)
+        self.chat = Chat(**self.kwargs)
         try:
             self._main_loop_impl()
         except KeyboardInterrupt:
@@ -161,7 +193,7 @@ class ChatWorker:
 
         while not self._do_stop:
             try:
-                action = self._queue.get(timeout=.01)
+                action = self._queue.get(timeout=1./1000.)
 
                 if action.get("prompt"):
                     response_iterable = iter(self.chat.iter_response(prompt=action["prompt"]))
@@ -187,28 +219,44 @@ class ChatWorker:
                     response = next(response_iterable)
                     cur_callback({"text": response})
 
+                    cur_time = time.time()
+
+                    self._token_count += 1
+                    if self._last_token_time is None:
+                        self._last_token_time = cur_time
+
+                    time_passed = cur_time - self._last_token_time
+                    if time_passed >= 1.:
+                        tokens_per_sec = self._token_count / time_passed
+                        self._avg_tokens_per_sec += .5 * (tokens_per_sec - self._avg_tokens_per_sec)
+                        cur_callback({"status": {"tokens_per_sec": round(self._avg_tokens_per_sec, 2)}})
+                        self._last_token_time = cur_time
+                        self._token_count = 0
+
                 except StopIteration:
                     response_iterable = None
                     cur_callback = None
 
 
 def run_server(
-        model: str,
-        device: str,
         host: str = "127.0.0.1",
         port: int = 8000,
+        **kwargs,
 ):
     state = {}
+    kwargs["device"] = to_torch_device(kwargs["device"])
 
-    def _callback(text: dict):
+    # callback result from chat-worker is sent to websocket via the ioloop thread
+    def _callback(data: dict):
         if state.get("ioloop"):
             state["ioloop"].call_soon_threadsafe(
-                lambda: state.get("ws") and state["ws"].write_message(json.dumps(text))
+                lambda: state.get("ws") and state["ws"].write_message(json.dumps(data))
             )
 
-    chat_worker = ChatWorker(model=model, device=device)
+    chat_worker = ChatWorker(**kwargs)
     chat_worker.start()
 
+    # deliver the html/js page
     class MainHandler(tornado.web.RequestHandler):
         def get(self):
             self.write(
@@ -222,7 +270,7 @@ def run_server(
             state["ws"] = self.ws_connection
             state["ioloop"] = asyncio.get_event_loop()
             print("WebSocket opened")
-            self.write_message(json.dumps({"message": f"Connected to model {model}\n"}))
+            self.write_message(json.dumps({"message": f"Connected to model {kwargs['model']} on {kwargs['device']}\n"}))
 
         def on_message(self, message):
             message = json.loads(message)
