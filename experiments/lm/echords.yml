@@ -1,0 +1,28 @@
+experiment_name: lm/echords-05-ce
+
+trainer: experiments.lm.trainer_ar.TrainAutoregressiveLM
+
+train_set: |
+  EChordsIterableDataset()
+
+#validation_set: |
+#  EChordsIterableDataset()
+
+batch_size: 1
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: cross_entropy
+max_inputs: 1_000_000
+num_inputs_between_checkpoints: 2_000
+num_train_loss_steps: 20
+max_context_length: 512
+
+model: |
+  from transformers import AutoModelForCausalLM
+  
+  AutoModelForCausalLM.from_pretrained(
+      "blueapple8259/TinyStories-Alpaca",
+      trust_remote_code=True,
+      # load_in_8bit=True,
+  )

@@ -6,7 +6,7 @@ import threading
 import time
 import queue
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
 import torch
 from IPython.terminal.prompts import Prompts
@@ -36,6 +36,10 @@ def parse_args():
         choices=[4, 8, 16],
         help="Weight precision reduction. See https://huggingface.co/docs/transformers/llm_tutorial_optimization#1-lower-precision"
     )
+    parser.add_argument(
+        "--checkpoint", type=str, nargs="?", default=None,
+        help="Load a checkpoint from exp.py training"
+    )
 
     return vars(parser.parse_args())
 
@@ -49,6 +53,7 @@ class Chat:
             model: str,
             device: str,
             bits: int = 16,
+            checkpoint: Optional[str] = None,
     ):
         if model == "phi-2":
             model = "microsoft/phi-2"
@@ -66,6 +71,7 @@ class Chat:
 
         torch.set_default_device(device)
 
+        print(f"loading model {model}")
         self.model = AutoModelForCausalLM.from_pretrained(
             model,
             trust_remote_code=True,
@@ -73,6 +79,11 @@ class Chat:
             load_in_4bit=bits==4,
         )
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name, trust_remote_code=True)
+
+        if checkpoint:
+            print(f"loading {checkpoint}")
+            checkpoint = torch.load(checkpoint)
+            self.model.load_state_dict(checkpoint["state_dict"])
 
     def iter_response(self, prompt: str):
         # check example code at https://huggingface.co/docs/transformers/llm_tutorial_optimization#1-lower-precision

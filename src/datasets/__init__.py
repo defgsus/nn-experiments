@@ -8,6 +8,7 @@ from .ca import TotalCADataset
 from .classlogits import ClassLogitsDataset
 from .contrastive import ContrastiveIterableDataset
 from .contrastive_image import ContrastiveImageDataset
+from .echords import EChordsIterableDataset
 from .generative import (
     Kali2dDataset, Kali2dFilteredIterableDataset
 )

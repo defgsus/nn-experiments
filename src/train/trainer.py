@@ -93,7 +93,11 @@ class Trainer:
         self._loss_steps = 0
         self.last_validation_loss: Optional[float] = None
 
-        self.model = self.model.to(self.device)
+        try:
+            self.model = self.model.to(self.device)
+        except ValueError as e:
+            if "8-bit" not in str(e):
+                raise
 
         if reset:
             if self.tensorboard_path.exists():
@@ -282,6 +286,14 @@ class Trainer:
                         for i in input_batch
                     ]
 
+                    if isinstance(input_batch[0], torch.Tensor):
+                        input_batch_size = input_batch[0].shape[0]
+                    elif isinstance(input_batch[0], dict):
+                        v = input_batch[0][next(iter(input_batch[0].keys()))]
+                        input_batch_size = len(v)
+                    else:
+                        raise TypeError(f"Can't determine input format from type '{type(input_batch[0]).__name__}'")
+
                     if self.training_noise > 0.:
                         with torch.no_grad():
                             input_batch[0] = input_batch[0] + self.training_noise * torch.randn_like(input_batch[0])
@@ -293,7 +305,7 @@ class Trainer:
                     if not isinstance(loss_result, dict):
                         loss_result = {"loss": loss_result}
 
-                    progress.update(input_batch[0].shape[0])
+                    progress.update(input_batch_size)
 
                     self.model.zero_grad()
                     loss_result["loss"].backward()
@@ -319,13 +331,13 @@ class Trainer:
                             self._loss_history.append({f"learnrate_{i+1}_{type(sched.optimizer).__name__}": lr})
 
                     self.num_batch_steps += 1
-                    self.num_input_steps += input_batch[0].shape[0]
+                    self.num_input_steps += input_batch_size
 
                     self._loss_history.append({
                         key: float(value)
                         for key, value in loss_result.items()
                     })
-                    self._loss_steps += input_batch[0].shape[0]
+                    self._loss_steps += input_batch_size
                     if self._loss_steps >= self.num_train_loss_steps:
                         losses = {}
                         for entry in self._loss_history:
