@@ -5,6 +5,7 @@ import torchvision.transforms as VT
 import clip
 
 from src.util.image import set_image_channels, image_resize_crop
+from src.util.embedding import normalize_embedding
 
 
 class ClipSingleton:
@@ -43,6 +44,7 @@ class ClipSingleton:
             device: str = "auto",
             interpolation: VT.InterpolationMode = VT.InterpolationMode.NEAREST,
             requires_grad: bool = False,
+            normalize: bool = False,
     ):
         model, preproc = cls.get(model, device)
 
@@ -67,9 +69,14 @@ class ClipSingleton:
 
         if requires_grad:
             feature_batch = model.encode_image(image_batch.to(model_device))
+            if normalize:
+                feature_batch = normalize_embedding(feature_batch)
+
         else:
             with torch.no_grad():
                 feature_batch = model.encode_image(image_batch.to(model_device))
+                if normalize:
+                    feature_batch = normalize_embedding(feature_batch)
 
         return feature_batch.to(device).to(image_batch.dtype)
 
@@ -81,16 +88,23 @@ class ClipSingleton:
             model: Optional[str] = None,
             device: str = "auto",
             requires_grad: bool = False,
+            normalize: bool = False,
     ):
         model, preproc = cls.get(model, device)
 
         tokens = clip.tokenize(text, truncate=truncate).to(cls._get_model_device(model))
 
         if requires_grad:
-            return model.encode_text(tokens)
+            embedding = model.encode_text(tokens)
+            if normalize:
+                embedding = normalize_embedding(embedding)
+            return embedding
         else:
             with torch.no_grad():
-                return model.encode_text(tokens)
+                embedding = model.encode_text(tokens)
+                if normalize:
+                    embedding = normalize_embedding(embedding)
+                return embedding
 
     @classmethod
     def _get_model_device(cls, model: torch.nn.Module) -> torch.device:

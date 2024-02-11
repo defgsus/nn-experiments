@@ -1,0 +1,32 @@
+experiment_name: ae/pixart-03-ratio4
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  ImagePatchDataset(SHAPE, "~/prog/python/github/pixelart-dataset/datasets/pixelart-overlay-4x32x32-317x317.png")
+
+validation_set: |
+  ImagePatchDataset(SHAPE, "~/prog/python/github/pixelart-dataset/datasets/pixelart-overlay-4x32x32-32x32.png")
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 3_000_000
+
+globals:
+  SHAPE: (3, 32, 32)
+  CODE_SIZE: 768
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(24, 32, 48), kernel_size=3)
+
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)

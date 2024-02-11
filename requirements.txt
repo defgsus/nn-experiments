@@ -1,4 +1,4 @@
-# the usual pytorch stack via https://pytorch.org/get-started/locally/
+# install the usual pytorch stack via https://pytorch.org/get-started/locally/
 
 accelerate
 bitsandbytes
@@ -9,6 +9,8 @@ jupyterlab
 marko
 pandas
 plotly
+PyQt5
+qdarkstyle
 scikit-learn
 tabulate
 tensorboard

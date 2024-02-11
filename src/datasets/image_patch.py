@@ -1,11 +1,47 @@
 from pathlib import Path
 from typing import Union, Generator, Optional, Iterable, Tuple, Callable
 
+import PIL.Image
 import torch
 from torch.utils.data import IterableDataset, Dataset
 import torchvision.transforms as VT
+import torchvision.transforms.functional as VF
 
-from src.util.image import iter_image_patches
+from src.util.image import iter_image_patches, set_image_channels
+
+
+class ImagePatchDataset(Dataset):
+
+    def __init__(
+            self,
+            shape: Tuple[int, int, int],
+            filename: Union[str, Path],
+    ):
+        self.shape = shape
+        self.filename = Path(filename).expanduser()
+        self._image = None
+        self._count = None
+
+    @property
+    def image(self):
+        if self._image is None:
+            self._image = set_image_channels(
+                VF.to_tensor(PIL.Image.open(str(self.filename))),
+                self.shape[0],
+            )
+            self._count = (self._image.shape[-1] // self.shape[-1]) * (self._image.shape[-2] // self.shape[-2])
+        return self._image
+
+    def __len__(self):
+        self.image
+        return self._count
+
+    def __getitem__(self, index: int):
+        img = self.image
+        sy, sx = self.shape[-2:]
+        w, h = img.shape[-1] // sx, img.shape[-2] // sy
+        x, y = index % w, index // w
+        return img[:, y * sy: (y + 1) * sy, x * sx: (x + 1) * sx]
 
 
 class ImagePatchIterableDataset(IterableDataset):
@@ -251,3 +287,5 @@ def make_image_patch_dataset(
         ds = IterableShuffle(ds, max_shuffle=patch_shuffle)
 
     return ds
+
+
