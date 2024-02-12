@@ -1,19 +1,11 @@
-import json
-import os
-from pathlib import Path
-from functools import partial
-from copy import deepcopy
-from typing import List, Dict, Hashable
+from typing import Dict, Hashable
 
-import torch
 from PyQt5.QtCore import *
-from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from ..clipig_worker import ClipigWorker
-from .image_widget import ImageWidget
-from .task_widget import TaskWidget
-from .preset_model import PresetModel
+from .task.task_widget import TaskWidget
+from .models.preset_model import PresetModel
 
 
 class MainWindow(QMainWindow):

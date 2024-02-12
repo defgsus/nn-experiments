@@ -1,15 +1,12 @@
 from PyQt5.QtCore import *
-from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-import PIL.Image
 import torch
 
-from .util import image_to_qimage
-from .image_widget import ImageWidget
-from ..clipig_worker import ClipigWorker
-from .task_config_widget import TaskConfigWidget
-from .preset_model import PresetModel
+from ..image_widget import ImageWidget
+from ...clipig_worker import ClipigWorker
+from ..task.task_config_widget import TaskConfigWidget
+from ..models.preset_model import PresetModel
 from .preset_widget import PresetWidget
 
 

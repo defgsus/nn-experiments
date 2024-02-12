@@ -24,6 +24,7 @@ class ParameterWidget(QWidget):
         self._widget = None
         self._widgets = []
 
+        self.setContentsMargins(0, 0, 0, 0)
         self._create_widgets()
 
     @property
@@ -102,6 +103,7 @@ class ParameterWidget(QWidget):
             raise ValueError(f"Unhandled type '{self.parameter_type} in parameter: {self.parameter}")
 
         lh = QHBoxLayout(self)
+        lh.setContentsMargins(0, 0, 0, 0)
         lh.addWidget(QLabel(self.parameter["name"], self))
         lh.addWidget(self._widget)
 
@@ -109,7 +111,9 @@ class ParameterWidget(QWidget):
         is_float = self.parameter_type.startswith("float")
 
         widget = QWidget(self)
+        widget.setContentsMargins(0, 0, 0, 0)
         lh = QHBoxLayout(widget)
+        lh.setContentsMargins(0, 0, 0, 0)
 
         min_values = self.parameter.get("min", [0] * count)
         max_values = self.parameter.get("max", [2**24] * count)

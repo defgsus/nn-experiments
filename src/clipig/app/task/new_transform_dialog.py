@@ -8,7 +8,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from ..task_parameters import get_task_parameters
+from src.clipig.task_parameters import get_task_parameters
 
 
 class NewTransformationDialog(QDialog):

@@ -1,6 +1,13 @@
 clip_model_name: ViT-B/32
 device: auto
 num_iterations: 100
+source_model:
+  name: pixels
+  params:
+    channels: RGB
+    size:
+    - 224
+    - 224
 targets:
 - batch_size: 1
   learnrate: 0.01
@@ -8,6 +15,7 @@ targets:
   transformations:
   - name: random_affine
     params:
+      active: true
       degrees_min_max:
       - -5.599999999999998
       - 5.0
@@ -23,4 +31,5 @@ targets:
       - 0.1
   - name: random_crop
     params:
+      active: true
       size: 224

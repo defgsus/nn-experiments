@@ -15,7 +15,7 @@ import yaml
 
 class PresetModel(QAbstractItemModel):
 
-    preset_directory: Path = Path(__file__).resolve().parent.parent / "presets"
+    preset_directory: Path = Path(__file__).resolve().parent.parent.parent / "presets"
 
     def __init__(self, parent):
         super().__init__(parent)

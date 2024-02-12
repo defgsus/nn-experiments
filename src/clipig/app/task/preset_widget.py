@@ -1,14 +1,9 @@
-import json
-from copy import deepcopy
-from functools import partial
-from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from PyQt5.QtCore import *
-from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from .preset_model import PresetModel
+from src.clipig.app.models.preset_model import PresetModel
 
 
 class PresetWidget(QWidget):

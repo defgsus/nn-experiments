@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from copy import deepcopy
+from typing import Optional
 
 import yaml
 
@@ -40,6 +41,11 @@ def get_complete_task_config(config: dict) -> dict:
         if param["name"] not in config:
             config[param["name"]] = param["default"]
 
+    config["source_model"] = get_complete_source_model_config(
+        config.get("source_model") or {},
+        parameters=parameters,
+    )
+
     if "targets" not in config:
         config["targets"] = []
 
@@ -51,18 +57,19 @@ def get_complete_task_config(config: dict) -> dict:
         if "transformations" not in target:
             target["transformations"] = []
 
-        for trans in target["transformations"]:
-            trans_params = parameters["transformations"][trans["name"]]
-            for param in trans_params:
-                if param["name"] not in trans["params"]:
-                    trans["params"][param["name"]] = param["default"]
+        target["transformations"] = [
+            get_complete_transformation_config(trans, parameters=parameters)
+            for trans in target["transformations"]
+        ]
 
     return config
 
 
-def get_complete_transformation_config(trans: dict) -> dict:
+def get_complete_transformation_config(trans: dict, parameters: Optional[dict] = None) -> dict:
+    if parameters is None:
+        parameters = get_task_parameters()
+
     trans = deepcopy(trans)
-    parameters = get_task_parameters()
 
     trans_params = parameters["transformations"][trans["name"]]
     for param in trans_params:
@@ -70,5 +77,24 @@ def get_complete_transformation_config(trans: dict) -> dict:
             trans["params"][param["name"]] = param["default"]
 
     return trans
+
+
+def get_complete_source_model_config(config: dict, parameters: Optional[dict] = None) -> dict:
+    if parameters is None:
+        parameters = get_task_parameters()
+
+    config = deepcopy(config)
+
+    if not config.get("name"):
+        config["name"] = "pixels"
+    if not config.get("params"):
+        config["params"] = {}
+
+    params = parameters["source_models"][config["name"]]
+    for param in params:
+        if param["name"] not in config["params"]:
+            config["params"][param["name"]] = param["default"]
+
+    return config
 
 
