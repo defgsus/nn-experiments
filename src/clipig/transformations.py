@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, Type, Tuple, List
 
 import torch
 import torchvision.transforms as VT
@@ -6,7 +6,7 @@ import torchvision.transforms.functional as VF
 
 
 # global lookup
-transformations: Dict[str, "TransformBase"] = dict()
+transformations: Dict[str, Type["TransformBase"]] = dict()
 
 
 def to_torch_interpolation(interpolation: str):
@@ -29,7 +29,13 @@ class TransformBase:
     NAME: Optional[str] = None
     IS_RANDOM = False
     IS_RESIZE = False
-    PARAMS: Optional[dict] = None
+    PARAMS: List[dict] = [
+        {
+            "name": "active",
+            "type": "bool",
+            "default": True,
+        }
+    ]
 
     def __init_subclass__(cls, **kwargs):
         assert cls.NAME, f"Must specify {cls.__name__}.NAME"
@@ -51,10 +57,12 @@ class Scale(TransformBase):
     NAME = "scale"
     IS_RESIZE = True
     PARAMS = [
+        *TransformBase.PARAMS,
         {
             "name": "scale",
             "type": "float",
             "default": 2.,
+            "min": 0,
         },
         INTERPOLATION_PARAMETER,
     ]
@@ -83,6 +91,7 @@ class RandomCrop(TransformBase):
     IS_RESIZE = True
     IS_RANDOM = True
     PARAMS = [
+        *TransformBase.PARAMS,
         {
             "name": "size",
             "type": "int",
@@ -106,85 +115,80 @@ class RandomAffine(TransformBase):
     IS_RESIZE = True
     IS_RANDOM = True
     PARAMS = [
+        *TransformBase.PARAMS,
         {
-            "name": "degrees_min",
-            "type": "float",
-            "default": -5.,
-            "min": -360,
-            "max": 360,
+            "name": "degrees_min_max",
+            "type": "float2",
+            "default": [-5., 5.],
+            "min": [-360., -360],
+            "max": [360., 360.],
         },
         {
-            "name": "degrees_max",
-            "type": "float",
-            "default": 5.,
-            "min": -360,
-            "max": 360,
+            "name": "translate_xy",
+            "type": "float2",
+            "default": [0., 0.],
+            "min": [-2., -2.],
+            "max": [2., 2.],
         },
         {
-            "name": "translate_x",
-            "type": "float",
-            "default": 0.,
-            "min": -2.,
-            "max": 2.,
+            "name": "scale_min_max",
+            "type": "float2",
+            "default": [1., 1.],
+            "min": [0., 0.],
+            "max": [100., 100.],
         },
         {
-            "name": "translate_y",
-            "type": "float",
-            "default": 0.,
-            "min": -2.,
-            "max": 2.,
-        },
-        {
-            "name": "scale_min",
-            "type": "float",
-            "default": 1.,
-            "min": 0,
-            "max": 100.,
-        },
-        {
-            "name": "scale_max",
-            "type": "float",
-            "default": 1.,
-            "min": 0,
-            "max": 100.,
-        },
-        {
-            "name": "shear_min",
-            "type": "float",
-            "default": 0.,
-            "min": -360,
-            "max": 360.,
-        },
-        {
-            "name": "shear_max",
-            "type": "float",
-            "default": 0.,
-            "min": -360,
-            "max": 360.,
+            "name": "shear_min_max",
+            "type": "float2",
+            "default": [0., 0.],
+            "min": [-360., -360.],
+            "max": [360., 360.],
         },
         INTERPOLATION_PARAMETER
     ]
 
     def __init__(
             self,
-            degrees_min: float,
-            degrees_max: float,
-            translate_x: float,
-            translate_y: float,
-            scale_min: float,
-            scale_max: float,
-            shear_min: float,
-            shear_max: float,
+            degrees_min_max: Tuple[float, float],
+            translate_xy: Tuple[float, float],
+            scale_min_max: Tuple[float, float],
+            shear_min_max: Tuple[float, float],
             interpolation: str,
     ):
         super().__init__()
         self.transform = VT.RandomAffine(
-            degrees=(degrees_min, degrees_max),
-            translate=None if translate_x == 0 and translate_y == 0 else (translate_x, translate_y),
-            scale=None if scale_min == 1 and scale_max == 1 else (scale_min, scale_max),
-            shear=None if shear_min == 0 and shear_max == 0 else (shear_min, shear_max, shear_min, shear_max),
+            degrees=degrees_min_max,
+            translate=None if translate_xy == (0, 0) else translate_xy,
+            scale=None if scale_min_max == (1, 1) else scale_min_max,
+            shear=None if shear_min_max == (0, 0) else (*shear_min_max, *shear_min_max),
             interpolation=to_torch_interpolation(interpolation),
         )
 
     def __call__(self, image: torch.Tensor) -> torch.Tensor:
         return self.transform(image)
+
+
+class Repeat(TransformBase):
+    """
+    Repeat the image in x and y direction
+    """
+    NAME = "repeat"
+    IS_RESIZE = True
+    IS_RANDOM = True
+    PARAMS = [
+        *TransformBase.PARAMS,
+        {
+            "name": "repeat_xy",
+            "type": "int2",
+            "default": [2, 2],
+            "min": [1, 1],
+            "max": [100, 100],
+        },
+    ]
+
+    def __init__(self, repeat_xy: Tuple[int]):
+        super().__init__()
+        self.repeat_xy = repeat_xy
+
+    def __call__(self, image: torch.Tensor) -> torch.Tensor:
+        return image.repeat(1, self.repeat_xy[1], self.repeat_xy[0])

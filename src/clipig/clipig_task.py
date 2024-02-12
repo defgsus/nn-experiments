@@ -1,3 +1,5 @@
+import time
+from copy import deepcopy
 from typing import Tuple, Optional, Union, Iterable, Generator, List
 
 import torch
@@ -11,6 +13,7 @@ from ..util import to_torch_device
 from .source_models import PixelModel
 from .task_parameters import get_complete_task_config
 from . import transformations
+from src.util.image import set_image_channels, set_image_dtype
 
 
 class ClipigTask:
@@ -21,6 +24,8 @@ class ClipigTask:
     ):
         self.config = get_complete_task_config(config)
         self._original_config = config
+        self._pixel_yield_delay_sec = 1.
+        self._last_pixel_yield_time = 0
 
         self._source_model: Optional[nn.Module] = None
 
@@ -70,29 +75,40 @@ class ClipigTask:
             normalize=normalize,
         )
 
-    def create_source_model(self) -> Tuple[nn.Module, torch.optim.Optimizer]:
-        model = PixelModel().to(self.device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=.1)
+    def create_source_model(self) -> nn.Module:
+        # return PixelModel(shape=(3, 100, 100)).to(self.device)
 
-        return model, optimizer
+        from src.models.encoder import EncoderConv2d, EncoderDecoder
+        from src.models.transform import Reshape
+        import math
+        from pathlib import Path
 
-    def create_transforms(self):
-        return VT.Compose([
-            #VT.RandomErasing(),
-            #VT.Pad(30, padding_mode="reflect"),
-            #Debug("model"),
-            #RandomWangMap((8, 8), probability=1, overlap=0, num_colors=2),
-            #Debug("wangmap"),
-            VT.RandomAffine(
-                degrees=35.,
-                #scale=(1., 3.),
-                #scale=(.3, 1.),
-                #translate=(0, 4. / 64.),
-            ),
-            VT.RandomCrop((224, 224)),
-        ])
+        CODE_SIZE = 128
+        SHAPE = (3, 32, 32)
+        encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(24, 32, 48), kernel_size=3)
 
-    def create_targets(self) -> List[dict]:
+        encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+        decoder = nn.Sequential(
+            nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+            Reshape(encoded_shape),
+            encoder.convolution.create_transposed(act_last_layer=False),
+        )
+
+        autoencoder = EncoderDecoder(encoder, decoder)
+        autoencoder.load_state_dict(torch.load(
+            #Path(__file__).resolve().parent.parent.parent / "checkpoints/ae/pixart-03-ratio4/best.pt"
+            Path(__file__).resolve().parent.parent.parent / "checkpoints/ae/pixart-02/best.pt"
+        )["state_dict"])
+
+        from .source_models import AutoencoderModelHxW
+
+        return AutoencoderModelHxW(
+            autoencoder=autoencoder,
+            code_size=CODE_SIZE,
+            shape=(4, 4),
+        ).to(self.device)
+
+    def create_targets(self, source_model: nn.Module) -> List[dict]:
         targets = []
         for target_conf in self.config["targets"]:
 
@@ -105,17 +121,26 @@ class ClipigTask:
 
             transforms = []
             for trans_conf in target_conf["transformations"]:
-                klass = transformations.transformations[trans_conf["name"]]
-                try:
-                    trans = klass(**trans_conf["params"])
-                except TypeError as e:
-                    e.args = (*e.args, f"for class {klass}")
-                    raise
-                transforms.append(trans)
+                if trans_conf["params"]["active"]:
+                    klass = transformations.transformations[trans_conf["name"]]
+
+                    # remove extra parameters
+                    trans_params = deepcopy(trans_conf["params"])
+                    trans_params.pop("active")
+
+                    try:
+                        trans = klass(**trans_params)
+                    except TypeError as e:
+                        e.args = (*e.args, f"for class {klass}")
+                        raise
+                    transforms.append(trans)
+
+            optimizer = torch.optim.Adam(source_model.parameters(), lr=target_conf["learnrate"])
 
             targets.append({
                 **target_conf,
-                "transformations": VT.Compose(transforms),
+                "optimizer": optimizer,
+                "transformations": VT.Compose(transforms) if transforms else lambda x: x,
                 "target_embeddings": target_embeddings,
                 "target_dots": target_dots,
             })
@@ -125,48 +150,60 @@ class ClipigTask:
     def run(self) -> Generator[dict, None, None]:
         yield {"status": "initializing"}
 
-        source_model, optimizer = self.create_source_model()
+        source_model = self.create_source_model()
         ClipSingleton.get(self.clip_model_name, self.device_name)
 
         yield {"status": "running"}
 
-        targets = self.create_targets()
+        targets = self.create_targets(source_model)
 
+        self._last_pixel_yield_time = 0
         for it in range(self.num_iterations):
-            pixels = source_model().float()
 
-            loss_sum = None
+            loss_per_target = []
             for target in targets:
+                pixels = source_model().float()
                 transforms = target["transformations"]
 
                 pixel_batch = []
                 for i in range(target["batch_size"]):
-                    pixel_batch.append(self._to_clip_size(transforms(pixels)).unsqueeze(0))
+                    pixel_batch.append(self._to_clip_pixels(transforms(pixels)).unsqueeze(0))
                 pixel_batch = torch.concat(pixel_batch).half()
 
                 image_embeddings = self.clip_encode_image(pixel_batch, requires_grad=True)
-                # print(pixels.dtype, image_embeddings.dtype, target_embeddings.dtype)
 
                 dots = image_embeddings @ target["target_embeddings"].T
 
                 loss = F.l1_loss(dots, target["target_dots"])
 
-                if loss_sum is None:
-                    loss_sum = loss
-                else:
-                    loss_sum += loss
+                optimizer = target["optimizer"]
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-            optimizer.zero_grad()
-            loss_sum.backward()
-            optimizer.step()
+                loss_per_target.append(float(loss))
 
-            yield {
+            message = {
                 "iteration": int,
-                "loss": float(loss_sum),
-                "pixels": pixels,
+                "loss": sum(loss_per_target),
+                "loss_per_target": loss_per_target,
             }
+            cur_time = time.time()
+            if cur_time - self._last_pixel_yield_time > self._pixel_yield_delay_sec:
+                self._last_pixel_yield_time = cur_time
+                with torch.no_grad():
+                    message["pixels"] = source_model().detach()
 
-    def _to_clip_size(self, pixels: torch.Tensor):
+            yield message
+
+    def _to_clip_pixels(self, pixels: torch.Tensor):
         if pixels.shape[-2:] != (224, 224):
             pixels = VF.resize(pixels, (224, 224), VT.InterpolationMode.NEAREST, antialias=False)
+
+        if pixels.shape[0] != 3:
+            pixels = set_image_channels(pixels, 3)
+
+        if pixels.dtype != torch.float16:
+            pixels = set_image_dtype(pixels, torch.float16)
+
         return pixels

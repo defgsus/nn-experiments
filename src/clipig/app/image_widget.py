@@ -1,10 +1,10 @@
 from functools import partial
+from pathlib import Path
+from typing import Optional
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-
-import PIL.Image
 
 from .util import image_to_qimage
 
@@ -15,23 +15,30 @@ class ImageWidget(QWidget):
         super().__init__(*args, **kwargs)
 
         self._ignore_zoom_bar = False
+        self.image: Optional[QImage] = None
 
         self.setMinimumSize(200, 200)
-        #self.setFixedSize(200, 200)
 
-        self.image = None
+        self._create_widgets()
 
-        l = QVBoxLayout(self)
-        self.setLayout(l)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._context_menu)
+
+    def _create_widgets(self):
+        lv = QVBoxLayout(self)
+        self.setLayout(lv)
 
         self.scroll_area = QScrollArea(self)
-        l.addWidget(self.scroll_area)
+        lv.addWidget(self.scroll_area)
 
         self.canvas = ImageDisplayCanvas(self)
         self.scroll_area.setWidget(self.canvas)
 
+        self.info_label = QLabel(self)
+        lv.addWidget(self.info_label)
+
         lh = QHBoxLayout()
-        l.addLayout(lh)
+        lv.addLayout(lh)
 
         self.repeat_input = QSpinBox(self)
         lh.addWidget(self.repeat_input)
@@ -83,9 +90,33 @@ class ImageWidget(QWidget):
         self.image = image_to_qimage(image)
         self.canvas.set_image(self.image)
 
+        self.info_label.setText(
+            f"{self.image.width()}x{self.image.height()}"
+        )
+
     def _zoom_bar_changed(self, value):
         if not self._ignore_zoom_bar:
             self.set_zoom(value)
+
+    def _context_menu(self, pos: QPoint):
+        menu = QMenu()
+        if self.image is not None:
+            menu.addAction(self.tr("Save image as ..."), self.save_image_as)
+        menu.exec(self.mapToGlobal(pos))
+
+    def save_image_as(self):
+        if self.image is not None:
+            filename, _ = QFileDialog.getSaveFileName(
+                parent=self,
+                caption=self.tr("Save image"),
+                filter="*.png",
+            )
+            if filename:
+                filename = Path(filename)
+                if not filename.suffix:
+                    filename = filename.with_suffix(".png")
+
+                self.image.save(str(filename))
 
 
 class ImageDisplayCanvas(QWidget):

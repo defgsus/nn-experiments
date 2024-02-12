@@ -11,12 +11,17 @@ with (Path(__file__).resolve().parent / "task_parameters.yaml").open() as fp:
 
 def get_task_parameters():
     from . import transformations
+    from . import source_models
 
     parameters = deepcopy(_BASE_PARAMETERS)
 
     parameters["transformations"] = {}
     for klass in transformations.transformations.values():
         parameters["transformations"][klass.NAME] = deepcopy(klass.PARAMS)
+
+    parameters["source_models"] = {}
+    for klass in source_models.source_models.values():
+        parameters["source_models"][klass.NAME] = deepcopy(klass.PARAMS)
 
     # print(json.dumps(parameters, indent=2))
     return parameters

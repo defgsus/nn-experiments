@@ -60,7 +60,7 @@ class TaskWidget(QWidget):
         self.run_button = QPushButton(self)
         lv.addWidget(self.run_button)
         self.run_button.setCheckable(True)
-        self.run_button.setText(self.tr("run"))
+        self.run_button.setText(self.tr("&run"))
         self.run_button.clicked.connect(self._run_click)
 
         lv.addStretch(2)
@@ -76,15 +76,15 @@ class TaskWidget(QWidget):
 
     def _update_run_button(self):
         if self.run_button.isChecked():
-            self.run_button.setText(self.tr("stop"))
+            self.run_button.setText(self.tr("&stop"))
         else:
-            self.run_button.setText(self.tr("run"))
+            self.run_button.setText(self.tr("&run"))
 
     def slot_task_event(self, event: dict):
         if "status" in event:
             status = event["status"]
 
-            if status in ("finished", "stopped"):
+            if status in ("finished", "stopped", "crashed"):
                 self.run_button.setChecked(False)
             else:
                 self.run_button.setChecked(True)

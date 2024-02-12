@@ -1,4 +1,5 @@
 import queue
+import traceback
 from copy import deepcopy
 import threading
 from typing import Tuple, Optional, Dict, Hashable, Generator, List, Iterable
@@ -105,6 +106,7 @@ class ClipigWorker:
                         self._queue_out.put({"task": {"id": task_id, "status": "finished"}})
 
                     except Exception as e:
+                        print(f"task '{task_id}' crashed with: {type(e).__name__}: {e}\n{traceback.format_exc()}")
                         self._queue_out.put(
                             {"task": {"id": task_id, "status": "crashed", "exception": f"{type(e).__name__}: {e}"}}
                         )

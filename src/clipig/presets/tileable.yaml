@@ -1,0 +1,31 @@
+clip_model_name: ViT-B/32
+device: auto
+num_iterations: 1000
+targets:
+- batch_size: 2
+  learnrate: 0.001
+  prompt: rocky surface
+  transformations:
+  - name: repeat
+    params:
+      repeat_xy:
+      - 4
+      - 4
+  - name: random_affine
+    params:
+      degrees_min_max:
+      - -5.999999999999998
+      - 5.1
+      interpolation: bilinear
+      scale_min_max:
+      - 0.9
+      - 1.1
+      shear_min_max:
+      - 0.0
+      - 0.0
+      translate_xy:
+      - 0.0
+      - 0.0
+  - name: random_crop
+    params:
+      size: 224

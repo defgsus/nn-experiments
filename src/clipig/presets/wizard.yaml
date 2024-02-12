@@ -1,0 +1,26 @@
+clip_model_name: ViT-B/32
+device: auto
+num_iterations: 100
+targets:
+- batch_size: 5
+  learnrate: 0.0001
+  prompt: portrait of a wizard, pixelart style
+  transformations:
+  - name: random_affine
+    params:
+      degrees_min_max:
+      - -5.0
+      - 5.0
+      interpolation: bilinear
+      scale_min_max:
+      - 0.9
+      - 1.1
+      shear_min_max:
+      - 0.0
+      - 0.0
+      translate_xy:
+      - 0.1
+      - 0.1
+  - name: random_crop
+    params:
+      size: 224
