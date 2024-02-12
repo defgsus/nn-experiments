@@ -8,7 +8,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from src.clipig.task_parameters import get_task_parameters
+from ...parameters import get_clipig_task_parameters
 
 
 class NewTransformationDialog(QDialog):
@@ -16,7 +16,7 @@ class NewTransformationDialog(QDialog):
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle(self.tr("new transformation"))
-        self.default_parameters = get_task_parameters()
+        self.default_parameters = get_clipig_task_parameters()
 
         lv = QVBoxLayout(self)
 

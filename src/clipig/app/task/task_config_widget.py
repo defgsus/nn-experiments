@@ -4,7 +4,7 @@ from typing import List
 from PyQt5.QtWidgets import *
 
 from ..models.preset_model import PresetModel
-from ...task_parameters import get_task_parameters, get_complete_task_config
+from ...parameters import get_clipig_task_parameters, get_complete_clipig_task_config
 from ..parameter_widget import ParameterWidget
 from .transformations_widget import TransformationsWidget
 from .source_model_widget import SourceModelWidget
@@ -19,7 +19,7 @@ class TaskConfigWidget(QWidget):
         self._base_widgets: List[dict] = []
         self._target_widgets: List[dict] = []
 
-        self.default_parameters = get_task_parameters()
+        self.default_parameters = get_clipig_task_parameters()
 
         self._create_widgets()
         self.set_values({})
@@ -62,7 +62,7 @@ class TaskConfigWidget(QWidget):
         return deepcopy(values)
 
     def set_values(self, values: dict):
-        values = get_complete_task_config(values)
+        values = get_complete_clipig_task_config(values)
 
         for param in self._base_widgets:
             value = values[param["name"]]

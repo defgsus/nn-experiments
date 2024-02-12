@@ -77,6 +77,7 @@ class ParameterWidget(QWidget):
 
         elif self.parameter_type == "int":
             self._widget = QSpinBox(self)
+            self._widget.setLocale(QLocale("en"))
             self._widget.setRange(self.parameter.get("min", 0), self.parameter.get("max", 2 ** 24))
             self._widget.setSingleStep(self.parameter.get("step", 1))
             self._widget.valueChanged.connect(lambda v: self.signal_value_changed.emit(QVariant(v)))
@@ -123,6 +124,7 @@ class ParameterWidget(QWidget):
         spinboxes = []
         for i in range(count):
             spinbox = QDoubleSpinBox(self) if is_float else QSpinBox(self)
+            spinbox.setLocale(QLocale("en"))
             spinboxes.append(spinbox)
             lh.addWidget(spinbox)
 

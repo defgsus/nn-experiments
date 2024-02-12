@@ -6,13 +6,13 @@ from typing import Optional
 import yaml
 
 
-with (Path(__file__).resolve().parent / "task_parameters.yaml").open() as fp:
+with (Path(__file__).resolve().parent / "clipig_task_parameters.yaml").open() as fp:
     _BASE_PARAMETERS = yaml.safe_load(fp)
 
 
-def get_task_parameters():
-    from . import transformations
-    from . import source_models
+def get_clipig_task_parameters():
+    from .. import transformations
+    from .. import source_models
 
     parameters = deepcopy(_BASE_PARAMETERS)
 
@@ -28,20 +28,20 @@ def get_task_parameters():
     return parameters
 
 
-def get_complete_task_config(config: dict) -> dict:
+def get_complete_clipig_task_config(config: dict) -> dict:
     """
     Add all default values to the config dict.
 
     Returns new instance
     """
     config = deepcopy(config)
-    parameters = get_task_parameters()
+    parameters = get_clipig_task_parameters()
 
     for param in parameters["base"]:
         if param["name"] not in config:
             config[param["name"]] = param["default"]
 
-    config["source_model"] = get_complete_source_model_config(
+    config["source_model"] = get_complete_clipig_source_model_config(
         config.get("source_model") or {},
         parameters=parameters,
     )
@@ -58,16 +58,16 @@ def get_complete_task_config(config: dict) -> dict:
             target["transformations"] = []
 
         target["transformations"] = [
-            get_complete_transformation_config(trans, parameters=parameters)
+            get_complete_clipig_transformation_config(trans, parameters=parameters)
             for trans in target["transformations"]
         ]
 
     return config
 
 
-def get_complete_transformation_config(trans: dict, parameters: Optional[dict] = None) -> dict:
+def get_complete_clipig_transformation_config(trans: dict, parameters: Optional[dict] = None) -> dict:
     if parameters is None:
-        parameters = get_task_parameters()
+        parameters = get_clipig_task_parameters()
 
     trans = deepcopy(trans)
 
@@ -79,9 +79,9 @@ def get_complete_transformation_config(trans: dict, parameters: Optional[dict] =
     return trans
 
 
-def get_complete_source_model_config(config: dict, parameters: Optional[dict] = None) -> dict:
+def get_complete_clipig_source_model_config(config: dict, parameters: Optional[dict] = None) -> dict:
     if parameters is None:
-        parameters = get_task_parameters()
+        parameters = get_clipig_task_parameters()
 
     config = deepcopy(config)
 

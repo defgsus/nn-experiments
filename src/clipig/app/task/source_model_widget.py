@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import *
 
 from ..parameter_widget import ParameterWidget
 from ..models import SourceModelModel
-from ...task_parameters import get_complete_source_model_config
+from ...parameters import get_complete_clipig_source_model_config
 
 
 class SourceModelWidget(QFrame):
@@ -58,7 +58,7 @@ class SourceModelWidget(QFrame):
             self._param_widgets[param["name"]] = widget = ParameterWidget(param, self.param_widget)
             lv.addWidget(widget)
 
-        config = get_complete_source_model_config(config or {"name": model_name})
+        config = get_complete_clipig_source_model_config(config or {"name": model_name})
 
         for key, value in config["params"].items():
             self._param_widgets[key].set_value(value)

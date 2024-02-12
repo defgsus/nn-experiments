@@ -5,7 +5,9 @@ from typing import List, Dict
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
-from ...task_parameters import get_task_parameters, get_complete_task_config, get_complete_transformation_config
+from ...parameters import (
+    get_clipig_task_parameters, get_complete_clipig_task_config, get_complete_clipig_transformation_config
+)
 from ..parameter_widget import ParameterWidget
 from .new_transform_dialog import NewTransformationDialog
 
@@ -96,7 +98,7 @@ class TransformationsWidget(QWidget):
     def slot_add_transform(self):
         trans_name = NewTransformationDialog.get_transformation_name(self)
         if trans_name:
-            new_transform = get_complete_transformation_config({
+            new_transform = get_complete_clipig_transformation_config({
                 "name": trans_name,
                 "params": {},
             })
