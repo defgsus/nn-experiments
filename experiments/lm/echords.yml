@@ -1,4 +1,4 @@
-experiment_name: lm/echords-05-ce
+experiment_name: lm/echords-06-ce-lr0003
 
 trainer: experiments.lm.trainer_ar.TrainAutoregressiveLM
 

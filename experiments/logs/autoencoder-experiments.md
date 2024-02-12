@@ -7,11 +7,11 @@ Why the heck do i need to train a small network like this
 
 ```python
 model = VariationalAutoencoderConv(
-    shape=(3, 32, 32), channels=[16, 24, 32], kernel_size=5, 
+    shape=(3, 32, 32), channels=[16, 24, 32], kernel_size=5,
     latent_dims=128,
 )
 
-optimizer = Adam(model.parameters(), lr=.0001, weight_decay=0.000001)
+optimizer = Adam(model.default_parameters(), lr=.0001, weight_decay=0.000001)
 ```
 
 for 10 hours and it still does not reach the optimum?

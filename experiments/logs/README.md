@@ -20,6 +20,7 @@ and look at its parameters and results.
   - [:arrow_forward:](lm-gen.md#text-generation-with-microsoftphi-2) text generation with microsoft/phi-2
     - [:arrow_forward:](lm-gen.md#text-completion) text completion
     - [:arrow_forward:](lm-gen.md#code-completion) code completion
+  - [:arrow_forward:](lm-gen.md#microsoftphi-15) microsoft/phi-1.5
 
 
 - [manifold.md](manifold.md)

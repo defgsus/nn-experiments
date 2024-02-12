@@ -20,9 +20,9 @@ class ResNetOpen(torchvision.models.ResNet):
     def __init__(self, *args, **kwagrs):
         super().__init__(*args, **kwagrs)
 
-        for p in self.avgpool.parameters():
+        for p in self.avgpool.default_parameters():
             p.requires_grad = False
-        for p in self.fc.parameters():
+        for p in self.fc.default_parameters():
             p.requires_grad = False
 
     def _forward_impl(self, x: torch.Tensor) -> torch.Tensor:

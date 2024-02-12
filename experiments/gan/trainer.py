@@ -36,8 +36,8 @@ class TrainGAN(Trainer):
         self.logits_fake = [0, 1]
 
         self.optimizers = [
-            self.optimizers[0].__class__(self.model.generator.parameters(), **self.optimizers[0].defaults),
-            self.optimizers[0].__class__(self.model.discriminator.parameters(), **self.optimizers[0].defaults),
+            self.optimizers[0].__class__(self.model.generator.default_parameters(), **self.optimizers[0].defaults),
+            self.optimizers[0].__class__(self.model.discriminator.default_parameters(), **self.optimizers[0].defaults),
         ]
         if self.schedulers:
             self.schedulers = [
