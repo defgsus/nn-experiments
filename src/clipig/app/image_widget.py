@@ -1,3 +1,5 @@
+from functools import partial
+
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -11,6 +13,8 @@ class ImageWidget(QWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self._ignore_zoom_bar = False
 
         self.setMinimumSize(200, 200)
         #self.setFixedSize(200, 200)
@@ -43,13 +47,18 @@ class ImageWidget(QWidget):
         self.zoom_bar.setStatusTip(self.tr("zoom"))
         self.zoom_bar.setRange(1, 500)
         self.zoom_bar.setValue(self.zoom)
-        self.zoom_bar.valueChanged.connect(self.set_zoom)
+        self.zoom_bar.valueChanged.connect(self._zoom_bar_changed)
         self.zoom_bar.setToolTip(self.tr("zoom"))
 
-        b = QPushButton(self.tr("100%"))
-        b.setToolTip(self.tr("reset zoom"))
-        lh.addWidget(b)
-        b.clicked.connect(lambda: self.set_zoom(100))
+        for zoom in (25, 50, 100, 200, 300):
+            b = QPushButton(self.tr(f"{zoom}%"))
+            if zoom == 100:
+                font = b.font()
+                font.setBold(True)
+                b.setFont(font)
+            b.setToolTip(self.tr("set zoom to {zoom}%").format(zoom=zoom))
+            lh.addWidget(b)
+            b.clicked.connect(partial(self.set_zoom, zoom))
 
     @property
     def zoom(self):
@@ -61,6 +70,11 @@ class ImageWidget(QWidget):
 
     def set_zoom(self, z: int):
         self.canvas.set_zoom(z)
+        try:
+            self._ignore_zoom_bar = True
+            self.zoom_bar.setValue(z)
+        finally:
+            self._ignore_zoom_bar = False
 
     def set_repeat(self, r: int):
         self.canvas.set_repeat(r)
@@ -68,6 +82,10 @@ class ImageWidget(QWidget):
     def set_image(self, image):
         self.image = image_to_qimage(image)
         self.canvas.set_image(self.image)
+
+    def _zoom_bar_changed(self, value):
+        if not self._ignore_zoom_bar:
+            self.set_zoom(value)
 
 
 class ImageDisplayCanvas(QWidget):

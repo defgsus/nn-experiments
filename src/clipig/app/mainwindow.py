@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import *
 from ..clipig_worker import ClipigWorker
 from .image_widget import ImageWidget
 from .task_widget import TaskWidget
+from .preset_model import PresetModel
 
 
 class MainWindow(QMainWindow):
@@ -23,6 +24,7 @@ class MainWindow(QMainWindow):
         self.clipig = clipig
         self._task_map: Dict[Hashable, dict] = {}
         self._refresh_msec = 300
+        self.preset_model = PresetModel(self)
 
         self.setWindowTitle(self.tr("CLIPIG"))
         # self.setWindowFlag(Qt.WindowMinMaxButtonsHint, True)
@@ -68,7 +70,7 @@ class MainWindow(QMainWindow):
         self.close()
 
     def slot_new_task(self):
-        task_widget = TaskWidget(self, clipig=self.clipig)
+        task_widget = TaskWidget(self, clipig=self.clipig, preset_model=self.preset_model)
         task_widget.signal_run_task.connect(self.slot_run_task)
         task_widget.signal_stop_task.connect(self.slot_stop_task)
         self.tab_widget.addTab(task_widget, f"Task #{task_widget.task_id}")

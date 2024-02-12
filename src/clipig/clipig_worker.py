@@ -16,7 +16,9 @@ class ClipigWorker:
 
     def __init__(
             self,
+            verbose: bool = False,
     ):
+        self.verbose = verbose
         self._queue_in = queue.Queue()
         self._queue_out = queue.Queue()
         self._thread: Optional[threading.Thread] = None
@@ -60,7 +62,10 @@ class ClipigWorker:
     def events(self, blocking: bool = False) -> Generator[dict, None, None]:
         while True:
             try:
-                yield self._queue_out.get(block=blocking)
+                event = self._queue_out.get(block=blocking)
+                if self.verbose:
+                    print("EVENT:", event)
+                yield event
 
             except queue.Empty:
                 if not blocking:
@@ -90,11 +95,19 @@ class ClipigWorker:
                 for task_id, (task, iterable) in self._task_map.items():
                     try:
                         message = next(iterable)
-                        self._queue_out.put({"task": {"id": task_id, "message": message}})
+                        if list(message.keys()) == ["status"]:
+                            self._queue_out.put({"task": {"id": task_id, "status": message["status"]}})
+                        else:
+                            self._queue_out.put({"task": {"id": task_id, "message": message}})
                         next_task_map[task_id] = (task, iterable)
 
                     except StopIteration:
                         self._queue_out.put({"task": {"id": task_id, "status": "finished"}})
+
+                    except Exception as e:
+                        self._queue_out.put(
+                            {"task": {"id": task_id, "status": "crashed", "exception": f"{type(e).__name__}: {e}"}}
+                        )
 
                 self._task_map = next_task_map
 
@@ -108,7 +121,7 @@ class ClipigWorker:
         task = ClipigTask(config=config)
         self._task_map[task_id] = (task, iter(task.run()))
 
-        self._queue_out.put({"task": {"id": task_id, "status": "running"}})
+        self._queue_out.put({"task": {"id": task_id, "status": "requested"}})
 
     def _stop_task(self, task_id: Hashable):
         if task_id in self._task_map:

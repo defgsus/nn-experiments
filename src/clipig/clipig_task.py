@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Union, Iterable, Generator
+from typing import Tuple, Optional, Union, Iterable, Generator, List
 
 import torch
 import torch.nn as nn
@@ -9,6 +9,8 @@ import torchvision.transforms.functional as VF
 from ..models.clip import ClipSingleton
 from ..util import to_torch_device
 from .source_models import PixelModel
+from .task_parameters import get_complete_task_config
+from . import transformations
 
 
 class ClipigTask:
@@ -17,29 +19,26 @@ class ClipigTask:
             self,
             config: dict,
     ):
-        self.config = config
+        self.config = get_complete_task_config(config)
+        self._original_config = config
 
         self._source_model: Optional[nn.Module] = None
 
     @property
     def clip_model_name(self) -> str:
-        return self.config.get("clip_model_name") or "ViT-B/32"
+        return self.config["clip_model_name"]
 
     @property
     def device_name(self) -> str:
-        return self.config.get("device") or "auto"
+        return self.config["device"]
 
     @property
     def device(self) -> torch.device:
         return to_torch_device(self.device_name)
 
     @property
-    def batch_size(self) -> int:
-        return self.config.get("batch_size") or 1
-
-    @property
     def num_iterations(self) -> int:
-        return self.config.get("num_iterations") or 10
+        return self.config["num_iterations"]
 
     def clip_encode_text(
             self,
@@ -93,42 +92,77 @@ class ClipigTask:
             VT.RandomCrop((224, 224)),
         ])
 
-    def create_target_embeddings(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        target_embeddings = self.clip_encode_text("top-down RPG style pixelart game")
+    def create_targets(self) -> List[dict]:
+        targets = []
+        for target_conf in self.config["targets"]:
 
-        target_dots = torch.ones(self.batch_size, 1).half().to(self.device)
+            texts = [
+                target_conf["prompt"]
+            ]
 
-        return target_embeddings, target_dots
+            target_embeddings = self.clip_encode_text(texts)
+            target_dots = torch.ones(target_conf["batch_size"], len(texts)).half().to(self.device)
+
+            transforms = []
+            for trans_conf in target_conf["transformations"]:
+                klass = transformations.transformations[trans_conf["name"]]
+                try:
+                    trans = klass(**trans_conf["params"])
+                except TypeError as e:
+                    e.args = (*e.args, f"for class {klass}")
+                    raise
+                transforms.append(trans)
+
+            targets.append({
+                **target_conf,
+                "transformations": VT.Compose(transforms),
+                "target_embeddings": target_embeddings,
+                "target_dots": target_dots,
+            })
+
+        return targets
 
     def run(self) -> Generator[dict, None, None]:
+        yield {"status": "initializing"}
+
         source_model, optimizer = self.create_source_model()
+        ClipSingleton.get(self.clip_model_name, self.device_name)
 
-        transforms = self.create_transforms()
+        yield {"status": "running"}
 
-        target_embeddings, target_dots = self.create_target_embeddings()
+        targets = self.create_targets()
 
         for it in range(self.num_iterations):
-            pixel_batch = []
             pixels = source_model().float()
 
-            for i in range(self.batch_size):
-                pixel_batch.append(self._to_clip_size(transforms(pixels)).unsqueeze(0))
-            pixel_batch = torch.concat(pixel_batch).half()
+            loss_sum = None
+            for target in targets:
+                transforms = target["transformations"]
 
-            image_embeddings = self.clip_encode_image(pixel_batch, requires_grad=True)
-            # print(pixels.dtype, image_embeddings.dtype, target_embeddings.dtype)
+                pixel_batch = []
+                for i in range(target["batch_size"]):
+                    pixel_batch.append(self._to_clip_size(transforms(pixels)).unsqueeze(0))
+                pixel_batch = torch.concat(pixel_batch).half()
 
-            dots = image_embeddings @ target_embeddings.T
+                image_embeddings = self.clip_encode_image(pixel_batch, requires_grad=True)
+                # print(pixels.dtype, image_embeddings.dtype, target_embeddings.dtype)
 
-            loss = F.l1_loss(dots, target_dots)
+                dots = image_embeddings @ target["target_embeddings"].T
+
+                loss = F.l1_loss(dots, target["target_dots"])
+
+                if loss_sum is None:
+                    loss_sum = loss
+                else:
+                    loss_sum += loss
 
             optimizer.zero_grad()
-            loss.backward()
+            loss_sum.backward()
             optimizer.step()
 
             yield {
                 "iteration": int,
-                "loss": float(loss),
+                "loss": float(loss_sum),
                 "pixels": pixels,
             }
 

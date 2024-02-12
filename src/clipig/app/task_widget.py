@@ -9,6 +9,8 @@ from .util import image_to_qimage
 from .image_widget import ImageWidget
 from ..clipig_worker import ClipigWorker
 from .task_config_widget import TaskConfigWidget
+from .preset_model import PresetModel
+from .preset_widget import PresetWidget
 
 
 class TaskWidget(QWidget):
@@ -18,9 +20,10 @@ class TaskWidget(QWidget):
 
     _static_id_count = 0
 
-    def __init__(self, *args, clipig: ClipigWorker, **kwargs):
+    def __init__(self, *args, clipig: ClipigWorker, preset_model: PresetModel, **kwargs):
         super().__init__(*args, **kwargs)
         self.clipig = clipig
+        self.preset_model = preset_model
         self._source_image = None
 
         TaskWidget._static_id_count += 1
@@ -37,8 +40,22 @@ class TaskWidget(QWidget):
         lv = QVBoxLayout()
         lh.addLayout(lv)
 
-        self.config_widget = TaskConfigWidget(self)
-        lv.addWidget(self.config_widget)
+        self.preset_widget = PresetWidget(self, preset_model=self.preset_model)
+        lv.addWidget(self.preset_widget)
+
+        scroll = QScrollArea(self)
+        lv.addWidget(scroll, stretch=100)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setWidgetResizable(True)
+
+        self.config_widget = TaskConfigWidget(self, preset_model=self.preset_model)
+        scroll.setWidget(self.config_widget)
+        # lv.addWidget(self.config_widget)
+        self.config_widget.set_values(self.preset_model.default_config()["config"])
+
+        self.preset_widget.signal_preset_changed.connect(self.config_widget.set_values)
+        self.preset_widget.signal_save_preset.connect(self._save_preset)
 
         self.run_button = QPushButton(self)
         lv.addWidget(self.run_button)
@@ -81,3 +98,6 @@ class TaskWidget(QWidget):
                 pixels: torch.Tensor = message["pixels"]
 
                 self.image_widget.set_image(pixels)
+
+    def _save_preset(self, name: str):
+        self.preset_model.save_preset(name, self.config_widget.get_values())
