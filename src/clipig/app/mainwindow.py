@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import *
 from ..clipig_worker import ClipigWorker
 from .task.task_widget import TaskWidget
 from .models.preset_model import PresetModel
+from .images import LImageWidget
 
 
 class MainWindow(QMainWindow):
@@ -40,11 +41,7 @@ class MainWindow(QMainWindow):
         self.tab_widget = QTabWidget(self)
         lv.addWidget(self.tab_widget)
 
-        #image_widget = ImageWidget(self)
-        #image_widget.set_image(torch.rand(3, 128, 128))
-        #lh.addWidget(image_widget)
-        #task_widget = TaskWidget(self, clipig=self.clipig)
-        #lv.addWidget(task_widget)
+        self.tab_widget.addTab(LImageWidget(self), "LImage")
 
         # lv.addStretch()
 

@@ -11,6 +11,9 @@ import torch
 import torchvision.transforms.functional as VF
 
 
+AnyImage = Union[QImage, PIL.Image.Image, torch.Tensor]
+
+
 def qimage_to_pil(image: QImage) -> PIL.Image.Image:
     image = image.convertToFormat(QImage.Format_ARGB32)
     buffer = QBuffer()
@@ -72,7 +75,7 @@ def pil_to_torch(image: PIL.Image.Image) -> torch.Tensor:
     return VF.to_tensor(image)
 
 
-def image_to_qimage(image: Union[PIL.Image.Image, torch.Tensor]) -> QImage:
+def image_to_qimage(image: AnyImage) -> QImage:
     if isinstance(image, QImage):
         return image
     elif isinstance(image, PIL.Image.Image):

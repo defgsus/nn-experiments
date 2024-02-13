@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import *
 
 import torch
 
-from ..image_widget import ImageWidget
+from ..images import LImageWidget
 from ...clipig_worker import ClipigWorker
 from ..task.task_config_widget import TaskConfigWidget
 from ..models.preset_model import PresetModel
@@ -32,7 +32,7 @@ class TaskWidget(QWidget):
     def _create_widgets(self):
         lh = QHBoxLayout(self)
 
-        self.image_widget = ImageWidget(self)
+        self.image_widget = LImageWidget(self)
         lh.addWidget(self.image_widget)
 
         lv = QVBoxLayout()
@@ -95,7 +95,7 @@ class TaskWidget(QWidget):
             if message.get("pixels") is not None:
                 pixels: torch.Tensor = message["pixels"]
 
-                self.image_widget.set_image(pixels)
+                self.image_widget.set_image("<clipig>", pixels)
 
     def _save_preset(self, name: str):
         self.preset_model.save_preset(name, self.config_widget.get_values())
