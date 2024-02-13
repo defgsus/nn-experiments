@@ -19,6 +19,14 @@ base:
       - cpu
       - cuda
 
+  - name: initialize
+    type: select
+    default: random
+    choices:
+      - input
+      - random
+      - zero
+
 target:
   - name: prompt
     type: str

@@ -1,6 +1,6 @@
 from functools import partial
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Union
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -16,6 +16,9 @@ class ImageWidget(QWidget):
 
         self._ignore_zoom_bar = False
         self.image: Optional[QImage] = None
+
+        self._last_save_directory: Optional[str] = None
+        self._last_loaded_images: List[str] = []
 
         self.setMinimumSize(200, 200)
 
@@ -102,21 +105,55 @@ class ImageWidget(QWidget):
         menu = QMenu()
         if self.image is not None:
             menu.addAction(self.tr("Save image as ..."), self.save_image_as)
+
+        menu.addSeparator()
+        menu.addAction(self.tr("Load image ..."), self.load_image_dialog)
+        for filename in self._last_loaded_images:
+            menu.addAction(
+                self.tr("Reload {filename}").format(Path(filename).name),
+                partial(self.load_image, filename),
+            )
+
         menu.exec(self.mapToGlobal(pos))
 
     def save_image_as(self):
         if self.image is not None:
+
+            # copy the current image before opening dialog
+            image = self.image.copy()
+
             filename, _ = QFileDialog.getSaveFileName(
                 parent=self,
                 caption=self.tr("Save image"),
                 filter="*.png",
+                directory=self._last_save_directory,
             )
             if filename:
                 filename = Path(filename)
+                self._last_save_directory = str(filename.parent)
+
                 if not filename.suffix:
                     filename = filename.with_suffix(".png")
 
-                self.image.save(str(filename))
+                image.save(str(filename))
+
+    def load_image_dialog(self):
+        filename, _ = QFileDialog.getOpenFileName(
+            parent=self,
+            caption=self.tr("Load image"),
+            filter="*.png",
+        )
+        if filename:
+            self.load_image(filename)
+
+            if filename in self._last_loaded_images:
+                self._last_loaded_images.remove(filename)
+            self._last_loaded_images.insert(0, filename)
+            self._last_loaded_images = self._last_loaded_images[:4]
+
+    def load_image(self, filename: Union[str, Path]):
+        image = QImage(filename)
+        self.set_image(image)
 
 
 class ImageDisplayCanvas(QWidget):

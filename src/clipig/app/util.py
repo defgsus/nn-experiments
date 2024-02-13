@@ -31,7 +31,7 @@ def pil_to_qimage(image: PIL.Image.Image) -> QImage:
 
 def qimage_to_torch(image: QImage) -> torch.Tensor:
     """
-    Convert QImage to numpy array
+    Convert QImage to torch tensor
 
     The image is converted to ARGB32 format before conversion.
 
@@ -40,8 +40,8 @@ def qimage_to_torch(image: QImage) -> torch.Tensor:
     """
     image = image.convertToFormat(QImage.Format_ARGB32)
     data = image.bits().asarray(image.byteCount())
-    data = torch.Tensor(data, dtype=torch.float).reshape(image.height(), image.width(), 4) / 255
-    data = data.transpose(2, 0, 1)
+    data = torch.Tensor(data).reshape(image.height(), image.width(), 4) / 255
+    data = data.permute(2, 0, 1)
     return torch.concat([data[2:3, :, :], data[1:2, :, :], data[0:1, :, :], data[3:4, :, :]], dim=0)
 
 

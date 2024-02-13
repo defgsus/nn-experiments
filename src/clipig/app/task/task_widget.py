@@ -8,6 +8,7 @@ from ...clipig_worker import ClipigWorker
 from ..task.task_config_widget import TaskConfigWidget
 from ..models.preset_model import PresetModel
 from .preset_widget import PresetWidget
+from ..util import qimage_to_torch
 
 
 class TaskWidget(QWidget):
@@ -66,7 +67,7 @@ class TaskWidget(QWidget):
         # self._update_run_button()
 
         if self.run_button.isChecked():
-            config = self.config_widget.get_values()
+            config = self._get_run_config()
             self.signal_run_task.emit(self.task_id, config)
         else:
             self.signal_stop_task.emit(self.task_id)
@@ -98,3 +99,13 @@ class TaskWidget(QWidget):
 
     def _save_preset(self, name: str):
         self.preset_model.save_preset(name, self.config_widget.get_values())
+
+    def _get_run_config(self) -> dict:
+        config = self.config_widget.get_values()
+
+        if config.get("initialize") == "input":
+            if self.image_widget.image is not None:
+                config["input_image"] = qimage_to_torch(self.image_widget.image)
+
+        return config
+

@@ -27,21 +27,22 @@ class AutoencoderModelHxW(SourceModelBase):
         },
     ]
 
+    # note that `grid_size` and `overlap` are (x, y) tuples for UI convenience
     def __init__(
             self,
             autoencoder: nn.Module,
             autoencoder_shape: Tuple[int, int, int],
             code_size: int,
             grid_size: Tuple[int, int],
-            overlap: Tuple[int, int] = (8, 8),
+            overlap: Tuple[int, int] = (0, 0),
             std: float = .5,
     ):
         super().__init__()
         self.autoencoder = autoencoder
         self.autoencoder_shape = autoencoder_shape
         self.code_size = code_size
-        self.grid_size = grid_size
-        self.overlap = tuple(overlap)
+        self.grid_size = tuple(reversed(grid_size))
+        self.overlap = tuple(reversed(overlap))
         self.std = std
         self.code = nn.Parameter(torch.randn(math.prod(self.grid_size), code_size) * std)
 
@@ -79,6 +80,10 @@ class AutoencoderModelHxW(SourceModelBase):
         return output
 
     @torch.no_grad()
+    def clear(self):
+        self.code[:] = torch.zeros_like(self.code)
+
+    @torch.no_grad()
     def randomize(self):
         with torch.no_grad():
             self.code[:] = torch.randn_like(self.code) * self.std
@@ -89,11 +94,9 @@ class AutoencoderModelHxW(SourceModelBase):
             gh, gw = self.grid_size[-2:]
             th, tw = gh * self.autoencoder_shape[-2], gw * self.autoencoder_shape[-1]
 
-            if tuple(image.shape[-2:]) != (th, tw):
-                image = VF.resize(image, (th, tw), VF.InterpolationMode.BICUBIC, antialias=True)
-            image = set_image_channels(image, self.autoencoder_shape[0])
+            image = fit_image(image, shape=(self.autoencoder_shape[0], th, tw), dtype=self.code.dtype)
 
-            patches = torch.concat([p.unsqueeze(0) for p in iter_image_patches(image, (th, tw))])
+            patches = torch.concat([p.unsqueeze(0) for p in iter_image_patches(image, self.autoencoder_shape[-2:])])
 
         else:
             raise NotImplementedError("Sorry, not implemented yet")

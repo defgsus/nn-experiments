@@ -29,6 +29,9 @@ class SourceModelBase(nn.Module):
     def forward(self):
         raise NotImplementedError
 
+    def clear(self):
+        raise NotImplementedError
+
     def randomize(self):
         raise NotImplementedError
 

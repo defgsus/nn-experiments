@@ -24,6 +24,7 @@ class ClipigTask:
     ):
         self.config = get_complete_clipig_task_config(config)
         self._original_config = config
+        # minimum delay in seconds between yields of pixel data
         self._pixel_yield_delay_sec = 1.
         self._last_pixel_yield_time = 0
 
@@ -76,39 +77,19 @@ class ClipigTask:
         )
 
     def create_source_model(self) -> nn.Module:
-        return create_source_model(self.config["source_model"], device=self.device)
+        model = create_source_model(self.config["source_model"], device=self.device)
 
-        # return PixelModel(shape=(3, 100, 100)).to(self.device)
+        init_method = self.config["initialize"]
+        if init_method == "random":
+            model.randomize()
 
-        from src.models.encoder import EncoderConv2d, EncoderDecoder
-        from src.models.transform import Reshape
-        import math
-        from pathlib import Path
+        elif init_method == "input" and ((image := self.get_input_image()) is not None):
+            model.set_image(image.to(self.device))
 
-        CODE_SIZE = 128
-        SHAPE = (3, 32, 32)
-        encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(24, 32, 48), kernel_size=3)
+        else:
+            model.clear()
 
-        encoded_shape = encoder.convolution.get_output_shape(SHAPE)
-        decoder = nn.Sequential(
-            nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
-            Reshape(encoded_shape),
-            encoder.convolution.create_transposed(act_last_layer=False),
-        )
-
-        autoencoder = EncoderDecoder(encoder, decoder)
-        autoencoder.load_state_dict(torch.load(
-            #Path(__file__).resolve().parent.parent.parent / "checkpoints/ae/pixart-03-ratio4/best.pt"
-            Path(__file__).resolve().parent.parent.parent / "checkpoints/ae/pixart-02/best.pt"
-        )["state_dict"])
-
-        from .source_models import AutoencoderModelHxW
-
-        return AutoencoderModelHxW(
-            autoencoder=autoencoder,
-            code_size=CODE_SIZE,
-            shape=(4, 4),
-        ).to(self.device)
+        return model
 
     def create_targets(self, source_model: nn.Module) -> List[dict]:
         targets = []
@@ -209,3 +190,11 @@ class ClipigTask:
             pixels = set_image_dtype(pixels, torch.float16)
 
         return pixels
+
+    def get_input_image(self) -> Optional[torch.Tensor]:
+        image = self.config.get("input_image")
+        if image is None:
+            return
+
+        if isinstance(image, torch.Tensor):
+            return image
