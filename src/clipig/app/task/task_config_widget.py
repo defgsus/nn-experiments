@@ -68,6 +68,8 @@ class TaskConfigWidget(QWidget):
             value = values[param["name"]]
             param["widget"].set_value(value)
 
+        self.source_model_widget.slot_set_source_model(values["source_model"]["name"], values["source_model"])
+
         # create a tab for each target and all of it's widgets for value readout
 
         self.target_tab_widget.clear()

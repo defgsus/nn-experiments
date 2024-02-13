@@ -1,0 +1,64 @@
+experiment_name: ae/pixart-mlp-05-ratio24-c128-ln
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  ImagePatchDataset(SHAPE, "~/prog/python/github/pixelart-dataset/datasets/pixelart-overlay-4x32x32-317x317.png")
+
+validation_set: |
+  ImagePatchDataset(SHAPE, "~/prog/python/github/pixelart-dataset/datasets/pixelart-overlay-4x32x32-32x32.png")
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 3_000_000
+
+globals:
+  SHAPE: (3, 32, 32)
+  CODE_SIZE: 64
+
+model: |
+    class AutoencoderMLP(nn.Module):
+        def __init__(
+                self, 
+                shape: Tuple[int, int, int],
+                code_size: int,
+                channels: List[int],
+                batch_norm: bool = False,
+                layer_norm: bool = True,
+        ):
+            super().__init__()
+        
+            self.encoder = nn.Sequential()
+            self.decoder = nn.Sequential()
+        
+            self.encoder.add_module("flatten", nn.Flatten(-3))
+            channels_ = (math.prod(shape), *channels, code_size)
+            for i, (chan, next_chan) in enumerate(zip(channels_, channels_[1:])):
+                if batch_norm:
+                    self.encoder.add_module(f"layer{i+1}_bn", nn.BatchNorm1d(chan))
+                if layer_norm:
+                    self.encoder.add_module(f"layer{i+1}_ln", nn.LayerNorm(chan))
+                self.encoder.add_module(f"layer{i+1}_linear", nn.Linear(chan, next_chan))
+                if i < len(channels_) - 2:
+                    self.encoder.add_module(f"layer{i+1}_act", nn.ReLU())
+        
+            channels_ = (code_size, *reversed(channels), math.prod(shape))
+            for i, (chan, next_chan) in enumerate(zip(channels_, channels_[1:])):
+                if batch_norm:
+                    self.decoder.add_module(f"layer{i+1}_bn", nn.BatchNorm1d(chan))
+                if layer_norm:
+                    self.decoder.add_module(f"layer{i+1}_ln", nn.LayerNorm(chan))
+                self.decoder.add_module(f"layer{i+1}_linear", nn.Linear(chan, next_chan))
+                if i < len(channels_) - 2:
+                    self.decoder.add_module(f"layer{i+1}_act", nn.ReLU())
+                else:
+                    self.decoder.add_module(f"out_act", nn.Sigmoid())
+            self.decoder.add_module("unflatten", Reshape(shape))
+    
+        def forward(self, x):
+            return self.decoder(self.encoder(x))
+    
+    AutoencoderMLP(SHAPE, CODE_SIZE, [128])

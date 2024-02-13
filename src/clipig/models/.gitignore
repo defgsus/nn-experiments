@@ -1,0 +1,4 @@
+# i'm only adding models explicitly
+
+*.yaml
+*.pt

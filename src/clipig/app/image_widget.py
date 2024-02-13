@@ -57,7 +57,7 @@ class ImageWidget(QWidget):
         self.zoom_bar.valueChanged.connect(self._zoom_bar_changed)
         self.zoom_bar.setToolTip(self.tr("zoom"))
 
-        for zoom in (25, 50, 100, 200, 300):
+        for zoom in (50, 100, 200, 300, 500):
             b = QPushButton(self.tr(f"{zoom}%"))
             if zoom == 100:
                 font = b.font()

@@ -10,7 +10,7 @@ import torchvision.transforms.functional as VF
 
 from ..models.clip import ClipSingleton
 from ..util import to_torch_device
-from .source_model_create import create_source_model
+from .source_models import create_source_model
 from .parameters import get_complete_clipig_task_config
 from . import transformations
 from src.util.image import set_image_channels, set_image_dtype
