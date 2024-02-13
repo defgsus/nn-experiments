@@ -9,7 +9,7 @@ class AutoencoderModelHxW(SourceModelBase):
         *SourceModelBase.PARAMS,
         {
             "name": "autoencoder",
-            "type": "str",
+            "type": "autoencoder",
             #"default": "pixelart-3x32x32-128",
             "default": "pixelart-3x32x32-mlp-128-256",
         },

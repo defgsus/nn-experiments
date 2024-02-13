@@ -9,6 +9,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
+from .models import AutoencoderModel
+
 
 class ParameterWidget(QWidget):
 
@@ -41,7 +43,7 @@ class ParameterWidget(QWidget):
         elif self.parameter_type in ("int", "float"):
             return self._widget.value()
 
-        elif self.parameter_type == "select":
+        elif self.parameter_type in ("select", "autoencoder"):
             return self._widget.currentText()
 
         elif (self._RE_INT_N.match(self.parameter_type) or self._RE_FLOAT_N.match(self.parameter_type)):
@@ -59,7 +61,7 @@ class ParameterWidget(QWidget):
         elif self.parameter_type in ("int", "float"):
             self._widget.setValue(value)
 
-        elif self.parameter_type == "select":
+        elif self.parameter_type in ("select", "autoencoder"):
             self._widget.setCurrentText(value)
 
         elif self._RE_INT_N.match(self.parameter_type) or self._RE_FLOAT_N.match(self.parameter_type):
@@ -94,6 +96,11 @@ class ParameterWidget(QWidget):
             self._widget = QComboBox(self)
             for choice in self.parameter["choices"]:
                 self._widget.addItem(choice)
+            self._widget.currentTextChanged.connect(lambda v: self.signal_value_changed.emit(QVariant(v)))
+
+        elif self.parameter_type == "autoencoder":
+            self._widget = QComboBox(self)
+            self._widget.setModel(AutoencoderModel(self))
             self._widget.currentTextChanged.connect(lambda v: self.signal_value_changed.emit(QVariant(v)))
 
         elif match := (self._RE_INT_N.match(self.parameter_type) or self._RE_FLOAT_N.match(self.parameter_type)):

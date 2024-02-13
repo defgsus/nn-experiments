@@ -14,6 +14,7 @@ class SourceModelWidget(QFrame):
         super().__init__(*args, **kwargs)
         self.default_parameters = default_parameters
         self._param_widgets: Dict[str, ParameterWidget] = {}
+        self._ignore_select_widget = False
 
         self.setFrameStyle(QFrame.StyledPanel)
         self.setLineWidth(1)
@@ -46,10 +47,18 @@ class SourceModelWidget(QFrame):
         self._layout = lv
 
     def slot_set_source_model(self, model_name: str, config: Optional[dict] = None):
+        if self._ignore_select_widget:
+            return
+
         self.param_widget.deleteLater()
         self.param_widget = QWidget()
         self._layout.addWidget(self.param_widget)
         self._param_widgets.clear()
+        try:
+            self._ignore_select_widget = True
+            self.select_widget.setCurrentText(model_name)
+        finally:
+            self._ignore_select_widget = False
 
         lv = QVBoxLayout(self.param_widget)
 
