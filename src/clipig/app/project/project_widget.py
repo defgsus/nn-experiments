@@ -24,6 +24,7 @@ class ProjectWidget(QWidget):
     ):
         super().__init__(*args, *kwargs)
 
+        self.project_name = "new project"
         self.clipig = clipig
         self._task_map: Dict[Hashable, dict] = {}
         self._refresh_msec = 300
@@ -38,11 +39,16 @@ class ProjectWidget(QWidget):
         self.tab_widget = QTabWidget(self)
         lv.addWidget(self.tab_widget)
 
+    def add_menu_actions(self, menu: QMenu):
+        menu.addAction(self.tr("Rename ..."), self.slot_rename)
+
     def get_settings(self) -> dict:
-        return {}
+        return {
+            "name": self.project_name,
+        }
 
     def set_settings(self, settings: dict):
-        pass
+        self.project_name = settings["name"]
 
     def slot_new_task(self) -> TaskWidget:
         task_widget = TaskWidget(self, clipig=self.clipig, preset_model=self.preset_model)
@@ -117,3 +123,6 @@ class ProjectWidget(QWidget):
                 task_widget.load_from_filestream(filestream, task_filename)
 
             self.set_settings(config_data["project_settings"])
+
+    def slot_rename(self):
+        pass

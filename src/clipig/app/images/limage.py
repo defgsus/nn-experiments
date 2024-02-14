@@ -1,15 +1,13 @@
 from functools import partial
 from pathlib import Path
-import dataclasses
-from io import StringIO
 from typing import Optional, List, Union, Tuple
 
-import yaml
+import torch
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from ..util import image_to_qimage
+from ..util import image_to_qimage, qimage_to_torch
 from src.util.files import Filestream
 
 
@@ -271,6 +269,9 @@ class LImage:
         painter.end()
 
         return image
+
+    def to_torch(self) -> torch.Tensor:
+        return qimage_to_torch(self.to_qimage())
 
     def copy(self, merged: bool = False) -> "LImage":
         if merged:

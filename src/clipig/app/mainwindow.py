@@ -8,6 +8,7 @@ from .task.task_widget import TaskWidget
 from .models.preset_model import PresetModel
 from .images import LImage
 from .project import ProjectWidget
+from .dialogs import FileDialog
 
 
 class MainWindow(QMainWindow):
@@ -25,22 +26,27 @@ class MainWindow(QMainWindow):
 
         self._create_main_menu()
         self._create_widgets()
+
         QTimer.singleShot(self._refresh_msec, self._slot_idle)
 
     def _create_main_menu(self):
         menu = self.menuBar().addMenu(self.tr("&File"))
-
-        project = self.current_project()
+        self._menu_project = self.menuBar().addMenu(self.tr("Project"))
 
         menu.addAction(self.tr("New &Project"), self.slot_new_project)
         menu.addAction(self.tr("New &Task"), self.slot_new_task)
 
         menu.addSeparator()
 
-        if project:
-            menu.addAction(self.tr("Save Project"), self.slot_save_project, "CTRL+S")
+        menu.addAction(self.tr("Load Project"), self.slot_load_project, "CTRL+O")
 
-            menu.addSeparator()
+        self._action_save_project = action = QAction(self.tr("Save Project"), self)
+        action.setEnabled(False)
+        action.setShortcut("CTRL+S")
+        action.triggered.connect(self.slot_save_project)
+        menu.addAction(action)
+
+        menu.addSeparator()
 
         menu.addAction(self.tr("E&xit"), self.slot_exit)
 
@@ -52,6 +58,7 @@ class MainWindow(QMainWindow):
 
         self.tab_widget = QTabWidget(self)
         lv.addWidget(self.tab_widget)
+        self.tab_widget.currentChanged.connect(self._tab_changed)
 
         self.status_label = QLabel(self)
         self.statusBar().addWidget(self.status_label)
@@ -107,6 +114,36 @@ class MainWindow(QMainWindow):
 
                 task_id = event["task"]["id"]
                 if task_id in task_map:
-                    self._task_event(task_id, event["task"])
+                    task_map[task_id]["widget"].slot_task_event(event["task"])
 
         QTimer.singleShot(self._refresh_msec, self._slot_idle)
+
+    def slot_save_project(self):
+        if project := self.current_project():
+            filename = FileDialog.get_save_filename(FileDialog.T_Project, parent=self)
+            if filename:
+                project.save_project(filename)
+
+    def slot_load_project(self):
+        filename = FileDialog.get_load_filename(FileDialog.T_Project, parent=self)
+        project = self.slot_new_project()
+        project.load_project(filename)
+
+    def _tab_changed(self):
+        self._update_project_menu()
+
+    def _update_project_menu(self):
+        project = self.tab_widget.currentWidget()
+        if not project:
+            self._menu_project.clear()
+            self._action_save_project.setEnabled(False)
+            return
+
+        self._action_save_project.setEnabled(True)
+        project.add_menu_actions(self._menu_project)
+
+
+
+
+
+

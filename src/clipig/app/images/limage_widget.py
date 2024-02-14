@@ -10,6 +10,7 @@ from ..util import image_to_qimage, AnyImage
 from .limage import LImage, LImageLayer
 from .limage_canvas_widget import LImageCanvasWidget
 from .limage_layers_widget import LImageLayersWidget
+from ..dialogs import FileDialog
 
 
 class LImageWidget(QWidget):
@@ -113,27 +114,12 @@ class LImageWidget(QWidget):
             # copy the current image before opening dialog
             image = self._limage.to_qimage()
 
-            filename, _ = QFileDialog.getSaveFileName(
-                parent=self,
-                caption=self.tr("Save image"),
-                filter="*.png",
-                directory=self._last_save_directory,
-            )
+            filename = FileDialog.get_save_filename(FileDialog.T_Image, parent=self)
             if filename:
-                filename = Path(filename)
-                self._last_save_directory = str(filename.parent)
-
-                if not filename.suffix:
-                    filename = filename.with_suffix(".png")
-
                 image.save(str(filename))
 
     def action_load_image_dialog(self):
-        filename, _ = QFileDialog.getOpenFileName(
-            parent=self,
-            caption=self.tr("Load image"),
-            filter="*.png",
-        )
+        filename = FileDialog.get_load_filename(FileDialog.T_Image, parent=self)
         if filename:
             self.action_load_image(filename)
 
