@@ -11,6 +11,8 @@ from .limage import LImage, LImageLayer
 from .limage_canvas_widget import LImageCanvasWidget
 from .limage_layers_widget import LImageLayersWidget
 from ..dialogs import FileDialog
+from .tools_widget import ImageToolsWidget
+from . import image_tools
 
 
 class LImageWidget(QWidget):
@@ -22,6 +24,7 @@ class LImageWidget(QWidget):
         super().__init__(*args, **kwargs)
 
         self._limage = LImage()
+        self._tool: Optional[image_tools.ImageToolBase] = None
 
         self._last_save_directory: Optional[str] = None
         self._last_loaded_images: List[str] = []
@@ -41,7 +44,12 @@ class LImageWidget(QWidget):
 
     def _create_widgets(self):
         lv = QVBoxLayout(self)
+        lv.setContentsMargins(0, 0, 0, 0)
         self.setLayout(lv)
+
+        self.tools_widget = ImageToolsWidget(self)
+        self.tools_widget.signal_tool_changed.connect(self.set_tool)
+        lv.addWidget(self.tools_widget)
 
         self.scroll_area = QScrollArea(self)
         lv.addWidget(self.scroll_area, stretch=100)
@@ -49,6 +57,7 @@ class LImageWidget(QWidget):
         self.canvas = LImageCanvasWidget(self)
         self.canvas.set_limage(self._limage)
         self.scroll_area.setWidget(self.canvas)
+        self.canvas.signal_mouse_event.connect(self._canvas_mouse_event)
 
         lv.addWidget(self.canvas.create_controls())
 
@@ -73,6 +82,8 @@ class LImageWidget(QWidget):
 
         self.canvas.set_limage(self._limage)
         self.layers_widget.set_limage(self._limage)
+        if self._tool is not None:
+            self._tool = self._tool.__class__(self._limage)
         self._limage.get_model().dataChanged.connect(lambda *args, **kwargs: self._set_changed())
         self._limage.get_model().modelReset.connect(lambda *args, **kwargs: self._set_changed())
         self._set_changed()
@@ -148,3 +159,14 @@ class LImageWidget(QWidget):
         )
 
         self.signal_changed.emit()
+
+    def set_tool(self, tool_name: str):
+        klass = image_tools.image_tools.get(tool_name)
+        if not klass:
+            return
+
+        self._tool = klass(self._limage)
+
+    def _canvas_mouse_event(self, event: image_tools.MouseEvent):
+        if self._tool is not None:
+            self._tool.mouse_event(event)

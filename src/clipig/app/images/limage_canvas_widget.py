@@ -7,9 +7,12 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from .limage import LImage
+from .image_tools import MouseEvent
 
 
 class LImageCanvasWidget(QWidget):
+
+    signal_mouse_event = pyqtSignal(MouseEvent)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -95,3 +98,23 @@ class LImageCanvasWidget(QWidget):
 
         widget = LImageCanvasControls(self)
         return widget
+
+    def event(self, event: QEvent):
+        return super().event(event)
+
+    def mousePressEvent(self, event: QMouseEvent):
+        event =MouseEvent(
+            type=MouseEvent.Press,
+            x=int(event.x() * 100 / self._zoom),
+            y=int(event.y() * 100 / self._zoom),
+            button=event.button(),
+        )
+        self.signal_mouse_event.emit(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        self.signal_mouse_event.emit(MouseEvent(
+            type=MouseEvent.Drag,
+            x=int(event.x() * 100 / self._zoom),
+            y=int(event.y() * 100 / self._zoom),
+            button=event.button(),
+        ))

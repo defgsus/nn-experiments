@@ -17,7 +17,7 @@ from .limage import LImage, LImageLayer
 class LImageModel(QAbstractTableModel):
 
     COLUMNS = [
-        "thumbnail", "selected", "active", "name", "size", "transparency", "repeat",
+        "thumbnail", "selected", "active", "name", "transparency", "size", "position", "repeat",
     ]
 
     def __init__(self, parent):
@@ -59,7 +59,7 @@ class LImageModel(QAbstractTableModel):
         if column in ("thumbnail", ):
             flags |= Qt.ItemIsDragEnabled
 
-        if column in ("name", "width", "height", "transparency", "repeat"):
+        if column in ("name", "width", "height", "transparency", "repeat", "position"):
             flags |= Qt.ItemIsEditable
 
         return flags
@@ -82,9 +82,10 @@ class LImageModel(QAbstractTableModel):
                 return layer.active
             if column == "transparency":
                 return layer.transparency
-
             if column == "repeat":
                 return f"{layer.repeat[0]}x{layer.repeat[1]}"
+            if column == "position":
+                return f"{layer.position[0]}x{layer.position[1]}"
 
             if not for_edit:
                 if column == "size":
@@ -134,6 +135,10 @@ class LImageModel(QAbstractTableModel):
 
         elif column == "transparency":
             layer.set_transparency(value)
+            return True
+
+        elif column == "position":
+            layer.set_position(parse_xy(value, default=(1, 1)))
             return True
 
         elif column == "repeat":

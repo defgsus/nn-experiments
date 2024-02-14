@@ -22,15 +22,17 @@ class LImageLayer:
             image: Optional[QImage] = None,
             repeat: Tuple[int, int] = (1, 1),
             active: bool = True,
-            transparency: float = 0.
+            transparency: float = 0.,
+            position: Tuple[int, int] = (0, 0),
     ):
         self._parent = parent
         self._name = name
         self._image = image
-        self._repeat = repeat
+        self._repeat = tuple(repeat)
         self._thumbnail: Optional[QImage] = None
         self._active = active
         self._transparency = transparency
+        self._position = tuple(position)
 
     def get_config(self) -> dict:
         return {
@@ -38,6 +40,7 @@ class LImageLayer:
             "active": self._active,
             "repeat": self._repeat,
             "transparency": self._transparency,
+            "position": self._position,
         }
 
     def set_config(self, config: dict):
@@ -45,6 +48,7 @@ class LImageLayer:
         self._active = config["active"]
         self._repeat = config["repeat"]
         self._transparency = config.get("transparency", 0.)
+        self._position = config.get("position", (0, 0))
         self.set_changed()
 
     @property
@@ -78,6 +82,15 @@ class LImageLayer:
         self.set_changed()
 
     @property
+    def position(self):
+        return self._position
+
+    def set_position(self, position: Tuple[int, int]):
+        self._position = tuple(position)
+        self._thumbnail = None
+        self.set_changed()
+
+    @property
     def active(self):
         return self._active
 
@@ -100,8 +113,31 @@ class LImageLayer:
     def set_selected(self):
         self._parent.set_selected_layer(self)
 
+    def set_image_size(self, size: Union[QSize, Tuple[int, int]]):
+        if not isinstance(size, QSize):
+            size = QSize(*size)
+
+        if self._image is None:
+            self._image = QImage(size, QImage.Format.Format_ARGB32)
+
+        self._image = self._image.scaled(
+            size,
+            # aspectRatioMode=Qt.KeepAspectRatio,
+            transformMode=Qt.SmoothTransformation,
+        )
+        self.set_changed()
+
     def size(self) -> QSize:
         return self.rect().size()
+
+    def content_rect(self) -> QRect:
+        """
+        The rect of the image (including repetitions)
+        """
+        if not self.image:
+            return QRect()
+        size = self.image.size()
+        return QRect(0, 0, size.width() * self.repeat[0], size.height() * self.repeat[1])
 
     def rect(self) -> QRect:
         """
@@ -110,16 +146,8 @@ class LImageLayer:
         if not self.image:
             return QRect()
         rect = self.content_rect()
+        rect.moveTo(*self.position)
         return QRect(0, 0, rect.right() + 1, rect.bottom() + 1)
-
-    def content_rect(self) -> QRect:
-        """
-        The rect of the image (including repetitions)
-        """
-        if not self.image:
-            return QRect()
-        rect = self.image.rect()
-        return QRect(rect.left(), rect.top(), rect.width() * self.repeat[0], rect.height() * self.repeat[1])
 
     def copy(self, parent: Optional["LImage"] = None) -> "LImageLayer":
         return LImageLayer(
@@ -138,8 +166,8 @@ class LImageLayer:
             for x in range(self._repeat[0]):
                 painter.setOpacity(max(0., min(1., 1. - self.transparency)))
                 painter.drawImage(
-                    x * self._image.width(),
-                    y * self._image.height(),
+                    self.position[0] + x * self._image.width(),
+                    self.position[1] + y * self._image.height(),
                     self._image,
                 )
 
@@ -160,6 +188,31 @@ class LImageLayer:
 
     def set_changed(self):
         self._parent._layer_changed(self)
+
+    def image_painter(self) -> "LImageLayerPainter":
+        return LImageLayerPainter(self)
+
+
+class LImageLayerPainter:
+
+    def __init__(self, layer: LImageLayer):
+        self.layer = layer
+        self._painter: Optional[QPainter] = None
+
+    def __enter__(self):
+        if not self.layer.image:
+            self._painter = QPainter()
+        else:
+            self._painter = QPainter(self.layer.image)
+
+        return self._painter
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._painter:
+            self._painter.end()
+            # TODO: need to debounce this a little for performance, i think
+            # self._thumbnail = None
+            self.layer.set_changed()
 
 
 class LImage:
@@ -304,7 +357,8 @@ class LImage:
             self._model.modelReset.emit()
 
     def add_menu_actions(self, menu: QMenu):
-        menu.addAction("Add layer", lambda : self.add_layer())
+        from .new_layer_dialog import NewLayerDialog
+        menu.addAction("Add layer", partial(NewLayerDialog.run_new_layer_dialog, self, menu))
 
     def to_qimage(self) -> QImage:
         image = QImage(self.size(), QImage.Format.Format_ARGB32)
