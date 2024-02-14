@@ -18,28 +18,6 @@ class Filestream:
 
     """
 
-    class ByteBuffer(BytesIO):
-
-        def __init__(self, callback: Callable[["File"], None]):
-            super().__init__()
-            self._callback = callback
-
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            # super().__exit__(exc_type, exc_val, exc_tb)
-            self.flush()
-            self._callback(self)
-
-    class StringBuffer(StringIO):
-
-        def __init__(self, callback: Callable[["File"], None]):
-            super().__init__()
-            self._callback = callback
-
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            # super().__exit__(exc_type, exc_val, exc_tb)
-            self.flush()
-            self._callback(self)
-
     def __init__(
             self,
             filename: Union[str, Path],
@@ -60,6 +38,17 @@ class Filestream:
         self._file.close()
 
     def open(self, filename: Union[str, Path], mode: str = "rt", encoding: str = "utf8"):
+        """
+        Open a file inside the tar for reading or writing.
+
+        When opening for writing: the returned buffer must be closed at which point
+        the contents are written to the tarfile.
+
+        :param filename: str|Path, the local filename (inside tar)
+        :param mode: str, can be "r", "rt", "rb", "w", "wt", or "wb"
+        :param encoding: str, encoding passed t TextIOWrapper
+        :return: a matching subclass instances of `BufferedIO`
+        """
         assert mode in ("r", "rt", "rb", "w", "wt", "wb"), f"Got {mode}"
 
         if mode.startswith("w") and self._mode.startswith("r"):
@@ -82,20 +71,49 @@ class Filestream:
 
             return BytesIO(data)
 
-        if mode == "wb":
-            return self.ByteBuffer(partial(self._add_file, filename, None))
-        else:
-            return self.StringBuffer(partial(self._add_file, filename, encoding))
+        buffer = _ByteBuffer(partial(self._write_buffer_callback, filename))
+        if mode in ("w", "wt"):
+            buffer = TextIOWrapper(buffer, encoding=encoding)
+        return buffer
 
-    def _add_file(self, filename: Union[str, Path], encoding: Optional[str], buffer: FileIO):
+    def write_bytes(self, filename: Union[str, Path], data: bytes):
+        with self.open(filename, "wb") as fp:
+            fp.write(data)
+
+    def write_text(self, filename: Union[str, Path], data: str, encoding: str = "utf8"):
+        with self.open(filename, "wt", encoding=encoding) as fp:
+            fp.write(data)
+
+    def read_bytes(self, filename: Union[str, Path]) -> bytes:
+        with self.open(filename, "rb") as fp:
+            return fp.read()
+
+    def read_text(self, filename: Union[str, Path], encoding: str = "utf8") -> str:
+        with self.open(filename, "rt", encoding=encoding) as fp:
+            return fp.read()
+
+    def write_qimage(self, filename: Union[str, Path], qimage, format: Optional[str] = None):
+        from PyQt5.QtCore import QBuffer
+
+        device = QBuffer()
+        qimage.save(device, format or Path(filename).suffix[1:])
+        self.write_bytes(filename, device.data().data())
+
+    def read_qimage(self, filename: Union[str, Path], format: Optional[str] = None):
+        from PyQt5.QtCore import QBuffer, QByteArray
+        from PyQt5.QtGui import QImage
+
+        data = self.read_bytes(filename)
+        buffer = QBuffer()
+        buffer.setData(QByteArray(data))
+        buffer.open(QBuffer.ReadOnly)
+        image = QImage()
+        image.load(buffer, format or Path(filename).suffix[1:])
+        buffer.close()
+        return image
+
+    def _write_buffer_callback(self, filename: Union[str, Path], buffer: io.BufferedWriter):
         size = buffer.tell()
-
-        if isinstance(buffer, StringIO):
-            buffer.seek(0)
-            data = buffer.read().encode(encoding)
-            size = len(data)
-            buffer = BytesIO(data)
-
         buffer.seek(0)
 
         info = tarfile.TarInfo()
@@ -106,5 +124,16 @@ class Filestream:
             tarinfo=info,
             fileobj=buffer,
         )
-        buffer.close()
 
+
+# this wrapper is returned from `filestream.open()`
+#   instead of closing the buffer, it calls the callback function
+
+class _ByteBuffer(BytesIO):
+
+    def __init__(self, callback: Callable[["_ByteBuffer"], None]):
+        super().__init__()
+        self._callback = callback
+
+    def close(self):
+        self._callback(self)
