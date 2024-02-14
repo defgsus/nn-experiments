@@ -65,12 +65,18 @@ class LImageLayer:
         return self.rect().size()
 
     def rect(self) -> QRect:
+        """
+        The full rect of the layer starting at 0, 0
+        """
         if not self.image:
             return QRect()
         rect = self.content_rect()
-        return QRect(0, 0, rect.right(), rect.bottom())
+        return QRect(0, 0, rect.right() + 1, rect.bottom() + 1)
 
     def content_rect(self) -> QRect:
+        """
+        The rect of the image (including repetitions)
+        """
         if not self.image:
             return QRect()
         rect = self.image.rect()

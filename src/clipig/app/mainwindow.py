@@ -1,4 +1,6 @@
-from typing import Dict, Hashable, Optional
+from functools import partial
+from pathlib import Path
+from typing import Dict, Hashable, Optional, List
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -17,7 +19,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.clipig = clipig
-        self._project_map: Dict[Hashable, dict] = {}
+        self._projects: List[ProjectWidget] = []
         self._refresh_msec = 300
         self.preset_model = PresetModel(self)
 
@@ -31,19 +33,24 @@ class MainWindow(QMainWindow):
 
     def _create_main_menu(self):
         menu = self.menuBar().addMenu(self.tr("&File"))
-        self._menu_project = self.menuBar().addMenu(self.tr("Project"))
+        self._menu_project = self.menuBar().addMenu(self.tr("&Project"))
 
-        menu.addAction(self.tr("New &Project"), self.slot_new_project)
-        menu.addAction(self.tr("New &Task"), self.slot_new_task)
+        menu.addAction(self.tr("&New Project"), self.slot_new_project, "CTRL+N")
+        # menu.addAction(self.tr("New &Task"), self.slot_new_task)
 
         menu.addSeparator()
 
-        menu.addAction(self.tr("Load Project"), self.slot_load_project, "CTRL+O")
+        menu.addAction(self.tr("&Open Project"), self.slot_load_project, "CTRL+O")
 
-        self._action_save_project = action = QAction(self.tr("Save Project"), self)
+        self._action_save_project = action = QAction(self.tr("&Save Project"), self)
         action.setEnabled(False)
         action.setShortcut("CTRL+S")
         action.triggered.connect(self.slot_save_project)
+        menu.addAction(action)
+        self._action_save_project_as = action = QAction(self.tr("Save Project as ..."), self)
+        action.setEnabled(False)
+        action.setShortcut("CTRL+SHIFT+S")
+        action.triggered.connect(self.slot_save_project_as)
         menu.addAction(action)
 
         menu.addSeparator()
@@ -74,7 +81,7 @@ class MainWindow(QMainWindow):
         self.close()
 
     def slot_new_task(self) -> TaskWidget:
-        if not self._project_map:
+        if self._projects:
             project_widget = self.slot_new_project()
         else:
             project_widget = self.current_project()
@@ -82,24 +89,30 @@ class MainWindow(QMainWindow):
         return project_widget.slot_new_task()
 
     def slot_new_project(self):
-        project_name = "proj"
         project_widget = ProjectWidget(self, clipig=self.clipig, preset_model=self.preset_model)
 
-        self.tab_widget.addTab(project_widget, project_name)
+        self.tab_widget.addTab(project_widget, project_widget.project_name)
         tab_index = self.tab_widget.count() - 1
 
-        self._project_map[project_widget] = {
-            "widget": project_widget,
-            "tab_index": tab_index,
-        }
+        project_widget.signal_changed.connect(partial(self._update_project_tab, project_widget))
+
+        self._projects.append(project_widget)
 
         self.tab_widget.setCurrentIndex(tab_index)
         return project_widget
 
     def current_project(self) -> Optional[ProjectWidget]:
         index = self.tab_widget.currentIndex()
-        if 0 <= index < len(self._project_map):
+        if 0 <= index < len(self._projects):
             return self.tab_widget.widget(index)
+
+    def get_project_tab_index(self, project_widget: ProjectWidget) -> Optional[int]:
+        for i in range(self.tab_widget.count()):
+            if self.tab_widget.widget(i) == project_widget:
+                return i
+
+    def select_project(self, project_widget: ProjectWidget):
+        self.tab_widget.setCurrentWidget(project_widget)
 
     def _slot_idle(self):
         task_map: Optional[Dict[Hashable, dict]] = None
@@ -109,7 +122,7 @@ class MainWindow(QMainWindow):
 
                 if task_map is None:
                     task_map = {}
-                    for project in self._project_map.values():
+                    for project in self._projects:
                         task_map.update(project["widget"]._task_map)
 
                 task_id = event["task"]["id"]
@@ -120,14 +133,31 @@ class MainWindow(QMainWindow):
 
     def slot_save_project(self):
         if project := self.current_project():
-            filename = FileDialog.get_save_filename(FileDialog.T_Project, parent=self)
+            if project.project_filename:
+                project.save_project(project.project_filename)
+            else:
+                self.slot_save_project_as()
+
+    def slot_save_project_as(self):
+        if project := self.current_project():
+            filename = FileDialog.get_save_filename(
+                FileDialog.T_Project, parent=self,
+            )
             if filename:
                 project.save_project(filename)
 
     def slot_load_project(self):
         filename = FileDialog.get_load_filename(FileDialog.T_Project, parent=self)
-        project = self.slot_new_project()
-        project.load_project(filename)
+        if filename:
+            filename = Path(filename)
+
+            for project_widget in self._projects:
+                if project_widget.project_filename == filename:
+                    self.select_project(project_widget)
+                    return
+
+            project = self.slot_new_project()
+            project.load_project(filename)
 
     def _tab_changed(self):
         self._update_project_menu()
@@ -140,10 +170,21 @@ class MainWindow(QMainWindow):
             return
 
         self._action_save_project.setEnabled(True)
+        self._menu_project.clear()
         project.add_menu_actions(self._menu_project)
 
+    def _get_project_tab_text(self, project_widget: ProjectWidget) -> str:
+        text = project_widget.project_name
 
+        if project_widget.project_filename:
+            text = f"{text} ({project_widget.project_filename.name})"
 
+        if not project_widget.is_saved:
+            text = f"{text} *"
+        return text
 
-
+    def _update_project_tab(self, project_widget: ProjectWidget):
+        tab_index = self.get_project_tab_index(project_widget)
+        if tab_index is not None:
+            self.tab_widget.setTabText(tab_index, self._get_project_tab_text(project_widget))
 

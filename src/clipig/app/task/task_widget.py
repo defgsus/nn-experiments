@@ -21,6 +21,8 @@ from src.util.files import Filestream
 
 class TaskWidget(QWidget):
 
+    signal_changed = pyqtSignal()
+
     signal_run_task = pyqtSignal(int, dict)
     signal_stop_task = pyqtSignal(int)
     signal_new_task_with_image = pyqtSignal(LImage)
@@ -73,8 +75,12 @@ class TaskWidget(QWidget):
 
         lv.addStretch(2)
 
+    def set_changed(self):
+        self.signal_changed.emit()
+
     def set_limage(self, image: LImage):
         self.image_widget.set_limage(image)
+        self.set_changed()
 
     def _run_click(self):
         # self._update_run_button()
@@ -109,6 +115,7 @@ class TaskWidget(QWidget):
                 pixels: torch.Tensor = message["pixels"]
 
                 self.image_widget.set_image("<clipig>", pixels)
+                self.set_changed()
 
     def _save_preset(self, name: str):
         self.preset_model.save_preset(name, self.config_widget.get_values())
@@ -126,7 +133,7 @@ class TaskWidget(QWidget):
         return {}
 
     def set_settings(self, settings: dict):
-        pass
+        self.set_changed()
 
     def save_to_filestream(self, filestream: Filestream, directory: Union[str, Path]):
         directory = Path(directory)
@@ -163,3 +170,5 @@ class TaskWidget(QWidget):
         self.image_widget.set_settings(config_data["image_settings"])
         self.set_settings(config_data["task_settings"])
         self.config_widget.set_values(config_data["task_config"])
+
+        self.set_changed()
