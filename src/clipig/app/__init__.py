@@ -16,6 +16,8 @@ def main():
     app.setStyleSheet(qdarkstyle.load_stylesheet())
     screen = app.primaryScreen()
 
+    QLocale.setDefault(QLocale("en"))
+
     win = MainWindow(clipig=ClipigWorker())
     # app.aboutToQuit.connect(win.slot_save_sessions)
 

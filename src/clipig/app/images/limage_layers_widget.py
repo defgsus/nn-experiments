@@ -41,7 +41,7 @@ class LImageLayersWidget(QWidget):
         if self._limage is None:
             self.table_widget.setModel(None)
         else:
-            model = self._limage.get_model()
+            model: LImageModel = self._limage.get_model()
             self.table_widget.setModel(model)
             model.set_table_delegates(self.table_widget)
             #self.table_widget.resizeColumnsToContents()
@@ -54,4 +54,17 @@ class LImageLayersWidget(QWidget):
         self._limage.add_menu_actions(menu)
         #menu.addAction(self.tr("Add layer"), self.signal_new_layer)
 
+        menu.addSeparator()
+
+        indices = self.table_widget.selectedIndexes()
+        rows = set(i.row() for i in indices)
+        if indices:
+            menu.addAction(
+                self.tr("Remove Layers") if len(rows) > 1 else self.tr("Remove Layer"),
+                partial(self._delete_rows, list(rows))
+            )
+
         menu.exec(self.mapToGlobal(pos))
+
+    def _delete_rows(self, rows: List[int]):
+        self._limage.delete_layers(rows)

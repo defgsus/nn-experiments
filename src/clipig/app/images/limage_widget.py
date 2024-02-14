@@ -16,6 +16,7 @@ from ..dialogs import FileDialog
 class LImageWidget(QWidget):
 
     signal_new_task_with_image = pyqtSignal(LImage)
+    signal_changed= pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -27,8 +28,8 @@ class LImageWidget(QWidget):
 
         self._create_widgets()
 
-        self._limage.get_model().dataChanged.connect(lambda *args, **kwargs: self._update_status_label())
-        self._limage.get_model().modelReset.connect(lambda *args, **kwargs: self._update_status_label())
+        self._limage.get_model().dataChanged.connect(lambda *args, **kwargs: self._set_changed())
+        self._limage.get_model().modelReset.connect(lambda *args, **kwargs: self._set_changed())
 
         self.setMinimumSize(200, 200)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -72,9 +73,9 @@ class LImageWidget(QWidget):
 
         self.canvas.set_limage(self._limage)
         self.layers_widget.set_limage(self._limage)
-        self._limage.get_model().dataChanged.connect(lambda *args, **kwargs: self._update_status_label())
-        self._limage.get_model().modelReset.connect(lambda *args, **kwargs: self._update_status_label())
-        self._update_status_label()
+        self._limage.get_model().dataChanged.connect(lambda *args, **kwargs: self._set_changed())
+        self._limage.get_model().modelReset.connect(lambda *args, **kwargs: self._set_changed())
+        self._set_changed()
 
     def set_image(self, name: str, image: AnyImage):
         """
@@ -87,7 +88,7 @@ class LImageWidget(QWidget):
         else:
             self._limage.add_layer(image=image, name=name)
 
-        self._update_status_label()
+        self._set_changed()
 
     def _context_menu(self, pos: QPoint):
         menu = QMenu()
@@ -99,7 +100,7 @@ class LImageWidget(QWidget):
             self._limage.add_menu_actions(menu)
 
         menu.addSeparator()
-        menu.addAction(self.tr("Load image ..."), self.action_load_image_dialog)
+        menu.addAction(self.tr("Open image ..."), self.action_load_image_dialog)
         for filename in self._last_loaded_images:
             menu.addAction(
                 self.tr("Reload {filename}").format(filename=Path(filename).name),
@@ -135,13 +136,15 @@ class LImageWidget(QWidget):
 
     def action_new_layer(self):
         self._limage.add_layer()
-        self._update_status_label()
+        self._set_changed()
 
     def action_to_new_task(self, merged: bool = False):
         self.signal_new_task_with_image.emit(self._limage.copy(merged=merged))
 
-    def _update_status_label(self):
+    def _set_changed(self):
         rect = self._limage.rect()
         self.info_label.setText(
             f"{rect.width()}x{rect.height()}"
         )
+
+        self.signal_changed.emit()

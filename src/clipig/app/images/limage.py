@@ -22,6 +22,7 @@ class LImageLayer:
             image: Optional[QImage] = None,
             repeat: Tuple[int, int] = (1, 1),
             active: bool = True,
+            transparency: float = 0.
     ):
         self._parent = parent
         self._name = name
@@ -29,6 +30,22 @@ class LImageLayer:
         self._repeat = repeat
         self._thumbnail: Optional[QImage] = None
         self._active = active
+        self._transparency = transparency
+
+    def get_config(self) -> dict:
+        return {
+            "name": self._name,
+            "active": self._active,
+            "repeat": self._repeat,
+            "transparency": self._transparency,
+        }
+
+    def set_config(self, config: dict):
+        self._name = config["name"]
+        self._active = config["active"]
+        self._repeat = config["repeat"]
+        self._transparency = config.get("transparency", 0.)
+        self.set_changed()
 
     @property
     def parent(self):
@@ -38,13 +55,27 @@ class LImageLayer:
     def name(self):
         return self._name
 
+    def set_name(self, name: str):
+        self._name = name
+        self.set_changed()
+
     @property
     def image(self):
         return self._image
 
+    def set_image(self, image: QImage):
+        self._image = image
+        self._thumbnail = None
+        self.set_changed()
+
     @property
     def repeat(self):
         return self._repeat
+
+    def set_repeat(self, repeat: Tuple[int, int]):
+        self._repeat = (max(1, repeat[0]), max(1, repeat[1]))
+        self._thumbnail = None
+        self.set_changed()
 
     @property
     def active(self):
@@ -52,7 +83,15 @@ class LImageLayer:
 
     def set_active(self, active: bool):
         self._active = active
-        self._parent._layer_changed(self)
+        self.set_changed()
+
+    @property
+    def transparency(self):
+        return self._transparency
+
+    def set_transparency(self, transparency: float):
+        self._transparency = transparency
+        self.set_changed()
 
     @property
     def selected(self):
@@ -97,16 +136,14 @@ class LImageLayer:
 
         for y in range(self._repeat[1]):
             for x in range(self._repeat[0]):
+                painter.setOpacity(max(0., min(1., 1. - self.transparency)))
                 painter.drawImage(
                     x * self._image.width(),
                     y * self._image.height(),
                     self._image,
                 )
 
-    def set_image(self, image: QImage):
-        self._image = image
-        self._thumbnail = None
-        self._parent._layer_changed(self)
+        painter.setOpacity(1.)
 
     def thumbnail(self) -> QImage():
         if not self._image:
@@ -121,17 +158,7 @@ class LImageLayer:
 
         return self._thumbnail
 
-    def get_config(self) -> dict:
-        return {
-            "name": self._name,
-            "active": self._active,
-            "repeat": self._repeat,
-        }
-
-    def set_config(self, config: dict):
-        self._name = config["name"]
-        self._active = config["active"]
-        self._repeat = config["repeat"]
+    def set_changed(self):
         self._parent._layer_changed(self)
 
 
@@ -233,6 +260,18 @@ class LImage:
 
         if changed:
             self._layers_changed()
+
+    def delete_layers(self, layers_or_names_or_indices: List[Union[LImageLayer, str, int]]):
+        layers_to_remove = set(
+            self.get_layer(i)
+            for i in layers_or_names_or_indices
+        )
+        self._layers = [
+            layer
+            for layer in self._layers
+            if layer not in layers_to_remove
+        ]
+        self._layers_changed()
 
     def paint(self, painter: QPainter):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)

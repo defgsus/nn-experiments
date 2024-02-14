@@ -123,7 +123,7 @@ class MainWindow(QMainWindow):
                 if task_map is None:
                     task_map = {}
                     for project in self._projects:
-                        task_map.update(project["widget"]._task_map)
+                        task_map.update(project._task_map)
 
                 task_id = event["task"]["id"]
                 if task_id in task_map:

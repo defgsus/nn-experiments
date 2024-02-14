@@ -76,7 +76,7 @@ class FileDialog:
 
         filename, used_filter = QFileDialog.getOpenFileName(
             parent=parent,
-            caption=f"Load {file_type_info['name']}",
+            caption=f"Open {file_type_info['name']}",
             filter=" ".join(f"*.{ext}" for ext in file_type_info["extensions"]) + ";;All *.*",
             directory=(
                 cls.settings[file_type].get("last_load_directory")

@@ -46,6 +46,7 @@ class TaskWidget(QWidget):
         self.image_widget = LImageWidget(self)
         lh.addWidget(self.image_widget)
         self.image_widget.signal_new_task_with_image.connect(self.signal_new_task_with_image)
+        self.image_widget.signal_changed.connect(self.set_changed)
 
         lv = QVBoxLayout()
         lh.addLayout(lv)
