@@ -1,4 +1,4 @@
-from typing import Dict, Hashable
+from typing import Dict, Hashable, Optional
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -6,7 +6,8 @@ from PyQt5.QtWidgets import *
 from ..clipig_worker import ClipigWorker
 from .task.task_widget import TaskWidget
 from .models.preset_model import PresetModel
-from .images import LImageWidget
+from .images import LImage
+from .project import ProjectWidget
 
 
 class MainWindow(QMainWindow):
@@ -15,11 +16,11 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.clipig = clipig
-        self._task_map: Dict[Hashable, dict] = {}
+        self._project_map: Dict[Hashable, dict] = {}
         self._refresh_msec = 300
         self.preset_model = PresetModel(self)
 
-        self.setWindowTitle(self.tr("CLIPIG"))
+        self.setWindowTitle(self.tr("CLIPig ]["))
         # self.setWindowFlag(Qt.WindowMinMaxButtonsHint, True)
 
         self._create_main_menu()
@@ -29,21 +30,28 @@ class MainWindow(QMainWindow):
     def _create_main_menu(self):
         menu = self.menuBar().addMenu(self.tr("&File"))
 
+        project = self.current_project()
+
+        menu.addAction(self.tr("New &Project"), self.slot_new_project)
         menu.addAction(self.tr("New &Task"), self.slot_new_task)
+
+        menu.addSeparator()
+
+        if project:
+            menu.addAction(self.tr("Save Project"), self.slot_save_project, "CTRL+S")
+
+            menu.addSeparator()
 
         menu.addAction(self.tr("E&xit"), self.slot_exit)
 
     def _create_widgets(self):
         parent = QWidget(self)
         self.setCentralWidget(parent)
-        lv = QHBoxLayout(parent)
+        lv = QVBoxLayout(parent)
+        lv.setContentsMargins(0, 0, 0, 0)
 
         self.tab_widget = QTabWidget(self)
         lv.addWidget(self.tab_widget)
-
-        self.tab_widget.addTab(LImageWidget(self), "LImage")
-
-        # lv.addStretch()
 
         self.status_label = QLabel(self)
         self.statusBar().addWidget(self.status_label)
@@ -58,42 +66,47 @@ class MainWindow(QMainWindow):
     def slot_exit(self):
         self.close()
 
-    def slot_new_task(self):
-        task_widget = TaskWidget(self, clipig=self.clipig, preset_model=self.preset_model)
-        task_widget.signal_run_task.connect(self.slot_run_task)
-        task_widget.signal_stop_task.connect(self.slot_stop_task)
-        self.tab_widget.addTab(task_widget, f"Task #{task_widget.task_id}")
+    def slot_new_task(self) -> TaskWidget:
+        if not self._project_map:
+            project_widget = self.slot_new_project()
+        else:
+            project_widget = self.current_project()
+
+        return project_widget.slot_new_task()
+
+    def slot_new_project(self):
+        project_name = "proj"
+        project_widget = ProjectWidget(self, clipig=self.clipig, preset_model=self.preset_model)
+
+        self.tab_widget.addTab(project_widget, project_name)
         tab_index = self.tab_widget.count() - 1
 
-        self._task_map[task_widget.task_id] = {
-            "status": "undefined",
-            "widget": task_widget,
+        self._project_map[project_widget] = {
+            "widget": project_widget,
             "tab_index": tab_index,
         }
 
-    def slot_run_task(self, task_id: Hashable, config: dict):
-        self.clipig.run_task(task_id, config)
+        self.tab_widget.setCurrentIndex(tab_index)
+        return project_widget
 
-    def slot_stop_task(self, task_id: Hashable):
-        self.clipig.stop_task(task_id)
+    def current_project(self) -> Optional[ProjectWidget]:
+        index = self.tab_widget.currentIndex()
+        if 0 <= index < len(self._project_map):
+            return self.tab_widget.widget(index)
 
     def _slot_idle(self):
+        task_map: Optional[Dict[Hashable, dict]] = None
+
         for event in self.clipig.events(blocking=False):
             if event.get("task"):
-                self._task_event(event["task"]["id"], event["task"])
+
+                if task_map is None:
+                    task_map = {}
+                    for project in self._project_map.values():
+                        task_map.update(project["widget"]._task_map)
+
+                task_id = event["task"]["id"]
+                if task_id in task_map:
+                    self._task_event(task_id, event["task"])
 
         QTimer.singleShot(self._refresh_msec, self._slot_idle)
-
-    def _task_event(self, task_id: Hashable, event: dict):
-        # print("task_event", task_id, event.keys())
-        task_data = self._task_map[task_id]
-
-        if "status" in event:
-            task_data["status"] = event["status"]
-            self.tab_widget.setTabText(task_data["tab_index"], f"Task #{task_id} ({event['status']})")
-
-        self.status_label.setText(
-            f"Tasks: {len(self._task_map)}"
-        )
-
-        task_data["widget"].slot_task_event(event)

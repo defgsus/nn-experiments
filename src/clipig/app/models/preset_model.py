@@ -17,8 +17,8 @@ class PresetModel(QAbstractItemModel):
 
     preset_directory: Path = Path(__file__).resolve().parent.parent.parent / "presets"
 
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self._presets = []
         self._scan_files()

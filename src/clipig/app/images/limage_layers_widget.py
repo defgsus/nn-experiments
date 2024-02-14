@@ -6,7 +6,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from .limage import LImage, ImageLayer
+from .limage import LImage, LImageLayer
 from .limage_model import LImageModel
 
 
@@ -46,13 +46,12 @@ class LImageLayersWidget(QWidget):
             model.set_table_delegates(self.table_widget)
             #self.table_widget.resizeColumnsToContents()
 
-
     def _context_menu(self, pos: QPoint):
         if self._limage is None:
             return
 
         menu = QMenu()
-
-        menu.addAction(self.tr("Add layer"), self.signal_new_layer)
+        self._limage.add_menu_actions(menu)
+        #menu.addAction(self.tr("Add layer"), self.signal_new_layer)
 
         menu.exec(self.mapToGlobal(pos))

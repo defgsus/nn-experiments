@@ -45,4 +45,3 @@ class TestFilestream(TestBase):
 
                 self.assertEqual(qimage.size(), qimage2.size())
                 self.assertEqual(qimage.sizeInBytes(), qimage2.sizeInBytes())
-                

@@ -23,6 +23,16 @@ class LImageCanvasWidget(QWidget):
     def zoom(self):
         return self._zoom
 
+    def get_settings(self) -> dict:
+        return {
+            "zoom": self._zoom,
+            "background": self._background,
+        }
+
+    def set_settings(self, settings: dict):
+        self._background = settings["background"]
+        self.set_zoom(settings["zoom"])
+
     def set_zoom(self, z):
         self._zoom = z
         self._update_size()

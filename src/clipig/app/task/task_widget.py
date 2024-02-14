@@ -1,3 +1,9 @@
+import os.path
+import tarfile
+from pathlib import Path
+from typing import Union
+
+import yaml
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
@@ -9,12 +15,15 @@ from ..task.task_config_widget import TaskConfigWidget
 from ..models.preset_model import PresetModel
 from .preset_widget import PresetWidget
 from ..util import qimage_to_torch
+from ..images import LImage
+from src.util.files import Filestream
 
 
 class TaskWidget(QWidget):
 
     signal_run_task = pyqtSignal(int, dict)
     signal_stop_task = pyqtSignal(int)
+    signal_new_task_with_image = pyqtSignal(LImage)
 
     _static_id_count = 0
 
@@ -34,6 +43,7 @@ class TaskWidget(QWidget):
 
         self.image_widget = LImageWidget(self)
         lh.addWidget(self.image_widget)
+        self.image_widget.signal_new_task_with_image.connect(self.signal_new_task_with_image)
 
         lv = QVBoxLayout()
         lh.addLayout(lv)
@@ -62,6 +72,9 @@ class TaskWidget(QWidget):
         self.run_button.clicked.connect(self._run_click)
 
         lv.addStretch(2)
+
+    def set_limage(self, image: LImage):
+        self.image_widget.set_limage(image)
 
     def _run_click(self):
         # self._update_run_button()
@@ -109,3 +122,43 @@ class TaskWidget(QWidget):
 
         return config
 
+    def get_settings(self) -> dict:
+        return {}
+
+    def set_settings(self, settings: dict):
+        pass
+
+    def save_to_filestream(self, filestream: Filestream, directory: Union[str, Path]):
+        directory = Path(directory)
+
+        # -- write config --
+
+        config_data = {
+            "task_settings": self.get_settings(),
+            "image_settings": self.image_widget.get_settings(),
+            "task_config": self.config_widget.get_values(),
+        }
+        if not self.image_widget.limage.is_empty():
+            config_data["limage_config_filename"] = str(directory / "limage" / "config.yaml")
+
+        filestream.write_yaml(directory / "config.yaml", config_data)
+
+        # -- write LImage --
+
+        if config_data.get("limage_config_filename"):
+            self.image_widget.limage.save_to_filestream(
+                filestream,
+                Path(config_data["limage_config_filename"]).parent,
+            )
+
+    def load_from_filestream(self, filestream: Filestream, config_filename: Union[str, Path]):
+        config_data = filestream.read_yaml(config_filename)
+
+        limage = LImage()
+        if config_data.get("limage_config_filename"):
+            limage.load_from_filestream(filestream, config_data["limage_config_filename"])
+
+        self.set_limage(limage)
+
+        self.image_widget.set_settings(config_data["image_settings"])
+        self.set_settings(config_data["task_settings"])

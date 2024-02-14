@@ -11,7 +11,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from .limage import LImage, ImageLayer
+from .limage import LImage, LImageLayer
 
 
 class LImageModel(QAbstractTableModel):

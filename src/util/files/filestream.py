@@ -1,9 +1,12 @@
 import io
 import tarfile
+import datetime
 from functools import partial
 from io import TextIOWrapper, BytesIO, StringIO, FileIO
 from pathlib import Path
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, List
+
+import yaml
 
 
 class Filestream:
@@ -76,6 +79,15 @@ class Filestream:
             buffer = TextIOWrapper(buffer, encoding=encoding)
         return buffer
 
+    def filenames(self) -> List[str]:
+        return [
+            info.name
+            for info in self._tar.getmembers()
+            if info.isfile()
+        ]
+
+    # --- convenience functions ----
+
     def write_bytes(self, filename: Union[str, Path], data: bytes):
         with self.open(filename, "wb") as fp:
             fp.write(data)
@@ -91,6 +103,14 @@ class Filestream:
     def read_text(self, filename: Union[str, Path], encoding: str = "utf8") -> str:
         with self.open(filename, "rt", encoding=encoding) as fp:
             return fp.read()
+
+    def write_yaml(self, filename: Union[str, Path], data: Union[list, dict]):
+        with self.open(filename, "wt") as fp:
+            yaml.safe_dump(data, fp)
+
+    def read_yaml(self, filename: Union[str, Path]) -> Union[list, dict]:
+        with self.open(filename, "rt") as fp:
+            return yaml.safe_load(fp)
 
     def write_qimage(self, filename: Union[str, Path], qimage, format: Optional[str] = None):
         from PyQt5.QtCore import QBuffer
@@ -112,22 +132,25 @@ class Filestream:
         buffer.close()
         return image
 
-    def _write_buffer_callback(self, filename: Union[str, Path], buffer: io.BufferedWriter):
+    def _write_buffer_callback(self, filename: Union[str, Path], buffer: "_ByteBuffer"):
         size = buffer.tell()
         buffer.seek(0)
 
         info = tarfile.TarInfo()
         info.size = size
         info.name = str(filename)
+        info.mtime = int(datetime.datetime.now().timestamp())
 
         self._tar.addfile(
             tarinfo=info,
             fileobj=buffer,
         )
+        buffer.super_close()
 
 
-# this wrapper is returned from `filestream.open()`
+# this wrapper is returned from `filestream.open(mode="w?")`
 #   instead of closing the buffer, it calls the callback function
+#   which extracts the content and then closes it for real
 
 class _ByteBuffer(BytesIO):
 
@@ -137,3 +160,6 @@ class _ByteBuffer(BytesIO):
 
     def close(self):
         self._callback(self)
+
+    def super_close(self):
+        super().close()
