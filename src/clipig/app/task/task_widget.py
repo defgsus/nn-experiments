@@ -26,6 +26,7 @@ class TaskWidget(QWidget):
     signal_run_task = pyqtSignal(int, dict)
     signal_stop_task = pyqtSignal(int)
     signal_new_task_with_image = pyqtSignal(LImage)
+    signal_copy_task = pyqtSignal()
 
     _static_id_count = 0
 
@@ -76,12 +77,25 @@ class TaskWidget(QWidget):
 
         lv.addStretch(2)
 
+    def add_menu_actions(self, menu: QMenu):
+        menu.addAction(self.tr("Clone Task"), self.signal_copy_task)
+
     def set_changed(self):
         self.signal_changed.emit()
+
+    @property
+    def limage(self) -> LImage:
+        return self.image_widget.limage
 
     def set_limage(self, image: LImage):
         self.image_widget.set_limage(image)
         self.set_changed()
+
+    def get_task_config(self) -> dict:
+        return self.config_widget.get_values()
+
+    def set_task_config(self, config: dict):
+        self.config_widget.set_values(config)
 
     def _run_click(self):
         # self._update_run_button()

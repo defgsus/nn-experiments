@@ -1,5 +1,6 @@
 import dataclasses
 import math
+from copy import deepcopy
 from typing import Tuple, Dict, Optional, Type, List
 
 from PyQt5.QtCore import *
@@ -45,8 +46,13 @@ class ImageToolBase:
             )
         image_tools[cls.NAME] = cls
 
-    def __init__(self, limage: LImage):
+    def __init__(self, limage: LImage, config: dict):
         self.limage = limage
+        self.config = deepcopy(config)
+
+        for param in self.PARAMS:
+            if param["name"] not in self.config:
+                self.config[param["name"]] = param["default"]
 
     @property
     def layer(self):

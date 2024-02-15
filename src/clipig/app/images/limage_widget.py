@@ -12,6 +12,7 @@ from .limage_canvas_widget import LImageCanvasWidget
 from .limage_layers_widget import LImageLayersWidget
 from ..dialogs import FileDialog
 from .tools_widget import ImageToolsWidget
+from .color_palette import ColorPaletteWidget
 from . import image_tools
 
 
@@ -45,14 +46,21 @@ class LImageWidget(QWidget):
     def _create_widgets(self):
         lv = QVBoxLayout(self)
         lv.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(lv)
 
         self.tools_widget = ImageToolsWidget(self)
         self.tools_widget.signal_tool_changed.connect(self.set_tool)
         lv.addWidget(self.tools_widget)
 
+        lh = QHBoxLayout()
+        lh.setContentsMargins(0, 0, 0, 0)
+        lv.addLayout(lh, stretch=100)
+
+        self.color_palette_widget = ColorPaletteWidget(self)
+        lh.addWidget(self.color_palette_widget)
+        self.color_palette_widget.signal_color_changed.connect(self.tools_widget.set_color)
+
         self.scroll_area = QScrollArea(self)
-        lv.addWidget(self.scroll_area, stretch=100)
+        lh.addWidget(self.scroll_area, stretch=100)
 
         self.canvas = LImageCanvasWidget(self)
         self.canvas.set_limage(self._limage)
@@ -83,7 +91,7 @@ class LImageWidget(QWidget):
         self.canvas.set_limage(self._limage)
         self.layers_widget.set_limage(self._limage)
         if self._tool is not None:
-            self._tool = self._tool.__class__(self._limage)
+            self._tool = self._tool.__class__(limage=self._limage, config=self._tool.config)
         self._limage.get_model().dataChanged.connect(lambda *args, **kwargs: self._set_changed())
         self._limage.get_model().modelReset.connect(lambda *args, **kwargs: self._set_changed())
         self._set_changed()
@@ -160,12 +168,12 @@ class LImageWidget(QWidget):
 
         self.signal_changed.emit()
 
-    def set_tool(self, tool_name: str):
+    def set_tool(self, tool_name: str, config: Optional[dict] = None):
         klass = image_tools.image_tools.get(tool_name)
         if not klass:
             return
 
-        self._tool = klass(self._limage)
+        self._tool = klass(limage=self._limage, config=config or {})
 
     def _canvas_mouse_event(self, event: image_tools.MouseEvent):
         if self._tool is not None:

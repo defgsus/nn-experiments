@@ -18,6 +18,7 @@ from src.util.files import Filestream
 class ProjectWidget(QWidget):
 
     signal_changed = pyqtSignal()
+    signal_menu_changed = pyqtSignal()
 
     def __init__(
             self,
@@ -47,17 +48,24 @@ class ProjectWidget(QWidget):
         self._is_saved = False
         self.signal_changed.emit()
 
+    def set_menu_changed(self):
+        self.signal_menu_changed.emit()
+
     def _create_widgets(self):
         lv = QVBoxLayout(self)
         lv.setContentsMargins(0, 0, 0, 0)
 
         self.tab_widget = QTabWidget(self)
         lv.addWidget(self.tab_widget)
+        self.tab_widget.currentChanged.connect(self.set_menu_changed)
 
     def add_menu_actions(self, menu: QMenu):
         menu.addAction(self.tr("New &Task"), self.slot_new_task, "CTRL+T")
+        if self.tab_widget.count():
+            menu.addAction(self.tr("&Clone Task"), self.slot_copy_task)
+            menu.addAction(self.tr("Delete Task"), self.slot_delete_task)
         menu.addSeparator()
-        menu.addAction(self.tr("Rename ..."), self.slot_rename)
+        menu.addAction(self.tr("Rename Project ..."), self.slot_rename)
 
     def get_settings(self) -> dict:
         return {
@@ -73,7 +81,9 @@ class ProjectWidget(QWidget):
         task_widget.signal_changed.connect(self.set_changed)
         task_widget.signal_run_task.connect(self.slot_run_task)
         task_widget.signal_stop_task.connect(self.slot_stop_task)
-        task_widget.signal_new_task_with_image.connect(self.slot_new_task_with_image)
+        task_widget.signal_new_task_with_image.connect(lambda x: self.slot_new_task_with(limage=x))
+        task_widget.signal_copy_task.connect(self.slot_copy_task)
+
         self.tab_widget.addTab(task_widget, f"Task #{task_widget.task_id}")
         tab_index = self.tab_widget.count() - 1
 
@@ -88,9 +98,16 @@ class ProjectWidget(QWidget):
         self.set_changed()
         return task_widget
 
-    def slot_new_task_with_image(self, limage: LImage):
+    def slot_new_task_with(
+            self,
+            limage: Optional[LImage] = None,
+            task_config: Optional[dict] = None,
+    ):
         new_widget = self.slot_new_task()
-        new_widget.set_limage(limage)
+        if limage is not None:
+            new_widget.set_limage(limage)
+        if task_config is not None:
+            new_widget.set_task_config(task_config)
 
     def slot_run_task(self, task_id: Hashable, config: dict):
         self.clipig.run_task(task_id, config)
@@ -98,17 +115,23 @@ class ProjectWidget(QWidget):
     def slot_stop_task(self, task_id: Hashable):
         self.clipig.stop_task(task_id)
 
+    def slot_copy_task(self):
+        task: TaskWidget = self.tab_widget.currentWidget()
+        self.slot_new_task_with(limage=task.limage.copy(), task_config=task.get_task_config())
+
+    def slot_delete_task(self):
+        self.tab_widget.removeTab(self.tab_widget.currentIndex())
+
     def task_event(self, task_id: Hashable, event: dict):
+        if task_id not in self._task_map:
+            return
+
         # print("task_event", task_id, event.keys())
         task_data = self._task_map[task_id]
 
         if "status" in event:
             task_data["status"] = event["status"]
             self.tab_widget.setTabText(task_data["tab_index"], f"Task #{task_id} ({event['status']})")
-
-        self.status_label.setText(
-            f"Tasks: {len(self._task_map)}"
-        )
 
         task_data["widget"].slot_task_event(event)
 

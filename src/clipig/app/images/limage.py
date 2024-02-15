@@ -342,8 +342,9 @@ class LImage:
         return self._model
 
     def _layer_changed(self, layer: LImageLayer):
-        index = self.layers.index(layer)
-        if index < 0:
+        try:
+            index = self.layers.index(layer)
+        except ValueError:
             return
 
         if self._model is not None:

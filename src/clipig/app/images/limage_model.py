@@ -85,7 +85,7 @@ class LImageModel(QAbstractTableModel):
             if column == "repeat":
                 return f"{layer.repeat[0]}x{layer.repeat[1]}"
             if column == "position":
-                return f"{layer.position[0]}x{layer.position[1]}"
+                return f"{layer.position[0]}, {layer.position[1]}"
 
             if not for_edit:
                 if column == "size":
@@ -200,8 +200,11 @@ class LImageModelCheckboxDelegate(QItemDelegate):
 
 
 def parse_xy(text: str, default: Tuple[int, int]) -> Tuple[int, int]:
-    try:
-        x, y = [int(t) for t in text.split("x")]
-        return x, y
-    except Exception:
-        return default
+    for splitter in (" ", ",", "x", "*"):
+        try:
+            x, y = [int(t) for t in text.split(splitter)]
+            return x, y
+        except Exception:
+            pass
+
+    return default

@@ -1,3 +1,7 @@
+from typing import Iterator
+
+from torch.nn import Parameter
+
 from .base import *
 
 
@@ -46,6 +50,9 @@ class AutoencoderModelHxW(SourceModelBase):
         self.std = std
         self.code = nn.Parameter(torch.randn(math.prod(self.grid_size), code_size) * std)
 
+    def parameters(self, recurse: bool = True) -> Iterator[Parameter]:
+        yield self.code
+        
     def forward(self):
         images = self.autoencoder.decoder(self.code).clamp(0, 1)
 
