@@ -13,6 +13,7 @@ from ..util import to_torch_device
 from .source_models import create_source_model
 from .parameters import get_complete_clipig_task_config
 from . import transformations
+from .optimizers import create_optimizer
 from src.util.image import set_image_channels, set_image_dtype
 
 
@@ -118,7 +119,7 @@ class ClipigTask:
                         raise
                     transforms.append(trans)
 
-            optimizer = torch.optim.Adam(source_model.parameters(), lr=target_conf["learnrate"])
+            optimizer = create_optimizer(source_model.parameters(), target_conf["optimizer"])
 
             targets.append({
                 **target_conf,

@@ -35,6 +35,7 @@ def get_complete_clipig_task_config(config: dict) -> dict:
     Returns new instance
     """
     config = deepcopy(config)
+
     parameters = get_clipig_task_parameters()
 
     for param in parameters["base"]:

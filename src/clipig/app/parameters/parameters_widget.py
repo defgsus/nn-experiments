@@ -27,9 +27,9 @@ class ParametersWidget(QWidget):
         super().__init__(parent)
 
         self._parameters: List[dict] = parameters or []
-        self._ignore_value_change = False
         self._widget_map: Dict[str, ParameterWidget] = {}
         self._exclude = set(exclude) if exclude is not None else []
+        self._backup_values: Dict[str, Any] = {}
 
         self._create_widgets()
 
@@ -51,19 +51,27 @@ class ParametersWidget(QWidget):
         if name not in self._exclude:
             if widget := self._widget_map.get(name):
                 widget.set_value(value, emit=emit)
+                self._backup_values[name] = value
 
     def set_values(self, values: Dict[str, Any], emit: bool):
         for key, widget in self._widget_map.items():
             if key in values and key not in self._exclude:
                 widget.set_value(values[key], emit=emit)
+                self._backup_values[key] = values[key]
 
     def set_parameters(self, parameters: List[dict], values: Optional[Dict[str, Any]] = None, emit: bool = False):
-        prev_values = self.get_values()
         self._parameters = deepcopy(parameters)
         self._create_param_widgets()
-        if values:
-            prev_values.update(values)
-        self.set_values(prev_values, emit=emit)
+
+        if values is None:
+            values = self._backup_values
+        else:
+            values = {
+                **self._backup_values,
+                **values,
+            }
+
+        self.set_values(values, emit=emit)
 
     def _create_widgets(self):
         self._layout = QVBoxLayout(self)
@@ -77,12 +85,15 @@ class ParametersWidget(QWidget):
         self._widget_container = QWidget()
         self._layout.addWidget(self._widget_container)
 
+        self._widget_map.clear()
+        lv = QVBoxLayout(self._widget_container)
         for param in self._parameters:
             if param["name"] not in self._exclude:
                 self._widget_map[param["name"]] = widget = ParameterWidget(param, self._widget_container)
-                self._layout.addWidget(widget)
+                lv.addWidget(widget)
                 widget.signal_value_changed.connect(partial(self._value_changed, param["name"]))
 
     def _value_changed(self, name: str, v: Any):
+        self._backup_values[name] = v
         self.signal_value_changed.emit(name, QVariant(v))
         self.signal_values_changed.emit(self.get_values())

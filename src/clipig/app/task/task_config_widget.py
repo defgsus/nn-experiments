@@ -16,7 +16,7 @@ class TaskConfigWidget(QWidget):
         super().__init__(*args, **kwargs)
 
         self.preset_model = preset_model
-        self._base_params_widget: Optional[ParametersWidget] = None
+        self.base_params_widget: Optional[ParametersWidget] = None
         self._target_widgets: List[dict] = []
 
         self.default_parameters = get_clipig_task_parameters()
@@ -26,10 +26,13 @@ class TaskConfigWidget(QWidget):
 
     def _create_widgets(self):
         lv = QVBoxLayout(self)
-
-        self._base_params_widget = ParametersWidget(self, self.default_parameters["base"])
-        lv.addWidget(self._base_params_widget)
+        lv.setContentsMargins(0, 0, 0, 0)
         
+        self.base_params_widget = ParametersWidget(
+            self, self.default_parameters["base"]
+        )
+        lv.addWidget(self.base_params_widget)
+
         self.source_model_widget = SourceModelWidget(
             self, default_parameters=self.default_parameters,
         )
@@ -39,25 +42,26 @@ class TaskConfigWidget(QWidget):
         lv.addWidget(self.target_tab_widget)
 
     def get_values(self) -> dict:
-        values = self._base_params_widget.get_values()
+        values = self.base_params_widget.get_values()
 
         values["source_model"] = self.source_model_widget.get_values()
 
         values["targets"] = []
-        for target_params in self._target_widgets:
-            values["targets"].append({})
+        for target_widgets in self._target_widgets:
 
-            for param in target_params["params"]:
-                values["targets"][-1][param["name"]] = param["widget"].get_value()
-
-            values["targets"][-1]["transformations"] = target_params["transformation_widget"].transformations
+            target_values = {
+                **target_widgets["params_widget"].get_values(),
+                "optimizer": target_widgets["optimizer_params_widget"].get_values(),
+                "transformations": target_widgets["transformation_widget"].transformations,
+            }
+            values["targets"].append(target_values)
 
         return deepcopy(values)
 
     def set_values(self, values: dict, emit: bool = False):
         values = get_complete_clipig_task_config(values)
 
-        self._base_params_widget.set_values(values, emit=emit)
+        self.base_params_widget.set_values(values, emit=emit)
 
         self.source_model_widget.slot_set_source_model(values["source_model"]["name"], values["source_model"])
 
@@ -71,22 +75,28 @@ class TaskConfigWidget(QWidget):
             lv = QVBoxLayout(tab)
             self.target_tab_widget.addTab(tab, self.tr("target #{i}").format(i=self.target_tab_widget.count() + 1))
 
-            target_params = {
-                "params": [],
+            optimizer_param = list(filter(lambda p: p["name"] == "optimizer", self.default_parameters["target"]))[0]
+            target_widgets = {
+                "params_widget": ParametersWidget(
+                    parent=tab,
+                    parameters=self.default_parameters["target"],
+                    exclude=["optimizer"],
+                    values=target_values,
+                ),
+                "optimizer_params_widget": SubParametersWidget(
+                    parent=tab,
+                    select_parameter=optimizer_param,
+                    sub_parameters=self.default_parameters["optimizers"],
+                    values=target_values["optimizer"],
+                ),
                 "transformation_widget": None,
             }
-            self._target_widgets.append(target_params)
-
-            for param in self.default_parameters["target"]:
-                param = deepcopy(param)
-                target_params["params"].append(param)
-
-                param["widget"] = widget = ParameterWidget(param, tab)
-                widget.set_value(target_values[param["name"]])
-                lv.addWidget(widget)
+            self._target_widgets.append(target_widgets)
+            lv.addWidget(target_widgets["params_widget"])
+            lv.addWidget(target_widgets["optimizer_params_widget"])
 
             lv.addWidget(QLabel(self.tr("transformations"), tab))
-            target_params["transformation_widget"] = trans_widget = TransformationsWidget(
+            target_widgets["transformation_widget"] = trans_widget = TransformationsWidget(
                 tab, transformations=target_values["transformations"], default_parameters=self.default_parameters,
             )
             lv.addWidget(trans_widget)

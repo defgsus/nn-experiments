@@ -39,7 +39,7 @@ class ParameterWidget(QWidget):
 
     def get_value(self):
         if self.parameter_type == "bool":
-            return self._widget.checked()
+            return self._widget.isChecked()
 
         elif self.parameter_type == "str":
             return self._widget.text()

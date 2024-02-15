@@ -30,14 +30,12 @@ base:
 target:
   - name: prompt
     type: str
-    default: "prompt"
+    default: pixelart
 
-  - name: learnrate
-    type: float
-    default: 0.01
-    min: 0
-    max: 100
-    step: 0.01
+  - name: optimizer
+    type: select
+    choices: ["SGD", "Adam"]
+    default: "Adam"
 
   - name: batch_size
     type: int
@@ -85,19 +83,12 @@ optimizers:
       min: [0., 0.]
       max: [1., 1.]
       step: [0.01, 0.0001]
-    - name: eps
-      description: term added to the denominator to improve numerical stability
-      type: float
-      default: 1e-8
-      min: 0
-      max: 100
-      step: 1e-8
     - name: weight_decay
       type: float
       default: 0.
       min: 0.
       max: 1.
-      step: 0.01
+      step: 0.00001
     - name: amsgrad
       type: bool
       description: whether to use the AMSGrad variant of this algorithm from the paper `On the Convergence of Adam and Beyond`

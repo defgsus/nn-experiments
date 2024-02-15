@@ -58,10 +58,10 @@ class SubParametersWidget(QWidget):
     def get_values(self) -> Dict[str, Any]:
         return {
             self._select_parameter["name"]: self._select_widget.get_value(),
-            **self._params_wiget.get_values(),
+            **self._params_widget.get_values(),
         }
 
-    def set_selected_value(self, value: str, emit: bool):
+    def set_select_value(self, value: str, emit: bool):
         self._select_widget.set_value(value, emit=False)
         self._params_widget.set_parameters(self._sub_parameters.get(value) or [], emit=False)
         if emit:
@@ -70,18 +70,17 @@ class SubParametersWidget(QWidget):
 
     def set_value(self, name: str, value: Any, emit: bool):
         if name == self._select_parameter["name"]:
-            self.set_selected_value(value, emit=emit)
+            self.set_select_value(value, emit=emit)
             return
 
         self._params_widget.set_value(name, value, emit=emit)
 
     def set_values(self, values: Dict[str, Any], emit: bool):
-
         emit_select = False
         if self._select_parameter["name"] in values:
             emit_select = True
             select_value = values[self._select_parameter["name"]]
-            self.set_selected_value(select_value, emit=False)
+            self.set_select_value(select_value, emit=False)
 
         self._params_widget.set_values(values, emit=False)
 
@@ -96,6 +95,7 @@ class SubParametersWidget(QWidget):
 
         self._select_widget = ParameterWidget(self._select_parameter, self)
         self._select_widget.signal_value_changed.connect(self._select_changed)
+        self._select_widget.setContentsMargins(0, 0, 0, 0)
         lv.addWidget(self._select_widget)
 
         lh = QHBoxLayout()
