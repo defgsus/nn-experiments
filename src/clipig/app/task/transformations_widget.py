@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import *
 from ...parameters import (
     get_clipig_task_parameters, get_complete_clipig_task_config, get_complete_clipig_transformation_config
 )
-from ..parameter_widget import ParameterWidget
+from ..parameters import ParameterWidget
 from .new_transform_dialog import NewTransformationDialog
 
 

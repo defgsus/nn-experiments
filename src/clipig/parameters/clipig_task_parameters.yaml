@@ -44,3 +44,65 @@ target:
     default: 1
     min: 1
     max: 100000
+
+
+optimizers:
+  SGD:
+    - name: learnrate
+      type: float
+      default: 0.01
+      min: 0
+      max: 100
+      step: 0.01
+    - name: momentum
+      type: float
+      default: 0.0
+      min: 0
+      max: 100
+      step: 0.01
+    - name: dampening
+      description: Dampening for momentum
+      type: float
+      default: 0.0
+      min: 0
+      max: 100
+      step: 0.01
+    - name: nesterov
+      type: bool
+      description: enables Nesterov momentum
+      default: false
+
+  Adam:
+    - name: learnrate
+      type: float
+      default: 0.01
+      min: 0.
+      max: 100.
+      step: 0.01
+    - name: betas
+      type: float2
+      default: [0.9, 0.999]
+      min: [0., 0.]
+      max: [1., 1.]
+      step: [0.01, 0.0001]
+    - name: eps
+      description: term added to the denominator to improve numerical stability
+      type: float
+      default: 1e-8
+      min: 0
+      max: 100
+      step: 1e-8
+    - name: weight_decay
+      type: float
+      default: 0.
+      min: 0.
+      max: 1.
+      step: 0.01
+    - name: amsgrad
+      type: bool
+      description: whether to use the AMSGrad variant of this algorithm from the paper `On the Convergence of Adam and Beyond`
+      default: false
+    - name: fused
+      type: bool
+      description: whether the fused implementation (CUDA only) is used
+      default: false

@@ -1,11 +1,11 @@
 from copy import deepcopy
-from typing import List
+from typing import List, Optional
 
 from PyQt5.QtWidgets import *
 
 from ..models.preset_model import PresetModel
 from ...parameters import get_clipig_task_parameters, get_complete_clipig_task_config
-from ..parameter_widget import ParameterWidget
+from ..parameters import ParameterWidget, ParametersWidget, SubParametersWidget
 from .transformations_widget import TransformationsWidget
 from .source_model_widget import SourceModelWidget
 
@@ -16,7 +16,7 @@ class TaskConfigWidget(QWidget):
         super().__init__(*args, **kwargs)
 
         self.preset_model = preset_model
-        self._base_widgets: List[dict] = []
+        self._base_params_widget: Optional[ParametersWidget] = None
         self._target_widgets: List[dict] = []
 
         self.default_parameters = get_clipig_task_parameters()
@@ -27,14 +27,9 @@ class TaskConfigWidget(QWidget):
     def _create_widgets(self):
         lv = QVBoxLayout(self)
 
-        self._base_widgets.clear()
-        for param in self.default_parameters["base"]:
-            param = deepcopy(param)
-            self._base_widgets.append(param)
-
-            widget = param["widget"] = ParameterWidget(param, self)
-            lv.addWidget(widget)
-
+        self._base_params_widget = ParametersWidget(self, self.default_parameters["base"])
+        lv.addWidget(self._base_params_widget)
+        
         self.source_model_widget = SourceModelWidget(
             self, default_parameters=self.default_parameters,
         )
@@ -44,9 +39,7 @@ class TaskConfigWidget(QWidget):
         lv.addWidget(self.target_tab_widget)
 
     def get_values(self) -> dict:
-        values = {}
-        for param in self._base_widgets:
-            values[param["name"]] = param["widget"].get_value()
+        values = self._base_params_widget.get_values()
 
         values["source_model"] = self.source_model_widget.get_values()
 
@@ -61,12 +54,10 @@ class TaskConfigWidget(QWidget):
 
         return deepcopy(values)
 
-    def set_values(self, values: dict):
+    def set_values(self, values: dict, emit: bool = False):
         values = get_complete_clipig_task_config(values)
 
-        for param in self._base_widgets:
-            value = values[param["name"]]
-            param["widget"].set_value(value)
+        self._base_params_widget.set_values(values, emit=emit)
 
         self.source_model_widget.slot_set_source_model(values["source_model"]["name"], values["source_model"])
 

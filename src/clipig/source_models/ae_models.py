@@ -52,7 +52,7 @@ class AutoencoderModelHxW(SourceModelBase):
 
     def parameters(self, recurse: bool = True) -> Iterator[Parameter]:
         yield self.code
-        
+
     def forward(self):
         images = self.autoencoder.decoder(self.code).clamp(0, 1)
 

@@ -9,7 +9,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from .models import AutoencoderModel
+from ..models import AutoencoderModel
 
 
 class ParameterWidget(QWidget):

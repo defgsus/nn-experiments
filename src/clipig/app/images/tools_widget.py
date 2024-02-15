@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import *
 
 from .limage import LImage, LImageLayer
 from . import image_tools
-from ..parameter_widget import ParameterWidget
+from ..parameters import ParameterWidget, ParametersWidget
 from .tool_buttons import ImageToolButtons
 
 
@@ -69,37 +69,22 @@ class ImageToolsConfigWidget(QWidget):
         self._create_widgets()
 
     def get_values(self) -> dict:
-        return {
-            key: widget.get_value()
-            for key, widget in self._param_widgets.items()
-        }
+        return self.params_widget.get_values()
 
     def set_value(self, name: str, value, emit: bool = True):
-        if name in self._param_widgets:
-            self._param_widgets[name].set_value(value, emit=emit)
+        self.params_widget.set_value(name, value, emit=emit)
 
     def _create_widgets(self):
         lv = QHBoxLayout(self)
         self.setLayout(lv)
 
-        self.params_widget = QWidget(self)
+        self.params_widget = ParametersWidget(self)
+        self.params_widget.signal_values_changed.connect(lambda: self.signal_config_changed.emit())
         lv.addWidget(self.params_widget)
-        self._layout = lv
 
     def set_tool(self, tool_name: str):
         self.tool_name = tool_name
 
-        self.params_widget.deleteLater()
-        self.params_widget = QWidget(self)
-        self._layout.addWidget(self.params_widget)
-
         klass = image_tools.image_tools[self.tool_name]
 
-        lv = QVBoxLayout(self.params_widget)
-        lv.setContentsMargins(0, 0, 0, 0)
-
-        self._param_widgets.clear()
-        for param in klass.PARAMS:
-            self._param_widgets[param["name"]] = widget = ParameterWidget(param, self)
-            lv.addWidget(widget)
-            widget.signal_value_changed.connect(lambda : self.signal_config_changed.emit())
+        self.params_widget.set_parameters(klass.PARAMS, emit=False)

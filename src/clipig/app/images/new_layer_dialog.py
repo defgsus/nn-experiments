@@ -8,7 +8,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from ..parameter_widget import ParameterWidget
+from ..parameters import ParameterWidget
 from .limage import LImage, LImageLayer
 
 

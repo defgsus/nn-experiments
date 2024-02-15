@@ -8,7 +8,7 @@ import yaml
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
-from ..parameter_widget import ParameterWidget
+from ..parameters import ParameterWidget
 
 
 class ParameterDialog(QDialog):

@@ -3,7 +3,7 @@ from typing import Dict, Optional
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
-from ..parameter_widget import ParameterWidget
+from ..parameters import ParameterWidget
 from ..models import SourceModelModel
 from ...parameters import get_complete_clipig_source_model_config
 
