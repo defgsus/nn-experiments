@@ -110,6 +110,10 @@ class TaskConfigWidget(QWidget):
         butt.clicked.connect(self.slot_new_target)
         self.target_tab_widget.addTab(butt, "+")
 
+    def set_running(self, running: bool):
+        for w in self._target_widgets:
+            w["transformation_widget"].set_running(running)
+
     def slot_new_target(self):
         default_config = self.preset_model.default_config()["config"]
         config = self.get_values()

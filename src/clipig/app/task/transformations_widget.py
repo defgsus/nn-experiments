@@ -37,6 +37,9 @@ class TransformationsWidget(QWidget):
     def set_preview_images(self, images: List[QImage]):
         self.transform_preview_widget.set_preview_images(images)
 
+    def set_running(self, running: bool):
+        self.transform_preview_widget.set_running(running)
+
     def _create_widgets(self):
         lv0 = QVBoxLayout(self)
 

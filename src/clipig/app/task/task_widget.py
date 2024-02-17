@@ -98,6 +98,15 @@ class TaskWidget(QWidget):
     def set_task_config(self, config: dict):
         self.config_widget.set_values(config)
 
+    def get_settings(self) -> dict:
+        return {}
+
+    def set_settings(self, settings: dict):
+        self.set_changed()
+
+    def set_running(self, running: bool):
+        self.config_widget.set_running(running)
+
     def _run_click(self):
         # self._update_run_button()
 
@@ -124,8 +133,10 @@ class TaskWidget(QWidget):
 
             if status in ("finished", "stopped", "crashed"):
                 self.run_button.setChecked(False)
+                self.set_running(False)
             else:
                 self.run_button.setChecked(True)
+                self.set_running(True)
 
             self._update_run_button()
 
@@ -157,12 +168,6 @@ class TaskWidget(QWidget):
                 config["input_image"] = self.image_widget.limage.to_torch()
 
         return config
-
-    def get_settings(self) -> dict:
-        return {}
-
-    def set_settings(self, settings: dict):
-        self.set_changed()
 
     def save_to_filestream(self, filestream: Filestream, directory: Union[str, Path]):
         directory = Path(directory)
