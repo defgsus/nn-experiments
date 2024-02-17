@@ -27,7 +27,7 @@ class TaskConfigWidget(QWidget):
     def _create_widgets(self):
         lv = QVBoxLayout(self)
         lv.setContentsMargins(0, 0, 0, 0)
-        
+
         self.base_params_widget = ParametersWidget(
             self, self.default_parameters["base"]
         )

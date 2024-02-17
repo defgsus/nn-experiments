@@ -139,7 +139,7 @@ class TaskWidget(QWidget):
         config = self.config_widget.get_values()
 
         if config.get("initialize") == "input":
-            if self.image_widget.limage is not None:
+            if self.image_widget.limage is not None and not self.image_widget.limage.is_empty():
                 config["input_image"] = self.image_widget.limage.to_torch()
 
         return config

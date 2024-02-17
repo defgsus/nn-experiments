@@ -32,9 +32,13 @@ target:
     type: str
     default: pixelart
 
+  - name: negative_prompt
+    type: str
+    default: letters
+
   - name: optimizer
     type: select
-    choices: ["SGD", "Adam"]
+    choices: []  # this is filled by script from `optimizers` below
     default: "Adam"
 
   - name: batch_size
@@ -70,6 +74,47 @@ optimizers:
       description: enables Nesterov momentum
       default: false
 
+  ASGD:
+    - name: learnrate
+      type: float
+      default: 0.01
+      min: 0
+      max: 100
+      step: 0.01
+    - name: lambd
+      description: decay term
+      type: float
+      default: 0.0001
+      min: 0
+      max: 1
+      step: 0.0001
+    - name: alpha
+      description: power for eta update
+      type: float
+      default: 0.75
+      min: 0
+      max: 100
+      step: 0.1
+    - name: alpha
+      description: power for eta update
+      type: float
+      default: 0.75
+      min: 0
+      max: 100
+      step: 0.1
+    - name: weight_decay
+      type: float
+      default: 0.
+      min: 0.
+      max: 1.
+      step: 0.00001
+    - name: t0
+      description: point at which to start averaging
+      type: float
+      default: 1000000.
+      min: 0.
+      step: 1
+
   Adam:
     - name: learnrate
       type: float
@@ -97,3 +142,190 @@ optimizers:
       type: bool
       description: whether the fused implementation (CUDA only) is used
       default: false
+
+  AdamW:
+    - name: learnrate
+      type: float
+      default: 0.001
+      min: 0.
+      max: 100.
+      step: 0.001
+    - name: betas
+      type: float2
+      default: [0.9, 0.999]
+      min: [0., 0.]
+      max: [1., 1.]
+      step: [0.01, 0.0001]
+    - name: weight_decay
+      type: float
+      default: 0.
+      min: 0.
+      max: 1.
+      step: 0.00001
+    - name: amsgrad
+      type: bool
+      description: whether to use the AMSGrad variant of this algorithm from the paper `On the Convergence of Adam and Beyond`
+      default: false
+    - name: fused
+      type: bool
+      description: whether the fused implementation (CUDA only) is used
+      default: false
+
+  Adamax:
+    - name: learnrate
+      type: float
+      default: 0.002
+      min: 0.
+      max: 100.
+      step: 0.001
+    - name: betas
+      type: float2
+      default: [0.9, 0.999]
+      min: [0., 0.]
+      max: [1., 1.]
+      step: [0.01, 0.0001]
+    - name: weight_decay
+      type: float
+      default: 0.
+      min: 0.
+      max: 1.
+      step: 0.00001
+
+  Adadelta:
+    - name: learnrate
+      type: float
+      default: 1.
+      min: 0.
+      max: 100.
+      step: 0.01
+    - name: rho
+      description: coefficient used for computing a running average of squared gradients
+      type: float
+      default: .9
+      min: 0.
+      max: 100.
+      step: 0.01
+    - name: weight_decay
+      type: float
+      default: 0.
+      min: 0.
+      max: 1.
+      step: 0.00001
+
+  Adagrad:
+    - name: learnrate
+      type: float
+      default: 0.01
+      min: 0.
+      max: 100.
+      step: 0.01
+    - name: lr_decay
+      description: learning rate decay
+      type: float
+      default: 0.
+      min: 0.
+      max: 1.
+      step: 0.0001
+    - name: weight_decay
+      type: float
+      default: 0.
+      min: 0.
+      max: 1.
+      step: 0.00001
+
+  NAdam:
+    - name: learnrate
+      type: float
+      default: 0.002
+      min: 0.
+      max: 100.
+      step: 0.001
+    - name: betas
+      type: float2
+      default: [0.9, 0.999]
+      min: [0., 0.]
+      max: [1., 1.]
+      step: [0.01, 0.0001]
+    - name: weight_decay
+      type: float
+      default: 0.
+      min: 0.
+      max: 1.
+      step: 0.00001
+    - name: momentum_decay
+      description: momentum momentum decay
+      type: float
+      default: 0.
+      min: 0.
+      max: 1.
+      step: 0.00001
+    - name: decoupled_weight_decay
+      type: bool
+      description: whether to use decoupled weight decay as in AdamW to obtain NAdamW
+      default: false
+
+  RAdam:
+    - name: learnrate
+      type: float
+      default: 0.001
+      min: 0.
+      max: 100.
+      step: 0.001
+    - name: betas
+      type: float2
+      default: [0.9, 0.999]
+      min: [0., 0.]
+      max: [1., 1.]
+      step: [0.01, 0.0001]
+    - name: weight_decay
+      type: float
+      default: 0.
+      min: 0.
+      max: 1.
+      step: 0.00001
+
+# this one looks interesting but needs an extra model evaluation closure in optimizer.step()
+#  LBFGS:
+#    - name: learnrate
+#      type: float
+#      default: 1.
+#      min: 0.
+#      max: 100.
+#      step: 0.1
+#    - name: max_iter
+#      description: maximal number of iterations per optimization step
+#      type: int
+#      default: 20
+#      min: 1
+#      max: 1000
+#    - name: history_size
+#      type: int
+#      default: 100
+#      min: 1
+#      max: 10000
+
+  RMSprop:
+    - name: learnrate
+      type: float
+      default: 0.01
+      min: 0.
+      max: 100.
+      step: 0.001
+    - name: alpha
+      type: float
+      default: 0.99
+      min: 0.
+      max: 10.
+      step: 0.001
+    - name: weight_decay
+      type: float
+      default: 0.
+      min: 0.
+      max: 1.
+      step: 0.00001
+    - name: momentum
+      type: float
+      default: 0.
+      min: 0.
+      max: 1.
+      step: 0.01

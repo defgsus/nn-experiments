@@ -24,6 +24,10 @@ def get_clipig_task_parameters():
     for klass in source_models.source_models.values():
         parameters["source_models"][klass.NAME] = deepcopy(klass.PARAMS)
 
+    for param in parameters["target"]:
+        if param["name"] == "optimizer":
+            param["choices"] = list(parameters["optimizers"].keys())
+
     # print(json.dumps(parameters, indent=2))
     return parameters
 

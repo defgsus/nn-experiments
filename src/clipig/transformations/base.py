@@ -1,4 +1,6 @@
-from typing import Optional, Dict, Type, Tuple, List
+import math
+import random
+from typing import Optional, Dict, Type, Tuple, List, Union
 
 import torch
 import torchvision.transforms as VT
@@ -16,6 +18,7 @@ def to_torch_interpolation(interpolation: str):
         "bicubic": VF.InterpolationMode.BICUBIC,
     }.get(interpolation, VF.InterpolationMode.NEAREST)
 
+
 INTERPOLATION_PARAMETER = {
     "name": "interpolation",
     "type": "select",
@@ -26,7 +29,8 @@ INTERPOLATION_PARAMETER = {
 
 class TransformBase:
 
-    NAME: Optional[str] = None
+    CLASS: str = None
+    NAME: str = None
     IS_RANDOM = False
     IS_RESIZE = False
     PARAMS: List[dict] = [
@@ -38,13 +42,15 @@ class TransformBase:
     ]
 
     def __init_subclass__(cls, **kwargs):
-        assert cls.NAME, f"Must specify {cls.__name__}.NAME"
-        assert cls.PARAMS, f"Must specify {cls.__name__}.PARAMS"
-        if cls.NAME in transformations:
-            raise ValueError(
-                f"{cls.__name__}.NAME = '{cls.NAME}' is already defined for {transformations[cls.NAME].__name__}"
-            )
-        transformations[cls.NAME] = cls
+        if not cls.__name__.endswith("Base"):
+            assert cls.CLASS, f"Must specify {cls.__name__}.CLASS"
+            assert cls.NAME, f"Must specify {cls.__name__}.NAME"
+            assert cls.PARAMS, f"Must specify {cls.__name__}.PARAMS"
+            if cls.NAME in transformations:
+                raise ValueError(
+                    f"{cls.__name__}.NAME = '{cls.NAME}' is already defined for {transformations[cls.NAME].__name__}"
+                )
+            transformations[cls.NAME] = cls
 
     def __call__(self, image: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError

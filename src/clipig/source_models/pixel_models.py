@@ -34,7 +34,7 @@ class PixelModel(SourceModelBase):
         self.randomize()
 
     def forward(self):
-        return self.code.clamp(0, 1)
+        return self.code
 
     @torch.no_grad()
     def clear(self):

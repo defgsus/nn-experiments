@@ -78,7 +78,7 @@ class ClipSingleton:
                 if normalize:
                     feature_batch = normalize_embedding(feature_batch)
 
-        return feature_batch.to(device).to(image_batch.dtype)
+        return feature_batch
 
     @classmethod
     def encode_text(

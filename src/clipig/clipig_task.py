@@ -96,12 +96,24 @@ class ClipigTask:
         targets = []
         for target_conf in self.config["targets"]:
 
-            texts = [
-                target_conf["prompt"]
-            ]
+            prompt = target_conf.get("prompt")
+            neg_prompt = target_conf.get("negative_prompt")
 
-            target_embeddings = self.clip_encode_text(texts)
-            target_dots = torch.ones(target_conf["batch_size"], len(texts)).half().to(self.device)
+            if not prompt and not neg_prompt:
+                texts = [(1, "")]  # whoa! the empty prompt!
+            else:
+                texts = []
+                if prompt:
+                    texts.append((1, prompt))
+                if neg_prompt:
+                    texts.append((-1, neg_prompt))
+
+            target_embeddings = self.clip_encode_text([t[1] for t in texts])
+            target_dots = (
+                torch.Tensor([[t[0] for t in texts]])
+                .repeat(target_conf["batch_size"], 1)
+                .half().to(self.device)
+            )
 
             transforms = []
             for trans_conf in target_conf["transformations"]:
@@ -181,8 +193,8 @@ class ClipigTask:
             yield message
 
     def _to_clip_pixels(self, pixels: torch.Tensor):
-        if pixels.shape[-2:] != (224, 224):
-            pixels = VF.resize(pixels, (224, 224), VT.InterpolationMode.NEAREST, antialias=False)
+        #if tuple(pixels.shape[-2:]) != (224, 224):
+        #    pixels = VF.resize(pixels, (224, 224), VT.InterpolationMode.NEAREST, antialias=False)
 
         if pixels.shape[0] != 3:
             pixels = set_image_channels(pixels, 3)
@@ -190,7 +202,7 @@ class ClipigTask:
         if pixels.dtype != torch.float16:
             pixels = set_image_dtype(pixels, torch.float16)
 
-        return pixels
+        return pixels.clamp(0, 1)
 
     def get_input_image(self) -> Optional[torch.Tensor]:
         image = self.config.get("input_image")
