@@ -3,6 +3,7 @@ from functools import partial
 from typing import List, Dict
 
 from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from ...parameters import (
@@ -10,9 +11,12 @@ from ...parameters import (
 )
 from ..parameters import ParameterWidget
 from .new_transform_dialog import NewTransformationDialog
+from .transformations_preview_widget import TransformationsPreviewWidget
 
 
 class TransformationsWidget(QWidget):
+
+    signal_run_transformation_preview = pyqtSignal()
 
     def __init__(self, *args, transformations: List[dict], default_parameters: dict, **kwargs):
         super().__init__(*args, **kwargs)
@@ -21,7 +25,7 @@ class TransformationsWidget(QWidget):
         self._param_widgets: List[ParameterWidget] = []
 
         self._create_widgets()
-        self._row_changed(0)
+        self._row_changed()
 
     @property
     def transformations(self) -> List[dict]:
@@ -30,8 +34,14 @@ class TransformationsWidget(QWidget):
             for i in range(self.list_widget.count())
         ]
 
+    def set_preview_images(self, images: List[QImage]):
+        self.transform_preview_widget.set_preview_images(images)
+
     def _create_widgets(self):
-        lh = QHBoxLayout(self)
+        lv0 = QVBoxLayout(self)
+
+        lh = QHBoxLayout()
+        lv0.addLayout(lh)
 
         lv = QVBoxLayout()
         lh.addLayout(lv)
@@ -40,6 +50,7 @@ class TransformationsWidget(QWidget):
         self.list_widget.setFixedWidth(200)
         lv.addWidget(self.list_widget)
         self.list_widget.setDragDropMode(QAbstractItemView.DragDrop)
+        self.list_widget.model().rowsMoved.connect(self._row_changed)
 
         for trans in self._init_transformations:
             item = QListWidgetItem(trans["name"], parent=self.list_widget)
@@ -63,7 +74,13 @@ class TransformationsWidget(QWidget):
         lh.addWidget(self.param_widget, stretch=10)
         self._layout = lh
 
-    def _row_changed(self, index: int):
+        self.transform_preview_widget = TransformationsPreviewWidget(self)
+        self.transform_preview_widget.signal_run_transformation_preview.connect(
+            self.signal_run_transformation_preview
+        )
+        lv0.addWidget(self.transform_preview_widget)
+
+    def _row_changed(self):
         self.param_widget.deleteLater()
         self.param_widget = QWidget()
         self._layout.addWidget(self.param_widget)
@@ -71,6 +88,7 @@ class TransformationsWidget(QWidget):
 
         lv = QVBoxLayout(self.param_widget)
 
+        index = self.list_widget.currentRow()
         if not 0 <= index < self.list_widget.count():
             self.butt_remove.setEnabled(False)
 

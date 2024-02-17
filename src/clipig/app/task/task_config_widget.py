@@ -1,6 +1,8 @@
 from copy import deepcopy
 from typing import List, Optional
 
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from ..models.preset_model import PresetModel
@@ -11,6 +13,8 @@ from .source_model_widget import SourceModelWidget
 
 
 class TaskConfigWidget(QWidget):
+
+    signal_run_transformation_preview = pyqtSignal()
 
     def __init__(self, *args, preset_model: PresetModel, **kwargs):
         super().__init__(*args, **kwargs)
@@ -99,6 +103,7 @@ class TaskConfigWidget(QWidget):
             target_widgets["transformation_widget"] = trans_widget = TransformationsWidget(
                 tab, transformations=target_values["transformations"], default_parameters=self.default_parameters,
             )
+            trans_widget.signal_run_transformation_preview.connect(self.signal_run_transformation_preview)
             lv.addWidget(trans_widget)
 
         butt = QPushButton(self.tr("new target"), self)
@@ -113,3 +118,7 @@ class TaskConfigWidget(QWidget):
         )
         self.set_values(config)
         self.target_tab_widget.setCurrentIndex(self.target_tab_widget.count() - 2)
+
+    def set_transformation_preview(self, target_index: int, images: List[QImage]):
+        if 0 <= target_index < len(self._target_widgets):
+            self._target_widgets[target_index]["transformation_widget"].set_preview_images(images)

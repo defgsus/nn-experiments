@@ -10,11 +10,12 @@ from PyQt5.QtWidgets import *
 import torch
 
 from ..images import LImageWidget
+from ...clipig_task import ClipigTask
 from ...clipig_worker import ClipigWorker
 from ..task.task_config_widget import TaskConfigWidget
 from ..models.preset_model import PresetModel
 from .preset_widget import PresetWidget
-from ..util import qimage_to_torch
+from ..util import qimage_to_torch, image_to_qimage
 from ..images import LImage
 from src.util.files import Filestream
 
@@ -65,7 +66,7 @@ class TaskWidget(QWidget):
         scroll.setWidget(self.config_widget)
         # lv.addWidget(self.config_widget)
         self.config_widget.set_values(self.preset_model.default_config()["config"])
-
+        self.config_widget.signal_run_transformation_preview.connect(self._run_transformation_preview)
         self.preset_widget.signal_preset_changed.connect(self.config_widget.set_values)
         self.preset_widget.signal_save_preset.connect(self._save_preset)
 
@@ -106,6 +107,11 @@ class TaskWidget(QWidget):
         else:
             self.signal_stop_task.emit(self.task_id)
 
+    def _run_transformation_preview(self):
+        config = self._get_run_config()
+        config["task_type"] = ClipigTask.TaskType.T_TRANSFORMATION_PREVIEW
+        self.signal_run_task.emit(self.task_id, config)
+
     def _update_run_button(self):
         if self.run_button.isChecked():
             self.run_button.setText(self.tr("&stop"))
@@ -131,6 +137,14 @@ class TaskWidget(QWidget):
 
                 self.image_widget.set_image("<clipig>", pixels)
                 self.set_changed()
+
+            if message.get("transformation_preview") is not None:
+                target_index = message["transformation_preview"]["target_index"]
+                images = [
+                    image_to_qimage(pixels)
+                    for pixels in message["transformation_preview"]["pixels"]
+                ]
+                self.config_widget.set_transformation_preview(target_index, images)
 
     def _save_preset(self, name: str):
         self.preset_model.save_preset(name, self.config_widget.get_values())

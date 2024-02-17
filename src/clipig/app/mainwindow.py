@@ -116,23 +116,11 @@ class MainWindow(QMainWindow):
         self.tab_widget.setCurrentWidget(project_widget)
 
     def _slot_idle(self):
-        task_map: Optional[Dict[Hashable, dict]] = None
-
         for event in self.clipig.events(blocking=False):
             if event.get("task"):
 
-                if 0:
-                    if task_map is None:
-                        task_map = {}
-                        for project in self._projects:
-                            task_map.update(project._task_map)
-
-                    task_id = event["task"]["id"]
-                    if task_id in task_map:
-                        task_map[task_id]["widget"].slot_task_event(event["task"])
-                else:
-                    for proj in self._projects:
-                        proj.task_event(event["task"]["id"], event["task"])
+                for proj in self._projects:
+                    proj.task_event(event["task"]["id"], event["task"])
 
         QTimer.singleShot(self._refresh_msec, self._slot_idle)
 

@@ -257,6 +257,10 @@ class LImage:
             name: Optional[str] = None,
             image: Optional[str] = None,
             index: Optional[int] = None,
+            repeat: Tuple[int, int] = (1, 1),
+            active: bool = True,
+            transparency: float = 0.,
+            position: Tuple[int, int] = (0, 0),
     ) -> LImageLayer:
         if name is None:
             name = f"layer #{len(self.layers) + 1}"
@@ -265,6 +269,10 @@ class LImage:
             parent=self,
             name=name,
             image=image,
+            repeat=repeat,
+            active=active,
+            transparency=transparency,
+            position=position,
         )
 
         if index is not None:

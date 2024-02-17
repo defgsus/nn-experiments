@@ -15,6 +15,7 @@ def image_resize_crop(
         shape: Tuple[int, int],
         interpolation: VF.InterpolationMode = VF.InterpolationMode.NEAREST,
 ) -> Union[torch.Tensor, PIL.Image.Image]:
+
     if isinstance(image, PIL.Image.Image):
         width, height = image.width, image.height
     else:

@@ -10,14 +10,18 @@ import torchvision.transforms.functional as VF
 
 from ..models.clip import ClipSingleton
 from ..util import to_torch_device
-from .source_models import create_source_model
+from .source_models import create_source_model, SourceModelBase
 from .parameters import get_complete_clipig_task_config
 from . import transformations
 from .optimizers import create_optimizer
-from src.util.image import set_image_channels, set_image_dtype
+from src.util.image import set_image_channels, set_image_dtype, image_resize_crop
 
 
 class ClipigTask:
+
+    class TaskType:
+        T_CLIPIG = "clipig"
+        T_TRANSFORMATION_PREVIEW = "transformation_preview"
 
     def __init__(
             self,
@@ -46,6 +50,10 @@ class ClipigTask:
     @property
     def num_iterations(self) -> int:
         return self.config["num_iterations"]
+
+    @property
+    def task_type(self):
+        return self.config.get("task_type") or self.TaskType.T_CLIPIG
 
     def clip_encode_text(
             self,
@@ -77,7 +85,7 @@ class ClipigTask:
             normalize=normalize,
         )
 
-    def create_source_model(self) -> nn.Module:
+    def create_source_model(self) -> SourceModelBase:
         model = create_source_model(self.config["source_model"], device=self.device)
 
         init_method = self.config["initialize"]
@@ -96,24 +104,28 @@ class ClipigTask:
         targets = []
         for target_conf in self.config["targets"]:
 
-            prompt = target_conf.get("prompt")
-            neg_prompt = target_conf.get("negative_prompt")
+            if self.task_type in (self.TaskType.T_CLIPIG, ):
+                prompt = target_conf.get("prompt")
+                neg_prompt = target_conf.get("negative_prompt")
 
-            if not prompt and not neg_prompt:
-                texts = [(1, "")]  # whoa! the empty prompt!
+                if not prompt and not neg_prompt:
+                    texts = [(1, "")]  # whoa! the empty prompt!
+                else:
+                    texts = []
+                    if prompt:
+                        texts.append((1, prompt))
+                    if neg_prompt:
+                        texts.append((-1, neg_prompt))
+
+                target_embeddings = self.clip_encode_text([t[1] for t in texts])
+                target_dots = (
+                    torch.Tensor([[t[0] for t in texts]])
+                    .repeat(target_conf["batch_size"], 1)
+                    .half().to(self.device)
+                )
             else:
-                texts = []
-                if prompt:
-                    texts.append((1, prompt))
-                if neg_prompt:
-                    texts.append((-1, neg_prompt))
-
-            target_embeddings = self.clip_encode_text([t[1] for t in texts])
-            target_dots = (
-                torch.Tensor([[t[0] for t in texts]])
-                .repeat(target_conf["batch_size"], 1)
-                .half().to(self.device)
-            )
+                target_embeddings = None
+                target_dots = None
 
             transforms = []
             for trans_conf in target_conf["transformations"]:
@@ -131,7 +143,10 @@ class ClipigTask:
                         raise
                     transforms.append(trans)
 
-            optimizer = create_optimizer(source_model.parameters(), target_conf["optimizer"])
+            if self.task_type in (self.TaskType.T_CLIPIG, ):
+                optimizer = create_optimizer(source_model.parameters(), target_conf["optimizer"])
+            else:
+                optimizer = None
 
             targets.append({
                 **target_conf,
@@ -144,21 +159,27 @@ class ClipigTask:
         return targets
 
     def run(self) -> Generator[dict, None, None]:
+
         yield {"status": "initializing"}
 
         source_model = self.create_source_model()
-        ClipSingleton.get(self.clip_model_name, self.device_name)
+        if self.task_type == self.TaskType.T_CLIPIG:
+            ClipSingleton.get(self.clip_model_name, self.device_name)
+
+        targets = self.create_targets(source_model)
 
         yield {"status": "running"}
 
-        targets = self.create_targets(source_model)
+        if self.task_type == self.TaskType.T_TRANSFORMATION_PREVIEW:
+            yield from self._preview_transformations(source_model, targets)
+            return
 
         self._last_pixel_yield_time = 0
         for it in range(self.num_iterations):
 
             loss_per_target = []
             for target in targets:
-                pixels = source_model().float()
+                pixels = source_model()
                 transforms = target["transformations"]
 
                 pixel_batch = []
@@ -192,8 +213,27 @@ class ClipigTask:
 
             yield message
 
+    @torch.no_grad()
+    def _preview_transformations(
+            self,
+            source_model: SourceModelBase,
+            targets: List[dict],
+            batch_size: int = 5,
+    ) -> Generator[dict, None, None]:
+        pixels = source_model()
+
+        for target_idx, target in enumerate(targets):
+            transforms = target["transformations"]
+
+            pixel_batch = []
+            for i in range(batch_size):
+                pixel_batch.append(self._to_clip_pixels(transforms(pixels)))
+
+            yield {"transformation_preview": {"target_index": target_idx, "pixels": pixel_batch}}
+
     def _to_clip_pixels(self, pixels: torch.Tensor):
-        #if tuple(pixels.shape[-2:]) != (224, 224):
+        if tuple(pixels.shape[-2:]) != (224, 224):
+            pixels = image_resize_crop(pixels, (224, 224))
         #    pixels = VF.resize(pixels, (224, 224), VT.InterpolationMode.NEAREST, antialias=False)
 
         if pixels.shape[0] != 3:

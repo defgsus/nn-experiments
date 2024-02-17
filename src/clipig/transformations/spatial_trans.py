@@ -187,6 +187,12 @@ class Padding(SpatialTransformBase):
             "min": 0,
             "max": 2**16,
         },
+        {
+            "name": "padding_mode",
+            "type": "select",
+            "choices": ["constant", "edge", "reflect", "symmetric"],
+            "default": "constant",
+        }
     ]
 
     def __init__(
@@ -195,16 +201,21 @@ class Padding(SpatialTransformBase):
             pad_top: int,
             pad_right: int,
             pad_bottom: int,
+            padding_mode: str,
     ):
         super().__init__()
         self.pad_left = pad_left
         self.pad_top = pad_top
         self.pad_right = pad_right
         self.pad_bottom = pad_bottom
+        self.padding_mode = padding_mode
 
     def __call__(self, image: torch.Tensor) -> torch.Tensor:
-        return VF.pad(image, [self.pad_left, self.pad_top, self.pad_right, self.pad_bottom])
-
+        return VF.pad(
+            image,
+            [self.pad_left, self.pad_top, self.pad_right, self.pad_bottom],
+            padding_mode=self.padding_mode,
+        )
 
 
 class Blur(SpatialTransformBase):
