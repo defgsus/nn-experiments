@@ -19,10 +19,11 @@ class ParameterWidget(QWidget):
     _RE_INT_N = re.compile(r"^int(\d+)$")
     _RE_FLOAT_N = re.compile(r"^float(\d+)$")
 
-    def __init__(self, parameter: dict, parent: QWidget):
+    def __init__(self, parameter: dict, parent: QWidget, show_label: bool = True):
         super().__init__(parent)
 
         self.parameter = parameter
+        self._show_label = show_label
         self._ignore_value_change = False
         self._widget = None
         self._widgets = []
@@ -94,14 +95,14 @@ class ParameterWidget(QWidget):
         elif self.parameter_type == "int":
             self._widget = QSpinBox(self)
             self._widget.setLocale(QLocale("en"))
-            self._widget.setRange(self.parameter.get("min", 0), self.parameter.get("max", 2 ** 24))
+            self._widget.setRange(self.parameter.get("min", -(2 ** 24)), self.parameter.get("max", 2 ** 24))
             self._widget.setSingleStep(self.parameter.get("step", 1))
             self._widget.valueChanged.connect(self._value_changed)
 
         elif self.parameter_type == "float":
             self._widget = QDoubleSpinBox(self)
             self._widget.setLocale(QLocale("en"))
-            self._widget.setRange(self.parameter.get("min", 0), self.parameter.get("max", 2 ** 24))
+            self._widget.setRange(self.parameter.get("min", -(2 ** 24)), self.parameter.get("max", 2 ** 24))
             self._widget.setSingleStep(self.parameter.get("step", 0.1))
             self._widget.setDecimals(self.parameter.get("decimals", 10))
             self._widget.valueChanged.connect(self._value_changed)
@@ -126,7 +127,9 @@ class ParameterWidget(QWidget):
 
         lh = QHBoxLayout(self)
         lh.setContentsMargins(0, 0, 0, 0)
-        lh.addWidget(QLabel(self.parameter["name"], self))
+        if self._show_label:
+            lh.addWidget(QLabel(self.parameter["name"], self))
+
         lh.addWidget(self._widget)
 
     def _create_multi_spinbox(self, count: int):
@@ -137,7 +140,7 @@ class ParameterWidget(QWidget):
         lh = QHBoxLayout(widget)
         lh.setContentsMargins(0, 0, 0, 0)
 
-        min_values = self.parameter.get("min", [0] * count)
+        min_values = self.parameter.get("min", [-(2**24)] * count)
         max_values = self.parameter.get("max", [2**24] * count)
         step_values = self.parameter.get("step", [.1 if is_float else 1] * count)
         decimals_values = self.parameter.get("decimals", [10] * count)

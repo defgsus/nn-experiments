@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from copy import deepcopy
-from typing import Optional
+from typing import Optional, List
 
 import yaml
 
@@ -11,6 +11,10 @@ with (Path(__file__).resolve().parent / "clipig_task_parameters.yaml").open() as
 
 
 def get_clipig_task_parameters():
+    """
+    Combine the clipig_task_parameters.yaml params and
+    the runtime generated params from transformation and source-model classes
+    """
     from .. import transformations
     from .. import source_models
 
@@ -42,9 +46,7 @@ def get_complete_clipig_task_config(config: dict) -> dict:
 
     parameters = get_clipig_task_parameters()
 
-    for param in parameters["base"]:
-        if param["name"] not in config:
-            config[param["name"]] = param["default"]
+    patch_values_with_parameters(config, parameters["base"])
 
     config["source_model"] = get_complete_clipig_source_model_config(
         config.get("source_model") or {},
@@ -55,9 +57,27 @@ def get_complete_clipig_task_config(config: dict) -> dict:
         config["targets"] = []
 
     for target in config["targets"]:
-        for param in parameters["target"]:
-            if param["name"] not in target:
-                target[param["name"]] = param["default"]
+        patch_values_with_parameters(target, parameters["target"])
+
+        # -- update prompt to new format --
+        if "target_features" not in target:
+            target["target_features"] = [
+                {
+                    "text": target["prompt"],
+                    "weight": 1.
+                }
+            ]
+            if target.get("negative_prompt"):
+                target["target_features"].append({
+                    "text": target["negative_prompt"],
+                    "weight": -1.
+                })
+
+        target.pop("prompt", None)
+        target.pop("negative_prompt", None)
+
+        for feature in target["target_features"]:
+            patch_values_with_parameters(feature, parameters["target_feature"])
 
         if "transformations" not in target:
             target["transformations"] = []
@@ -76,10 +96,10 @@ def get_complete_clipig_transformation_config(trans: dict, parameters: Optional[
 
     trans = deepcopy(trans)
 
-    trans_params = parameters["transformations"][trans["name"]]
-    for param in trans_params:
-        if param["name"] not in trans["params"]:
-            trans["params"][param["name"]] = param["default"]
+    patch_values_with_parameters(
+        trans["params"],
+        parameters["transformations"][trans["name"]]
+    )
 
     return trans
 
@@ -95,11 +115,16 @@ def get_complete_clipig_source_model_config(config: dict, parameters: Optional[d
     if not config.get("params"):
         config["params"] = {}
 
-    params = parameters["source_models"][config["name"]]
-    for param in params:
-        if param["name"] not in config["params"]:
-            config["params"][param["name"]] = param["default"]
+    patch_values_with_parameters(
+        config["params"],
+        parameters["source_models"][config["name"]]
+    )
 
     return config
 
+
+def patch_values_with_parameters(values: dict, parameters: List[dict]):
+    for param in parameters:
+        if param["name"] not in values:
+            values[param["name"]] = param["default"]
 

@@ -103,29 +103,27 @@ class ClipigTask:
     def create_targets(self, source_model: nn.Module) -> List[dict]:
         targets = []
         for target_conf in self.config["targets"]:
+            batch_size = target_conf["batch_size"]
 
             if self.task_type in (self.TaskType.T_CLIPIG, ):
-                prompt = target_conf.get("prompt")
-                neg_prompt = target_conf.get("negative_prompt")
 
-                if not prompt and not neg_prompt:
-                    texts = [(1, "")]  # whoa! the empty prompt!
-                else:
-                    texts = []
-                    if prompt:
-                        texts.append((1, prompt))
-                    if neg_prompt:
-                        texts.append((-1, neg_prompt))
+                target_features = target_conf["target_features"]
 
-                target_embeddings = self.clip_encode_text([t[1] for t in texts])
+                target_embeddings = self.clip_encode_text([prompt["text"] for prompt in target_features])
                 target_dots = (
-                    torch.Tensor([[t[0] for t in texts]])
-                    .repeat(target_conf["batch_size"], 1)
+                    torch.ones(batch_size, len(target_features))
                     .half().to(self.device)
                 )
+                target_weights = (
+                    torch.Tensor([[prompt["weight"] for prompt in target_features]])
+                    .repeat(batch_size, 1)
+                    .half().to(self.device)
+                )
+
             else:
                 target_embeddings = None
                 target_dots = None
+                target_weights = None
 
             transforms = []
             for trans_conf in target_conf["transformations"]:
@@ -154,6 +152,7 @@ class ClipigTask:
                 "transformations": VT.Compose(transforms) if transforms else lambda x: x,
                 "target_embeddings": target_embeddings,
                 "target_dots": target_dots,
+                "target_weights": target_weights,
             })
 
         return targets
@@ -191,7 +190,10 @@ class ClipigTask:
 
                 dots = image_embeddings @ target["target_embeddings"].T
 
-                loss = F.l1_loss(dots, target["target_dots"])
+                abs_error = (dots - target["target_dots"]).abs()
+                loss = (abs_error * target["target_weights"]).mean()
+
+                # loss = F.l1_loss(dots, target["target_dots"])
 
                 optimizer = target["optimizer"]
                 optimizer.zero_grad()

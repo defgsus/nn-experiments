@@ -10,6 +10,7 @@ from ...parameters import get_clipig_task_parameters, get_complete_clipig_task_c
 from ..parameters import ParameterWidget, ParametersWidget, SubParametersWidget
 from .transformations_widget import TransformationsWidget
 from .source_model_widget import SourceModelWidget
+from .target_features_widget import TargetFeaturesWidget
 
 
 class TaskConfigWidget(QWidget):
@@ -55,6 +56,7 @@ class TaskConfigWidget(QWidget):
 
             target_values = {
                 **target_widgets["params_widget"].get_values(),
+                "target_features": target_widgets["features_widget"].get_values(),
                 "optimizer": target_widgets["optimizer_params_widget"].get_values(),
                 "transformations": target_widgets["transformation_widget"].transformations,
             }
@@ -87,6 +89,9 @@ class TaskConfigWidget(QWidget):
                     exclude=["optimizer"],
                     values=target_values,
                 ),
+                "features_widget": TargetFeaturesWidget(
+                    parent=tab,
+                ),
                 "optimizer_params_widget": SubParametersWidget(
                     parent=tab,
                     select_parameter=optimizer_param,
@@ -97,7 +102,10 @@ class TaskConfigWidget(QWidget):
             }
             self._target_widgets.append(target_widgets)
             lv.addWidget(target_widgets["params_widget"])
+            lv.addWidget(target_widgets["features_widget"])
             lv.addWidget(target_widgets["optimizer_params_widget"])
+
+            target_widgets["features_widget"].set_values(target_values["target_features"])
 
             lv.addWidget(QLabel(self.tr("transformations"), tab))
             target_widgets["transformation_widget"] = trans_widget = TransformationsWidget(
