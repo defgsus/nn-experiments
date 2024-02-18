@@ -2,6 +2,10 @@ from .classic import (
     mnist_dataset,
     fmnist_dataset,
 )
+from .image_patch import (
+    image_patch_dataset,
+    all_image_patch_dataset,
+)
 from .noise import (
     noise_dataset
 )

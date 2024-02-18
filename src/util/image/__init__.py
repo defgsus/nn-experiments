@@ -12,4 +12,5 @@ from .image import (
     get_image_window,
 )
 from .image_filter import ImageFilter
-from .patches import iter_image_patches
+from .patches import iter_image_patches, map_image_patches
+

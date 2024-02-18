@@ -148,7 +148,8 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
         trainer = trainer_klass(**kwargs)
 
         if not kwargs["reset"]:
-            trainer.load_checkpoint()
+            if not trainer.load_checkpoint("best"):
+                trainer.load_checkpoint()
 
         trainer.save_description()
         trainer.train()

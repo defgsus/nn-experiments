@@ -1,0 +1,40 @@
+experiment_name: denoise/conv04-${matrix_slug}
+
+matrix:
+  ks: [3]
+  chan: [[64, 128, 128, 128, 64]]
+  stride: [[1, 1, 2, 2, 2, 1]]
+
+trainer: experiments.denoise.trainer.TrainDenoising
+
+train_set: |
+  all_image_patch_dataset(SHAPE)
+
+validation_set: |
+  LimitIterableDataset(
+    all_image_patch_dataset(SHAPE),
+    5000,
+  )
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 2_000_000
+num_inputs_between_validations: 150_000
+freeze_validation_set: True
+
+
+globals:
+  SHAPE: (3, 64, 64)
+
+model: |
+  from experiments.denoise.models import ConvDenoiser
+  
+  ConvDenoiser(
+      shape=SHAPE, 
+      channels=${chan},
+      stride=${stride},
+      kernel_size=${ks},
+  )
