@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import *
 
 from .limage import LImage, LImageLayer
 from .limage_model import LImageModel
+from ..dialogs import ResizeDialog
 
 
 class LImageLayersWidget(QWidget):
@@ -34,6 +35,7 @@ class LImageLayersWidget(QWidget):
         self.table_widget.setShowGrid(False)
         self.table_widget.verticalHeader().setVisible(False)
         self.table_widget.setMaximumHeight(160)
+        self.table_widget.doubleClicked.connect(self._table_dbl_click)
 
     def set_limage(self, limage: Optional[LImage] = None):
         self._limage = limage
@@ -68,3 +70,14 @@ class LImageLayersWidget(QWidget):
 
     def _delete_rows(self, rows: List[int]):
         self._limage.delete_layers(rows)
+
+    def _table_dbl_click(self, index: QModelIndex):
+        size_column = LImageModel.COLUMNS.index("size")
+        if index.column() == size_column:
+            layer = index.data(Qt.ItemDataRole.UserRole)
+            result = ResizeDialog.run_dialog(
+                size=layer.size(),
+                title=f"Resize {layer.name}"
+            )
+            if result is not None:
+                layer.set_image_size(**result._asdict())

@@ -113,7 +113,12 @@ class LImageLayer:
     def set_selected(self):
         self._parent.set_selected_layer(self)
 
-    def set_image_size(self, size: Union[QSize, Tuple[int, int]]):
+    def set_image_size(
+            self,
+            size: Union[QSize, Tuple[int, int]],
+            transform_mode: Qt.TransformationMode = Qt.TransformationMode.SmoothTransformation,
+            aspect_mode: Qt.AspectRatioMode = Qt.AspectRatioMode.IgnoreAspectRatio,
+    ):
         if not isinstance(size, QSize):
             size = QSize(*size)
 
@@ -122,8 +127,8 @@ class LImageLayer:
 
         self._image = self._image.scaled(
             size,
-            # aspectRatioMode=Qt.KeepAspectRatio,
-            transformMode=Qt.SmoothTransformation,
+            aspectRatioMode=aspect_mode,
+            transformMode=transform_mode,
         )
         self.set_changed()
 
@@ -180,8 +185,8 @@ class LImageLayer:
         if self._thumbnail is None:
             self._thumbnail = self._image.scaled(
                 self.THUMBNAIL_SIZE,
-                aspectRatioMode=Qt.KeepAspectRatio,
-                transformMode=Qt.SmoothTransformation,
+                aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio,
+                transformMode=Qt.TransformationMode.SmoothTransformation,
             )
 
         return self._thumbnail
