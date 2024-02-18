@@ -106,7 +106,7 @@ class RandomScale(SpatialTransformBase):
         ]
         if torch.Size(new_shape) == image.shape[-2:]:
             return image
-        
+
         return VF.resize(
             image,
             size=new_shape,

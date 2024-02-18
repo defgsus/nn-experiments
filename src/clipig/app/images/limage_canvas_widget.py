@@ -42,8 +42,8 @@ class LImageCanvasWidget(QWidget):
 
     def _update_size(self):
         self.setFixedSize(
-            max(1, self._size[0] * self.zoom),
-            max(1, self._size[1] * self.zoom),
+            max(1, int(self._size[0] * self.zoom / 100)),
+            max(1, int(self._size[1] * self.zoom / 100)),
         )
 
     def set_background(self, mode: str):

@@ -20,7 +20,7 @@ class FileDialog:
         T_Image: {
             "name": "Image",
             # first is default
-            "extensions": ["png", "jpg"],  # ...
+            "extensions": ["png", "jpg", "bmp"],  # ...
             "default_directory": Path("~/Pictures").expanduser(),
         },
         T_Project: {
@@ -47,7 +47,7 @@ class FileDialog:
         filename, used_filter = QFileDialog.getSaveFileName(
             parent=parent,
             caption=f"Save {file_type_info['name']}",
-            filter=" ".join(f"*.{ext}" for ext in file_type_info["extensions"]),
+            filter=" ".join(f"*.{ext} *.{ext.upper()}" for ext in file_type_info["extensions"]),
             directory=(
                 cls.settings[file_type].get("last_save_directory")
                 or cls.settings[file_type].get("last_load_directory")

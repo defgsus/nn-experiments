@@ -10,6 +10,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from ..models import AutoencoderModel
+from .image_select_widget import ImageSelectWidget
 
 
 class ParameterWidget(QWidget):
@@ -51,6 +52,9 @@ class ParameterWidget(QWidget):
         elif self.parameter_type in ("select", "autoencoder"):
             return self._widget.currentText()
 
+        elif self.parameter_type == "image":
+            return self._widget.get_value()
+
         elif (self._RE_INT_N.match(self.parameter_type) or self._RE_FLOAT_N.match(self.parameter_type)):
             return tuple(
                 w.value() for w in self._widgets
@@ -78,6 +82,9 @@ class ParameterWidget(QWidget):
 
         elif self.parameter_type in ("select", "autoencoder"):
             self._widget.setCurrentText(value)
+
+        elif self.parameter_type == "image":
+            self._widget.set_value(value)
 
         elif self._RE_INT_N.match(self.parameter_type) or self._RE_FLOAT_N.match(self.parameter_type):
             for w, v in zip(self._widgets, value):
@@ -117,6 +124,10 @@ class ParameterWidget(QWidget):
             self._widget = QComboBox(self)
             self._widget.setModel(AutoencoderModel(self))
             self._widget.currentTextChanged.connect(self._value_changed)
+
+        elif self.parameter_type == "image":
+            self._widget = ImageSelectWidget(self)
+            self._widget.signal_value_changed.connect(self._value_changed)
 
         elif match := (self._RE_INT_N.match(self.parameter_type) or self._RE_FLOAT_N.match(self.parameter_type)):
             count = int(match.groups()[0])

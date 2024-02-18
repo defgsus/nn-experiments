@@ -1,7 +1,9 @@
 import time
+from pathlib import Path
 from copy import deepcopy
 from typing import Tuple, Optional, Union, Iterable, Generator, List
 
+import PIL.Image
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -85,6 +87,9 @@ class ClipigTask:
             normalize=normalize,
         )
 
+    def load_image(self, filename: Union[str, Path]):
+        return VF.to_tensor(PIL.Image.open(str(filename)))
+
     def create_source_model(self) -> SourceModelBase:
         model = create_source_model(self.config["source_model"], device=self.device)
 
@@ -109,7 +114,41 @@ class ClipigTask:
 
                 target_features = target_conf["target_features"]
 
-                target_embeddings = self.clip_encode_text([prompt["text"] for prompt in target_features])
+                text_targets = {}
+                image_targets = {}
+                target_embeddings = []
+                for i, feature in enumerate(target_features):
+                    if feature.get("type") == "image":
+                        if feature.get("image") is not None:
+                            image_targets[len(target_embeddings)] = self._to_clip_pixels(
+                                self.load_image(feature["image"])
+                            )
+                            target_embeddings.append(None)
+                    elif feature.get("type") == "text":
+                        if feature.get("text") is not None:
+                            text_targets[len(target_embeddings)] = feature["text"]
+                            target_embeddings.append(None)
+
+                if image_targets:
+                    for idx, emb in zip(
+                            image_targets.keys(),
+                            self.clip_encode_image(torch.concat([
+                                img.unsqueeze(0) for img in image_targets.values()
+                            ], dim=0))
+                    ):
+                        target_embeddings[idx] = emb
+                if text_targets:
+                    for idx, emb in zip(
+                            text_targets.keys(),
+                            self.clip_encode_text(list(text_targets.values()))
+                    ):
+                        target_embeddings[idx] = emb
+
+                if not target_embeddings:
+                    raise ValueError(f"no target_features defined")
+
+                target_embeddings = torch.concat([e.unsqueeze(0) for e in target_embeddings])
+
                 target_dots = (
                     torch.ones(batch_size, len(target_features))
                     .half().to(self.device)

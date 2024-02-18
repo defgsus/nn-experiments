@@ -126,5 +126,8 @@ def get_complete_clipig_source_model_config(config: dict, parameters: Optional[d
 def patch_values_with_parameters(values: dict, parameters: List[dict]):
     for param in parameters:
         if param["name"] not in values:
-            values[param["name"]] = param["default"]
+            try:
+                values[param["name"]] = param["default"]
+            except KeyError:
+                raise KeyError(f"Missing `default` in parameter {param}")
 

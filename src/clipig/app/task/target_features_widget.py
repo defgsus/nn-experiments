@@ -1,6 +1,6 @@
 from functools import partial
 from copy import deepcopy
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -96,6 +96,9 @@ class FeatureWidget(QWidget):
             if key in self._widgets:
                 self._widgets[key].set_value(value, emit=emit)
 
+        if not emit:
+            self._update_text_image()
+
     def _create_widgets(self):
         lh = QHBoxLayout(self)
         lh.setContentsMargins(0, 0, 0, 0)
@@ -104,11 +107,26 @@ class FeatureWidget(QWidget):
         self._widgets["weight"] = widget = ParameterWidget(param, parent=self, show_label=False)
         lh.addWidget(widget)
 
+        param = next(iter(filter(lambda p: p["name"] == "type", self._parameters)))
+        self._widgets["type"] = widget = ParameterWidget(param, parent=self, show_label=False)
+        lh.addWidget(widget)
+        widget.signal_value_changed.connect(self._update_text_image)
+
         param = next(iter(filter(lambda p: p["name"] == "text", self._parameters)))
         self._widgets["text"] = widget = ParameterWidget(param, parent=self, show_label=False)
         lh.addWidget(widget)
+
+        param = next(iter(filter(lambda p: p["name"] == "image", self._parameters)))
+        self._widgets["image"] = widget = ParameterWidget(param, parent=self, show_label=False)
+        lh.addWidget(widget)
+        widget.setVisible(False)
 
         butt = QPushButton("X", self)
         butt.setToolTip(self.tr("Remove feature"))
         butt.clicked.connect(self.signal_remove)
         lh.addWidget(butt)
+
+    def _update_text_image(self):
+        is_image = self._widgets["type"].get_value() == "image"
+        self._widgets["text"].setVisible(not is_image)
+        self._widgets["image"].setVisible(is_image)

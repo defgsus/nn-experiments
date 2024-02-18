@@ -1,3 +1,4 @@
+from .image_select_widget import ImageSelectWidget
 from .parameter_widget import ParameterWidget
 from .parameters_widget import ParametersWidget
 from .sub_parameters_widget import SubParametersWidget

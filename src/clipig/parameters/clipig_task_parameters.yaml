@@ -48,14 +48,18 @@ target:
     max: 100000
 
 target_feature:
-  #- name: type
-  #  type: select
-  #  choices:
-  #    - text
-  #    - image
+  - name: type
+    type: select
+    default: text
+    choices:
+      - text
+      - image
   - name: text
     type: str
     default: pixelart
+  - name: image
+    type: image
+    default: ""
   - name: weight
     type: float
     default: 1.
