@@ -1,5 +1,6 @@
 import math
 import random
+from copy import deepcopy
 from typing import Optional, Dict, Type, Tuple, List, Union
 
 import torch
@@ -54,3 +55,17 @@ class TransformBase:
 
     def __call__(self, image: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError
+
+
+def create_transformation(name: str, config: dict):
+    klass = transformations[name]
+
+    # remove extra parameters
+    trans_params = deepcopy(config)
+    trans_params.pop("active", None)
+
+    try:
+        return klass(**trans_params)
+    except TypeError as e:
+        e.args = (*e.args, f"for class {klass}")
+        raise

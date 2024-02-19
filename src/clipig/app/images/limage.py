@@ -7,7 +7,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from ..util import image_to_qimage, qimage_to_torch
+from ..util import image_to_qimage, qimage_to_torch, torch_to_qimage
 from src.util.files import Filestream
 
 
@@ -162,6 +162,15 @@ class LImageLayer:
             repeat=self._repeat,
             active=self._active,
         )
+
+    def to_torch(self) -> Optional[torch.Tensor]:
+        if not self._image:
+            return None
+        return qimage_to_torch(self._image)
+
+    def from_torch(self, image: torch.Tensor):
+        self._image = torch_to_qimage(image)
+        self.set_changed()
 
     def paint(self, painter: QPainter):
         if self._image is None or not self._active:
@@ -372,7 +381,9 @@ class LImage:
 
     def add_menu_actions(self, menu: QMenu):
         from .new_layer_dialog import NewLayerDialog
+        from .image_transform_dialog import ImageTransformDialog
         menu.addAction("Add layer", partial(NewLayerDialog.run_new_layer_dialog, self, menu))
+        menu.addAction("Transform layer", partial(ImageTransformDialog.run_dialog_on_limage_layer, self, menu))
 
     def to_qimage(self) -> QImage:
         image = QImage(self.size(), QImage.Format.Format_ARGB32)
@@ -401,6 +412,14 @@ class LImage:
                 limage._selected_layer = limage._layers[0]
 
         return limage
+
+    def copy_from(self, other: "LImage"):
+        other = other.copy()
+        self._layers = other._layers
+        self._selected_layer = None if not self._layers else self._layers[0]
+        for l in self._layers:
+            l._parent = self
+        self._layers_changed()
 
     def save_to_filestream(self, filestream: Filestream, directory: Union[str, Path]):
         directory = Path(directory)

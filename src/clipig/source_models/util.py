@@ -1,7 +1,7 @@
 import os
 import ast
 from pathlib import Path
-from typing import Any, Union, Optional, Tuple
+from typing import Any, Union, Optional, Tuple, Dict, List
 
 import torch
 import torch.nn as nn
@@ -43,8 +43,16 @@ def construct_from_code(code: Any):
         raise
 
 
+_model_stack: List[Tuple[Path, Tuple[nn.Module, dict]]] = []
+
+
 def load_model_from_yaml(filename: Union[str, Path]) -> Tuple[nn.Module, dict]:
     filename = Path(filename)
+
+    for stack in _model_stack:
+        if stack[0] == filename:
+            return stack[1]
+
     with filename.open() as fp:
         data = yaml.safe_load(fp)
 
@@ -63,5 +71,10 @@ def load_model_from_yaml(filename: Union[str, Path]) -> Tuple[nn.Module, dict]:
             state_dict = state_dict["state_dict"]
 
         model.load_state_dict(state_dict)
+
+    if len(_model_stack) > 5:
+        _model_stack.pop(0)
+
+    _model_stack.append((filename, (model, data)))
 
     return model, data

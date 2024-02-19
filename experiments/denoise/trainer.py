@@ -22,7 +22,7 @@ from src.models.transform import Sobel
 def add_noise(
         x: torch.Tensor,
         amt_min: float = .01,
-        amt_max: float = .35,
+        amt_max: float = .15,
         amt_power: float = 2.,
 ):
     amt = math.pow(random.uniform(0, 1), amt_power)

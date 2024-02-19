@@ -83,8 +83,12 @@ class Denoising(ValueTransformBase):
         {
             "name": "model",
             "type": "select",
-            "default": "denoiser-conv-32x32-750k",
-            "choices": ["denoiser-conv-32x32-750k"],
+            "default": "denoiser-conv-64x64-150k",
+            "choices": [
+                "denoiser-conv-64x64-150k",
+                "denoiser-conv-64x64-750k",
+                "denoiser-conv-64x64-900k",
+            ],
         },
         {
             "name": "mix",
@@ -93,26 +97,46 @@ class Denoising(ValueTransformBase):
             "min": 0.0,
             "max": 1.0,
         },
+        {
+            "name": "overlap",
+            "type": "int2",
+            "default": [0, 0],
+            "min": [0, 0],
+            "max": [1024, 1024],
+        },
     ]
 
     def __init__(
             self,
             model: str,
             mix: float,
+            overlap: Tuple[int, int] = (0, 0),
     ):
         super().__init__()
         self.model, self.model_config = load_model_from_yaml(PROCESS_PATH / f"{model}.yaml")
+        self.model.eval()
         self.mix = mix
+        self.overlap = overlap
 
     def __call__(self, image: torch.Tensor) -> torch.Tensor:
+        if image.shape[-3] == 4:
+            alpha = image[3:]
+            image = image[:3]
+        else:
+            alpha = None
+
         processed = map_image_patches(
             image=image,
             function=lambda x: self.model(x).clamp(0, 1),
             patch_size=self.model_config["shape"][-2:],
-            overlap=0,
+            overlap=self.overlap,
             batch_size=64,
         )
-        if self.mix == 1.:
-            return processed
-        return image * (1. - self.mix) + self.mix * processed
+        if self.mix != 1.:
+            processed = image * (1. - self.mix) + self.mix * processed
+
+        if alpha is not None:
+            processed = torch.concat([processed, alpha])
+
+        return processed
 

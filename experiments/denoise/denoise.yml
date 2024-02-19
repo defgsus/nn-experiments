@@ -1,9 +1,10 @@
-experiment_name: denoise/conv04-${matrix_slug}
+experiment_name: denoise/conv05-${matrix_slug}
 
 matrix:
   ks: [3]
-  chan: [[64, 128, 128, 128, 64]]
-  stride: [[1, 1, 2, 2, 2, 1]]
+  chan: [[64, 64, 64]]
+  stride: [[1, 2, 2, 1]]
+  pad: [1]
 
 trainer: experiments.denoise.trainer.TrainDenoising
 
@@ -21,7 +22,7 @@ learnrate: 0.0003
 optimizer: AdamW
 scheduler: CosineAnnealingLR
 loss_function: l1
-max_inputs: 2_000_000
+max_inputs: 5_000_000
 num_inputs_between_validations: 150_000
 freeze_validation_set: True
 
@@ -37,4 +38,5 @@ model: |
       channels=${chan},
       stride=${stride},
       kernel_size=${ks},
+      padding=${pad},
   )

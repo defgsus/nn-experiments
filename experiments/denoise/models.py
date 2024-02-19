@@ -34,6 +34,7 @@ class ConvDenoiser(nn.Module):
             channels: Iterable[int],
             kernel_size: Union[int, Iterable[int]] = 3,
             stride: Union[int, Iterable[int]] = 1,
+            padding: Union[int, Iterable[int]] = 0,
             batch_norm: bool = True,
             activation: Union[None, str, Callable] = "gelu",
     ):
@@ -41,35 +42,30 @@ class ConvDenoiser(nn.Module):
         self.shape = shape
 
         self._channels = [shape[0], *channels, shape[0]]
-        if isinstance(kernel_size, int):
-            kernel_sizes = [kernel_size] * len(self._channels)
-        else:
-            kernel_sizes = list(kernel_size)
-            if len(kernel_sizes) != len(self._channels) - 1:
-                raise ValueError(f"Expected kernel_size of length {len(self._channels) - 1}, got {len(kernel_sizes)}")
+        num_layers = len(self._channels) - 1
 
-        if isinstance(stride, int):
-            strides = [stride] * len(self._channels)
-        else:
-            strides = list(stride)
-            if len(strides) != len(self._channels) - 1:
-                raise ValueError(f"Expected stride of length {len(self._channels) - 1}, got {len(strides)}")
+        kernel_sizes = _make_list(kernel_size, num_layers, "kernel_size")
+        strides = _make_list(stride, num_layers, "stride")
+        paddings = _make_list(padding, num_layers, "padding")
 
         self.encoder = nn.ModuleDict()
         decoder_paddings = []
         with torch.no_grad():
             tmp_state = torch.zeros(1, *shape)
 
-            for i, (ch, ch_next, kernel_size, stride) in enumerate(zip(self._channels, self._channels[1:], kernel_sizes, strides)):
+            for i, (ch, ch_next, kernel_size, stride, pad) in enumerate(
+                    zip(self._channels, self._channels[1:], kernel_sizes, strides, paddings)
+            ):
                 if batch_norm:
                     self.encoder[f"layer{i+1}_bn"] = nn.BatchNorm2d(ch)
-                self.encoder[f"layer{i+1}_conv"] = nn.Conv2d(ch, ch_next, kernel_size, stride=stride)
+                self.encoder[f"layer{i+1}_conv"] = nn.Conv2d(ch, ch_next, kernel_size, stride=stride, padding=pad)
                 if activation:
                     self.encoder[f"layer{i+1}_act"] = activation_to_module(activation)
 
+                # conv transposed and see if padding is required
                 in_shape = tmp_state.shape[-2:]
                 tmp_state = self.encoder[f"layer{i+1}_conv"](tmp_state)
-                dec_shape = nn.ConvTranspose2d(ch_next, ch_next, kernel_size, stride=stride)(tmp_state).shape[-2:]
+                dec_shape = nn.ConvTranspose2d(ch_next, ch_next, kernel_size, stride=stride, padding=pad)(tmp_state).shape[-2:]
                 decoder_paddings.append(
                     [s - ds for s, ds in zip(in_shape, dec_shape)]
                 )
@@ -77,15 +73,18 @@ class ConvDenoiser(nn.Module):
         channels = list(reversed(self._channels))
         kernel_sizes = list(reversed(kernel_sizes))
         strides = list(reversed(strides))
+        paddings = list(reversed(paddings))
+        decoder_paddings = list(reversed(decoder_paddings))
+
         self.decoder = nn.ModuleDict()
-        for i, (ch, ch_next, kernel_size, stride, pad) in enumerate(
-                zip(channels, channels[1:], kernel_sizes, strides, list(reversed(decoder_paddings)))
+        for i, (ch, ch_next, kernel_size, stride, pad, out_pad) in enumerate(
+                zip(channels, channels[1:], kernel_sizes, strides, paddings, decoder_paddings)
         ):
             if batch_norm:
                 self.decoder[f"layer{i+1}_bn"] = nn.BatchNorm2d(ch)
 
             self.decoder[f"layer{i+1}_conv"] = nn.ConvTranspose2d(
-                ch, ch_next, kernel_size, stride=stride, output_padding=pad,
+                ch, ch_next, kernel_size, stride=stride, padding=pad, output_padding=out_pad,
             )
             if activation and i < len(channels) - 2:
                 self.decoder[f"layer{i+1}_act"] = activation_to_module(activation)
@@ -115,6 +114,17 @@ class ConvDenoiser(nn.Module):
         return state
 
 
+def _make_list(value, length: int, name: str):
+    if isinstance(value, (int, float, bool, str)):
+        value_list = [value] * length
+    else:
+        value_list = list(value)
+        if len(value_list) != length:
+            raise ValueError(f"Expected {name} of length {length}, got {len(value_list)}")
+
+    return value_list
+
+
 
 class TestConvDenoiser(unittest.TestCase):
 
@@ -134,16 +144,25 @@ class TestConvDenoiser(unittest.TestCase):
                     (2, 2, 2, 2, 2),
                     (2, 3, 4),
             ):
-                msg = f"shape={shape}, stride={stride}"
+                for padding in (
+                        0,
+                        1,
+                        (1, 0, 2),
+                ):
+                    if isinstance(padding, tuple) and len(padding) != len(stride):
+                        continue
 
-                model = ConvDenoiser(
-                    shape=shape,
-                    channels=[16] * (len(stride) - 1),
-                    stride=stride,
-                ).eval()
+                    msg = f"shape={shape}, stride={stride}, padding={padding}"
+                    # print(msg)
+                    model = ConvDenoiser(
+                        shape=shape,
+                        channels=[16] * (len(stride) - 1),
+                        stride=stride,
+                        padding=padding,
+                    ).eval()
 
-                self.assertEqual(
-                    torch.Size(shape),
-                    model(torch.zeros(1, *shape)).shape[-3:],
-                    msg
-                )
+                    self.assertEqual(
+                        torch.Size(shape),
+                        model(torch.zeros(1, *shape)).shape[-3:],
+                        msg
+                    )
