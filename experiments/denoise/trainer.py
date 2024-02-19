@@ -21,14 +21,12 @@ from src.models.transform import Sobel
 
 def add_noise(
         x: torch.Tensor,
-        amt_min: float = .05,
+        amt_min: float = .01,
         amt_max: float = .35,
-        prob: float = .8,
+        amt_power: float = 2.,
 ):
-    if random.uniform(0, 1) > prob:
-        return x
-
-    amt = random.uniform(amt_min, amt_max)
+    amt = math.pow(random.uniform(0, 1), amt_power)
+    amt = amt_min + (amt_max - amt_min) * amt
 
     return x + amt * torch.randn_like(x)
 

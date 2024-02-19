@@ -32,6 +32,7 @@ def image_resize_crop(
             image,
             [int(height * factor), int(width * factor)],
             interpolation=interpolation,
+            antialias=interpolation != VF.InterpolationMode.NEAREST,
         )
 
         if isinstance(image, PIL.Image.Image):

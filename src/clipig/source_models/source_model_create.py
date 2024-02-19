@@ -51,6 +51,7 @@ from src.models.util import *
 from src.algo import *
 
 from . import base
+from .util import construct_from_code, PROJECT_PATH, AUTOENCODER_PATH
 
 
 def create_source_model(config: dict, device: torch.device):
@@ -68,17 +69,13 @@ def create_source_model(config: dict, device: torch.device):
     return model
 
 
-PROJECT_PATH = Path(__file__).resolve().parent.parent.parent.parent
-AUTOENCODER_PATH = Path(__file__).resolve().parent.parent / "models/autoencoder"
-
-
 def _create_autoencoder(kwargs: dict):
     ae_config = _get_autoencoder_config(kwargs["autoencoder"])
 
     kwargs["autoencoder_shape"] = ae_config["shape"]
     kwargs["code_size"] = ae_config["code_size"]
 
-    kwargs["autoencoder"] = model = _construct_from_code(ae_config["model"])
+    kwargs["autoencoder"] = model = construct_from_code(ae_config["model"])
 
     if ae_config.get("checkpoint"):
         filename = Path(
@@ -101,34 +98,3 @@ def _get_autoencoder_config(name: str):
     filename = AUTOENCODER_PATH / f"{name}.yaml"
     with filename.open() as fp:
         return yaml.safe_load(fp)
-
-
-def _construct_from_code(code: Any):
-    """
-    https://stackoverflow.com/questions/39379331/python-exec-a-code-block-and-eval-the-last-line/39381428#39381428
-    """
-    if not isinstance(code, str):
-        return code
-
-    block = ast.parse(code, mode='exec')
-
-    # assumes last node is an expression
-    stmt = block.body.pop()
-    try:
-        last = ast.Expression(stmt.value)
-    except AttributeError as e:
-        raise AttributeError(f"{e}, in code:\n{code}") from e
-
-    try:
-        _locals = {}
-        _globals = globals().copy()
-        exec(compile(block, '<string>', mode='exec'), _globals, _locals)
-        _globals.update(_locals)
-        return eval(compile(last, '<string>', mode='eval'), _globals, _locals)
-
-    except:
-        print("\n".join(
-            f"{i + 1:3}: {line}"
-            for i, line in enumerate(code.splitlines())
-        ))
-        raise

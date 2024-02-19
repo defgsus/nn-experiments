@@ -80,7 +80,7 @@ class ImageFilter:
 
         if self.min_scaled_compression_ratio or self.max_scaled_compression_ratio:
             ratio = self.calc_compression_ratio(
-                VF.resize(image, self.scaled_compression_shape, interpolation=VF.InterpolationMode.BICUBIC)
+                VF.resize(image, self.scaled_compression_shape, interpolation=VF.InterpolationMode.BICUBIC, antialias=True)
             )
             if self.min_scaled_compression_ratio and ratio < self.min_scaled_compression_ratio:
                 return False
