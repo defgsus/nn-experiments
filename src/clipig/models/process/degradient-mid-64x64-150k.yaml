@@ -1,0 +1,14 @@
+shape: [3, 64, 64]
+
+checkpoint: $PROJECT/checkpoints/denoise/dequant01-ks-3_chan-64,64,64_stride-1,2,2,1_pad-1/best.pt
+model: |
+  from src.clipig.models.process.conv_denoiser import ConvDenoiser
+  
+  ConvDenoiser(
+      shape=(3, 64, 64), 
+      channels=(64, 64, 64),
+      stride=(1, 2, 2, 1),
+      kernel_size=3,
+      padding=1,
+      residual_weight=.1,
+  )
