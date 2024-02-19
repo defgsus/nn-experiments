@@ -59,12 +59,7 @@ def load_model_from_yaml(filename: Union[str, Path]) -> Tuple[nn.Module, dict]:
     model = construct_from_code(data["model"])
     checkpoint_filename = data.get("checkpoint")
     if checkpoint_filename:
-        checkpoint_filename = Path(
-            checkpoint_filename
-            .replace("$PROJECT", str(PROJECT_PATH).rstrip(os.path.sep))
-        )
-        if not checkpoint_filename.is_absolute():
-            checkpoint_filename = filename.parent / checkpoint_filename
+        checkpoint_filename = get_full_yaml_filename(checkpoint_filename, filename.parent)
 
         state_dict = torch.load(checkpoint_filename)
         if "state_dict" in state_dict:
@@ -78,3 +73,17 @@ def load_model_from_yaml(filename: Union[str, Path]) -> Tuple[nn.Module, dict]:
     _model_stack.append((filename, (model, data)))
 
     return model, data
+
+
+def get_full_yaml_filename(
+    filename: Union[str, Path],
+    yaml_directory: Union[str, Path],
+) -> Path:
+    filename = Path(
+        str(filename).replace("$PROJECT", str(PROJECT_PATH).rstrip(os.path.sep))
+    )
+    if not filename.is_absolute():
+        filename = Path(yaml_directory) / filename
+
+    return filename
+

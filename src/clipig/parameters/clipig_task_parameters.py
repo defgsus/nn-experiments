@@ -22,18 +22,18 @@ def get_clipig_task_parameters():
 
     parameters["transformations"] = {}
     for klass in transformations.transformations.values():
-        parameters["transformations"][klass.NAME] = deepcopy(klass.PARAMS)
+        parameters["transformations"][klass.NAME] = klass.PARAMS
 
     parameters["source_models"] = {}
     for klass in source_models.source_models.values():
-        parameters["source_models"][klass.NAME] = deepcopy(klass.PARAMS)
+        parameters["source_models"][klass.NAME] = klass.PARAMS
 
     for param in parameters["target"]:
         if param["name"] == "optimizer":
             param["choices"] = list(parameters["optimizers"].keys())
 
     # print(json.dumps(parameters, indent=2))
-    return parameters
+    return deepcopy(parameters)
 
 
 def get_complete_clipig_task_config(config: dict) -> dict:

@@ -37,9 +37,11 @@ class ConvDenoiser(nn.Module):
             padding: Union[int, Iterable[int]] = 0,
             batch_norm: bool = True,
             activation: Union[None, str, Callable] = "gelu",
+            residual_weight: float = .1,
     ):
         super().__init__()
         self.shape = shape
+        self.residual_weight = residual_weight
 
         self._channels = [shape[0], *channels, shape[0]]
         num_layers = len(self._channels) - 1
@@ -104,7 +106,7 @@ class ConvDenoiser(nn.Module):
         for i in range(len(self._channels) - 1):
             if i > 0:
                 # print("DEC", state.shape, state_history[-(i+1)].shape)
-                state = state + state_history[-(i+1)]
+                state = state + self.residual_weight * state_history[-(i+1)]
             if f"layer{i+1}_bn" in self.decoder:
                 state = self.decoder[f"layer{i+1}_bn"](state)
             state = self.decoder[f"layer{i+1}_conv"](state)

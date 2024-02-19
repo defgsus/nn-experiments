@@ -1,5 +1,9 @@
+from pathlib import Path
+
+import yaml
+
 from .base import *
-from ..source_models.util import load_model_from_yaml, PROCESS_PATH
+from ..source_models.util import load_model_from_yaml, PROCESS_PATH, get_full_yaml_filename
 from src.util.image import map_image_patches
 
 
@@ -83,12 +87,8 @@ class Denoising(ValueTransformBase):
         {
             "name": "model",
             "type": "select",
-            "default": "denoiser-conv-64x64-150k",
-            "choices": [
-                "denoiser-conv-64x64-150k",
-                "denoiser-conv-64x64-750k",
-                "denoiser-conv-64x64-900k",
-            ],
+            "default": None,  # will be filled at import time
+            "choices": [None],
         },
         {
             "name": "mix",
@@ -100,7 +100,7 @@ class Denoising(ValueTransformBase):
         {
             "name": "overlap",
             "type": "int2",
-            "default": [0, 0],
+            "default": [7, 7],
             "min": [0, 0],
             "max": [1024, 1024],
         },
@@ -140,3 +140,22 @@ class Denoising(ValueTransformBase):
 
         return processed
 
+
+def _get_denoising_modules():
+    directory = Path(__file__).resolve().parent.parent / "models" / "process"
+
+    models = []
+    for f in directory.glob("*.yaml"):
+        with f.open() as fp:
+            data = yaml.safe_load(fp)
+        if get_full_yaml_filename(data["checkpoint"], directory).exists():
+            models.append(f.name[:-5])
+
+    assert models, f"No models found in {directory}"
+
+    param = next(filter(lambda p: p["name"] == "model", Denoising.PARAMS))
+    param["choices"] = sorted(models)
+    param["default"] = param["choices"][0]
+
+
+_get_denoising_modules()

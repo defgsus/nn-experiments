@@ -1,9 +1,15 @@
-experiment_name: denoise/conv08-grad-${matrix_slug}
+experiment_name: denoise/dequant03-strong-${matrix_slug}
 
 matrix:
-  ks: [3]
-  chan: [[64, 64, 64]]
-  stride: [[1, 2, 2, 1]]
+  ks:
+    #- 3
+    - [3, 3, 5, 5, 7]
+  chan:
+    #- [64, 64, 64, 64]
+    - [64, 64, 64, 64]
+  stride:
+    #- [1, 2, 2, 2, 1]
+    - [1, 2, 2, 2, 2]
   pad: [1]
 
 trainer: experiments.denoise.trainer.TrainDenoising
@@ -25,6 +31,11 @@ loss_function: l1
 max_inputs: 5_000_000
 num_inputs_between_validations: 150_000
 freeze_validation_set: True
+train_input_transforms: |
+  [
+    #RandomQuantization(min_quantization=.05, max_quantization=0.3),
+    RandomQuantization(min_quantization=.2, max_quantization=0.4),
+  ]
   
 
 globals:
@@ -39,4 +50,6 @@ model: |
       stride=${stride},
       kernel_size=${ks},
       padding=${pad},
+      activation=nn.LeakyReLU,
+      residual_weight=0.01,
   )

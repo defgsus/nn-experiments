@@ -51,7 +51,7 @@ from src.models.util import *
 from src.algo import *
 
 from . import base
-from .util import construct_from_code, PROJECT_PATH, AUTOENCODER_PATH
+from .util import construct_from_code, PROJECT_PATH, AUTOENCODER_PATH, get_full_yaml_filename
 
 
 def create_source_model(config: dict, device: torch.device):
@@ -78,12 +78,7 @@ def _create_autoencoder(kwargs: dict):
     kwargs["autoencoder"] = model = construct_from_code(ae_config["model"])
 
     if ae_config.get("checkpoint"):
-        filename = Path(
-            ae_config["checkpoint"]
-            .replace("$PROJECT", str(PROJECT_PATH).rstrip(os.path.sep))
-        )
-        if not filename.is_absolute():
-            filename = AUTOENCODER_PATH / filename
+        filename = get_full_yaml_filename(ae_config["checkpoint"], AUTOENCODER_PATH)
 
         state_dict = torch.load(filename)
         if "state_dict" in state_dict:

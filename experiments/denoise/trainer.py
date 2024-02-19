@@ -16,19 +16,8 @@ from torchvision.utils import make_grid
 from src import console
 from src.util.image import signed_to_image, get_images_from_iterable
 from src.train.train_autoencoder import TrainAutoencoder
-from src.models.transform import Sobel
+from src.models.transform import *
 
-
-def add_noise(
-        x: torch.Tensor,
-        amt_min: float = .01,
-        amt_max: float = .15,
-        amt_power: float = 2.,
-):
-    amt = math.pow(random.uniform(0, 1), amt_power)
-    amt = amt_min + (amt_max - amt_min) * amt
-
-    return x + amt * torch.randn_like(x)
 
 
 class TrainDenoising(TrainAutoencoder):
@@ -36,7 +25,7 @@ class TrainDenoising(TrainAutoencoder):
     def __init__(self, *args, train_input_transforms=None, **kwargs):
         if train_input_transforms is None:
             train_input_transforms = [
-                add_noise,
+                NoiseTransform(),
             ]
         super().__init__(*args, **kwargs, train_input_transforms=train_input_transforms)
 
