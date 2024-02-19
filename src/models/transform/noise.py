@@ -13,17 +13,27 @@ class NoiseTransform(nn.Module):
             amt_min: float = .01,
             amt_max: float = .15,
             amt_power: float = 2.,
+            grayscale_prob: float = .1,
     ):
         super().__init__()
         self.amt_min = amt_min
         self.amt_max = amt_max
         self.amt_power = amt_power
+        self.grayscale_prob = grayscale_prob
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         amt = math.pow(random.uniform(0, 1), self.amt_power)
         amt = self.amt_min + (self.amt_max - self.amt_min) * amt
 
-        return x + amt * torch.randn_like(x)
+        if random.uniform(0, 1) < self.grayscale_prob:
+            noise = torch.randn_like(x[..., :1, :, :]).repeat(
+                *(1 for _ in range(x.ndim - 3)),
+                x.shape[-3], 1, 1
+            )
+        else:
+            noise = torch.randn_like(x)
+
+        return x + amt * noise
 
 
 class RandomQuantization(nn.Module):
