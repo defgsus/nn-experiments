@@ -47,6 +47,7 @@ from src.models.transform import *
 from src.models.vae import *
 from src.models.clip import ClipSingleton
 from src.models.loss import *
+from src.models.img2img import *
 from src.models.util import *
 from src.datasets import *
 from src.algo import *

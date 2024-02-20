@@ -496,6 +496,7 @@ class Trainer:
                 self.save_checkpoint("best")
                 self.save_description("best", extra={"validation_loss": loss})
 
+            self.save_checkpoint("snapshot")
             self.save_description("snapshot", extra={"validation_loss": loss})
 
             self.save_weight_image()
