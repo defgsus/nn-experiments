@@ -16,7 +16,8 @@ class TestImagePatches(TestBase):
             "image_shape": (
                 (3, 64, 64),
                 (1, 32, 64),
-                (1, 64, 32),
+                (1, 64, 31),
+                (2, 11, 10),
             ),
             "patch_size": (
                 32,
@@ -30,10 +31,15 @@ class TestImagePatches(TestBase):
                 (14, 17),
                 (31, 31),
             ),
+            "cut_away": (
+                0,
+                1,
+                (2, 3),
+            ),
             "window": (False, True),
         }))):
             msg = ", ".join(
-                f"{key}: {repr(value)}"
+                f"{key}={repr(value)}"
                 for key, value in params.items()
             )
             # print(msg)
@@ -41,10 +47,14 @@ class TestImagePatches(TestBase):
             image_shape = params["image_shape"]
             patch_size = params["patch_size"]
             overlap = params["overlap"]
+            cut_away = params["cut_away"]
             window = params["window"]
 
-            if any(
-                o >= s for o, s in zip(param_make_tuple(overlap, 2), param_make_tuple(patch_size, 2))
+            if (
+                any(o >= s for o, s in zip(param_make_tuple(overlap, 2), param_make_tuple(patch_size, 2)))
+                or any(o + c >= s for o, c, s in zip(
+                    param_make_tuple(overlap, 2), param_make_tuple(cut_away, 2), param_make_tuple(patch_size, 2)
+                ))
             ):
                 continue
 
@@ -56,7 +66,7 @@ class TestImagePatches(TestBase):
                     function=lambda x: 1. - x,  # invert the patches
                     patch_size=patch_size,
                     overlap=overlap,
-                    inset=0,
+                    cut_away=cut_away,
                     batch_size=32,
                     auto_pad=True,
                     window=window,
@@ -67,8 +77,10 @@ class TestImagePatches(TestBase):
                     output.shape,
                 )
 
-                self.assertTrue(
-                    output.mean().item() == 1.  # test that all of the image is inverted
+                # test that all of the image is inverted
+                self.assertEqual(
+                    1.,
+                    output.mean().item(),
                 )
 
             except Exception as e:

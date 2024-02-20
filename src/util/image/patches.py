@@ -1,3 +1,4 @@
+import math
 from typing import Optional, Callable, List, Tuple, Iterable, Generator, Union, Dict
 
 import PIL.Image
@@ -100,10 +101,10 @@ def map_image_patches(
         function: Callable[[torch.Tensor], torch.Tensor],
         patch_size: Union[int, Tuple[int, int]],
         overlap: Union[int, Tuple[int, int]] = 0,
-        inset: Union[int, Tuple[int, int]] = 0,
+        cut_away: Union[int, Tuple[int, int]] = 0,
         batch_size: int = 64,
         auto_pad: bool = True,
-        window: Union[bool, Callable] = None,
+        window: Union[bool, torch.Tensor, Callable] = False,
         verbose: bool = False,
 ) -> torch.Tensor:
     """
@@ -115,32 +116,68 @@ def map_image_patches(
 
     patch_size = param_make_tuple(patch_size, 2, "patch_size")
     overlap = param_make_tuple(overlap, 2, "overlap")
-    inset = param_make_tuple(inset, 2, "inset")
+    cut_away = param_make_tuple(cut_away, 2, "cut_away")
+
+    for d in (-1, -2):
+        if cut_away[d]:
+            if cut_away[d] >= patch_size[d] // 2:
+                raise ValueError(f"`cut_away` must be smaller than half the patch_size {patch_size}, got {cut_away}")
+            if cut_away[d] * 2 + overlap[d] >= patch_size[d]:
+                raise ValueError(
+                    f"2 * `cut_away` + `overlap` must be smaller than the patch_size {patch_size}"
+                    f", got cut_away={cut_away}, overlap={overlap}"
+                )
 
     for i in (-1, -2):
         if overlap[i] >= patch_size[i]:
-            raise ValueError(f"Overlap must be smaller than the patch_size ({patch_size}), got {overlap}")
-        if inset[i] >= patch_size[i]:
-            raise ValueError(f"Inset must be smaller than the patch_size ({patch_size}), got {inset}")
+            raise ValueError(f"`overlap` must be smaller than the patch_size {patch_size}, got {overlap}")
+
+    LEFT, RIGHT, TOP, BOTTOM = range(4)
+    padding = [0, 0, 0, 0]
+
+    is_cut_away = bool(any(cut_away))
+    if is_cut_away:
+        overlap = tuple(o + c * 2 for o, c in zip(overlap, cut_away))
+        padding[LEFT] = cut_away[-1]
+        padding[TOP] = cut_away[-2]
 
     stride = [patch_size[0] - overlap[0], patch_size[1] - overlap[1]]
 
-    if window is True:
+    if isinstance(window, torch.Tensor):
+        if window.shape != patch_size:
+            raise ValueError(
+                f"`window` must match patch_size {patch_size}, got {window.shape}"
+            )
+    elif window is True:
         window = get_image_window(shape=patch_size)
-    elif window:
+    elif callable(window):
         window = get_image_window(shape=patch_size, window_function=window)
     else:
         window = None
 
-    grid_size = [sh // st for sh, st in zip(image.shape[-2:], stride)]
-    recon_size = [gs * st + ov for gs, st, ov in zip(grid_size, stride, overlap)]
+    if is_cut_away and window is not None:
+        window = window[cut_away[-2]: window.shape[-2] - cut_away[-2], cut_away[-1]: window.shape[-1] - cut_away[-1]]
 
-    padding = [0, 0, 0, 0]
-    if auto_pad and any(rs != s for rs, s in zip(recon_size, image.shape[-2:])):
-        grid_size = [sh // st + 1 for sh, st in zip(image.shape[-2:], stride)]
-        recon_size = [gs * st + ov for gs, st, ov in zip(grid_size, stride, overlap)]
-        padding = [rs - sh for rs, sh in zip(recon_size, image.shape[-2:])]
-        image = VF.pad(image, [0, 0, padding[1], padding[0]])
+    image_shape = (image.shape[-2] + padding[TOP], image.shape[-1] + padding[LEFT])
+
+    if auto_pad:
+        for d, pad_pos in ((-1, RIGHT), (-2, BOTTOM)):
+            grid_size = max(1, int(math.ceil(image_shape[d] / stride[d])))
+            while True:
+                needed_size = grid_size * stride[d] + overlap[d]
+                if needed_size >= image_shape[d]:
+                    break
+                # print(f"  INCREASED dim={d} needed={needed_size} image={image_shape[d]}")
+                grid_size += 1
+
+            if needed_size > image_shape[d]:
+                padding[pad_pos] = needed_size - image_shape[d]
+                # print(f"  needed > image, added padding {padding[pad_pos]}")
+
+    if any(padding):
+        image = F.pad(image, padding)
+
+    # print(f"stride={stride} grid={grid_size} image={image.shape[-2:]} pad={padding} overlap={overlap}")
 
     output = torch.zeros_like(image)
     output_sum = torch.zeros_like(image[0])
@@ -155,17 +192,28 @@ def map_image_patches(
     ):
         patch_batch = function(patch_batch)
         for patch, pos in zip(patch_batch, pos_batch):
+            ps = patch_size
+            if is_cut_away:
+                patch = patch[..., cut_away[-2]: patch.shape[-2] - cut_away[-2], cut_away[-1]: patch.shape[-1] - cut_away[-1]]
+                pos = (pos[0] + cut_away[0], pos[1] + cut_away[1])
+                ps = patch.shape[-2:]
+
+            add_pixel = 1.
             if window is not None:
-                output_sum[pos[-2]: pos[-2] + patch_size[-2], pos[-1]: pos[-1] + patch_size[-1]] += window
-                output[:, pos[-2]: pos[-2] + patch_size[-2], pos[-1]: pos[-1] + patch_size[-1]] += patch * window
-            else:
-                output_sum[pos[-2]: pos[-2] + patch_size[-2], pos[-1]: pos[-1] + patch_size[-1]] += 1
-                output[:, pos[-2]: pos[-2] + patch_size[-2], pos[-1]: pos[-1] + patch_size[-1]] += patch
+                patch *= window
+                add_pixel = window
+
+            output_sum[pos[-2]: pos[-2] + ps[-2], pos[-1]: pos[-1] + ps[-1]] += add_pixel
+            output[:, pos[-2]: pos[-2] + ps[-2], pos[-1]: pos[-1] + ps[-1]] += patch
 
     mask = output_sum > 0
     output[:, mask] /= output_sum[mask].unsqueeze(0)
 
     if any(padding):
-        output = output[:, :-padding[0], :-padding[1]]
+        output = output[
+            ...,
+            padding[TOP]: output.shape[-2] - padding[BOTTOM],
+            padding[LEFT]: output.shape[-1] - padding[RIGHT],
+        ]
 
     return output
