@@ -46,9 +46,9 @@ class ConvDenoiser(nn.Module):
         self._channels = [shape[0], *channels, shape[0]]
         num_layers = len(self._channels) - 1
 
-        kernel_sizes = _make_list(kernel_size, num_layers, "kernel_size")
-        strides = _make_list(stride, num_layers, "stride")
-        paddings = _make_list(padding, num_layers, "padding")
+        kernel_sizes = param_make_list(kernel_size, num_layers, "kernel_size")
+        strides = param_make_list(stride, num_layers, "stride")
+        paddings = param_make_list(padding, num_layers, "padding")
 
         self.encoder = nn.ModuleDict()
         decoder_paddings = []
@@ -114,17 +114,6 @@ class ConvDenoiser(nn.Module):
                 state = self.decoder[f"layer{i+1}_act"](state)
 
         return state
-
-
-def _make_list(value, length: int, name: str):
-    if isinstance(value, (int, float, bool, str)):
-        value_list = [value] * length
-    else:
-        value_list = list(value)
-        if len(value_list) != length:
-            raise ValueError(f"Expected {name} of length {length}, got {len(value_list)}")
-
-    return value_list
 
 
 

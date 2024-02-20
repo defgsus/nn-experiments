@@ -1,9 +1,35 @@
-from typing import List, Dict, Any, Generator
+from typing import Any, List, Optional, Tuple, Dict, Generator, Iterable
+
+
+def param_make_tuple(value: Any, length: int, name: Optional[str] = None) -> Tuple[Any]:
+    return tuple(param_make_list(value, length, name))
+
+
+def param_make_list(value: Any, length: int, name: Optional[str] = None) -> List[Any]:
+    """
+    Convert any value that is not a list (or tuple) to a list of defined length
+    by repeating the value `length` times.
+
+    If `value` is a list (or tuple) then it's length is checked and a ValueError
+    is raised when unmatched.
+    """
+    if not isinstance(value, (list, tuple)):
+        value_list = [value] * length
+    else:
+        value_list = list(value)
+        if len(value_list) != length:
+            if not name:
+                name = ""
+            else:
+                name = f"{name} of "
+            raise ValueError(f"Expected {name}length {length}, got {len(value_list)}")
+
+    return value_list
 
 
 def iter_parameter_permutations(
-        matrix: Dict[str, List[Any]],
-        exclude_keys: List[str] = tuple()
+        matrix: Dict[str, Iterable[Any]],
+        exclude_keys: Iterable[str] = tuple()
 ) -> Generator[Dict[str, Any], None, None]:
     """
     Iterates through all items of a `key -> [values]` type dictionary.

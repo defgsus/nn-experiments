@@ -12,6 +12,7 @@ import torchvision.transforms.functional as VF
 from tqdm import tqdm
 
 from .image import get_image_window
+from src.util import param_make_tuple
 
 
 def iter_image_patches(
@@ -42,12 +43,7 @@ def iter_image_patches(
     if image.ndim != 3:
         raise ValueError(f"image.ndim != 3 not supported, got {image.ndim}")
 
-    if isinstance(shape, int):
-        shape = (shape, shape)
-    else:
-        shape = tuple(shape)
-    if len(shape) != 2:
-        raise ValueError(f"shape must have 2 dimensions, got {shape}")
+    shape = param_make_tuple(shape, 2, "shape")
     if any(s < 1 for s in shape):
         raise ValueError(f"shape < 1 not supported, got {shape}")
     if any(s > imgs for s, imgs in zip(shape, image.shape[-2:])):
@@ -55,14 +51,10 @@ def iter_image_patches(
 
     if stride is None:
         stride = shape
-    elif isinstance(stride, int):
-        stride = (stride, stride)
     else:
-        stride = tuple(stride)
-    if len(stride) != 2:
-        raise ValueError(f"stride must have 2 dimensions, got {stride}")
-    if any(s < 1 for s in stride):
-        raise ValueError(f"stride < 1 not supported, got {stride}")
+        stride = param_make_tuple(stride, 2, "stride")
+        if any(s < 1 for s in stride):
+            raise ValueError(f"stride < 1 not supported, got {stride}")
 
     if padding:
         image = VF.pad(image, padding, fill=fill)
@@ -106,8 +98,9 @@ def iter_image_patches(
 def map_image_patches(
         image: torch.Tensor,
         function: Callable[[torch.Tensor], torch.Tensor],
-        patch_size: Tuple[int, int],
+        patch_size: Union[int, Tuple[int, int]],
         overlap: Union[int, Tuple[int, int]] = 0,
+        inset: Union[int, Tuple[int, int]] = 0,
         batch_size: int = 64,
         auto_pad: bool = True,
         window: Union[bool, Callable] = None,
@@ -117,8 +110,19 @@ def map_image_patches(
     Pass an image patch-wise through `function` with shape [batch_size, C, *patch_size]
     and return processed image.
     """
-    if isinstance(overlap, int):
-        overlap = [overlap, overlap]
+    if image.ndim != 3:
+        raise ValueError(f"Expected image.ndim = 3, got {image.shape}")
+
+    patch_size = param_make_tuple(patch_size, 2, "patch_size")
+    overlap = param_make_tuple(overlap, 2, "overlap")
+    inset = param_make_tuple(inset, 2, "inset")
+
+    for i in (-1, -2):
+        if overlap[i] >= patch_size[i]:
+            raise ValueError(f"Overlap must be smaller than the patch_size ({patch_size}), got {overlap}")
+        if inset[i] >= patch_size[i]:
+            raise ValueError(f"Inset must be smaller than the patch_size ({patch_size}), got {inset}")
+
     stride = [patch_size[0] - overlap[0], patch_size[1] - overlap[1]]
 
     if window is True:
@@ -131,13 +135,12 @@ def map_image_patches(
     grid_size = [sh // st for sh, st in zip(image.shape[-2:], stride)]
     recon_size = [gs * st + ov for gs, st, ov in zip(grid_size, stride, overlap)]
 
-    if auto_pad and any(rs < s for rs, s in zip(recon_size, image.shape[-2:])):
+    padding = [0, 0, 0, 0]
+    if auto_pad and any(rs != s for rs, s in zip(recon_size, image.shape[-2:])):
         grid_size = [sh // st + 1 for sh, st in zip(image.shape[-2:], stride)]
         recon_size = [gs * st + ov for gs, st, ov in zip(grid_size, stride, overlap)]
         padding = [rs - sh for rs, sh in zip(recon_size, image.shape[-2:])]
         image = VF.pad(image, [0, 0, padding[1], padding[0]])
-    else:
-        padding = None
 
     output = torch.zeros_like(image)
     output_sum = torch.zeros_like(image[0])
@@ -162,7 +165,7 @@ def map_image_patches(
     mask = output_sum > 0
     output[:, mask] /= output_sum[mask].unsqueeze(0)
 
-    if padding:
+    if any(padding):
         output = output[:, :-padding[0], :-padding[1]]
 
     return output
