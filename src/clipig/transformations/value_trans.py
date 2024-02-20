@@ -104,6 +104,13 @@ class Denoising(ValueTransformBase):
             "min": [0, 0],
             "max": [1024, 1024],
         },
+        {
+            "name": "cut_away",
+            "type": "int2",
+            "default": [0, 0],
+            "min": [0, 0],
+            "max": [1024, 1024],
+        },
     ]
 
     def __init__(
@@ -111,12 +118,14 @@ class Denoising(ValueTransformBase):
             model: str,
             mix: float,
             overlap: Tuple[int, int] = (0, 0),
+            cut_away: Tuple[int, int] = (0, 0),
     ):
         super().__init__()
         self.model, self.model_config = load_model_from_yaml(PROCESS_PATH / f"{model}.yaml")
         self.model.eval()
         self.mix = mix
         self.overlap = overlap
+        self.cut_away = cut_away
 
     def __call__(self, image: torch.Tensor) -> torch.Tensor:
         if image.shape[-3] == 4:
@@ -129,7 +138,8 @@ class Denoising(ValueTransformBase):
             image=image,
             function=lambda x: self.model(x).clamp(0, 1),
             patch_size=self.model_config["shape"][-2:],
-            overlap=self.overlap,
+            overlap=tuple(reversed(self.overlap)),
+            cut_away=tuple(reversed(self.cut_away)),
             batch_size=64,
         )
         if self.mix != 1.:
