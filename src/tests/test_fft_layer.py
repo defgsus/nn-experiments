@@ -9,7 +9,7 @@ from torch.utils.data import TensorDataset, DataLoader
 import torchvision.transforms.functional as VF
 
 from src.models.transform import FFTLayer
-from tests.base import TestBase
+from src.tests.base import TestBase
 
 
 class TestFFTLayer(TestBase):

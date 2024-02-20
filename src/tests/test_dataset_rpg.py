@@ -1,6 +1,6 @@
 from tqdm import tqdm
 
-from tests.base import *
+from src.tests.base import *
 from src.datasets import RpgTileIterableDataset
 
 

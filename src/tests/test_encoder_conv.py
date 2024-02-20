@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 
 from src.models.encoder import EncoderConv2d
-from tests.base import TestBase
+from src.tests.base import TestBase
 
 
 class TestEncoderConv(TestBase):

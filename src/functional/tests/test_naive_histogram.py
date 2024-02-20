@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 
 from src.functional import differentiable_histogram
-from tests.base import *
+from src.tests.base import *
 
 
 class TestNaiveHistogram(TestBase):

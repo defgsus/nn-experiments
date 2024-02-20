@@ -5,7 +5,7 @@ import numpy as np
 import sklearn.base
 
 from src.cluster.autocluster import AutoCluster
-from tests.base import TestBase
+from src.tests.base import TestBase
 
 
 class TestAutoCluster(TestBase):

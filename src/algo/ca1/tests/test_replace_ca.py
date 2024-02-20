@@ -3,7 +3,7 @@ import unittest
 import torch
 import torch.nn as nn
 
-from tests.base import *
+from src.tests.base import *
 
 from src.algo import ca1
 

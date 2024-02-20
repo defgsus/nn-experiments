@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 import torchvision.transforms as VT
 
-from tests.base import *
+from src.tests.base import *
 from src.util.image import *
 
 

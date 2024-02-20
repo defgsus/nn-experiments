@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 
-from tests.base import *
+from src.tests.base import *
 from src.datasets import ImageFolderIterableDataset
 
 

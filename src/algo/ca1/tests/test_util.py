@@ -1,6 +1,6 @@
 import torch
 
-from tests.base import *
+from src.tests.base import *
 
 from src.algo.ca1 import util
 

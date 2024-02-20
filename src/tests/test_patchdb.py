@@ -12,7 +12,7 @@ from src import console
 from src.patchdb import PatchDB
 from src.models.encoder import EncoderConv2d
 from src.util.image import iter_image_patches
-from tests.base import TestBase
+from src.tests.base import TestBase
 
 
 class TestPatchDB(TestBase):

@@ -5,7 +5,7 @@ import unittest
 import torch
 
 from src.algo.greedylibrary import *
-from tests.base import TestBase
+from src.tests.base import TestBase
 
 
 class TestGreedyLibrary(TestBase):

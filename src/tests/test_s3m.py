@@ -4,7 +4,7 @@ import unittest
 from tqdm import tqdm
 
 from src.util.s3m import *
-from tests.base import TestBase
+from src.tests.base import TestBase
 
 
 class TestS3m(TestBase):

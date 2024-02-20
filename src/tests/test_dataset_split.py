@@ -3,7 +3,7 @@ from tqdm import tqdm
 
 from torch.utils.data import TensorDataset, IterableDataset
 
-from tests.base import *
+from src.tests.base import *
 from src.datasets import SplitIterableDataset
 
 
