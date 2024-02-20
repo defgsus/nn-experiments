@@ -81,6 +81,7 @@ class ParametersWidget(QWidget):
         self._create_param_widgets()
 
     def _create_param_widgets(self):
+        self._widget_container.close()
         self._widget_container.deleteLater()
         self._widget_container = QWidget()
         self._layout.addWidget(self._widget_container)
@@ -89,7 +90,7 @@ class ParametersWidget(QWidget):
         lv = QVBoxLayout(self._widget_container)
         for param in self._parameters:
             if param["name"] not in self._exclude:
-                self._widget_map[param["name"]] = widget = ParameterWidget(param, self._widget_container)
+                self._widget_map[param["name"]] = widget = ParameterWidget(param, parent=self._widget_container)
                 lv.addWidget(widget)
                 widget.signal_value_changed.connect(partial(self._value_changed, param["name"]))
 

@@ -269,7 +269,7 @@ class LImage:
     def add_layer(
             self,
             name: Optional[str] = None,
-            image: Optional[str] = None,
+            image: Optional[QImage] = None,
             index: Optional[int] = None,
             repeat: Tuple[int, int] = (1, 1),
             active: bool = True,
@@ -379,11 +379,14 @@ class LImage:
         if self._model is not None:
             self._model.modelReset.emit()
 
-    def add_menu_actions(self, menu: QMenu):
+    def add_menu_actions(self, menu: QMenu, project: "ProjectWidget"):
         from .new_layer_dialog import NewLayerDialog
         from .image_transform_dialog import ImageTransformDialog
         menu.addAction("Add layer", partial(NewLayerDialog.run_new_layer_dialog, self, menu))
-        menu.addAction("Transform layer", partial(ImageTransformDialog.run_dialog_on_limage_layer, self, menu))
+        menu.addAction(
+            "Transform layer",
+            partial(ImageTransformDialog.run_dialog_on_limage_layer, limage=self, parent=menu, project=project),
+        )
 
     def to_qimage(self) -> QImage:
         image = QImage(self.size(), QImage.Format.Format_ARGB32)

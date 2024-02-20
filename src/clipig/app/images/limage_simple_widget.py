@@ -20,8 +20,11 @@ class LImageSimpleWidget(QWidget):
 
     signal_changed = pyqtSignal()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *, project: "ProjectWidget", parent: Optional[QWidget] = None):
+        super().__init__(parent or project)
+
+        from ..project import ProjectWidget
+        self._project: ProjectWidget = project
 
         self._limage = LImage()
 
@@ -85,7 +88,7 @@ class LImageSimpleWidget(QWidget):
         if self._limage is not None:
             if not self._limage.size().isEmpty():
                 menu.addAction(self.tr("Save image as ..."), self.action_save_image_as)
-            self._limage.add_menu_actions(menu)
+            self._limage.add_menu_actions(menu, project=self._project)
 
         menu.exec(self.mapToGlobal(pos))
 

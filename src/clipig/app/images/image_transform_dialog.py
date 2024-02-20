@@ -20,10 +20,14 @@ class ImageTransformDialog(QDialog):
 
     def __init__(
             self,
+            *,
             image: QImage,
+            project: "ProjectWidget",
             parent: Optional[QWidget] = None,
     ):
-        super().__init__(parent)
+        super().__init__(parent or project)
+        from ..project import ProjectWidget
+        self._project: ProjectWidget = project
         self._limage = LImage()
         self._limage.add_layer(image=image)
         self._undo_stack: List[QImage] = []
@@ -31,21 +35,49 @@ class ImageTransformDialog(QDialog):
 
         self.setWindowTitle("Image transformation")
         self.setWindowFlag(Qt.WindowMinMaxButtonsHint, True)
+        self.setSizeGripEnabled(True)
+
         self.setMinimumWidth(800)
         self.setMinimumHeight(800)
 
         self._create_widgets()
-        self.select_transform.setCurrentIndex(0)
 
+        self.set_settings(self._project.get_dialog_settings("image_transformation"))
+        self.finished.connect(lambda: self._project.set_dialog_settings("image_transformation", self.get_settings()))
     @property
     def image(self) -> QImage:
         return self._limage.layers[0].image
+
+    def get_settings(self):
+        rect = self.rect()
+        top_left = self.mapToGlobal(rect.topLeft())
+        return {
+            "window": {
+                "position": [top_left.x(), top_left.y()],
+                "size": [rect.width(), rect.height()],
+            },
+            "limage_widget": self.image_widget.get_settings(),
+            "transformation": {
+                "type": self.select_transform.currentText(),
+                "config": self.params_widget.get_values(),
+            }
+        }
+
+    def set_settings(self, settings: dict):
+        if sett := settings.get("window"):
+            self.setFixedSize(QSize(*sett["size"]))
+        if sett := settings.get("limage_widget"):
+            self.image_widget.set_settings(sett)
+        if sett := settings.get("transformation"):
+            self.select_transform.setCurrentText(sett["type"])
+            self._set_transform(sett["type"])
+            self.params_widget.set_values(sett["config"], emit=False)
 
     def _create_widgets(self):
         lv = QVBoxLayout(self)
         lv.setContentsMargins(20, 20, 20, 20)
 
-        self.image_widget = LImageSimpleWidget(self)
+        self.image_widget = LImageSimpleWidget(project=self._project, parent=self)
         self.image_widget.set_limage(self._limage)
         lv.addWidget(self.image_widget)
 
@@ -107,11 +139,14 @@ class ImageTransformDialog(QDialog):
     @classmethod
     def run_dialog(
             cls,
+            *,
             image: QImage,
+            project: "ProjectWidget",
             parent: Optional[QWidget] = None,
     ) -> Optional[QImage]:
         dialog = cls(
             image=image,
+            project=project,
             parent=parent,
         )
         result = dialog.exec_()
@@ -121,11 +156,14 @@ class ImageTransformDialog(QDialog):
     @classmethod
     def run_dialog_on_limage_layer(
             cls,
+            *,
             limage: LImage,
+            project: "ProjectWidget",
             parent: Optional[QWidget] = None,
     ) -> bool:
         dialog = cls(
             image=limage.selected_layer.image,
+            project=project,
             parent=parent,
         )
         result = dialog.exec_()

@@ -1,6 +1,6 @@
 from copy import deepcopy
 from functools import partial
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -14,8 +14,11 @@ class TransformationsPreviewWidget(QWidget):
 
     signal_run_transformation_preview = pyqtSignal()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *, project: "ProjectWidget", parent: Optional[QWidget] = None):
+        super().__init__(parent or project)
+
+        from ..project import ProjectWidget
+        self._project: ProjectWidget = project
 
         self._create_widgets()
 
@@ -46,6 +49,6 @@ class TransformationsPreviewWidget(QWidget):
         self.butt_preview.clicked.connect(self.signal_run_transformation_preview)
         lh.addWidget(self.butt_preview)
 
-        self.limage_widget = LImageSimpleWidget(self)
+        self.limage_widget = LImageSimpleWidget(project=self._project, parent=self)
         lv.addWidget(self.limage_widget)
 

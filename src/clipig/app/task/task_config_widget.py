@@ -17,10 +17,12 @@ class TaskConfigWidget(QWidget):
 
     signal_run_transformation_preview = pyqtSignal()
 
-    def __init__(self, *args, preset_model: PresetModel, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *, project: "ProjectWidget", parent: Optional[QWidget] = None):
+        super().__init__(parent or project)
 
-        self.preset_model = preset_model
+        from ..project import ProjectWidget
+        self._project: ProjectWidget = project
+
         self.base_params_widget: Optional[ParametersWidget] = None
         self._target_widgets: List[dict] = []
 
@@ -28,6 +30,10 @@ class TaskConfigWidget(QWidget):
 
         self._create_widgets()
         self.set_values({})
+
+    @property
+    def preset_model(self):
+        return self._project.preset_model
 
     def _create_widgets(self):
         lv = QVBoxLayout(self)
@@ -109,7 +115,8 @@ class TaskConfigWidget(QWidget):
 
             lv.addWidget(QLabel(self.tr("transformations"), tab))
             target_widgets["transformation_widget"] = trans_widget = TransformationsWidget(
-                tab, transformations=target_values["transformations"], default_parameters=self.default_parameters,
+                transformations=target_values["transformations"], default_parameters=self.default_parameters,
+                parent=tab, project=self._project,
             )
             trans_widget.signal_run_transformation_preview.connect(self.signal_run_transformation_preview)
             lv.addWidget(trans_widget)

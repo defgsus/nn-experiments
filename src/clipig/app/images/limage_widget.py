@@ -21,8 +21,11 @@ class LImageWidget(QWidget):
     signal_new_task_with_image = pyqtSignal(LImage)
     signal_changed= pyqtSignal()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *, project: "ProjectWidget", parent: Optional[QWidget] = None):
+        super().__init__(parent or project)
+
+        from ..project import ProjectWidget
+        self._project: ProjectWidget = project
 
         self._limage = LImage()
         self._tool: Optional[image_tools.ImageToolBase] = None
@@ -69,7 +72,7 @@ class LImageWidget(QWidget):
 
         lv.addWidget(self.canvas.create_controls())
 
-        self.layers_widget = LImageLayersWidget(self)
+        self.layers_widget = LImageLayersWidget(parent=self, project=self._project)
         self.layers_widget.set_limage(self._limage)
         lv.addWidget(self.layers_widget)
         self.layers_widget.signal_new_layer.connect(self.action_new_layer)
@@ -116,7 +119,7 @@ class LImageWidget(QWidget):
                 menu.addAction(self.tr("Save image as ..."), self.action_save_image_as)
             menu.addAction(self.tr("To new Task"), partial(self.action_to_new_task, False))
             menu.addAction(self.tr("To new Task (merged)"), partial(self.action_to_new_task, True))
-            self._limage.add_menu_actions(menu)
+            self._limage.add_menu_actions(menu, project=self._project)
 
         menu.addSeparator()
         menu.addAction(self.tr("Open image ..."), self.action_load_image_dialog)

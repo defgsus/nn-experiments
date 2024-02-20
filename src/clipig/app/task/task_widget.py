@@ -31,10 +31,11 @@ class TaskWidget(QWidget):
 
     _static_id_count = 0
 
-    def __init__(self, *args, clipig: ClipigWorker, preset_model: PresetModel, **kwargs):
+    def __init__(self, *args, project: "ProjectWidget", **kwargs):
         super().__init__(*args, **kwargs)
-        self.clipig = clipig
-        self.preset_model = preset_model
+        from ..project import ProjectWidget
+
+        self._project: ProjectWidget = project
         self._source_image = None
 
         TaskWidget._static_id_count += 1
@@ -42,10 +43,18 @@ class TaskWidget(QWidget):
 
         self._create_widgets()
 
+    @property
+    def clipig(self):
+        return self._project.clipig
+
+    @property
+    def preset_model(self):
+        return self._project.preset_model
+
     def _create_widgets(self):
         lh = QHBoxLayout(self)
 
-        self.image_widget = LImageWidget(self)
+        self.image_widget = LImageWidget(project=self._project, parent=self)
         lh.addWidget(self.image_widget)
         self.image_widget.signal_new_task_with_image.connect(self.signal_new_task_with_image)
         self.image_widget.signal_changed.connect(self.set_changed)
@@ -62,7 +71,7 @@ class TaskWidget(QWidget):
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setWidgetResizable(True)
 
-        self.config_widget = TaskConfigWidget(self, preset_model=self.preset_model)
+        self.config_widget = TaskConfigWidget(project=self.preset_model, parent=self)
         scroll.setWidget(self.config_widget)
         # lv.addWidget(self.config_widget)
         self.config_widget.set_values(self.preset_model.default_config()["config"])

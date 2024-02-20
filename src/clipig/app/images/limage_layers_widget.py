@@ -15,8 +15,11 @@ class LImageLayersWidget(QWidget):
 
     signal_new_layer = pyqtSignal()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *, project: "ProjectWidget", parent: Optional[QWidget] = None):
+        super().__init__(parent or project)
+
+        from ..project import ProjectWidget
+        self._project: ProjectWidget = project
 
         self._limage: Optional[LImage] = None
 
@@ -53,7 +56,7 @@ class LImageLayersWidget(QWidget):
             return
 
         menu = QMenu()
-        self._limage.add_menu_actions(menu)
+        self._limage.add_menu_actions(menu, project=self._project)
         #menu.addAction(self.tr("Add layer"), self.signal_new_layer)
 
         menu.addSeparator()

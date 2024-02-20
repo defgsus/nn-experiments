@@ -1,5 +1,6 @@
 import tarfile
 import os
+from copy import deepcopy
 from pathlib import Path
 from typing import Dict, Hashable, Union, Optional
 
@@ -9,7 +10,7 @@ from PyQt5.QtWidgets import *
 from src.clipig.clipig_worker import ClipigWorker
 from src.clipig.app.task.task_widget import TaskWidget
 from src.clipig.app.models.preset_model import PresetModel
-from src.clipig.app.images import LImageWidget, LImage
+from src.clipig.app.images import LImage
 from src.clipig.app.dialogs import ParameterDialog
 
 from src.util.files import Filestream
@@ -38,6 +39,8 @@ class ProjectWidget(QWidget):
         self._refresh_msec = 300
         self.preset_model = preset_model
 
+        self._dialog_settings = {}
+
         self._create_widgets()
 
     @property
@@ -50,6 +53,26 @@ class ProjectWidget(QWidget):
 
     def set_menu_changed(self):
         self.signal_menu_changed.emit()
+
+    def get_settings(self) -> dict:
+        return {
+            "name": self.project_name,
+            "dialog_settings": deepcopy(self._dialog_settings),
+        }
+
+    def set_settings(self, settings: dict):
+        self.project_name = settings["name"]
+        if sett := settings.get("dialog_settings"):
+            self._dialog_settings = deepcopy(sett)
+        self.signal_changed.emit()
+
+    def get_dialog_settings(self, name: str) -> dict:
+        return deepcopy(self._dialog_settings.get(name) or {})
+
+    def set_dialog_settings(self, name: str, settings: dict):
+        if settings != self._dialog_settings.get("name"):
+            self._dialog_settings[name] = deepcopy(settings)
+            self.signal_changed.emit()
 
     def _create_widgets(self):
         lv = QVBoxLayout(self)
@@ -67,17 +90,8 @@ class ProjectWidget(QWidget):
         menu.addSeparator()
         menu.addAction(self.tr("Rename Project ..."), self.slot_rename)
 
-    def get_settings(self) -> dict:
-        return {
-            "name": self.project_name,
-        }
-
-    def set_settings(self, settings: dict):
-        self.project_name = settings["name"]
-        self.signal_changed.emit()
-
     def slot_new_task(self) -> TaskWidget:
-        task_widget = TaskWidget(self, clipig=self.clipig, preset_model=self.preset_model)
+        task_widget = TaskWidget(self, project=self)
         task_widget.signal_changed.connect(self.set_changed)
         task_widget.signal_run_task.connect(self.slot_run_task)
         task_widget.signal_stop_task.connect(self.slot_stop_task)
