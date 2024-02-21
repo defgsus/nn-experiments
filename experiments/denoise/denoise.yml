@@ -33,8 +33,8 @@ num_inputs_between_validations: 150_000
 freeze_validation_set: True
 train_input_transforms: |
   [
-    #NoiseTransform(),,
-    NoiseTransform(amt_min=.15, amt_max=.3),
+    # ImageNoise(amt_min=0.01, amt_max=0.15),  # mid
+    ImageNoise(amt_min=.15, amt_max=.3),  # strong
   ]
 
 

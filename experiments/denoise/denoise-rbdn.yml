@@ -1,0 +1,66 @@
+experiment_name: denoise/rbdn-noise-strong-${matrix_slug}
+
+matrix:
+  ks:
+    - 9
+  chans:
+    - 64
+  layers:
+    - 1
+  blayers:
+    - 1
+  nbranch:
+    - 2
+  bstride:
+    - 2
+  pad:
+    - 1
+
+trainer: experiments.denoise.trainer.TrainDenoising
+
+train_set: |
+  all_image_patch_dataset(SHAPE)
+
+validation_set: |
+  LimitIterableDataset(
+    all_image_patch_dataset(SHAPE),
+    5000,
+  )
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 5_000_000
+num_inputs_between_validations: 150_000
+freeze_validation_set: True
+train_input_transforms: |
+  [
+    # ImageNoise(amt_min=0.01, amt_max=0.15),  # mid
+    ImageNoise(amt_min=.1, amt_max=.3),  # strong
+  ]
+
+
+globals:
+  SHAPE: (3, 64, 64)
+
+model: |
+  model = RBDN(
+      in_channels=SHAPE[0],
+      out_channels=SHAPE[0],
+      hidden_channels=${chans},
+
+      num_branches=${nbranch},
+      num_hidden_layers=${layers},
+  
+      conv_kernel_size=${ks},
+      conv_padding=${pad},
+  
+      branch_conv_kernel_size=${ks},
+      branch_conv_padding=${pad},
+      branch_conv_stride=${bstride},
+      branch_num_hidden_layers=${blayers},
+  )
+  print(f"RBDN hidden shapes: {model.get_inner_shape(SHAPE)}")
+  model

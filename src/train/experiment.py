@@ -188,6 +188,10 @@ def dump_experiments_results(
         if snapshot_data.get("trainable_parameters"):
             row["model params"] = "{:,}".format(snapshot_data["trainable_parameters"][0])
 
+        if snapshot_data.get("training_time"):
+            seconds = snapshot_data["training_time"]
+            row["train time (minutes)"] = round(seconds / 60., 2)
+
         rows.append(row)
 
     if max_loss is not None and max_loss != min_loss:
@@ -200,6 +204,12 @@ def dump_experiments_results(
     df = pd.DataFrame(rows)
 
     for key in reversed(sort_columns):
+        if key not in df.columns:
+            for column in df.columns:
+                if key in column:
+                    key = column
+                    break
+
         ascending = True
         if key.startswith("-"):
             key = key[1:]

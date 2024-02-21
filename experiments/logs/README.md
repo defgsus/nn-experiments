@@ -12,6 +12,7 @@ and look at its parameters and results.
 - [autoencoder-experiments.md](autoencoder-experiments.md)
   - [:arrow_forward:](autoencoder-experiments.md#variational-auto-encoder-on-rpg-tile-dataset) variational auto-encoder on RPG Tile dataset
   - [:arrow_forward:](autoencoder-experiments.md#comparing-different-datasets) comparing different datasets
+        - [:arrow_forward:](autoencoder-experiments.md#take-care-of-the-choice-of-interpolation) Take care of the choice of interpolation
   - [:arrow_forward:](autoencoder-experiments.md#2023-12-08-autoencoder-with-histogram-loss) 2023-12-08 autoencoder with histogram loss
   - [:arrow_forward:](autoencoder-experiments.md#2024-01-21-stacked-symmetric-one-layer-at-a-time) 2024-01-21 stacked symmetric one-layer-at-a-time
 
@@ -51,6 +52,11 @@ and look at its parameters and results.
       - [:arrow_forward:](reservoir-computing.md#5-bit-xor) 5-bit xor
       - [:arrow_forward:](reservoir-computing.md#8-bit-square) 8-bit square
       - [:arrow_forward:](reservoir-computing.md#2023-12-30) 2023-12-30
+
+
+- [residual-convolution.md](residual-convolution.md)
+  - [:arrow_forward:](residual-convolution.md#parameter-tuning-for-a-residual-cnn) Parameter tuning for a residual CNN
+    - [:arrow_forward:](residual-convolution.md#compare-number-of-layers) compare number of layers
 
 
 - [transformers.md](transformers.md)

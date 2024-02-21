@@ -88,7 +88,7 @@ model: |
   )
 ```
 
-Note that the MNIST and FMNIST images are 28x28 pixels and
+Note that the MNIST and [FMNIST](https://arxiv.org/abs/1708.07747) images are 28x28 pixels and
 the RPG dataset is resized (via BILINEAR filter) to the same
 resolution.
 
@@ -103,6 +103,8 @@ are resized):
 
 Huh? Very different results. 
 MNIST easiest, FMNIST middle, RPG hardest. 
+
+#### Take care of the choice of interpolation
 
 After some testing it seems that the interpolation mode 
 during resizing has a strong influence. So i ran the above

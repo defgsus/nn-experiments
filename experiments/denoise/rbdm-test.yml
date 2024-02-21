@@ -1,0 +1,81 @@
+experiment_name: denoise/rbdn-test-hcrop_${matrix_slug}
+
+matrix:
+  ds:
+    - fmnist
+  ks:
+    - 9
+  chans:
+    - 64
+  layers:
+    - 1
+    #- 3
+    #- 4
+    #- 5
+  blayers:
+    - 1
+  nbranch:
+    #- 0
+    - 2
+  bstride:
+    - 2
+  pad:
+    - 1
+
+trainer: experiments.denoise.trainer.TrainDenoising
+
+train_set: |
+  {
+      "mnist": mnist_dataset(train=True, shape=SHAPE, interpolation=False),
+      "fmnist": fmnist_dataset(train=True, shape=SHAPE, interpolation=False),
+      "rpg": rpg_tile_dataset_3x32x32(validation=False, shape=SHAPE, interpolation=False) 
+  }["${ds}"]
+
+validation_set: |
+  {
+      "mnist": mnist_dataset(train=False, shape=SHAPE, interpolation=False),
+      "fmnist": fmnist_dataset(train=False, shape=SHAPE, interpolation=False),
+      "rpg": rpg_tile_dataset_3x32x32(validation=True, shape=SHAPE, interpolation=False)
+  }["${ds}"]
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 600_000
+freeze_validation_set: True
+train_input_transforms: |
+  [
+    # ImageNoise(amt_min=0.01, amt_max=0.15),  # mid
+    # ImageNoise(amt_min=.15, amt_max=.3),  # strong
+
+    # RandomQuantization(min_quantization=.05, max_quantization=0.3),  # mid
+    # RandomQuantization(min_quantization=.2, max_quantization=0.4),  # strong
+  
+    RandomCropHalfImage(),
+  ]
+  
+
+globals:
+  SHAPE: (3, 64, 64)
+
+model: |
+  model = RBDN(
+      in_channels=SHAPE[0],
+      out_channels=SHAPE[0],
+      hidden_channels=${chans},
+
+      num_branches=${nbranch},
+      num_hidden_layers=${layers},
+      
+      conv_kernel_size=${ks},
+      conv_padding=${pad},
+      
+      branch_conv_kernel_size=${ks},
+      branch_conv_padding=${pad},
+      branch_conv_stride=${bstride},
+      branch_num_hidden_layers=${blayers},
+  )
+  print(f"RBDN hidden shapes: {model.get_inner_shape(SHAPE)}")
+  model

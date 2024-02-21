@@ -1,7 +1,8 @@
 from .fft import FFTLayer
 from .hist import HistogramLayer
 from .noise import (
-    NoiseTransform,
+    ImageNoise,
+    RandomCropHalfImage,
     RandomQuantization,
 )
 from .reshape import Reshape

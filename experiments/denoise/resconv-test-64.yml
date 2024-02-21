@@ -1,0 +1,83 @@
+experiment_name: denoise/resconv-64-hcrop-bw_${matrix_slug}
+
+matrix:
+  ds:
+    - fmnist
+  l:
+    - 1
+    - 3
+    - 5
+    - 7
+    - 9
+    - 11
+    - 13
+    - 15
+    - 17
+    - 19
+    - 21
+  ks:
+    - 3
+    #- 5
+    #- 7
+    #- 9
+  ch:
+    - 32
+  stride:
+    - 1
+  pad:
+    - 1
+  act:
+    - gelu
+
+
+trainer: experiments.denoise.trainer.TrainDenoising
+
+train_set: |
+  {
+      "mnist": mnist_dataset(train=True, shape=SHAPE, interpolation=False),
+      "fmnist": fmnist_dataset(train=True, shape=SHAPE, interpolation=False),
+      "rpg": rpg_tile_dataset_3x32x32(validation=False, shape=SHAPE, interpolation=False) 
+  }["${ds}"]
+
+validation_set: |
+  {
+      "mnist": mnist_dataset(train=False, shape=SHAPE, interpolation=False),
+      "fmnist": fmnist_dataset(train=False, shape=SHAPE, interpolation=False),
+      "rpg": rpg_tile_dataset_3x32x32(validation=True, shape=SHAPE, interpolation=False)
+  }["${ds}"]
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 180_000
+freeze_validation_set: True
+train_input_transforms: |
+  [
+    # ImageNoise(amt_min=0.01, amt_max=0.15),  # mid
+    # ImageNoise(amt_min=.15, amt_max=.3),  # strong
+
+    # RandomQuantization(min_quantization=.05, max_quantization=0.3),  # mid
+    # RandomQuantization(min_quantization=.2, max_quantization=0.4),  # strong
+  
+    RandomCropHalfImage(),
+  ]
+  
+
+globals:
+  SHAPE: (1, 64, 64)
+
+model: |
+  from experiments.denoise.resconv import ResConv
+  
+  ResConv(
+      in_channels=SHAPE[0],
+      num_layers=${l},
+      channels=${ch},
+      stride=${stride},
+      kernel_size=${ks},
+      padding=${pad},
+      activation="${act}",
+      activation_last_layer="sigmoid",
+  )

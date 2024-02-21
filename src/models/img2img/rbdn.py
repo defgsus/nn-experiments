@@ -185,6 +185,7 @@ class RBDN(nn.Module):
             branch_conv_padding: int = 1,
             branch_pool_kernel_size: int = 3,
             branch_pool_stride: int = 1,
+            branch_num_hidden_layers: int = 1,
 
             hidden_kernel_size: int = 3,
             hidden_stride: int = 1,
@@ -205,6 +206,7 @@ class RBDN(nn.Module):
                 pool_kernel_size=branch_pool_kernel_size, pool_stride=branch_pool_stride,
                 hidden_kernel_size=hidden_kernel_size, hidden_stride=hidden_stride, hidden_padding=hidden_padding,
                 activation=activation, batch_norm=batch_norm,
+                num_hidden_layers=branch_num_hidden_layers,
                 sub_branch=branches,
             )
 
