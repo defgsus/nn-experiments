@@ -55,8 +55,13 @@ and look at its parameters and results.
 
 
 - [residual-convolution.md](residual-convolution.md)
-  - [:arrow_forward:](residual-convolution.md#parameter-tuning-for-a-residual-cnn) Parameter tuning for a residual CNN
-    - [:arrow_forward:](residual-convolution.md#compare-number-of-layers) compare number of layers
+  - [:arrow_forward:](residual-convolution.md#parameter-tuning-for-a-residual-deep-image-to-image-cnn) Parameter tuning for a Residual Deep Image-to-Image CNN
+    - [:arrow_forward:](residual-convolution.md#compare-number-of-layers) Compare number of layers
+    - [:arrow_forward:](residual-convolution.md#compare-residual-weight-factor) Compare residual weight factor
+    - [:arrow_forward:](residual-convolution.md#compare-position-of-batch-normalization) Compare position of batch normalization?
+    - [:arrow_forward:](residual-convolution.md#compare-activation-function) Compare activation function
+    - [:arrow_forward:](residual-convolution.md#compare-channel-size) Compare channel size
+  - [:arrow_forward:](residual-convolution.md#compare-kernel-size) Compare kernel size
 
 
 - [transformers.md](transformers.md)

@@ -11,14 +11,12 @@ LOG_PATH = Path(__file__).resolve().parent
 
 def update_readme():
 
-    slugger = github_slugger.GithubSlugger()
-
     documents = []
 
     fp = StringIO()
     for file in sorted(LOG_PATH.rglob("*.md")):
         if file.name != "README.md":
-            documents.append((file, render_file_index(file, slugger, fp)))
+            documents.append((file, render_file_index(file, fp)))
 
     # check for wrong links
     has_error = False
@@ -129,7 +127,6 @@ class LinkCheckRenderer(marko.HTMLRenderer):
 
 def render_file_index(
         file: Path,
-        slugger: github_slugger.GithubSlugger,
         out: StringIO,
 ) -> Tuple[marko.block.Document, List[str]]:
     """
@@ -140,12 +137,15 @@ def render_file_index(
 
     doc = marko.Markdown().parse(file.read_text())
 
-    # grab each heading and render it with the IndexRenderer
+    slugger = github_slugger.GithubSlugger()
     slugs = []
     for child in doc.children:
+        # grab each heading and render it with the IndexRenderer
         if child.get_type() == "Heading":
             renderer = IndexRenderer(file.relative_to(LOG_PATH), slugger)
             print(renderer.render(child), file=out)
+
+            # also collect the slugs in this document
             slugs.extend(renderer.slugs)
 
     return doc, slugs

@@ -36,13 +36,15 @@ class ConvLayer(nn.Module):
             stride: int = 1,
             padding: int = 0,
             batch_norm: bool = True,
+            batch_norm_pos: int = 0,
             activation: Union[None, str, Callable] = "gelu",
             padding_mode: str = "zeros",
             transposed: bool = False,
     ):
         super().__init__()
+        self._batch_norm_pos = batch_norm_pos
 
-        if batch_norm:
+        if batch_norm and batch_norm_pos == 0:
             self.bn = nn.BatchNorm2d(in_channels)
 
         self.conv = (nn.ConvTranspose2d if transposed else nn.Conv2d)(
@@ -54,14 +56,20 @@ class ConvLayer(nn.Module):
             padding_mode=padding_mode,
         )
 
+        if batch_norm and batch_norm_pos == 1:
+            self.bn = nn.BatchNorm2d(out_channels)
+
         self.act = activation_to_module(activation)
+
+        if batch_norm and batch_norm_pos == 2:
+            self.bn = nn.BatchNorm2d(out_channels)
 
     def forward(
             self,
             x: torch.Tensor,
             output_size: Union[None, Tuple[int, int]] = None,
     ) -> torch.Tensor:
-        if hasattr(self, "bn"):
+        if self._batch_norm_pos == 0 and hasattr(self, "bn"):
             x = self.bn(x)
 
         x = self.conv(x)
@@ -69,8 +77,14 @@ class ConvLayer(nn.Module):
         if output_size is not None and tuple(x.shape[-2:]) != output_size:
             x = F.pad(x, (0, output_size[-1] - x.shape[-1], 0, output_size[-2] - x.shape[-2]))
 
+        if self._batch_norm_pos == 1 and hasattr(self, "bn"):
+            x = self.bn(x)
+
         if self.act:
             x = self.act(x)
+
+        if self._batch_norm_pos == 2 and hasattr(self, "bn"):
+            x = self.bn(x)
 
         return x
 
@@ -90,7 +104,9 @@ class ResConv(nn.Module):
             batch_norm: Union[bool, Iterable[bool]] = True,
             activation: Union[None, str, Callable] = "gelu",
             activation_last_layer: Union[None, str, Callable] = None,
-            residual_weight: float = .1,
+            residual_weight: float = 1.,
+            batch_norm_pos_encoder: int = 0,
+            batch_norm_pos_decoder: int = 0,
     ):
         super().__init__()
         self.residual_weight = residual_weight
@@ -122,9 +138,10 @@ class ResConv(nn.Module):
                     kernel_size=kernel_size,
                     stride=stride,
                     padding=pad,
-                    batch_norm=batch_norm,
-                    activation=(None if i == num_layers -1 else activation),
+                    batch_norm=batch_norm and i < num_layers - 1,
+                    activation=(activation if i < num_layers - 1 else None),
                     padding_mode=padding_mode,
+                    batch_norm_pos=batch_norm_pos_encoder,
                 )
 
         channels_list = list(reversed([out_channels, *channels]))
@@ -143,10 +160,11 @@ class ResConv(nn.Module):
                 kernel_size=kernel_size,
                 stride=stride,
                 padding=pad,
-                batch_norm=batch_norm,
-                activation=activation_last_layer if i == num_layers - 1 else activation,
+                batch_norm=batch_norm and i < num_layers - 1,
+                activation=activation if i < num_layers - 1 else activation_last_layer,
                 padding_mode=padding_mode,
                 transposed=True,
+                batch_norm_pos=batch_norm_pos_decoder,
             )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

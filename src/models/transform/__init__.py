@@ -2,6 +2,7 @@ from .fft import FFTLayer
 from .hist import HistogramLayer
 from .noise import (
     ImageNoise,
+    ImageMultiNoise,
     RandomCropHalfImage,
     RandomQuantization,
 )

@@ -348,6 +348,14 @@ class LImage:
         ]
         self._layers_changed()
 
+    def duplicate_selected_layer(self) -> Optional[LImageLayer]:
+        if self.selected_layer:
+            layer = self.selected_layer.copy()
+            self._layers.append(layer)
+            self._selected_layer = layer
+            self._layers_changed()
+            return layer
+
     def paint(self, painter: QPainter):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
@@ -382,6 +390,7 @@ class LImage:
     def add_menu_actions(self, menu: QMenu, project: "ProjectWidget"):
         from .new_layer_dialog import NewLayerDialog
         from .image_transform_dialog import ImageTransformDialog
+        menu.addAction("Duplicate layer", self.duplicate_selected_layer)
         menu.addAction("Add layer", partial(NewLayerDialog.run_new_layer_dialog, self, menu))
         menu.addAction(
             "Transform layer",

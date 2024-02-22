@@ -6,6 +6,9 @@ from .image_patch import (
     image_patch_dataset,
     all_image_patch_dataset,
 )
+from .kali import (
+    kali_patch_dataset
+)
 from .noise import (
     noise_dataset
 )
