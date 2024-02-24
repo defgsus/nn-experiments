@@ -35,6 +35,7 @@ class ConvLayer(nn.Module):
             kernel_size: int,
             stride: int = 1,
             padding: int = 0,
+            groups: int = 1,
             batch_norm: bool = True,
             batch_norm_pos: int = 0,
             activation: Union[None, str, Callable] = "gelu",
@@ -54,6 +55,7 @@ class ConvLayer(nn.Module):
             stride=stride,
             padding=padding,
             padding_mode=padding_mode,
+            groups=groups,
         )
 
         if batch_norm and batch_norm_pos == 1:
@@ -101,6 +103,7 @@ class ResConv(nn.Module):
             stride: Union[int, Iterable[int]] = 1,
             padding: Union[int, Iterable[int]] = 0,
             padding_mode: str = "zeros",
+            conv_groups: Union[int, Iterable[int]] = 1,
             batch_norm: Union[bool, Iterable[bool]] = True,
             activation: Union[None, str, Callable] = "gelu",
             activation_last_layer: Union[None, str, Callable] = None,
@@ -122,6 +125,7 @@ class ResConv(nn.Module):
         strides = param_make_list(stride, num_layers, "stride")
         paddings = param_make_list(padding, num_layers, "padding")
         batch_norms = param_make_list(batch_norm, num_layers, "batch_norm")
+        conv_groups = param_make_list(conv_groups, num_layers, "conv_groups")
 
         channels_list = [in_channels, *channels]
 
@@ -129,8 +133,8 @@ class ResConv(nn.Module):
 
         with torch.no_grad():
 
-            for i, (ch, ch_next, kernel_size, stride, pad, batch_norm) in enumerate(
-                    zip(channels_list, channels_list[1:], kernel_sizes, strides, paddings, batch_norms)
+            for i, (ch, ch_next, kernel_size, stride, pad, batch_norm, groups) in enumerate(
+                    zip(channels_list, channels_list[1:], kernel_sizes, strides, paddings, batch_norms, conv_groups)
             ):
                 self.encoder[f"layer_{i + 1}"] = ConvLayer(
                     in_channels=ch,
@@ -142,6 +146,7 @@ class ResConv(nn.Module):
                     activation=(activation if i < num_layers - 1 else None),
                     padding_mode=padding_mode,
                     batch_norm_pos=batch_norm_pos_encoder,
+                    groups=groups,
                 )
 
         channels_list = list(reversed([out_channels, *channels]))
@@ -149,10 +154,11 @@ class ResConv(nn.Module):
         strides = list(reversed(strides))
         paddings = list(reversed(paddings))
         batch_norms = list(reversed(batch_norms))
+        conv_groups = list(reversed(conv_groups))
 
         self.decoder = nn.ModuleDict()
-        for i, (ch, ch_next, kernel_size, stride, pad, batch_norm) in enumerate(
-                zip(channels_list, channels_list[1:], kernel_sizes, strides, paddings, batch_norms)
+        for i, (ch, ch_next, kernel_size, stride, pad, batch_norm, groups) in enumerate(
+                zip(channels_list, channels_list[1:], kernel_sizes, strides, paddings, batch_norms, conv_groups)
         ):
             self.decoder[f"layer_{i + 1}"] = ConvLayer(
                 in_channels=ch,
@@ -165,6 +171,7 @@ class ResConv(nn.Module):
                 padding_mode=padding_mode,
                 transposed=True,
                 batch_norm_pos=batch_norm_pos_decoder,
+                groups=groups,
             )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

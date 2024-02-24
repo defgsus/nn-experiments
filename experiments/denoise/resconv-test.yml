@@ -1,23 +1,30 @@
-experiment_name: denoise/resconv-ks-hcrop-bw_${matrix_slug}
+experiment_name: denoise/resconv-group-hcrop-bw_${matrix_slug}
 
 matrix:
   ds:
     - fmnist
   l:
     - 11
-  ks:
+  ks1:
     - 3
     #- 5
     #- 7
     #- 9
     #- 11
+  ks2:
+    #- 3
+    #- 5
+    #- 7
+    - 9
+    #- 11
   ch:
     - 32
   stride:
     - 1
-  pad:
+  groups:
     - 1
-  #act: ["Hardshrink", "Hardsigmoid", "Hardtanh", "Hardswish", "LeakyReLU", "LogSigmoid", "PReLU", "ReLU", "ReLU6", "RReLU", "SELU", "CELU", "GELU", "Sigmoid", "SiLU", "Mish", "Softplus", "Softshrink", "Softsign", "Tanh", "Tanhshrink"]
+    #- 4
+    #act: ["Hardshrink", "Hardsigmoid", "Hardtanh", "Hardswish", "LeakyReLU", "LogSigmoid", "PReLU", "ReLU", "ReLU6", "RReLU", "SELU", "CELU", "GELU", "Sigmoid", "SiLU", "Mish", "Softplus", "Softshrink", "Softsign", "Tanh", "Tanhshrink"]
   act:
     - gelu
 #
@@ -43,7 +50,7 @@ learnrate: 0.0003
 optimizer: AdamW
 scheduler: CosineAnnealingLR
 loss_function: l1
-max_inputs: 180_000
+max_inputs: 1_200_000
 freeze_validation_set: True
 train_input_transforms: |
   [
@@ -62,14 +69,24 @@ globals:
 
 model: |
   from experiments.denoise.resconv import ResConv
+
+  kernel_size = []
+  padding = []
+  for i in range(${l}):
+      t = i / (${l} - 1)
+      ks = ${ks1} * (1. - t) + t * ${ks2}
+      ks = int(ks / 2) * 2 + 1
+      kernel_size.append(ks)
+      padding.append(int(math.floor(ks / 2)))
   
   ResConv(
       in_channels=SHAPE[0],
       num_layers=${l},
       channels=${ch},
       stride=${stride},
-      kernel_size=${ks},
-      padding=${pad},
+      kernel_size=kernel_size,
+      padding=padding,
       activation="${act}",
       activation_last_layer="sigmoid",
+      conv_groups=[1] + [${groups}] * (${l} - 2) + [1],
   )

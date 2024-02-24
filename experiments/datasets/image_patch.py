@@ -65,12 +65,14 @@ def all_image_patch_dataset(
         shuffle: int = 200_000,
         file_shuffle: bool = True,
 ):
+    # from .kali import kali_patch_dataset
     ds = InterleaveIterableDataset(
         (
             image_patch_dataset(shape, "~/Pictures/photos/", file_shuffle=file_shuffle),
             image_patch_dataset(shape, "~/Pictures/__diverse/", file_shuffle=file_shuffle),
-            image_patch_dataset(shape, "~/Pictures/diffusion/", file_shuffle=file_shuffle),
+            # image_patch_dataset(shape, "~/Pictures/diffusion/", file_shuffle=file_shuffle),
             image_patch_dataset(shape, "~/Pictures/eisenach/", file_shuffle=file_shuffle),
+
         )
     )
     if shuffle:

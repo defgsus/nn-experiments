@@ -2,6 +2,7 @@ from .classic import (
     mnist_dataset,
     fmnist_dataset,
 )
+from .clip_noise import ClipNoiseDataset
 from .image_patch import (
     image_patch_dataset,
     all_image_patch_dataset,

@@ -1,0 +1,69 @@
+experiment_name: denoise/resconv-declipix_${matrix_slug}
+
+matrix:
+  ds:
+    - dc07
+  l:
+    - 5
+  ks1:
+    - 3
+  ks2:
+    - 9
+  ch:
+    - 64
+  stride:
+    - 1
+  act:
+    - mish
+
+trainer: experiments.denoise.trainer.TrainDenoising
+
+train_set: |
+  ClipNoiseDataset(SHAPE[-2:], interleave_images=200).shuffle(10000)
+
+validation_set: |
+  ClipNoiseDataset(SHAPE[-2:], interleave_images=200).limit(5000)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+#num_inputs_between_validations: 100_000
+freeze_validation_set: True
+second_data_is_noise: True
+
+globals:
+  SHAPE: (3, 48, 48)
+
+model: |
+  from experiments.denoise.resconv import ResConv
+
+  kernel_size = []
+  padding = []
+  for i in range(${l}):
+      t = i / (${l} - 1)
+      ks = ${ks1} * (1. - t) + t * ${ks2}
+      ks = int(ks / 2) * 2 + 1
+      kernel_size.append(ks)
+      padding.append(int(math.floor(ks / 2)))
+  
+  class Module(nn.Module):
+      def __init__(self):
+          super().__init__()
+          self.module = ResConv(
+              in_channels=SHAPE[0],
+              num_layers=${l},
+              channels=${ch},
+              stride=${stride},
+              kernel_size=kernel_size,
+              padding=padding,
+              activation="${act}",
+              activation_last_layer=None,
+          )
+      
+      def forward(self, x):
+          return (x - self.module(x)).clamp(0, 1) 
+  
+  Module()

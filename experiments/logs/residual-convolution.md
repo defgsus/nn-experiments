@@ -366,7 +366,10 @@ Wow, there is a significant perfomance jump from 3 to 5, **and** the 5x5 kernel 
 even faster on my hardware/lib/driver setup. It is very likely, though, that the performance of the 
 kernel size must be re-evaluated for each particular task.
 
-Similar to the channel size, the kernel size is varied layer-wise in the following experiment.
+Similar to the channel size abve , the kernel size is varied layer-wise in the following experiment.
+The top performing network with `ks1=3` and `ks2=9`, for example, has the following kernel sizes:
+
+    [3, 3, 5, 5, 5, 7, 7, 7, 7, 9, 9]
 
 |   l |   ks1 |   ks2 |   ch |   stride | act   | validation loss |  model params | train time (minutes) |
 |----:|------:|------:|-----:|---------:|:------|----------------:|--------------:|---------------------:|
@@ -396,6 +399,10 @@ Similar to the channel size, the kernel size is varied layer-wise in the followi
 |  11 |    11 |     9 |   32 |        1 | gelu  |       0.0500542 |     2,078,115 |                 8.58 |
 |  11 |     3 |     3 |   32 |        1 | gelu  |       0.0512497 |       186,787 |                 2.11 |
 
+Wow, our little 3x3 kernel friend, that was used all the time, has the worst
+performance again. Also the 5x5 from the above experiment is surpassed.
+Generally, one can see: Small kernel size in shallow layers and larger kernel
+size in deeper layers is a good thing.
 
 
 TODO: 
