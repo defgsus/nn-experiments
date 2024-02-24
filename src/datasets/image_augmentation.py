@@ -14,9 +14,10 @@ import torchvision.transforms.functional as VF
 import torchvision.transforms as VT
 
 from src.util.image import image_resize_crop, set_image_channels, set_image_dtype
+from .base_iterable import BaseIterableDataset
 
 
-class ImageAugmentation(IterableDataset):
+class ImageAugmentation(BaseIterableDataset):
 
     def __init__(
             self,

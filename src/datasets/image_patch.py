@@ -8,6 +8,7 @@ import torchvision.transforms as VT
 import torchvision.transforms.functional as VF
 
 from src.util.image import iter_image_patches, set_image_channels
+from .base_iterable import BaseIterableDataset
 
 
 class ImagePatchDataset(Dataset):
@@ -44,7 +45,7 @@ class ImagePatchDataset(Dataset):
         return img[:, y * sy: (y + 1) * sy, x * sx: (x + 1) * sx]
 
 
-class ImagePatchIterableDataset(IterableDataset):
+class ImagePatchIterableDataset(BaseIterableDataset):
     def __init__(
             self,
             dataset: Union[Dataset, IterableDataset, Iterable[torch.Tensor], Iterable[Tuple[torch.Tensor, ...]]],

@@ -14,9 +14,10 @@ from torchvision.datasets.folder import is_image_file
 from torchvision.transforms.functional import pil_to_tensor
 
 from src.models.encoder import Encoder2d
+from .base_iterable import BaseIterableDataset
 
 
-class ImageEncodeIterableDataset(IterableDataset):
+class ImageEncodeIterableDataset(BaseIterableDataset):
 
     def __init__(
             self,

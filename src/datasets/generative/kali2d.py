@@ -10,6 +10,7 @@ import torchvision.transforms.functional as VF
 
 from src.algo import Space2d, kali_2d
 from src.util.image import ImageFilter
+from ..base_iterable import BaseIterableDataset
 
 """
 nice parameters:
@@ -104,7 +105,7 @@ class Kali2dDataset(Dataset):
         )
 
 
-class Kali2dFilteredIterableDataset(IterableDataset):
+class Kali2dFilteredIterableDataset(BaseIterableDataset):
 
     def __init__(
             self,

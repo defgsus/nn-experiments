@@ -4,9 +4,10 @@ import torch
 from torch.utils.data import Dataset, IterableDataset
 
 from src.util.embedding import normalize_embedding
+from .base_iterable import BaseIterableDataset
 
 
-class DissimilarImageIterableDataset(IterableDataset):
+class DissimilarImageIterableDataset(BaseIterableDataset):
 
     def __init__(
             self,

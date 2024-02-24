@@ -5,8 +5,10 @@ from torch.utils.data import Dataset, IterableDataset, get_worker_info
 import torchvision.transforms as VT
 import torchvision.transforms.functional as VF
 
+from .base_iterable import BaseIterableDataset
 
-class ImageScaleIterableDataset(IterableDataset):
+
+class ImageScaleIterableDataset(BaseIterableDataset):
 
     def __init__(
             self,
@@ -46,7 +48,11 @@ class ImageScaleIterableDataset(IterableDataset):
                 if self.max_size is not None and any(s > self.max_size for s in scaled_shape):
                     continue
 
-                scaled_image = VF.resize(image, scaled_shape, interpolation=self.interpolation)
+                scaled_image = VF.resize(
+                    image, scaled_shape,
+                    interpolation=self.interpolation,
+                    antialias=self.interpolation != VF.InterpolationMode.NEAREST,
+                )
 
                 if self.with_scale:
                     if is_tuple:

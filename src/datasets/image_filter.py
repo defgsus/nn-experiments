@@ -4,9 +4,10 @@ import torch
 from torch.utils.data import IterableDataset, Dataset
 
 from src.util.image import ImageFilter
+from .base_iterable import BaseIterableDataset
 
 
-class ImageFilterIterableDataset(IterableDataset):
+class ImageFilterIterableDataset(BaseIterableDataset):
 
     def __init__(
             self,

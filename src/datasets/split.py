@@ -3,8 +3,10 @@ from typing import Union, Generator, Optional, Callable, Any, Dict, List, Tuple
 import torch
 from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
+from .base_iterable import BaseIterableDataset
 
-class SplitIterableDataset(IterableDataset):
+
+class SplitIterableDataset(BaseIterableDataset):
     def __init__(
             self,
             ds: Union[Dataset, IterableDataset],

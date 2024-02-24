@@ -13,8 +13,10 @@ from torchvision.datasets import ImageFolder as TorchImageFolder, DatasetFolder
 from torchvision.datasets.folder import is_image_file
 from torchvision.transforms.functional import pil_to_tensor
 
+from .base_iterable import BaseIterableDataset
 
-class IterableShuffle(IterableDataset):
+
+class IterableShuffle(BaseIterableDataset):
 
     def __init__(
             self,

@@ -9,9 +9,10 @@ import torchvision.transforms.functional as VF
 import torchvision.transforms as VT
 
 from src.util import iter_batches
+from ..base_iterable import BaseIterableDataset
 
 
-class CombineImageAugmentIterableDataset(IterableDataset):
+class CombineImageAugmentIterableDataset(BaseIterableDataset):
     def __init__(
             self,
             dataset: Union[Dataset, IterableDataset],

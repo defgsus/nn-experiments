@@ -15,9 +15,10 @@ from torchvision.datasets.folder import is_image_file
 from torchvision.transforms.functional import pil_to_tensor
 
 from src.util.image import image_resize_crop, set_image_channels, set_image_dtype
+from .base_iterable import BaseIterableDataset
 
 
-class ImageFolderIterableDataset(IterableDataset):
+class ImageFolderIterableDataset(BaseIterableDataset):
 
     def __init__(
             self,

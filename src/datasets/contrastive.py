@@ -4,8 +4,10 @@ from typing import Tuple, Optional, Union, Iterable, Callable
 import torch
 from torch.utils.data import Dataset, IterableDataset
 
+from .base_iterable import BaseIterableDataset
 
-class ContrastiveIterableDataset(IterableDataset):
+
+class ContrastiveIterableDataset(BaseIterableDataset):
     """
     Expects source dataset that generates (vector, id)
     and yields (vector1, vector2, is_similar).

@@ -25,9 +25,10 @@ import requests
 
 from src.datasets import *
 from src.util.image import *
+from ..base_iterable import BaseIterableDataset
 
 
-class RpgTileIterableDataset(IterableDataset):
+class RpgTileIterableDataset(BaseIterableDataset):
 
     WEB_HOST = "https://opengameart.org"
     DEFAULT_CONFIG_FILE = Path(__file__).resolve().parent / "tile-config.ndjson"

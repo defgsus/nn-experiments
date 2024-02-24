@@ -15,6 +15,8 @@ from src.datasets import *
 from src.util.image import *
 from src.algo import IFS
 
+from ..base_iterable import BaseIterableDataset
+
 
 class IFSDataset(Dataset):
     def __init__(
@@ -54,7 +56,7 @@ class IFSDataset(Dataset):
         return image, seed
 
 
-class IFSClassIterableDataset(IterableDataset):
+class IFSClassIterableDataset(BaseIterableDataset):
     def __init__(
             self,
             shape: Tuple[int, int],

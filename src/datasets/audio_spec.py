@@ -10,10 +10,11 @@ from torch.utils.data import IterableDataset
 
 from src.util.files import iter_filenames
 from src.util.audio import iter_audio_slices, is_audio_file
+from .base_iterable import BaseIterableDataset
 
 
 # TODO: make this use an audio-slice dataset as source
-class AudioSpecIterableDataset(IterableDataset):
+class AudioSpecIterableDataset(BaseIterableDataset):
 
     def __init__(
             self,

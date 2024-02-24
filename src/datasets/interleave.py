@@ -10,9 +10,10 @@ import torch
 from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
 from .util import iter_dataset
+from .base_iterable import BaseIterableDataset
 
 
-class InterleaveIterableDataset(IterableDataset):
+class InterleaveIterableDataset(BaseIterableDataset):
 
     def __init__(
             self,

@@ -3,9 +3,10 @@ from pathlib import Path
 from torch.utils.data import IterableDataset
 
 from src.util.files import iter_ndjson
+from .base_iterable import BaseIterableDataset
 
 
-class EChordsIterableDataset(IterableDataset):
+class EChordsIterableDataset(BaseIterableDataset):
 
     def __init__(self):
         self.filename = Path("~/prog/python/github/nn-experiments/datasets/echords.ndjson.gz").expanduser()

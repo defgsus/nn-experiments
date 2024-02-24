@@ -14,9 +14,10 @@ from torchvision.datasets.folder import is_image_file
 from torchvision.transforms.functional import pil_to_tensor
 
 from src.util import iter_batches
+from .base_iterable import BaseIterableDataset
 
 
-class NormalizeMaxIterableDataset(IterableDataset):
+class NormalizeMaxIterableDataset(BaseIterableDataset):
 
     def __init__(
             self,

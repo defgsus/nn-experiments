@@ -3,6 +3,8 @@ from typing import Union, Generator, Optional, Callable, Any, Dict, List, Tuple
 import torch
 from torch.utils.data import Dataset, IterableDataset
 
+from .base_iterable import BaseIterableDataset
+
 
 class LimitDataset(Dataset):
 
@@ -24,7 +26,8 @@ class LimitDataset(Dataset):
 
         raise IndexError(f"{item} is >= {len(self)}")
 
-class LimitIterableDataset(IterableDataset):
+
+class LimitIterableDataset(BaseIterableDataset):
 
     def __init__(
             self,

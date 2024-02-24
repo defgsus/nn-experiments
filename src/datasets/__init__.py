@@ -4,6 +4,7 @@ from .aug import (
     CombineImageAugmentIterableDataset,
     ImageAugmentClassDataset,
 )
+from .base_iterable import BaseIterableDataset
 from .ca import TotalCADataset
 from .classlogits import ClassLogitsDataset
 from .contrastive import ContrastiveIterableDataset

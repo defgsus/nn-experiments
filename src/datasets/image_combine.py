@@ -5,8 +5,10 @@ from torch.utils.data import Dataset, IterableDataset, get_worker_info
 import torchvision.transforms.functional as VF
 import torchvision.transforms as VT
 
+from .base_iterable import BaseIterableDataset
 
-class ImageCombinePatchIterableDataset(IterableDataset):
+
+class ImageCombinePatchIterableDataset(BaseIterableDataset):
 
     def __init__(
             self,

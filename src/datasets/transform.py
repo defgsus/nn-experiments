@@ -4,6 +4,8 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
+from .base_iterable import BaseIterableDataset
+
 
 class TransformDataset(Dataset):
     """
@@ -71,7 +73,7 @@ class TransformDataset(Dataset):
         return tensor
 
 
-class TransformIterableDataset(IterableDataset):
+class TransformIterableDataset(BaseIterableDataset):
     """
     Transformation on Tensor IterableDataset
 
