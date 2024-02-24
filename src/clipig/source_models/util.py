@@ -1,11 +1,55 @@
+import json
 import os
+import re
+import math
+import random
+import itertools
+import shutil
+import argparse
+import sys
+import warnings
 import ast
+from copy import deepcopy
+from io import StringIO
 from pathlib import Path
-from typing import Any, Union, Optional, Tuple, Dict, List
+import importlib
+from typing import List, Iterable, Tuple, Optional, Callable, Union, Generator, Dict, Type, Any
 
+import yaml
+from tqdm import tqdm
 import torch
 import torch.nn as nn
-import yaml
+import torch.nn.functional as F
+import torch.nn.modules
+import torch.nn.utils
+import torch.utils.data
+from torch.utils.data import DataLoader, Dataset, IterableDataset, TensorDataset
+import torchvision.transforms as VT
+import torchvision.transforms.functional as VF
+import torchvision.models
+from torchvision.utils import make_grid
+import pandas as pd
+
+# make all this stuff available to yaml code snippets
+from src import console
+from src.util import *
+from src.util.image import *
+from src.train import *
+from src.models.util import *
+from src.models.ca import *
+from src.models.cnn import *
+from src.models.decoder import *
+from src.models.encoder import *
+from src.models.generative import *
+from src.models.rbm import *
+from src.models.recursive import *
+from src.models.transform import *
+from src.models.vae import *
+from src.models.clip import ClipSingleton
+from src.models.loss import *
+from src.models.util import *
+from src.algo import *
+
 
 PROJECT_PATH = Path(__file__).resolve().parent.parent.parent.parent
 AUTOENCODER_PATH = Path(__file__).resolve().parent.parent / "models/autoencoder"

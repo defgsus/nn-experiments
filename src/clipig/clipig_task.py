@@ -32,10 +32,10 @@ class ClipigTask:
         self.config = get_complete_clipig_task_config(config)
         self._original_config = config
         # minimum delay in seconds between yields of pixel data
-        self._pixel_yield_delay_sec = 1.
+        self._pixel_yield_delay_sec = config.get("pixel_yield_delay_sec", 1.)
         self._last_pixel_yield_time = 0
 
-        self._source_model: Optional[nn.Module] = None
+        self.source_model: Optional[nn.Module] = None
 
     @property
     def clip_model_name(self) -> str:
@@ -87,7 +87,9 @@ class ClipigTask:
             normalize=normalize,
         )
 
-    def load_image(self, filename: Union[str, Path]):
+    def load_image(self, filename: Union[str, Path, torch.Tensor]) -> torch.Tensor:
+        if isinstance(filename, torch.Tensor):
+            return filename
         return VF.to_tensor(PIL.Image.open(str(filename)))
 
     def create_source_model(self) -> SourceModelBase:
@@ -200,7 +202,7 @@ class ClipigTask:
 
         yield {"status": "initializing"}
 
-        source_model = self.create_source_model()
+        self.source_model = source_model = self.create_source_model()
         if self.task_type == self.TaskType.T_CLIPIG:
             ClipSingleton.get(self.clip_model_name, self.device_name)
 
@@ -214,6 +216,9 @@ class ClipigTask:
 
         self._last_pixel_yield_time = 0
         for it in range(self.num_iterations):
+
+            if self.config.get("dummy_mode"):
+                yield {"pixels": source_model().detach()}
 
             loss_per_target = []
             for target in targets:
