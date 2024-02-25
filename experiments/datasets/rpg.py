@@ -116,5 +116,46 @@ def rpg_tile_dataset(
         ds = LimitIterableDataset(ds, limit)
 
     return ds
-    
-    
+
+
+
+class PixilartPatchDataset(BaseIterableDataset):
+    def __init__(
+            self,
+            shape: Tuple[int, int, int] = (3, 64, 64),
+            interpolation: VT.InterpolationMode = VT.InterpolationMode.BILINEAR,
+            interleave_images: Optional[int] = 20,
+            shuffle_images: bool = True,
+    ):
+        self._ds_image = ImageFolderIterableDataset(
+            Path("~/prog/data/pixilart/raw").expanduser(),
+            shuffle=shuffle_images,
+        )
+
+        self._ds = InterleaveIterableDataset((
+            RandomImagePatchIterableDataset(
+                self._ds_image.scale(min(shape[2:])/400, interpolation=interpolation), shape,
+                patches_per_image_factor=1.,
+                interleave_images=interleave_images,
+            ),
+            RandomImagePatchIterableDataset(
+                self._ds_image.scale(.25, interpolation=interpolation), shape,
+                patches_per_image_factor=2.,
+                interleave_images=interleave_images,
+            ),
+            RandomImagePatchIterableDataset(
+                self._ds_image.scale(.5, interpolation=interpolation), shape,
+                patches_per_image_factor=3.,
+                interleave_images=interleave_images,
+            ),
+            RandomImagePatchIterableDataset(
+                self._ds_image, shape,
+                interleave_images=interleave_images,
+            ),
+        ))
+
+    def __len__(self):
+        return 149_744
+
+    def __iter__(self):
+        yield from self._ds

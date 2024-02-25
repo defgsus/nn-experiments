@@ -104,6 +104,7 @@ def map_image_patches(
         cut_away: Union[int, Tuple[int, int]] = 0,
         batch_size: int = 64,
         auto_pad: bool = True,
+        padding_mode: str = "zeros",
         window: Union[bool, torch.Tensor, Callable] = False,
         verbose: bool = False,
 ) -> torch.Tensor:
@@ -175,7 +176,7 @@ def map_image_patches(
                 # print(f"  needed > image, added padding {padding[pad_pos]}")
 
     if any(padding):
-        image = F.pad(image, padding)
+        image = F.pad(image, padding, mode=padding_mode)
 
     # print(f"stride={stride} grid={grid_size} image={image.shape[-2:]} pad={padding} overlap={overlap}")
 

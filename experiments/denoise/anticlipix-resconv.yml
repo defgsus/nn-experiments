@@ -3,6 +3,8 @@ experiment_name: denoise/resconv-declipix_${matrix_slug}
 matrix:
   ds:
     - dc07
+  maxnoise:
+    - 2.
   l:
     - 5
   ks1:
@@ -19,10 +21,10 @@ matrix:
 trainer: experiments.denoise.trainer.TrainDenoising
 
 train_set: |
-  ClipNoiseDataset(SHAPE[-2:], interleave_images=200).shuffle(10000)
+  ClipNoiseMixDataset(SHAPE[-2:], interleave_images=200, max_amt=${maxnoise}).shuffle(10000)
 
 validation_set: |
-  ClipNoiseDataset(SHAPE[-2:], interleave_images=200).limit(5000)
+  ClipNoiseMixDataset(SHAPE[-2:], interleave_images=200, max_amt=${maxnoise}).limit(5000)
 
 batch_size: 64
 learnrate: 0.0003

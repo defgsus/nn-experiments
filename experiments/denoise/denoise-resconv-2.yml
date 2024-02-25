@@ -1,8 +1,8 @@
-experiment_name: denoise/resconv-denoises_${matrix_slug}
+experiment_name: denoise/resconv-denoise_${matrix_slug}
 
 matrix:
   ds:
-    - all
+    - pixil
   l:
     - 11
   ks1:
@@ -25,6 +25,7 @@ train_set: |
       #"rpg": rpg_tile_dataset_3x32x32(validation=False, shape=SHAPE, interpolation=False), 
       #"kali": kali_patch_dataset(shape=SHAPE),
       "all": all_image_patch_dataset(shape=SHAPE),
+      "pixil": PixilartPatchDataset(shape=SHAPE),
   }["${ds}"]
 
 validation_set: |
@@ -34,6 +35,7 @@ validation_set: |
       #"rpg": rpg_tile_dataset_3x32x32(validation=True, shape=SHAPE, interpolation=False),
       #"kali": kali_patch_dataset(shape=SHAPE).limit(5000),
       "all": all_image_patch_dataset(shape=SHAPE).limit(5000),
+      "pixil": PixilartPatchDataset(shape=SHAPE).limit(5000),
   }["${ds}"]
 
 batch_size: 64
@@ -63,7 +65,7 @@ train_input_transforms: |
   
 
 globals:
-  SHAPE: (3, 48, 48)
+  SHAPE: (3, 64, 64)
 
 model: |
   from experiments.denoise.resconv import ResConv

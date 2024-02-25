@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 from typing import Union, Generator, Optional, Iterable, Tuple, Callable
 
@@ -192,6 +193,9 @@ class ImagePatchIterableDataset(BaseIterableDataset):
                 ]
 
     def _iter_image_patches(self, image):
+        if min(image.shape[-2:]) < min(self.shape):
+            return
+
         if callable(self.stride):
             stride = self.stride(image.shape[-2:])
         else:
@@ -216,6 +220,7 @@ def make_image_patch_dataset(
         stride: Union[None, int, Tuple[int, int], Callable[[Tuple[int, int]], Union[int, Iterable[int]]]] = None,
         padding: Union[int, Iterable[int]] = 0,
         fill: Union[int, float] = 0,
+        interpolation: VT.InterpolationMode = VT.InterpolationMode.BILINEAR,
         interleave_images: Optional[int] = None,
         file_shuffle: bool = False,
         image_shuffle: int = 0,
@@ -261,6 +266,7 @@ def make_image_patch_dataset(
     if scales is not None:
         ds_images = ImageScaleIterableDataset(
             ds_images, scales=scales, with_scale=with_scale,
+            interpolation=interpolation,
         )
 
     if image_shuffle:
@@ -289,4 +295,50 @@ def make_image_patch_dataset(
 
     return ds
 
+
+class RandomImagePatchIterableDataset(ImagePatchIterableDataset):
+    def __init__(
+            self,
+            dataset: Union[Dataset, IterableDataset, Iterable[torch.Tensor], Iterable[Tuple[torch.Tensor, ...]]],
+            shape: Union[int, Iterable[int]],
+            patches_per_image_factor: float = 1.,
+            interleave_images: Optional[int] = None,
+            with_pos: bool = False,
+    ):
+        """
+        Yields patches of each source image
+
+        :param dataset: source dataset
+        :param shape: one or two ints defining the output shape
+        :param interleave_images: optional int,
+            number of source images to create patches from at the same time
+        :param with_pos: bool, insert the patch rectangle position as second output argument
+        """
+        self.dataset = dataset
+        self.shape = (shape, shape) if isinstance(shape, int) else tuple(shape)
+        self.interleave_images = interleave_images
+        self.with_pos = bool(with_pos)
+        self.patches_per_image_factor = patches_per_image_factor
+        self.max_size = None
+
+    def _iter_image_patches(self, image: torch.Tensor):
+        if min(image.shape[-2:]) < min(self.shape):
+            return
+
+        ps = self.shape
+        size = image.shape[-2:]
+        count = (size[-2] // ps[-2]) * (size[-1] // ps[-1])
+        count = int(count * self.patches_per_image_factor)
+
+        for i in range(count):
+            pos = (
+                random.randrange(0, max(1, size[-2] - ps[-2])),
+                random.randrange(0, max(1, size[-1] - ps[-1]))
+            )
+
+            patch = image[:, pos[-2]: pos[-2] + ps[-2], pos[-1]: pos[-1] + ps[-1]]
+            if self.with_pos:
+                yield patch, pos
+            else:
+                yield patch
 

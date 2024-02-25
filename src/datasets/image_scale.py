@@ -41,7 +41,7 @@ class ImageScaleIterableDataset(BaseIterableDataset):
 
             for scale in scales:
 
-                scaled_shape = tuple(int(s * scale) for s in image.shape[-2:])
+                scaled_shape = tuple(max(1, int(s * scale)) for s in image.shape[-2:])
 
                 if self.min_size is not None and any(s < self.min_size for s in scaled_shape):
                     continue

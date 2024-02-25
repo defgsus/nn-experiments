@@ -19,7 +19,9 @@ from .image_dissimilar import DissimilarImageIterableDataset
 from .image_encode import ImageEncodeIterableDataset
 from .image_filter import ImageFilterIterableDataset
 from .image_folder import ImageFolderIterableDataset
-from .image_patch import ImagePatchDataset, ImagePatchIterableDataset, make_image_patch_dataset
+from .image_patch import (
+    ImagePatchDataset, ImagePatchIterableDataset, make_image_patch_dataset, RandomImagePatchIterableDataset
+)
 from .image_scale import ImageScaleIterableDataset
 from .interleave import InterleaveIterableDataset
 from .limit import LimitDataset, LimitIterableDataset
