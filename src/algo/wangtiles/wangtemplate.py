@@ -1,4 +1,4 @@
-from typing import Iterable, Tuple, Optional
+from typing import Iterable, Tuple, Optional, Union
 
 import torch
 
@@ -52,6 +52,18 @@ class WangTemplate:
            pos[0] * shape[-2]: (pos[0] + 1) * shape[-2],
            pos[1] * shape[-1]: (pos[1] + 1) * shape[-1],
         ]
+
+    def render_map(
+            self,
+            tile_indices: torch.Tensor,
+            overlap: Union[int, Tuple[int, int]] = 0,
+    ):
+        from .render import render_wang_map
+        return render_wang_map(
+            wang_template=self,
+            tile_indices=tile_indices,
+            overlap=overlap,
+        )
 
 
 OPTIMAL_WANG_INDICES_SQUARE = {
@@ -121,5 +133,16 @@ class WangTemplate3E(WangTemplate):
     ):
         super().__init__(
             indices=OPTIMAL_WANG_INDICES_SQUARE[("edge", 3)],
+            image=image,
+        )
+
+
+class WangTemplate3C(WangTemplate):
+    def __init__(
+            self,
+            image: torch.Tensor,
+    ):
+        super().__init__(
+            indices=OPTIMAL_WANG_INDICES_SQUARE[("corner", 3)],
             image=image,
         )
