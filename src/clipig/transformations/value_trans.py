@@ -111,6 +111,12 @@ class Denoising(ValueTransformBase):
             "min": [0, 0],
             "max": [1024, 1024],
         },
+        {
+            "name": "padding_mode",
+            "type": "select",
+            "default": "constant",
+            "choices": ["constant", "reflect", "replicate", "circular"],
+        },
     ]
 
     def __init__(
@@ -119,6 +125,7 @@ class Denoising(ValueTransformBase):
             mix: float,
             overlap: Tuple[int, int] = (0, 0),
             cut_away: Tuple[int, int] = (0, 0),
+            padding_mode: str = "constant",
     ):
         super().__init__()
         self.model, self.model_config = load_model_from_yaml(PROCESS_PATH / f"{model}.yaml")
@@ -126,6 +133,7 @@ class Denoising(ValueTransformBase):
         self.mix = mix
         self.overlap = overlap
         self.cut_away = cut_away
+        self.padding_mode = padding_mode
 
     def __call__(self, image: torch.Tensor) -> torch.Tensor:
         if image.shape[-3] == 4:
@@ -141,6 +149,7 @@ class Denoising(ValueTransformBase):
             overlap=tuple(reversed(self.overlap)),
             cut_away=tuple(reversed(self.cut_away)),
             batch_size=64,
+            padding_mode=self.padding_mode,
         )
         if self.mix != 1.:
             processed = image * (1. - self.mix) + self.mix * processed
@@ -158,8 +167,10 @@ def _get_denoising_modules():
     for f in directory.glob("*.yaml"):
         with f.open() as fp:
             data = yaml.safe_load(fp)
-        if get_full_yaml_filename(data["checkpoint"], directory).exists():
-            models.append(f.name[:-5])
+            if get_full_yaml_filename(data["checkpoint"], directory).exists():
+                models.append(f.name[:-5])
+            else:
+                print(f"Missing checkpoint, skipping model {f.name}")
 
     assert models, f"No models found in {directory}"
 
