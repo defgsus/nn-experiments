@@ -239,9 +239,11 @@ class ClipigTask:
 
                 # loss = F.l1_loss(dots, target["target_dots"])
 
-                optimizer = target["optimizer"]
+                optimizer: torch.optim.Optimizer = target["optimizer"]
                 optimizer.zero_grad()
                 loss.backward()
+                if target["clip_grad_norm"]:
+                    torch.nn.utils.clip_grad_norm_(source_model.parameters(), target["clip_grad_norm"])
                 optimizer.step()
 
                 loss_per_target.append(float(loss))

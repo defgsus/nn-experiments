@@ -87,7 +87,7 @@ class ClassLogitsDataset(Dataset):
         label = item
         if isinstance(label, int):
             pass
-        if label.ndim == 0:
+        elif label.ndim == 0:
             label = label.item()
         elif label.ndim == 1 and label.shape == (1,):
             label = label[0].item()

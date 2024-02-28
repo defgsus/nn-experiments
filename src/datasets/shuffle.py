@@ -16,6 +16,25 @@ from torchvision.transforms.functional import pil_to_tensor
 from .base_iterable import BaseIterableDataset
 
 
+class ShuffleDataset(Dataset):
+
+    def __init__(
+            self,
+            dataset: Dataset,
+    ):
+        self._dataset = dataset
+        self._indices = list(torch.utils.data.sampler.RandomSampler(self))
+
+    def __len__(self):
+        return len(self._dataset)
+
+    def __getitem__(self, index):
+        return self._dataset[self._indices[index]]
+
+
+
+
+
 class IterableShuffle(BaseIterableDataset):
 
     def __init__(

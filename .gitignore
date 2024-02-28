@@ -10,7 +10,7 @@ notebooks/
 checkpoints/
 runs/
 scratchpad/
-datasets/
+/datasets/
 
 *.pyc
 __pycache__/

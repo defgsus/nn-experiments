@@ -14,7 +14,7 @@ class ImageNoise(nn.Module):
             self,
             amt_min: float = .01,
             amt_max: float = .15,
-            amt_power: float = 2.,
+            amt_power: float = 1.,
             grayscale_prob: float = .1,
             prob: float = 1.,
     ):

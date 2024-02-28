@@ -22,6 +22,7 @@ from .rpg import (
     rpg_tile_dataset_3x32x32,
     PixilartPatchDataset,
 )
+from .pixelart import PixelartDataset
 from .teletext import (
     TeletextIterableDataset,
     TeletextMatrixIterableDataset,

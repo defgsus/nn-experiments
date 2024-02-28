@@ -1,0 +1,97 @@
+experiment_name: denoise/conresconv-difnoise_${matrix_slug}
+
+matrix:
+  ds:
+    - pix
+  noise:
+    - [.1, 1.3]
+  l:
+    - 9
+  ks1:
+    - 3
+  ks2:
+    - 9
+  ch:
+    - 32
+  stride:
+    - 1
+  act:
+    - gelu
+
+trainer: experiments.denoise.trainer.TrainDenoising
+
+train_set: |
+  ImageNoiseDataset(
+      ClassLogitsDataset(
+          {
+              "mnist": mnist_dataset(train=True, shape=SHAPE, interpolation=False),
+              "fmnist": fmnist_dataset(train=True, shape=SHAPE, interpolation=False),
+              "pix": PixelartDataset(shape=SHAPE).shuffle(),
+          }["${ds}"],
+          num_classes=CLASSES, tuple_position=1, label_to_index=True,
+      ),
+      amt_min=${noise}[0], amt_max=${noise}[1],
+      amounts_per_arg=(0.5, 1.),
+  )
+
+validation_set: |
+  ImageNoiseDataset(
+      ClassLogitsDataset(
+          {
+              "mnist": mnist_dataset(train=False, shape=SHAPE, interpolation=False),
+              "fmnist": fmnist_dataset(train=False, shape=SHAPE, interpolation=False),
+              "pix": PixelartDataset(shape=SHAPE).limit(3000),
+          }["${ds}"],
+          num_classes=CLASSES, tuple_position=1, label_to_index=True,
+      ),
+      amt_min=${noise}[0], amt_max=${noise}[1],
+      amounts_per_arg=(0.5, 1.),
+  )
+
+globals:
+  SHAPE: (3, 32, 32)
+  CLASSES: 30
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 600_000
+#num_inputs_between_validations: 100_000
+#freeze_validation_set: True
+second_arg_is_noise: True
+pass_args_to_model: [2]
+
+
+model: |
+  from experiments.denoise.resconv_cond import ConditionalResConv
+
+  kernel_size = []
+  padding = []
+  for i in range(${l}):
+      t = i / (${l} - 1)
+      ks = ${ks1} * (1. - t) + t * ${ks2}
+      ks = int(ks / 2) * 2 + 1
+      kernel_size.append(ks)
+      padding.append(int(math.floor(ks / 2)))
+  
+  class Module(nn.Module):
+      def __init__(self):
+          super().__init__()
+          self.module = ConditionalResConv(
+              in_channels=SHAPE[0],
+              condition_size=CLASSES,
+              num_layers=${l},
+              channels=${ch},
+              stride=${stride},
+              kernel_size=kernel_size,
+              padding=padding,
+              activation="${act}",
+              activation_last_layer=None,
+          )
+      
+      def forward(self, x, condition):
+          return (x - self.module(x, condition)).clamp(0, 1) 
+  
+  Module()

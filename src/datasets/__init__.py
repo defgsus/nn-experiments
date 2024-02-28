@@ -3,7 +3,9 @@ from .audio_spec import AudioSpecIterableDataset
 from .aug import (
     CombineImageAugmentIterableDataset,
     ImageAugmentClassDataset,
+    ImageNoiseDataset,
 )
+from .base_dataset import BaseDataset
 from .base_iterable import BaseIterableDataset
 from .ca import TotalCADataset
 from .classlogits import ClassLogitsDataset
@@ -26,7 +28,7 @@ from .image_scale import ImageScaleIterableDataset
 from .interleave import InterleaveIterableDataset
 from .limit import LimitDataset, LimitIterableDataset
 from .normalize import NormalizeMaxIterableDataset
-from .shuffle import IterableShuffle
+from .shuffle import ShuffleDataset, IterableShuffle
 from .split import SplitIterableDataset
 from .pixelart import RpgTileIterableDataset
 from .transform import TransformDataset, TransformIterableDataset

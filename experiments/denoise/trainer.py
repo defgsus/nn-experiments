@@ -26,11 +26,13 @@ class TrainDenoising(TrainAutoencoder):
             self,
             *args,
             train_input_transforms=None,
-            second_data_is_noise: bool = False,
+            second_arg_is_noise: bool = False,
+            pass_args_to_model: Iterable[int] = tuple(),
             **kwargs,
     ):
-        self._second_data_is_noise = second_data_is_noise
-        if train_input_transforms is None and not second_data_is_noise:
+        self._second_arg_is_noise = second_arg_is_noise
+        self._pass_args_to_model = pass_args_to_model
+        if train_input_transforms is None and not second_arg_is_noise:
             train_input_transforms = [
                 ImageNoise(),
             ]
@@ -38,13 +40,20 @@ class TrainDenoising(TrainAutoencoder):
 
     def train_step(self, input_batch) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
         transformed_batch = None
+        arg_batches = []
         if isinstance(input_batch, (tuple, list)):
-            if self._second_data_is_noise:
+            for idx in self._pass_args_to_model:
+                arg_batches.append(input_batch[idx])
+
+            if self._second_arg_is_noise:
                 transformed_batch = input_batch[1]
             input_batch = input_batch[0]
+        else:
+            if self._pass_args_to_model:
+                raise ValueError(f"Expected these args: {self._pass_args_to_model}, but got no tuple/list from dataloader")
 
         if transformed_batch is None:
-            if self._second_data_is_noise:
+            if self._second_arg_is_noise:
                 raise ValueError("Didn't get noisy 2nd batch from training set")
 
             transformed_batch = self.transform_input_batch(input_batch)
@@ -55,7 +64,7 @@ class TrainDenoising(TrainAutoencoder):
                 f", transformed_batch = {transformed_batch.shape}"
             )
 
-        output_batch = self.model(transformed_batch)
+        output_batch = self.model(transformed_batch, *arg_batches)
 
         if input_batch.shape != output_batch.shape:
             raise ValueError(
@@ -75,10 +84,13 @@ class TrainDenoising(TrainAutoencoder):
         def _get_reconstruction(batch_iterable, transform: bool = False, max_count: int = 32):
             images = []
             transformed_images = []
+            arg_batches = []
             count = 0
             for batch in batch_iterable:
                 if isinstance(batch, (list, tuple)):
-                    if self._second_data_is_noise and transform:
+                    for idx in self._pass_args_to_model:
+                        arg_batches.append(batch[idx])
+                    if self._second_arg_is_noise and transform:
                         transformed_images.append(batch[1])
                     batch = batch[0]
 
@@ -87,6 +99,9 @@ class TrainDenoising(TrainAutoencoder):
                 if count >= max_count:
                     break
             images = torch.cat(images)[:max_count].to(self.device)
+            arg_batches = [
+                b[:max_count] for b in arg_batches
+            ]
             if transformed_images:
                 transformed_images = torch.cat(transformed_images)[:max_count].to(self.device)
             else:
@@ -100,7 +115,7 @@ class TrainDenoising(TrainAutoencoder):
                 else:
                     images = transformed_images
 
-            output_batch = self.model.forward(images)
+            output_batch = self.model.forward(images, *arg_batches)
             if isinstance(output_batch, (list, tuple)):
                 output_batch = output_batch[0]
 

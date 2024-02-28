@@ -1,4 +1,5 @@
 import math
+import random
 from typing import Optional, Callable, List, Tuple, Iterable, Generator, Union, Dict
 
 import PIL.Image
@@ -88,6 +89,70 @@ def iter_image_patches(
                             yield torch.concat(patch_batch)
                         patch_batch.clear()
                         pos_batch.clear()
+
+        if len(patch_batch):
+            if with_pos:
+                yield torch.concat(patch_batch), torch.concat(pos_batch)
+            else:
+                yield torch.concat(patch_batch)
+
+
+def iter_random_image_patches(
+        image: torch.Tensor,
+        shape: Union[int, Iterable[int]],
+        count: int,
+        with_pos: bool = False,
+        batch_size: Optional[int] = None,
+        verbose: bool = False,
+) -> Generator[
+    Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
+    None, None
+]:
+    """
+    Iterate through patches of an image
+
+    :param image: Tensor of shape [C, H, W]
+    :param shape: one or two ints defining the output shape
+    :param with_pos: bool, yield patch positions as well
+    :param batch_size: optional int, if defined, N patches will be batched together
+    :param verbose: bool, use tqdm for progress bar
+    """
+    if image.ndim != 3:
+        raise ValueError(f"image.ndim != 3 not supported, got {image.ndim}")
+
+    shape = param_make_tuple(shape, 2, "shape")
+    if any(s < 1 for s in shape):
+        raise ValueError(f"shape < 1 not supported, got {shape}")
+    if any(s > imgs for s, imgs in zip(shape, image.shape[-2:])):
+        raise ValueError(f"shape exceeds image dimensions, got {shape}, image is {image.shape}")
+
+    patch_batch = []
+    pos_batch = []
+    height, width = image.shape[-2:]
+    for _ in tqdm(range(count), disable=not verbose):
+        y = random.randrange(height - shape[-2])
+        x = random.randrange(width - shape[-1])
+
+        patch = image[:, y: y + shape[0], x: x + shape[1]]
+
+        if batch_size is None:
+            if with_pos:
+                yield patch, torch.Tensor([y, x]).to(torch.int64)
+            else:
+                yield patch
+
+        else:
+            patch_batch.append(patch.unsqueeze(0))
+            if with_pos:
+                pos_batch.append(torch.LongTensor([[y, x]]))
+
+            if len(patch_batch) >= batch_size:
+                if with_pos:
+                    yield torch.concat(patch_batch), torch.concat(pos_batch)
+                else:
+                    yield torch.concat(patch_batch)
+                patch_batch.clear()
+                pos_batch.clear()
 
         if len(patch_batch):
             if with_pos:

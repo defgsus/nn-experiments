@@ -99,8 +99,13 @@ def set_image_dtype(image: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:
 
 
 def set_image_channels(image: torch.Tensor, channels: int) -> torch.Tensor:
-    if channels not in (1, 3):
+    if channels not in (1, 3, 4):
         raise NotImplementedError(f"Conversion to {channels} channels not supported")
+
+    if channels == 4:
+        if channels == image.shape[-3]:
+            return image
+        raise NotImplementedError(f"Sorry, currently no conversion of {image.shape[-3]} to 4 channels supported")
 
     if image.ndim == 2:
         image = image.unsqueeze(0)
