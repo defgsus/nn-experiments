@@ -39,7 +39,7 @@ class ClipSingleton:
     @classmethod
     def encode_image(
             cls,
-            image_batch: torch.Tensor,
+            image_batch: Union[torch.Tensor, Iterable[torch.Tensor]],
             model: Optional[str] = None,
             device: str = "auto",
             interpolation: VT.InterpolationMode = VT.InterpolationMode.NEAREST,
@@ -47,6 +47,12 @@ class ClipSingleton:
             normalize: bool = False,
     ):
         model, preproc = cls.get(model, device)
+
+        if not isinstance(image_batch, torch.Tensor):
+            image_batch = torch.concat([
+                i.unsqueeze(0)
+                for i in image_batch
+            ])
 
         if image_batch.ndim == 3:
             image_batch = image_batch.unsqueeze(0)

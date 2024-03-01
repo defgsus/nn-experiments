@@ -10,6 +10,14 @@ import torchvision.transforms as VT
 import torchvision.transforms.functional as VF
 
 
+def image_shift(image: torch.Tensor, y: int = 0, x: int = 0) -> torch.Tensor:
+    if y != 0:
+        image = torch.concat([image[..., -y:, :], image[..., :-y, :]], dim=-2)
+    if x != 0:
+        image = torch.concat([image[..., -x:], image[..., :-x]], dim=-1)
+    return image
+
+
 def image_resize_crop(
         image: Union[torch.Tensor, PIL.Image.Image],
         shape: Tuple[int, int],

@@ -12,6 +12,7 @@ import yaml
 from io import BytesIO
 from pathlib import Path
 from collections import OrderedDict
+from dataclasses import dataclass
 from typing import Optional, Callable, List, Tuple, Iterable, Generator, Union, Dict
 
 import pandas as pd
@@ -37,11 +38,17 @@ from IPython.display import display
 from src.util import *
 from src.util.image import *
 from src.util.params import *
+from src.util.embedding import *
+from src.util.widgets import *
 from src.datasets import *
 from src.algo import *
+from src.models.ca import *
+from src.models.cnn import *
+from src.models.encoder import *
 from src.models.decoder import *
 from src.models.transform import *
 from src.models.util import *
+from src.models.clip import ClipSingleton
 from experiments import datasets
 from experiments.denoise.resconv import ResConv
 

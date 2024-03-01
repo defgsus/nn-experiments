@@ -15,6 +15,7 @@ from torch.utils.data import TensorDataset
 import torchvision.transforms as VT
 import torchvision.transforms.functional as VF
 from torch.utils.data import DataLoader
+from torchvision.utils import make_grid
 
 import diffusers
 from diffusers.optimization import get_cosine_schedule_with_warmup
@@ -22,6 +23,7 @@ from accelerate import Accelerator
 
 from src.util.module import num_module_parameters
 from src.datasets import *
+from src.models.clip import ClipSingleton
 from experiments.datasets import PixelartDataset
 
 PROJECT_PATH = Path(__file__).parent.parent
@@ -34,20 +36,28 @@ class TrainingConfig:
 
     image_shape = (4, 32, 32)
     train_batch_size = 16
-    eval_batch_size = 16  # how many images to sample during evaluation
+    eval_batch_size = 16
+    eval_text_prompts = [  # must match eval_batch_size
+        "fire", "water", "sand", "grass",
+        "cobblestone", "brick wall", "door", "window",
+        "wizard", "dragon", "man", "woman",
+        "face", "eye", "hand", "boots",
+    ]
     num_epochs = 50
     gradient_accumulation_steps = 1
     learning_rate = 1e-4
     lr_warmup_steps = 500
-    save_image_epochs = 5
-    save_model_epochs = 5
+    save_image_epochs = 2
+    save_model_epochs = 2
 
-    dataset = PixelartDataset(shape=image_shape)
-    num_classes = len(PixelartDataset.LABELS)
+    dataset = PixelartDataset(shape=image_shape, with_clip_embedding=True, normalized_clip_embedding=True)
+    embedding_size = 512
+    embedding_scale = 5
+    embedding_clamp = .3
     num_train_timesteps = 1000
 
     mixed_precision = "no"# "fp16"  # `no` for float32, `fp16` for automatic mixed precision
-    output_dir = "ddpm-03-class"  #
+    output_dir = f"ddpm-07-clip-norm-mult{embedding_scale}-clamp{embedding_clamp}"
 
     seed = 0
 
@@ -58,26 +68,23 @@ def create_model(config: TrainingConfig):
         sample_size=config.image_shape[-1],  # the target image resolution
         in_channels=config.image_shape[0],  # the number of input channels, 3 for RGB images
         out_channels=config.image_shape[0],  # the number of output channels
-        num_class_embeds=config.num_classes,
+        class_embed_type="identity",
 
         layers_per_block=2,  # how many ResNet layers to use per UNet block
         #block_out_channels=(128, 128, 256, 256, 512, 512),  # the number of output channels for each UNet block
-        block_out_channels=(128, 128, 256, 512),
+        block_out_channels=(config.embedding_size // 4, 128, 256, 512),
+        #block_out_channels=(config.embedding_size // 4, 128, 128, 128),
 
         down_block_types=(
-            "DownBlock2D",  # a regular ResNet downsampling block
             "DownBlock2D",
-            #"DownBlock2D",
-            #"DownBlock2D",
-            "AttnDownBlock2D",  # a ResNet downsampling block with spatial self-attention
             "DownBlock2D",
+            "AttnDownBlock2D",
+            "AttnDownBlock2D",
         ),
 
         up_block_types=(
-            "UpBlock2D",  # a regular ResNet upsampling block
-            "AttnUpBlock2D",  # a ResNet upsampling block with spatial self-attention
-            #"UpBlock2D",
-            #"UpBlock2D",
+            "AttnUpBlock2D",
+            "AttnUpBlock2D",
             "UpBlock2D",
             "UpBlock2D",
         ),
@@ -85,11 +92,11 @@ def create_model(config: TrainingConfig):
     return model
 
 
-class DDPMPipelineWithClasses(diffusers.DDPMPipeline):
+class DDPMPipelineWithEmbedding(diffusers.DDPMPipeline):
 
     @dataclass
     class CallbackArg:
-        pipeline: "DDPMPipelineWithClasses"
+        pipeline: "DDPMPipelineWithEmbedding"
         image: torch.Tensor
         iteration: int
         timestep: int
@@ -97,7 +104,7 @@ class DDPMPipelineWithClasses(diffusers.DDPMPipeline):
     @torch.no_grad()
     def __call__(
             self,
-            classes: Iterable[int] = (0,),
+            embedding: Optional[torch.Tensor] = None,
             batch_size: int = 1,
             generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
             num_inference_steps: int = 1000,
@@ -125,14 +132,22 @@ class DDPMPipelineWithClasses(diffusers.DDPMPipeline):
         else:
             image = randn_tensor(image_shape, generator=generator, device=self.device)
 
-        class_labels = list(classes)
-        while len(class_labels) < batch_size:
-            class_labels.extend(class_labels)
-        class_labels = torch.LongTensor(class_labels[:batch_size]).to(self.device)
+        if embedding is None:
+            embedding = randn_tensor((batch_size, 512), generator=generator, device=self.device)
+        else:
+            embedding = embedding.to(self.device)
+            if embedding.ndim == 1:
+                embedding = embedding.unsqueeze(0)
+            if embedding.ndim != 2:
+                raise ValueError(f"`embedding` must have 2 dimensions, got {embedding.shape}")
+            if embedding.shape[0] < batch_size:
+                embedding = embedding.repeat(batch_size // embedding.shape[0] + 1, 1)
+            if embedding.shape[0] > batch_size:
+                embedding = embedding[:batch_size]
 
         return self.run_inference_on(
             image=image / 2. + .5,
-            class_labels=class_labels,
+            embedding=embedding,
             num_inference_steps=num_inference_steps,
             output_type=output_type,
             return_dict=return_dict,
@@ -144,7 +159,7 @@ class DDPMPipelineWithClasses(diffusers.DDPMPipeline):
     def run_inference_on(
             self,
             image: torch.Tensor,
-            class_labels: Union[int, Iterable, torch.LongTensor],
+            embedding: torch.Tensor,
             num_inference_steps: int = 1000,
             timestep_offset: int = 0,
             timestep_count: Optional[int] = None,
@@ -164,24 +179,19 @@ class DDPMPipelineWithClasses(diffusers.DDPMPipeline):
 
         image = image * 2. - 1.
 
-        if isinstance(class_labels, int):
-            class_labels = torch.LongTensor([class_labels]).to(self.device)
-        elif not isinstance(class_labels, torch.Tensor):
-            class_labels = torch.LongTensor(class_labels).to(self.device)
-
-        if class_labels.shape[0] != image.shape[0]:
-            raise ValueError(f"batch-size of `class_labels` must match `image`, expected {image.shape[0]}, got {class_labels.shape}")
+        if embedding.shape[0] != image.shape[0]:
+            raise ValueError(f"batch-size of `embedding` must match `image`, expected {image.shape[0]}, got {embedding.shape}")
 
         # set step values
         self.scheduler.set_timesteps(num_inference_steps)
 
-        timesteps = timestepsX = self.scheduler.timesteps[timestep_offset:]
+        timesteps = self.scheduler.timesteps[timestep_offset:]
         if timestep_count is not None:
             timesteps = timesteps[:timestep_count]
-        # print(timestep_count, timestep_offset, timesteps, timestepsX)
+
         for idx, t in enumerate(self.progress_bar(timesteps)):
             # 1. predict noise model_output
-            model_output = self.unet(image, t, class_labels).sample
+            model_output = self.unet(image, t, embedding).sample
 
             # 2. compute previous image: x_t -> x_t-1
             image = self.scheduler.step(model_output, t, image, generator=generator).prev_sample
@@ -227,23 +237,34 @@ def main():
         num_training_steps=(len(train_dataloader) * config.num_epochs),
     )
 
-    def evaluate(config, epoch, pipeline: DDPMPipelineWithClasses):
-        from diffusers.utils import make_image_grid
+    evaluate_embeds = ClipSingleton.encode_text(config.eval_text_prompts, device="cpu", normalize=True)
 
-        for inference_steps in sorted({20, 100, config.num_train_timesteps}):
+    def evaluate(config: TrainingConfig, epoch: int, pipeline: DDPMPipelineWithEmbedding):
+        log_values = {}
+        for inference_steps in sorted({20, 100}): #, config.num_train_timesteps}):
             images = pipeline(
-                classes=range(min(config.num_classes, config.eval_batch_size)),
+                embedding=evaluate_embeds.clamp(-config.embedding_clamp, config.embedding_clamp) * config.embedding_scale,
                 batch_size=config.eval_batch_size,
                 generator=torch.manual_seed(config.seed),
                 num_inference_steps=inference_steps,
-                output_type="pil",
+                output_type="pt",
             ).images
 
-            image_grid = make_image_grid(images, rows=4, cols=4)
+            final_embeds = ClipSingleton.encode_image(
+                images, device="cpu",
+                interpolation=VF.InterpolationMode.BILINEAR,
+                normalize=True
+            )
+            dots = final_embeds @ evaluate_embeds.T
+            log_values[f"validation_clip_dots_{inference_steps}"] = float(dots.mean())
+
+            image_grid = make_grid(images, nrow=4)
 
             test_dir = CHECKPOINT_PATH / config.output_dir / "samples"
             os.makedirs(test_dir, exist_ok=True)
-            image_grid.save(f"{test_dir}/{epoch:04d}-{inference_steps}.png")
+            VF.to_pil_image(image_grid).save(f"{test_dir}/{epoch:04d}-{inference_steps}.png")
+
+        return log_values
 
     # Initialize accelerator and tensorboard logging
     accelerator = Accelerator(
@@ -270,9 +291,7 @@ def main():
         progress_bar.set_description(f"Epoch {epoch}")
 
         for step, batch in enumerate(train_dataloader):
-            clean_images, class_labels = batch
-            #if isinstance(batch, (tuple, list)):
-            #    clean_images = batch[0]
+            clean_images, class_labels, clip_embeddings = batch
 
             # Sample noise to add to the images
             noise = torch.randn(clean_images.shape, device=clean_images.device)
@@ -291,7 +310,12 @@ def main():
             # print("X", noisy_images.shape, timesteps.shape, class_labels.shape)
             with accelerator.accumulate(model):
                 # Predict the noise residual
-                noise_pred = model(noisy_images, timesteps, class_labels, return_dict=False)[0]
+                noise_pred = model(
+                    noisy_images,
+                    timesteps,
+                    clip_embeddings.clamp(-config.embedding_clamp, config.embedding_clamp) * config.embedding_scale,
+                    return_dict=False,
+                )[0]
                 loss = F.mse_loss(noise_pred, noise)
                 accelerator.backward(loss)
 
@@ -305,14 +329,16 @@ def main():
             progress_bar.set_postfix(**logs)
             accelerator.log(logs, step=global_step)
             global_step += bs
-            break
 
-        # After each epoch you optionally sample some demo images with evaluate() and save the model
+            #if step > 20:
+            #    break
+
         if accelerator.is_main_process:
-            pipeline = DDPMPipelineWithClasses(unet=accelerator.unwrap_model(model), scheduler=noise_scheduler)
+            pipeline = DDPMPipelineWithEmbedding(unet=accelerator.unwrap_model(model), scheduler=noise_scheduler)
 
             if (epoch + 1) % config.save_image_epochs == 0 or epoch == config.num_epochs - 1:
-                evaluate(config, epoch, pipeline)
+                log_values = evaluate(config, epoch, pipeline)
+                accelerator.log(log_values, step=global_step)
 
             if (epoch + 1) % config.save_model_epochs == 0 or epoch == config.num_epochs - 1:
                 pipeline.save_pretrained(CHECKPOINT_PATH / config.output_dir)

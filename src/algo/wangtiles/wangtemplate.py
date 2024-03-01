@@ -31,6 +31,9 @@ class WangTemplate:
             self.image.shape[-1] // self.indices.shape[-1],
         )
 
+    def with_new_image(self, image: torch.Tensor):
+        return self.__class__(indices=self.indices, image=image)
+
     def tile(
             self,
             index: Optional[int] = None,
@@ -108,9 +111,10 @@ class WangTemplate2E(WangTemplate):
     def __init__(
             self,
             image: torch.Tensor,
+            indices: Optional[Iterable[Iterable[int]]] = None,
     ):
         super().__init__(
-            indices=OPTIMAL_WANG_INDICES_SQUARE[("edge", 2)],
+            indices=OPTIMAL_WANG_INDICES_SQUARE[("edge", 2)] if indices is None else indices,
             image=image,
         )
 
@@ -119,9 +123,10 @@ class WangTemplate2C(WangTemplate):
     def __init__(
             self,
             image: torch.Tensor,
+            indices: Optional[Iterable[Iterable[int]]] = None,
     ):
         super().__init__(
-            indices=OPTIMAL_WANG_INDICES_SQUARE[("corner", 2)],
+            indices=OPTIMAL_WANG_INDICES_SQUARE[("corner", 2)] if indices is None else indices,
             image=image,
         )
 
@@ -130,9 +135,10 @@ class WangTemplate3E(WangTemplate):
     def __init__(
             self,
             image: torch.Tensor,
+            indices: Optional[Iterable[Iterable[int]]] = None,
     ):
         super().__init__(
-            indices=OPTIMAL_WANG_INDICES_SQUARE[("edge", 3)],
+            indices=OPTIMAL_WANG_INDICES_SQUARE[("edge", 3)] if indices is None else indices,
             image=image,
         )
 
@@ -141,8 +147,9 @@ class WangTemplate3C(WangTemplate):
     def __init__(
             self,
             image: torch.Tensor,
+            indices: Optional[Iterable[Iterable[int]]] = None,
     ):
         super().__init__(
-            indices=OPTIMAL_WANG_INDICES_SQUARE[("corner", 3)],
+            indices=OPTIMAL_WANG_INDICES_SQUARE[("corner", 3)] if indices is None else indices,
             image=image,
         )

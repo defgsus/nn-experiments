@@ -24,7 +24,6 @@ from src.datasets import *
 from src.util.image import *
 
 
-
 class PixelartDataset(BaseDataset):
 
     LABELS = [
@@ -63,11 +62,16 @@ class PixelartDataset(BaseDataset):
     def __init__(
             self,
             shape: Tuple[int, int, int] = (3, 32, 32),
+            with_clip_embedding: bool = False,
+            normalized_clip_embedding: bool = True,
     ):
         self._out_shape = shape
+        self._with_clip_embedding = with_clip_embedding
+        self._normalized_clip_embedding = normalized_clip_embedding
         self._patch_dataset = None
         self._label_to_id = {l: i for i, l in enumerate(self.LABELS)}
         self._fallback_id = self._label_to_id["other"]
+        self._embeddings = None
 
     def __len__(self):
         self._lazy_load()
@@ -80,6 +84,10 @@ class PixelartDataset(BaseDataset):
             patch_shape = (self._out_shape[0], *self._meta["shape"])
             self._patch_dataset = ImagePatchDataset(patch_shape, path / "tiles.png")
             self._patch_df = pd.read_csv(path / "tiles.csv")
+            if self._with_clip_embedding:
+                self._embeddings = torch.load(path / "clip-vit-b32-embeddings.pt")
+                if self._normalized_clip_embedding:
+                    self._embeddings /= torch.norm(self._embeddings, dim=1, keepdim=True)
 
     def __getitem__(self, index: int):
         self._lazy_load()
@@ -92,5 +100,9 @@ class PixelartDataset(BaseDataset):
                     self._label_to_id[label] = self._label_to_id[base_label]
                     break
 
-        #print(self._patch_df.iloc[index])
-        return item, self._label_to_id.get(label, self._fallback_id)
+        label_id = self._label_to_id.get(label, self._fallback_id)
+
+        if not self._with_clip_embedding:
+            return item, label_id
+        else:
+            return item, label_id, self._embeddings[index]
