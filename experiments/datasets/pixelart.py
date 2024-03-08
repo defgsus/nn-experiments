@@ -62,10 +62,12 @@ class PixelartDataset(BaseDataset):
     def __init__(
             self,
             shape: Tuple[int, int, int] = (3, 32, 32),
+            with_label: bool = False,
             with_clip_embedding: bool = False,
             normalized_clip_embedding: bool = True,
     ):
         self._out_shape = shape
+        self._with_label = with_label
         self._with_clip_embedding = with_clip_embedding
         self._normalized_clip_embedding = normalized_clip_embedding
         self._patch_dataset = None
@@ -79,13 +81,13 @@ class PixelartDataset(BaseDataset):
 
     def _lazy_load(self):
         if self._patch_dataset is None:
-            path = Path("~/prog/python/github/pixelart-dataset/datasets/v2/").expanduser()
+            path = Path("~/prog/python/github/pixelart-dataset/datasets/v1/").expanduser()
             self._meta = json.loads((path / "tiles.json").read_text())
             patch_shape = (self._out_shape[0], *self._meta["shape"])
             self._patch_dataset = ImagePatchDataset(patch_shape, path / "tiles.png")
             self._patch_df = pd.read_csv(path / "tiles.csv")
             if self._with_clip_embedding:
-                self._embeddings = torch.load(path / "clip-vit-b32-embeddings.pt")
+                self._embeddings = torch.load(path / "clip-vit-b32-embeddings.pt").to(self._patch_dataset.image.dtype)
                 if self._normalized_clip_embedding:
                     self._embeddings /= torch.norm(self._embeddings, dim=1, keepdim=True)
 
@@ -100,9 +102,15 @@ class PixelartDataset(BaseDataset):
                     self._label_to_id[label] = self._label_to_id[base_label]
                     break
 
-        label_id = self._label_to_id.get(label, self._fallback_id)
+        args = [item]
+        if self._with_label:
+            label_id = self._label_to_id.get(label, self._fallback_id)
+            args.append(label_id)
 
-        if not self._with_clip_embedding:
-            return item, label_id
+        if self._with_clip_embedding:
+            args.append(self._embeddings[index])
+
+        if len(args) == 1:
+            return args[0]
         else:
-            return item, label_id, self._embeddings[index]
+            return tuple(args)

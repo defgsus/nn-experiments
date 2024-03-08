@@ -14,7 +14,9 @@ class BaseDataset(Dataset):
     def sample(self, size: int):
         return next(iter(DataLoader(self, batch_size=size)))
 
-    def shuffle(self):
+    def shuffle(
+            self,
+            seed: Optional[int] = None,
+    ):
         from .shuffle import ShuffleDataset
-        return ShuffleDataset(self)
-
+        return ShuffleDataset(self, seed=seed)

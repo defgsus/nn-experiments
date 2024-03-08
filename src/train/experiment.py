@@ -50,6 +50,7 @@ from src.models.loss import *
 from src.models.img2img import *
 from src.models.util import *
 from src.datasets import *
+from src.datasets.aug import *
 from src.algo import *
 try:
     from experiments.datasets import *

@@ -57,7 +57,7 @@ class TrainingConfig:
     num_train_timesteps = 1000
 
     mixed_precision = "no"# "fp16"  # `no` for float32, `fp16` for automatic mixed precision
-    output_dir = f"ddpm-07-clip-norm-mult{embedding_scale}-clamp{embedding_clamp}"
+    output_dir = f"ddpm-09-clip-norm-mult{embedding_scale}-clamp{embedding_clamp}"
 
     seed = 0
 
@@ -72,8 +72,8 @@ def create_model(config: TrainingConfig):
 
         layers_per_block=2,  # how many ResNet layers to use per UNet block
         #block_out_channels=(128, 128, 256, 256, 512, 512),  # the number of output channels for each UNet block
-        block_out_channels=(config.embedding_size // 4, 128, 256, 512),
-        #block_out_channels=(config.embedding_size // 4, 128, 128, 128),
+        #block_out_channels=(config.embedding_size // 4, 128, 256, 512),
+        block_out_channels=(config.embedding_size // 4, 128, 128, 128),
 
         down_block_types=(
             "DownBlock2D",

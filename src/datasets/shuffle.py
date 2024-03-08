@@ -13,17 +13,23 @@ from torchvision.datasets import ImageFolder as TorchImageFolder, DatasetFolder
 from torchvision.datasets.folder import is_image_file
 from torchvision.transforms.functional import pil_to_tensor
 
+from .base_dataset import BaseDataset
 from .base_iterable import BaseIterableDataset
 
 
-class ShuffleDataset(Dataset):
+class ShuffleDataset(BaseDataset):
 
     def __init__(
             self,
             dataset: Dataset,
+            seed: Optional[int] = None,
     ):
         self._dataset = dataset
-        self._indices = list(torch.utils.data.sampler.RandomSampler(self))
+        if seed is None:
+            generator = None
+        else:
+            generator = torch.manual_seed(seed)
+        self._indices = list(torch.utils.data.sampler.RandomSampler(self, generator=generator))
 
     def __len__(self):
         return len(self._dataset)
