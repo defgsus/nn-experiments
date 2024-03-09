@@ -4,10 +4,11 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
+from .base_dataset import BaseDataset
 from .base_iterable import BaseIterableDataset
 
 
-class TransformDataset(Dataset):
+class TransformDataset(BaseDataset):
     """
     Transformation on Tensor Dataset
 
@@ -26,21 +27,21 @@ class TransformDataset(Dataset):
             features_dataframe: Optional[pd.DataFrame] = None,
     ):
         super().__init__()
-        self.source_dataset = source_dataset
-        self.dtype = dtype
-        self.multiply = multiply
-        self.transforms = list(transforms) if transforms is not None else None
-        self.num_repeat = num_repeat
-        self.features_dataframe = features_dataframe
+        self._source_dataset = source_dataset
+        self._dtype = dtype
+        self._multiply = multiply
+        self._transforms = list(transforms) if transforms is not None else None
+        self._num_repeat = num_repeat
+        self._features_dataframe = features_dataframe
 
     def __len__(self):
-        return len(self.source_dataset) * self.num_repeat
+        return len(self._source_dataset) * self._num_repeat
 
     def __getitem__(self, index) -> Tuple[torch.Tensor, ...]:
-        repeat_index = index % self.num_repeat
-        index = index // self.num_repeat
+        repeat_index = index % self._num_repeat
+        index = index // self._num_repeat
 
-        item = self.source_dataset[index]
+        item = self._source_dataset[index]
 
         if isinstance(item, (tuple, int)):
             item, features = item[0], item[1:]
@@ -50,8 +51,8 @@ class TransformDataset(Dataset):
 
         item = self._transform(item)
 
-        if self.features_dataframe is not None:
-            features = torch.Tensor(self.features_dataframe.iloc[index].tolist())
+        if self._features_dataframe is not None:
+            features = torch.Tensor(self._features_dataframe.iloc[index].tolist())
             features = (features, )
 
         if features is not None:
@@ -60,14 +61,14 @@ class TransformDataset(Dataset):
             return item,
 
     def _transform(self, tensor: torch.Tensor) -> torch.Tensor:
-        if self.dtype is not None:
-            tensor = tensor.to(self.dtype)
+        if self._dtype is not None:
+            tensor = tensor.to(self._dtype)
 
-        if self.multiply is not None:
-            tensor = tensor * self.multiply
+        if self._multiply is not None:
+            tensor = tensor * self._multiply
 
-        if self.transforms:
-            for t in self.transforms:
+        if self._transforms:
+            for t in self._transforms:
                 tensor = t(tensor)
 
         return tensor
@@ -93,45 +94,45 @@ class TransformIterableDataset(BaseIterableDataset):
             remove_tuple: bool = False,
     ):
         super().__init__()
-        self.source_dataset = source_dataset
-        self.dtype = dtype
-        self.multiply = multiply
-        self.transforms = list(transforms) if transforms is not None else None
-        self.num_repeat = num_repeat
-        self.features_dataframe = features_dataframe
-        self.remove_tuple = remove_tuple
+        self._source_dataset = source_dataset
+        self._dtype = dtype
+        self._multiply = multiply
+        self._transforms = list(transforms) if transforms is not None else None
+        self._num_repeat = num_repeat
+        self._features_dataframe = features_dataframe
+        self._remove_tuple = remove_tuple
 
     def __len__(self):
-        return len(self.source_dataset) * self.num_repeat
+        return len(self._source_dataset) * self._num_repeat
 
     def __iter__(self) -> Tuple[torch.Tensor, ...]:
-        if self.features_dataframe is not None:
+        if self._features_dataframe is not None:
             raise NotImplementedError("__iter__ with features currently not supported")
 
-        for item in self.source_dataset:
+        for item in self._source_dataset:
             is_tuple = isinstance(item, (tuple, list))
             if is_tuple:
                 item, features = item[0], item[1:]
             else:
                 item, features = item, None
 
-            for repeat_index in range(self.num_repeat):
+            for repeat_index in range(self._num_repeat):
                 trans_item = self._transform(item)
 
-                if is_tuple and not self.remove_tuple:
+                if is_tuple and not self._remove_tuple:
                     yield trans_item, *features
                 else:
                     yield trans_item
 
     def _transform(self, tensor: torch.Tensor) -> torch.Tensor:
-        if self.dtype is not None:
-            tensor = tensor.to(self.dtype)
+        if self._dtype is not None:
+            tensor = tensor.to(self._dtype)
 
-        if self.multiply is not None:
-            tensor = tensor * self.multiply
+        if self._multiply is not None:
+            tensor = tensor * self._multiply
 
-        if self.transforms:
-            for t in self.transforms:
+        if self._transforms:
+            for t in self._transforms:
                 tensor = t(tensor)
 
         return tensor

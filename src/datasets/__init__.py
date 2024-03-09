@@ -5,7 +5,7 @@ from .aug import (
     ImageAugmentClassDataset,
     ImageNoiseDataset,
 )
-from .base_dataset import BaseDataset
+from .base_dataset import BaseDataset, WrapDataset
 from .base_iterable import BaseIterableDataset
 from .ca import TotalCADataset
 from .classlogits import ClassLogitsDataset
@@ -26,7 +26,7 @@ from .image_patch import (
 )
 from .image_scale import ImageScaleIterableDataset
 from .interleave import InterleaveIterableDataset
-from .limit import LimitDataset, LimitIterableDataset
+from .limit import LimitDataset, OffsetDataset, LimitIterableDataset
 from .normalize import NormalizeMaxIterableDataset
 from .shuffle import ShuffleDataset, IterableShuffle
 from .split import SplitIterableDataset

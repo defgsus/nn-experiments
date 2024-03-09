@@ -6,6 +6,7 @@ from .image import (
     get_images_from_iterable,
     image_1d_to_2d,
     image_resize_crop,
+    image_maximum_size,
     image_minimum_size,
     make_grid_labeled,
     set_image_channels,

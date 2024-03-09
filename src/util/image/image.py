@@ -54,6 +54,33 @@ def image_resize_crop(
     return image
 
 
+def image_maximum_size(
+        image: Union[torch.Tensor, PIL.Image.Image],
+        size: int = None,
+        interpolation: VF.InterpolationMode = VF.InterpolationMode.NEAREST,
+) -> Union[torch.Tensor, PIL.Image.Image]:
+
+    if isinstance(image, PIL.Image.Image):
+        w, h = image.width, image.height
+    else:
+        w, h = image.shape[-1], image.shape[-2]
+
+    if w > size or h > size:
+        if w > h:
+            scale = size / w
+        else:
+            scale = size / h
+
+        image = VF.resize(
+            image,
+            [int(h * scale), int(w * scale)],
+            interpolation=interpolation,
+            antialias=interpolation != VF.InterpolationMode.NEAREST,
+        )
+
+    return image
+
+
 def image_minimum_size(
         image: Union[torch.Tensor, PIL.Image.Image],
         width: Optional[int] = None,

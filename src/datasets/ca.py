@@ -3,11 +3,12 @@ from typing import Tuple, Union, Optional, Iterable, List, Callable, Generator
 
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset
 import torch.nn.functional as F
 
+from src.datasets.base_dataset import BaseDataset
 
-class TotalCADataset(Dataset):
+
+class TotalCADataset(BaseDataset):
 
     def __init__(
             self,
@@ -62,7 +63,8 @@ class TotalCADataset(Dataset):
 
         rng = torch.default_generator
         if self.seed is not None:
-            rng = torch.Generator().manual_seed((index * 1234567) ^ self.seed)
+            rng = torch.Generator().manual_seed(self.seed)
+            rng = torch.Generator().manual_seed(index + torch.randint(1, 2**60, [1], generator=rng).item())
 
         birth, survive = self.index_to_rule(index)
         num_iterations = self.num_iterations

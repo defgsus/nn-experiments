@@ -46,6 +46,7 @@ class Trainer:
             num_inputs_between_validations: Optional[int] = None,
             num_epochs_between_validations: Optional[int] = None,
             num_inputs_between_checkpoints: Optional[int] = None,
+            num_epochs_between_checkpoints: int = 1,
             training_noise: float = 0.,
             train_input_transforms: Optional[Iterable[Callable]] = None,
             loss_function: Union[str, Callable, torch.nn.Module] = "l1",
@@ -77,6 +78,7 @@ class Trainer:
         self.num_inputs_between_validations = num_inputs_between_validations
         self.num_epochs_between_validations = num_epochs_between_validations
         self.num_inputs_between_checkpoints = num_inputs_between_checkpoints
+        self.num_epochs_between_checkpoints = num_epochs_between_checkpoints
         self.epoch = 0
         self.num_batch_steps = 0
         self.num_input_steps = 0
@@ -250,6 +252,7 @@ class Trainer:
 
         last_validation_step = None
         last_validation_epoch = None
+        last_checkpoint_epoch = -self.num_epochs_between_checkpoints
         if self.num_inputs_between_validations is not None:
             last_validation_step = -self.num_inputs_between_validations
         if self.num_epochs_between_validations is not None:
@@ -370,8 +373,10 @@ class Trainer:
                         self.running = False
                         break
 
-            # self.save_checkpoint(f"epoch-{epoch:03d}")
-            self.save_checkpoint()
+            if self.epoch - last_checkpoint_epoch >= self.num_epochs_between_checkpoints:
+                last_checkpoint_epoch = self.epoch
+                # self.save_checkpoint(f"epoch-{epoch:03d}")
+                self.save_checkpoint()
 
             if self.num_epochs_between_validations is not None:
                 if self.epoch - last_validation_epoch >= self.num_epochs_between_validations:

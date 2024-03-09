@@ -1,21 +1,24 @@
-experiment_name: denoise/conresconv-sr_${matrix_slug}
+experiment_name: super-res/test_rcnn_pix20k-crop24-aa_${matrix_slug}
 
 matrix:
+  opt:
+    #- Adam
+    - AdamW
+    #- RAdam
   srf:
     - 4
-  i:
-    #- "n"
-    - "l"
-  ics: # internal_condition_size
-    - 32
+  aa:
+    #- False
+    - True
   l:
     - 9
   ks1:
     - 3
   ks2:
-    - 9
+    - 3
   ch:
-    - 128
+    - 32
+    - 64
   stride:
     - 1
   act:
@@ -24,37 +27,40 @@ matrix:
 trainer: experiments.denoise.trainer.TrainDenoising
 
 train_set: |
-  SuperResolutionDataset(
-      PixelartDataset(shape=SHAPE, with_clip_embedding=True).shuffle(seed=23),
+  SuperResolutionIterableDataset(
+      PixelartDataset(shape=(SHAPE[0], 32, 32)).offset(3000).shuffle(23).limit(20_000)
+          .transform([VT.RandomCrop(SHAPE[-1])])
+      ,
       factor=${srf},
-      interpolation={"n": VF.InterpolationMode.NEAREST, "l": VF.InterpolationMode.BILINEAR}["${i}"],
+      interpolation=VF.InterpolationMode.BILINEAR if ${aa} else VF.InterpolationMode.NEAREST,
   )
 
 validation_set: |
   SuperResolutionDataset(
-      PixelartDataset(shape=SHAPE, with_clip_embedding=True).limit(3000),
+      PixelartDataset(shape=SHAPE).limit(3000).shuffle(42),
       factor=${srf},
-      interpolation={"n": VF.InterpolationMode.NEAREST, "l": VF.InterpolationMode.BILINEAR}["${i}"],
+      interpolation=VF.InterpolationMode.BILINEAR if ${aa} else VF.InterpolationMode.NEAREST,
   )
 
 globals:
-  SHAPE: (3, 32, 32)
-  CLASSES: 512
+  SHAPE: (3, 24, 24)
 
 batch_size: 64
 learnrate: 0.0003
-optimizer: AdamW
+optimizer: ${opt}
 scheduler: CosineAnnealingLR
 loss_function: l1
-max_inputs: 600_000
-#num_inputs_between_validations: 100_000
+max_inputs: 100_000
+num_epochs_between_validations: 1
+#num_epochs_between_checkpoints: 20
+#num_inputs_between_validations: 25_000
 #freeze_validation_set: True
 second_arg_is_noise: True
-pass_args_to_model: [2]
+#pass_args_to_model: [2]
 
 model: |
     from experiments.denoise.resconv_cond import ConditionalResConv
-  
+    
     kernel_size = []
     padding = []
     for i in range(${l}):
@@ -66,8 +72,6 @@ model: |
     
     ConditionalResConv(
         in_channels=SHAPE[0],
-        condition_size=512,
-        internal_condition_size=${ics},
         num_layers=${l},
         channels=${ch},
         stride=${stride},

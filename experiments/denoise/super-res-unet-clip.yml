@@ -1,0 +1,78 @@
+experiment_name: super-res/unet_pix60k_${matrix_slug}
+
+matrix:
+  srf:
+    - 4
+  aa:
+    #- False
+    - True
+  act:
+    - silu
+
+trainer: experiments.denoise.trainer.TrainDenoising
+
+train_set: |
+  SuperResolutionDataset(
+      PixelartDataset(shape=SHAPE, with_clip_embedding=True).shuffle(seed=23), #.limit(1000, keep_length=True),
+      factor=${srf},
+      interpolation=VF.InterpolationMode.BILINEAR if ${aa} else VF.InterpolationMode.NEAREST,
+  )
+
+validation_set: |
+  SuperResolutionDataset(
+      PixelartDataset(shape=SHAPE, with_clip_embedding=True).shuffle(42).limit(3000),
+      factor=${srf},
+      interpolation=VF.InterpolationMode.BILINEAR if ${aa} else VF.InterpolationMode.NEAREST,
+  )
+
+globals:
+  SHAPE: (3, 32, 32)
+  CLASSES: 512
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 600_000
+#num_epochs_between_validations: 20
+#num_epochs_between_checkpoints: 20
+#num_inputs_between_validations: 100_000
+#freeze_validation_set: True
+second_arg_is_noise: True
+pass_args_to_model: [2]
+
+model: |
+    import diffusers
+  
+    class Module(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.model = diffusers.UNet2DModel(
+                sample_size=SHAPE[-1],  # the target image resolution
+                in_channels=SHAPE[0],  # the number of input channels, 3 for RGB images
+                out_channels=SHAPE[0],  # the number of output channels
+                class_embed_type="identity",
+                act_fn="${act}",
+                layers_per_block=2,  # how many ResNet layers to use per UNet block
+                block_out_channels=(512 // 4, 128, 128, 128),
+          
+                down_block_types=(
+                    "DownBlock2D",
+                    "DownBlock2D",
+                    "AttnDownBlock2D",
+                    "AttnDownBlock2D",
+                ),
+          
+                up_block_types=(
+                    "AttnUpBlock2D",
+                    "AttnUpBlock2D",
+                    "UpBlock2D",
+                    "UpBlock2D",
+                ),
+            )
+  
+        def forward(self, x, condition):
+            return self.model(x, 0, condition).sample
+    
+    Module()

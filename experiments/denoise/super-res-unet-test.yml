@@ -1,0 +1,105 @@
+experiment_name: super-res/test_unet_mix-crop24-aa_${matrix_slug}
+
+matrix:
+  opt:
+    #- Adam
+    - AdamW
+    #- RAdam
+  lr:
+    #- 0.0003
+    - 0.003
+  srf:
+    - 4
+  aa:
+    #- False
+    - True
+  act:
+    #- silu
+    - gelu
+  ch:
+    - [32, 32, 32, 32]
+    #- [64, 64, 64, 64]
+    #- [64, 96, 128, 160]
+    #- [160, 128, 96, 64]
+    #- [128, 128, 128, 128]
+  attn:
+    - [0, 0, 1, 1]
+    #- [0, 1, 1, 0]
+  lpb:
+    - 2
+
+trainer: experiments.denoise.trainer.TrainDenoising
+
+train_set: |
+  SuperResolutionIterableDataset(
+      InterleaveIterableDataset((
+          PixelartDataset(shape=(SHAPE[0], 32, 32)).offset(3000).shuffle(seed=23)
+              .transform([VT.RandomCrop(SHAPE[-1])]),
+          WrapDataset(TensorDataset(torch.load(f"./datasets/photos-64x64-bcr03.pt")))
+              .transform([VT.RandomCrop(SHAPE[-1])]),
+          WrapDataset(TensorDataset(torch.load(f"./datasets/kali-uint8-64x64.pt")))
+              .transform([VT.RandomCrop(SHAPE[-1]), lambda x: x.float() / 255.]),
+          WrapDataset(TensorDataset(torch.load(f"./datasets/diverse-64x64-aug4.pt")))
+              .transform([VT.RandomCrop(SHAPE[-1])]),
+          #WrapDataset(TensorDataset(torch.load(f"./datasets/ifs-1x128x128-uint8-1000x16.pt")))
+          #    .transform([VT.RandomCrop(SHAPE[-1]), lambda x: set_image_channels(x, SHAPE[0]).float() / 255., VT.RandomInvert(p=.5)])
+      )),
+      factor=${srf},
+      interpolation=VF.InterpolationMode.BILINEAR if ${aa} else VF.InterpolationMode.NEAREST,
+  )
+
+validation_set: |
+  SuperResolutionDataset(
+      PixelartDataset(shape=SHAPE).limit(3000).shuffle(42),
+      factor=${srf},
+      interpolation=VF.InterpolationMode.BILINEAR if ${aa} else VF.InterpolationMode.NEAREST,
+  )
+
+globals:
+  SHAPE: (3, 24, 24)
+
+batch_size: 64
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+num_epochs_between_validations: 1
+#num_epochs_between_checkpoints: 20
+#num_inputs_between_validations: 25_000
+#freeze_validation_set: True
+second_arg_is_noise: True
+#pass_args_to_model: [2]
+
+model: |
+    import diffusers
+  
+    class Module(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.model = diffusers.UNet2DModel(
+                sample_size=SHAPE[-1],  
+                in_channels=SHAPE[0],  
+                out_channels=SHAPE[0],  
+                # class_embed_type="identity",
+                
+                act_fn="${act}",
+                layers_per_block=${lpb},  
+                block_out_channels=${ch},
+          
+                down_block_types=tuple(
+                    "AttnDownBlock2D" if a else "DownBlock2D"
+                    for a in ${attn}
+                ),
+          
+                up_block_types=tuple(
+                    "AttnUpBlock2D" if a else "UpBlock2D"
+                    for a in ${attn}
+                ),
+            )
+  
+        def forward(self, x, condition=None):
+            output = self.model(x * 2. - 1., 0, condition).sample
+            return (x + output).clamp(0, 1)
+    
+    Module()

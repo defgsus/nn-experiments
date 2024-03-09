@@ -1,5 +1,6 @@
 from typing import Optional, Tuple, Union, Iterable, Callable
 
+import torch
 from torch.utils.data import Dataset, IterableDataset, DataLoader
 import torchvision.transforms as VT
 
@@ -10,7 +11,7 @@ class BaseIterableDataset(IterableDataset):
         from .limit import LimitIterableDataset
         return LimitIterableDataset(self, size)
 
-    def shuffle(self, max_shuffle: int, seed: Optional[int] = None):
+    def shuffle(self, max_shuffle: int, *, seed: Optional[int] = None):
         from .shuffle import IterableShuffle
         return IterableShuffle(self, max_shuffle=max_shuffle, seed=seed)
 
@@ -51,3 +52,11 @@ class BaseIterableDataset(IterableDataset):
             interpolation=interpolation,
             with_scale=with_scale,
         )
+
+    def transform(
+            self,
+            transforms: Optional[Iterable[Callable]] = None,
+            dtype: Optional[torch.dtype] = None,
+    ):
+        from .transform import TransformIterableDataset
+        return TransformIterableDataset(self, transforms=transforms, dtype=dtype)
