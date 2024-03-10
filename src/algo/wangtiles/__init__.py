@@ -12,6 +12,7 @@ from .render import (
     render_wang_tile,
 )
 from .wangtemplate import (
+    OPTIMAL_WANG_INDICES_SQUARE,
     WangTemplate,
     WangTemplate2E,
     WangTemplate2C,

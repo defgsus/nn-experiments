@@ -31,12 +31,12 @@ class LImageCanvasControls(QWidget):
         self.zoom_bar = QScrollBar(Qt.Horizontal, self)
         lh.addWidget(self.zoom_bar)
         self.zoom_bar.setStatusTip(self.tr("zoom"))
-        self.zoom_bar.setRange(1, 500)
+        self.zoom_bar.setRange(1, 1500)
         self.zoom_bar.setValue(100)
         self.zoom_bar.valueChanged.connect(self._zoom_bar_changed)
         self.zoom_bar.setToolTip(self.tr("zoom"))
 
-        for zoom in (50, 100, 200, 300, 500):
+        for zoom in (50, 100, 200, 300, 500, 1000, 1500):
             b = QPushButton(self.tr(f"{zoom}%"))
             if zoom == 100:
                 font = b.font()
@@ -50,11 +50,14 @@ class LImageCanvasControls(QWidget):
 
         self.select_background = QComboBox(self)
         lh.addWidget(self.select_background)
-        self.select_background.setToolTip(self.tr("draw background"))
+        self.select_background.setToolTip(self.tr("background"))
         self.select_background.addItems([
             "cross", "black", "gray", "white"
         ])
         self.select_background.currentTextChanged.connect(self.set_background)
+
+        self.cb_tiling = QCheckBox(self)
+        self.cb_tiling.setText(self.tr("show tiling"))
 
     def set_zoom(self, z: int):
         self.canvas.set_zoom(z)

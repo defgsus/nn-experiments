@@ -7,7 +7,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from .limage import LImage
-from .image_tools import MouseEvent
+from .image_tools import ImageToolBase, MouseEvent
 
 
 class LImageCanvasWidget(QWidget):
@@ -20,7 +20,9 @@ class LImageCanvasWidget(QWidget):
         self.limage: Optional[LImage] = None
         self._zoom = 100
         self._size = (0, 0)
+        self._with_ui = False
         self._background = "cross"
+        self._tool: Optional[ImageToolBase] = None
 
     @property
     def zoom(self):
@@ -59,6 +61,9 @@ class LImageCanvasWidget(QWidget):
         self.limage.get_model().dataChanged.connect(lambda *args, **kwargs: self.update())
         self.limage.get_model().modelReset.connect(lambda *args, **kwargs: self.update())
 
+    def set_tool(self, tool: Optional[ImageToolBase]):
+        self._tool = tool
+
     def paintEvent(self, event: QPaintEvent):
         if self.limage is not None:
             rect = self.limage.rect()
@@ -91,7 +96,10 @@ class LImageCanvasWidget(QWidget):
         painter.drawRect(0, 0, *self._size)
 
         if self.limage:
-            self.limage.paint(painter)
+            self.limage.paint(painter, with_ui=self._with_ui)
+
+        if self._tool:
+            self._tool.paint(painter, event)
 
     def create_controls(self):
         from .limage_canvas_controls import LImageCanvasControls

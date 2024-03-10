@@ -11,6 +11,8 @@ class PaintTool(ImageToolBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def config_changed(self):
         self.brush = Brush(
             type=self.config["type"],
             size=self.config["size"],

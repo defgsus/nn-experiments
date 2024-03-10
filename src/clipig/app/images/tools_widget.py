@@ -15,6 +15,7 @@ from .tool_buttons import ImageToolButtons
 class ImageToolsWidget(QWidget):
 
     signal_tool_changed = pyqtSignal(str, dict)
+    signal_tool_config_changed = pyqtSignal(str, dict)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -44,6 +45,9 @@ class ImageToolsWidget(QWidget):
             if emit:
                 self._config_changed()
 
+    def set_config(self, config: dict, emit: bool = True):
+        self.config_widget.set_values(config, emit=emit)
+
     def set_color(self, color: Union[Tuple[int, int, int], QColor], emit: bool = True):
         if isinstance(color, QColor):
             color = (color.red(), color.green(), color.blue())
@@ -56,7 +60,7 @@ class ImageToolsWidget(QWidget):
 
     def _config_changed(self):
         tool_name = self.tool_buttons.current_tool
-        self.signal_tool_changed.emit(tool_name, self.config_widget.get_values())
+        self.signal_tool_config_changed.emit(tool_name, self.config_widget.get_values())
 
 
 class ImageToolsConfigWidget(QWidget):
@@ -73,6 +77,9 @@ class ImageToolsConfigWidget(QWidget):
 
     def set_value(self, name: str, value, emit: bool = True):
         self.params_widget.set_value(name, value, emit=emit)
+
+    def set_values(self, values: dict, emit: bool = True):
+        self.params_widget.set_values(values, emit=emit)
 
     def _create_widgets(self):
         lv = QHBoxLayout(self)

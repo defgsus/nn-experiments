@@ -57,7 +57,6 @@ class LImageLayersWidget(QWidget):
 
         menu = QMenu()
         self._limage.add_menu_actions(menu, project=self._project)
-        #menu.addAction(self.tr("Add layer"), self.signal_new_layer)
 
         menu.addSeparator()
 

@@ -52,6 +52,7 @@ class LImageWidget(QWidget):
 
         self.tools_widget = ImageToolsWidget(self)
         self.tools_widget.signal_tool_changed.connect(self.set_tool)
+        self.tools_widget.signal_tool_config_changed.connect(self.set_tool_config)
         lv.addWidget(self.tools_widget)
 
         lh = QHBoxLayout()
@@ -120,6 +121,10 @@ class LImageWidget(QWidget):
             menu.addAction(self.tr("To new Task"), partial(self.action_to_new_task, False))
             menu.addAction(self.tr("To new Task (merged)"), partial(self.action_to_new_task, True))
             self._limage.add_menu_actions(menu, project=self._project)
+            if self._tool:
+                sub_menu = QMenu(self._tool.NAME.capitalize())
+                menu.addMenu(sub_menu)
+                self._tool.add_menu_actions(sub_menu, project=self._project)
 
         menu.addSeparator()
         menu.addAction(self.tr("Open image ..."), self.action_load_image_dialog)
@@ -177,6 +182,19 @@ class LImageWidget(QWidget):
             return
 
         self._tool = klass(limage=self._limage, config=config or {})
+        self._tool.config_changed()
+        # copy params back after initialization
+        self.tools_widget.set_config(self._tool.config, emit=False)
+        self.canvas.set_tool(self._tool)
+        self.canvas.update()
+
+    def set_tool_config(self, tool_name: str, config: Optional[dict] = None):
+        if self._tool is None or self._tool.NAME != tool_name:
+            self.set_tool(tool_name, config)
+            return
+
+        self._tool.set_config(config)
+        self.canvas.update()
 
     def _canvas_mouse_event(self, event: image_tools.MouseEvent):
         if self._tool is not None:
