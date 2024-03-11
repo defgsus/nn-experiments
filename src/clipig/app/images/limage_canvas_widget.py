@@ -20,7 +20,6 @@ class LImageCanvasWidget(QWidget):
         self.limage: Optional[LImage] = None
         self._zoom = 100
         self._size = (0, 0)
-        self._with_ui = False
         self._background = "cross"
         self._tool: Optional[ImageToolBase] = None
 
@@ -79,6 +78,7 @@ class LImageCanvasWidget(QWidget):
         painter.setTransform(trans)
 
         painter.setPen(Qt.NoPen)
+
         brush = QBrush(QColor(0, 0, 0))
         if self._background == "cross":
             brush = QBrush(QColor(128, 128, 128), Qt.BrushStyle.DiagCrossPattern)
@@ -96,7 +96,7 @@ class LImageCanvasWidget(QWidget):
         painter.drawRect(0, 0, *self._size)
 
         if self.limage:
-            self.limage.paint(painter, with_ui=self._with_ui)
+            self.limage.paint(painter)
 
         if self._tool:
             self._tool.paint(painter, event)

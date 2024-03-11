@@ -25,7 +25,6 @@ class LImageLayer:
             active: bool = True,
             transparency: float = 0.,
             position: Tuple[int, int] = (0, 0),
-            tiling: Optional[LImageTiling] = None,
     ):
         self._parent = parent
         self._name = name
@@ -35,7 +34,6 @@ class LImageLayer:
         self._active = active
         self._transparency = transparency
         self._position = tuple(position)
-        self._tiling: Optional[LImageTiling] = tiling
 
     def get_config(self) -> dict:
         return {
@@ -44,7 +42,6 @@ class LImageLayer:
             "repeat": self._repeat,
             "transparency": self._transparency,
             "position": self._position,
-            "tiling": None if self._tiling is None else self._tiling.get_config(),
         }
 
     def set_config(self, config: dict, emit: bool = True):
@@ -53,11 +50,6 @@ class LImageLayer:
         self._repeat = config["repeat"]
         self._transparency = config.get("transparency", 0.)
         self._position = config.get("position", (0, 0))
-        if not config.get("tiling"):
-            self._tiling = None
-        else:
-            self._tiling = LImageTiling()
-            self._tiling.set_config(config["tiling"])
 
         if emit:
             self.set_changed()
@@ -133,14 +125,6 @@ class LImageLayer:
     def set_selected(self):
         self._parent.set_selected_layer(self)
 
-    @property
-    def tiling(self) -> Optional[LImageTiling]:
-        return self._tiling
-
-    def set_tiling(self, tiling: Optional[LImageTiling]):
-        self._tiling = tiling
-        self.set_changed()
-
     def set_image_size(
             self,
             size: Union[QSize, Tuple[int, int]],
@@ -211,57 +195,6 @@ class LImageLayer:
         if self._tiling is not None:
             self.paint_tiling(painter)
 
-    def paint_grid(self, painter: QPainter, size: Tuple[int, int], offset: Tuple[int, int] = (0, 0)):
-        layer_size = self.size()
-
-        painter.setCompositionMode(QPainter.CompositionMode_Xor)
-        painter.setOpacity(.3)
-        painter.setPen(QPen(QColor(255, 255, 255)))
-        for y in range(offset[1], layer_size.height(), size[1]):
-            painter.drawLine(0, y, layer_size.width(), y)
-        for x in range(offset[0], layer_size.width(), size[0]):
-            painter.drawLine(x, 0, x, layer_size.height())
-
-        painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
-
-    def paint_tiling(self, painter: QPainter):
-        if self._tiling is None:
-            return
-
-        tile_size = self._tiling.tile_size
-        tiling_offset = QPoint(*self._tiling.offset)
-
-        self.paint_grid(painter, tile_size)
-
-        TILING_COLORS = [
-            QColor(255, 128, 128),
-            QColor(128, 255, 128),
-            QColor(128, 128, 255),
-        ]
-
-        for (x, y), attr in self._tiling.attributes_map.items():
-            offset = (
-                    QPoint(x * self._tiling.tile_size[0], y * self._tiling.tile_size[1])
-                    + tiling_offset
-            )
-            for pos_idx, color_idx in enumerate(attr.colors):
-                if color_idx >= 0:
-                    poly = self._tiling.get_tile_polygon(pos_idx, offset)
-                    color = TILING_COLORS[color_idx % len(TILING_COLORS)]
-
-                    painter.setOpacity(.3)
-                    painter.setPen(Qt.NoPen)
-                    painter.setBrush(QBrush(color))
-                    painter.drawPolygon(poly)
-
-                    painter.setOpacity(.5)
-                    painter.setPen(QPen(color.darker(200)))
-                    painter.setBrush(Qt.NoBrush)
-                    painter.drawPolygon(poly)
-
-        painter.setOpacity(1)
-        painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
-
     def thumbnail(self) -> QImage():
         if not self._image:
             return QImage()
@@ -312,6 +245,7 @@ class LImage:
         self._layers: List[LImageLayer] = []
         self._selected_layer: Optional[LImageLayer] = None
         self._model: Optional[LImageModel] = None
+        self._tiling: Optional[LImageTiling] = None
 
     @property
     def layers(self):
@@ -339,6 +273,15 @@ class LImage:
 
     def clear(self):
         self.layers.clear()
+        self._tiling = None
+        self._layers_changed()
+
+    @property
+    def tiling(self) -> Optional[LImageTiling]:
+        return self._tiling
+
+    def set_tiling(self, tiling: Optional[LImageTiling]):
+        self._tiling = tiling
         self._layers_changed()
 
     def add_layer(
@@ -431,13 +374,11 @@ class LImage:
             self._layers_changed()
             return layer
 
-    def paint(self, painter: QPainter, with_ui: bool = False):
+    def paint(self, painter: QPainter):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         for layer in self.layers:
             layer.paint(painter)
-            if with_ui:
-                layer.paint_ui(painter)
 
     def get_model(self):
         from .limage_model import LImageModel
@@ -522,6 +463,7 @@ class LImage:
 
         config_data = {
             "selected_index": self.selected_index,
+            "tiling": None if self._tiling is None else self._tiling.get_config(),
             "layers": [],
         }
 
@@ -559,3 +501,63 @@ class LImage:
                 layer._image = filestream.read_qimage(layer_config["image_filename"])
 
             layer.set_config(layer_config["config"])
+
+        if config_data.get("tiling"):
+            self._tiling = LImageTiling()
+            self._tiling.set_config(config_data["tiling"])
+
+        if config_data["selected_index"] < len(self._layers):
+            self._selected_layer = self._layers[config_data["selected_index"]]
+
+    def paint_grid(self, painter: QPainter, size: Tuple[int, int], offset: Tuple[int, int] = (0, 0)):
+        layer_size = self.size()
+
+        painter.setCompositionMode(QPainter.CompositionMode_Xor)
+        painter.setOpacity(.3)
+        painter.setPen(QPen(QColor(255, 255, 255)))
+        for y in range(offset[1], layer_size.height(), size[1]):
+            painter.drawLine(0, y, layer_size.width(), y)
+        for x in range(offset[0], layer_size.width(), size[0]):
+            painter.drawLine(x, 0, x, layer_size.height())
+
+        painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+        painter.setOpacity(1.)
+
+    def paint_tiling(self, painter: QPainter):
+        if self._tiling is None:
+            return
+
+        tile_size = self._tiling.tile_size
+        tiling_offset = QPoint(*self._tiling.offset)
+
+        self.paint_grid(painter, tile_size, self._tiling.offset)
+
+        TILING_COLORS = [
+            QColor(255, 128, 96),
+            QColor(96, 255, 128),
+            QColor(96, 128, 255),
+            QColor(128, 255, 224),
+        ]
+
+        for (x, y), attr in self._tiling.attributes_map.items():
+            offset = (
+                    QPoint(x * self._tiling.tile_size[0], y * self._tiling.tile_size[1])
+                    + tiling_offset
+            )
+            for pos_idx, color_idx in enumerate(attr.colors):
+                if color_idx >= 0:
+                    poly = self._tiling.get_tile_polygon(pos_idx, offset)
+                    color = TILING_COLORS[color_idx % len(TILING_COLORS)]
+
+                    painter.setOpacity(.3)
+                    painter.setPen(Qt.NoPen)
+                    painter.setBrush(QBrush(color))
+                    painter.drawPolygon(poly)
+
+                    painter.setOpacity(.5)
+                    painter.setPen(QPen(color.darker(200)))
+                    painter.setBrush(Qt.NoBrush)
+                    painter.drawPolygon(poly)
+
+        painter.setOpacity(1)
+        painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
