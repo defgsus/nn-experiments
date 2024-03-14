@@ -74,12 +74,14 @@ class TrainDenoising(TrainAutoencoder):
 
         loss_reconstruction_l1 = F.l1_loss(output_batch, input_batch)
         loss_reconstruction_l2 = F.mse_loss(output_batch, input_batch)
+        # loss_reconstruction_l01 = (output_batch - input_batch).abs().clamp(0, 1).pow(0.1).mean()
         # loss_reconstruction_fft = F.l1_loss(torch.fft.fft2(output_batch), torch.fft.fft2(input_batch))
 
         return {
             "loss": loss_reconstruction_l1, # + loss_reconstruction_fft,
             "loss_reconstruction_l1": loss_reconstruction_l1,
             "loss_reconstruction_l2": loss_reconstruction_l2,
+            # "loss_reconstruction_l01": loss_reconstruction_l01,
             # "loss_reconstruction_fft": loss_reconstruction_fft,
         }
 

@@ -78,7 +78,7 @@ class SuperResolutionIterableDataset(BaseIterableDataset):
         self._factor = factor
         self._keep_shape = keep_shape
         self._interpolation = interpolation
-        self._up_interpolation = interpolation or up_interpolation
+        self._up_interpolation = up_interpolation or interpolation
 
     def __iter__(self):
         for item in self._image_dataset:

@@ -349,7 +349,11 @@ class Trainer:
                                     losses[key] = []
                                 losses[key].append(value)
                         for key, values in losses.items():
-                            self.log_scalar(f"train_{key}", sum(values) / len(values))
+                            value = sum(values) / len(values)
+                            self.log_scalar(f"train_{key}", value)
+                            if key == "loss":
+                                progress.desc=f"epoch #{self.epoch} (loss {value:.4f})"
+
                         self._loss_history.clear()
                         self._loss_steps = 0
 
