@@ -21,10 +21,11 @@ class PaintTool(ImageToolBase):
         )
 
     def mouse_event(self, event: MouseEvent):
-        if event.type in (MouseEvent.Drag, MouseEvent.Press):
+        if event.button == Qt.LeftButton:
+            if event.type in (MouseEvent.Drag, MouseEvent.Press):
 
-            if self.layer.active:
-                with self.layer.image_painter() as painter:
+                if self.layer.active:
+                    with self.layer.image_painter() as painter:
 
-                    self.brush.apply(painter, event.pos)
+                        self.brush.apply(painter, event.pos)
 

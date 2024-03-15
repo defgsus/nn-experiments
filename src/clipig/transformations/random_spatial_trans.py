@@ -178,6 +178,75 @@ class RandomAffine(RandomSpatialTransformBase):
 
 
 
+class RandomTilingMap(RandomSpatialTransformBase):
+    """
+    Uses the defined tiling and renders a random tiled map
+    """
+    NAME = "random_tile_map"
+    IS_RESIZE = True
+    PARAMS = [
+        *SpatialTransformBase.PARAMS,
+        {
+            "name": "map_size",
+            "type": "int2",
+            "default": [4, 4],
+            "min": [1, 1],
+            "max": [1024, 1024],
+        },
+        {
+            "name": "overlap",
+            "type": "int2",
+            "default": [0, 0],
+            "min": [0, 0],
+            "max": [1024, 1024],
+        },
+        {
+            "name": "probability",
+            "type": "float",
+            "default": 1.,
+            "min": 0.,
+            "max": 1.,
+        },
+    ]
+
+    def __init__(
+            self,
+            map_size: Tuple[int, int],
+            overlap: Union[int, Tuple[int, int]],
+            probability: float,
+    ):
+        super().__init__()
+        self.map_size = map_size
+        self.overlap = overlap
+        self.probability = probability
+
+    def __call__(self, image: torch.Tensor) -> torch.Tensor:
+
+        def _render(template):
+            if self.probability < 1.:
+                if random.random() > self.probability:
+                    return template
+
+            tiling = self._clipig.input_tiling()
+            if not tiling:
+                return template
+
+            tile_map = tiling.create_map_stochastic_scanline(self.map_size)
+
+            return tiling.render_tile_map(template, tile_map, overlap=self.overlap)
+
+        if image.ndim == 3:
+            return _render(image)
+
+        elif image.ndim == 4:
+            return torch.concat([
+                _render(i).unsqueeze(0)
+                for i in image
+            ])
+        else:
+            raise ValueError(f"Expected input to have 3 or 4 dimensions, got {image.shape}")
+
+
 class RandomWangMap(RandomSpatialTransformBase):
     """
     Treats input as wang tile template and renders a random wang map

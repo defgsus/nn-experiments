@@ -14,6 +14,7 @@ from ..models.clip import ClipSingleton
 from ..util import to_torch_device
 from .source_models import create_source_model, SourceModelBase
 from .parameters import get_complete_clipig_task_config
+from .app.images.tiling import LImageTiling
 from . import transformations
 from .optimizers import create_optimizer
 from src.util.image import set_image_channels, set_image_dtype, image_resize_crop
@@ -169,17 +170,8 @@ class ClipigTask:
             transforms = []
             for trans_conf in target_conf["transformations"]:
                 if trans_conf["params"]["active"]:
-                    klass = transformations.transformations[trans_conf["name"]]
-
-                    # remove extra parameters
-                    trans_params = deepcopy(trans_conf["params"])
-                    trans_params.pop("active")
-
-                    try:
-                        trans = klass(**trans_params)
-                    except TypeError as e:
-                        e.args = (*e.args, f"for class {klass}")
-                        raise
+                    trans = transformations.create_transformation(trans_conf["name"], trans_conf["params"])
+                    trans._clipig = self
                     transforms.append(trans)
 
             if self.task_type in (self.TaskType.T_CLIPIG, ):
@@ -236,8 +228,6 @@ class ClipigTask:
 
                 abs_error = (dots - target["target_dots"]).abs()
                 loss = (abs_error * target["target_weights"]).mean()
-
-                # loss = F.l1_loss(dots, target["target_dots"])
 
                 optimizer: torch.optim.Optimizer = target["optimizer"]
                 optimizer.zero_grad()
@@ -299,3 +289,6 @@ class ClipigTask:
 
         if isinstance(image, torch.Tensor):
             return image
+
+    def input_tiling(self) -> Optional[LImageTiling]:
+        return self.config.get("input_tiling")

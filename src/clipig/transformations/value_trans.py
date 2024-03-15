@@ -37,25 +37,65 @@ class Multiplication(ValueTransformBase):
         return image * self.multiply + self.add
 
 
-class Saturation(ValueTransformBase):
+class Color(ValueTransformBase):
 
-    NAME = "saturation"
+    NAME = "color"
+
     PARAMS = [
         *ValueTransformBase.PARAMS,
+        {
+            "name": "brightness",
+            "type": "float",
+            "default": 1.,
+            "min": 0.0,
+        },
         {
             "name": "saturation",
             "type": "float",
             "default": 1.,
             "min": 0.0,
         },
+        {
+            "name": "contrast",
+            "type": "float",
+            "default": 1.,
+            "min": 0.0,
+        },
+        {
+            "name": "hue",
+            "type": "float",
+            "default": 0.,
+            "min": -.5,
+            "max": .5,
+        },
     ]
 
-    def __init__(self, saturation: float):
+    def __init__(self, brightness: float, saturation: float, contrast: float, hue: float):
         super().__init__()
+        self.brightness = brightness
         self.saturation = saturation
+        self.contrast = contrast
+        self.hue = hue
 
     def __call__(self, image: torch.Tensor) -> torch.Tensor:
-        return VF.adjust_saturation(image, self.saturation)
+        alpha = None
+        if image.shape[-3] == 4:
+            image, alpha = image[..., :3, :, :], image[..., 3:, :, :]
+
+        if self.brightness != 1:
+            image = VF.adjust_brightness(image, self.brightness)
+        if self.saturation != 1:
+            image = VF.adjust_saturation(image, self.saturation)
+        if self.contrast != 1:
+            image = VF.adjust_contrast(image, self.contrast)
+        if self.hue != 0.:
+            image = VF.adjust_hue(image, self.hue)
+
+        if alpha is None:
+            return image
+
+        return torch.concat([image, alpha], dim=-3)
+
 
 
 class Quantization(ValueTransformBase):

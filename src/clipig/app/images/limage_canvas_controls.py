@@ -56,9 +56,6 @@ class LImageCanvasControls(QWidget):
         ])
         self.select_background.currentTextChanged.connect(self.set_background)
 
-        self.cb_tiling = QCheckBox(self)
-        self.cb_tiling.setText(self.tr("show tiling"))
-
     def set_zoom(self, z: int):
         self.canvas.set_zoom(z)
         try:

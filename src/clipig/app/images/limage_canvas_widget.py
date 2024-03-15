@@ -1,6 +1,7 @@
 from functools import partial
 from pathlib import Path
-from typing import Optional, List, Union
+from copy import deepcopy
+from typing import Optional, List, Union, Dict
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -21,7 +22,9 @@ class LImageCanvasWidget(QWidget):
         self._zoom = 100
         self._size = (0, 0)
         self._background = "cross"
+        self._visible: Dict[str, bool] = {}
         self._tool: Optional[ImageToolBase] = None
+        self._last_mouse_press_button = None
 
     @property
     def zoom(self):
@@ -31,11 +34,14 @@ class LImageCanvasWidget(QWidget):
         return {
             "zoom": self._zoom,
             "background": self._background,
+            "visible": self._visible,
         }
 
     def set_settings(self, settings: dict):
+        settings = deepcopy(settings)
         self._background = settings["background"]
         self.set_zoom(settings["zoom"])
+        self._visible = settings.get("visible", {})
 
     def set_zoom(self, z):
         self._zoom = z
@@ -49,6 +55,13 @@ class LImageCanvasWidget(QWidget):
 
     def set_background(self, mode: str):
         self._background = mode
+        self.update()
+
+    def is_visible(self, name: str) -> bool:
+        return bool(self._visible.get(name))
+
+    def set_visible(self, name: str, visible: bool = True):
+        self._visible[name] = bool(visible)
         self.update()
 
     def set_limage(self, image: LImage):
@@ -65,7 +78,7 @@ class LImageCanvasWidget(QWidget):
 
     def paintEvent(self, event: QPaintEvent):
         if self.limage is not None:
-            rect = self.limage.rect()
+            rect = self.limage.rect(for_ui=True)
             size = (rect.right(), rect.bottom())
             if size != self._size:
                 self._size = size
@@ -96,10 +109,17 @@ class LImageCanvasWidget(QWidget):
         painter.drawRect(0, 0, *self._size)
 
         if self.limage:
-            self.limage.paint(painter)
+            self.limage.paint(painter, for_ui=True)
+
+        if self.limage.tiling and not self.limage.ui_settings.project_random_tiling_map:
+            if self.is_visible("tiling_grid"):
+                self.limage.paint_tiling_grid(painter)
+
+            if self.is_visible("tiling"):
+                self.limage.paint_tiling(painter)
 
         if self._tool:
-            self._tool.paint(painter, event)
+            self._tool.paint(painter, event, self)
 
     def create_controls(self):
         from .limage_canvas_controls import LImageCanvasControls
@@ -111,7 +131,8 @@ class LImageCanvasWidget(QWidget):
         return super().event(event)
 
     def mousePressEvent(self, event: QMouseEvent):
-        event =MouseEvent(
+        self._last_mouse_press_button = event.button()
+        event = MouseEvent(
             type=MouseEvent.Press,
             x=int(event.x() * 100 / self._zoom),
             y=int(event.y() * 100 / self._zoom),
@@ -119,10 +140,20 @@ class LImageCanvasWidget(QWidget):
         )
         self.signal_mouse_event.emit(event)
 
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        event = MouseEvent(
+            type=MouseEvent.Release,
+            x=int(event.x() * 100 / self._zoom),
+            y=int(event.y() * 100 / self._zoom),
+            button=self._last_mouse_press_button,
+        )
+        self._last_mouse_press_button = None
+        self.signal_mouse_event.emit(event)
+
     def mouseMoveEvent(self, event: QMouseEvent):
         self.signal_mouse_event.emit(MouseEvent(
             type=MouseEvent.Drag,
             x=int(event.x() * 100 / self._zoom),
             y=int(event.y() * 100 / self._zoom),
-            button=event.button(),
+            button=self._last_mouse_press_button,
         ))

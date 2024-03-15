@@ -18,7 +18,7 @@ class ColorPaletteWidget(QWidget):
         super().__init__(*args, **kwargs)
 
         self._boxes: List[ColorBoxWidget] = []
-
+        self.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum))
         self._create_widgets()
 
     def _create_widgets(self):

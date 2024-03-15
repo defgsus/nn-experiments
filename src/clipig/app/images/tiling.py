@@ -1,11 +1,16 @@
 import dataclasses
 import math
+import random
 from copy import deepcopy
 from typing import Optional, List, Union, Tuple, Dict, Iterable
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
+
+import torch
+
+from src.util.image import get_image_window
 
 
 class LImageTiling:
@@ -36,6 +41,10 @@ class LImageTiling:
 
         def __hash__(self):
             return self.colors
+
+        def __repr__(self):
+            args = ", ".join(f"{key}: {value}" for key, value in vars(self).items() if value != -1)
+            return f"{self.__class__.__name__}({args})"
 
         @property
         def colors(self) -> Tuple[int, ...]:
@@ -272,3 +281,86 @@ class LImageTiling:
                 attr_index = self.PosIndex.B
 
         return tile_pos, attr_index
+
+    def create_map_stochastic_scanline(
+            self,
+            size: Tuple[int, int],
+            seed: Optional[int] = None,
+    ):
+        rng = random.Random(seed)
+
+        possible_tiles = list(self.attributes_map.keys())
+
+        map = [[(0, 0)] * size[0] for _ in range(size[1])]
+        for y in range(size[1]):
+            for x in range(size[0]):
+
+                rng.shuffle(possible_tiles)
+                for tile_idx in possible_tiles:
+                    attrs = self.tile_attributes(tile_idx)
+
+                    if y > 0 and not attrs.matches_top(self.tile_attributes(map[y - 1][x])):
+                        continue
+                    if x > 0 and not attrs.matches_left(self.tile_attributes(map[y][x - 1])):
+                        continue
+
+                    map[y][x] = tile_idx
+                    break
+
+        return map
+
+    def render_tile_map(
+            self,
+            template: torch.Tensor,
+            map: List[List[Tuple[int, int]]],
+            overlap: Union[int, Tuple[int, int]] = 0,
+    ):
+        if isinstance(overlap, int):
+            overlap = (overlap, overlap)
+
+        if overlap[-2] > self.tile_size[-2] or overlap[-1] > self.tile_size[-1]:
+            raise ValueError(
+                f"`overlap` exceeds tile size, got {overlap}, tile shape is {self.tile_size}"
+            )
+
+        image = torch.zeros(
+            template.shape[-3],
+            len(map[0]) * self.tile_size[1],
+            len(map[1]) * self.tile_size[0],
+            dtype=template.dtype,
+            device=template.device,
+        )
+        if overlap != (0, 0):
+            accum = torch.zeros_like(image)
+            window = get_image_window(list(reversed(self.tile_size))).to(template)
+
+        for y, row in enumerate(map):
+            for x, tile_pos in enumerate(row):
+                if (tile_pos[0] + 1) * self.tile_size[0] > template.shape[-1]:
+                    continue
+                if (tile_pos[1] + 1) * self.tile_size[1] > template.shape[-2]:
+                    continue
+
+                template_patch = template[
+                    :,
+                    tile_pos[1] * self.tile_size[1]: (tile_pos[1] + 1) * self.tile_size[1],
+                    tile_pos[0] * self.tile_size[0]: (tile_pos[0] + 1) * self.tile_size[0],
+                ]
+
+                if overlap == (0, 0):
+                    image[
+                        :,
+                        y * self.tile_size[1]: (y + 1) * self.tile_size[1],
+                        x * self.tile_size[0]: (x + 1) * self.tile_size[0],
+                    ] = template_patch
+                else:
+                    sy = slice(y * (self.tile_size[1] - overlap[-2]), (y + 1) * (self.tile_size[1] - overlap[-2]) + overlap[-2])
+                    sx = slice(x * (self.tile_size[0] - overlap[-1]), (x + 1) * (self.tile_size[0] - overlap[-1]) + overlap[-1])
+                    image[:, sy, sx] = image[:, sy, sx] + window * template_patch
+                    accum[:, sy, sx] = accum[:, sy, sx] + window
+
+        if overlap != (0, 0):
+            mask = accum > 0
+            image[mask] = image[mask] / accum[mask]
+
+        return image

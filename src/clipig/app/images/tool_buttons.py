@@ -28,17 +28,21 @@ class ImageToolButtons(QWidget):
         return self._tool_name
 
     def _create_widgets(self):
-        lh = QHBoxLayout(self)
-        lh.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(lh)
+        lg = QGridLayout(self)
+        lg.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(lg)
 
+        x, y = 0, 0
         for klass in image_tools.image_tools.values():
             self._buttons[klass.NAME] = butt = QToolButton(self)
             butt.setText(klass.NAME)
             butt.clicked.connect(partial(self._tool_click, klass.NAME))
-            lh.addWidget(butt)
+            lg.addWidget(butt, y, x)
+            x += 1
+            if x == 2:
+                x, y = 0, y + 1
 
-        lh.addStretch(10)
+        # lh.addStretch(10)
 
     def set_tool(self, tool_name: str):
         if image_tools.image_tools.get(tool_name):

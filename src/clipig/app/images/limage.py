@@ -1,6 +1,7 @@
+import dataclasses
 from functools import partial
 from pathlib import Path
-from typing import Optional, List, Union, Tuple
+from typing import Optional, List, Union, Tuple, Dict
 
 import torch
 from PyQt5.QtCore import *
@@ -8,6 +9,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from ..util import image_to_qimage, qimage_to_torch, torch_to_qimage
+from ..dialogs import ParameterDialog
 from src.util.files import Filestream
 from .tiling import LImageTiling
 
@@ -125,6 +127,22 @@ class LImageLayer:
     def set_selected(self):
         self._parent.set_selected_layer(self)
 
+    def repeat_image(self, num_x: int = 1, num_y: int = 1):
+        if num_x > 1 or num_y > 1 and self._image:
+            rep_image = QImage(
+                QSize(self._image.width() * num_x, self._image.height() * num_y),
+                QImage.Format_ARGB32,
+            )
+            painter = QPainter(rep_image)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QBrush(QColor(0, 100, 0, 255)))
+            painter.drawRect(rep_image.rect())
+            for y in range(num_y):
+                for x in range(num_x):
+                    painter.drawImage(x * self._image.width(), y * self._image.height(), self._image)
+            painter.end()
+            self.set_image(rep_image)
+
     def set_image_size(
             self,
             size: Union[QSize, Tuple[int, int]],
@@ -191,10 +209,6 @@ class LImageLayer:
 
         painter.setOpacity(1.)
 
-    def paint_ui(self, painter: QPainter):
-        if self._tiling is not None:
-            self.paint_tiling(painter)
-
     def thumbnail(self) -> QImage():
         if not self._image:
             return QImage()
@@ -239,6 +253,13 @@ class LImageLayerPainter:
 
 class LImage:
 
+    @dataclasses.dataclass
+    class UISettings:
+        tiling_visibility: float = .3
+        project_random_tiling_map: bool = False
+        tiling_map_size: Tuple[int, int] = (8, 8)
+        tiling_map_seed: int = 23
+
     def __init__(self):
         from .limage_model import LImageModel
 
@@ -246,6 +267,9 @@ class LImage:
         self._selected_layer: Optional[LImageLayer] = None
         self._model: Optional[LImageModel] = None
         self._tiling: Optional[LImageTiling] = None
+        self._tile_map: Optional[List[List[Tuple[int, int]]]] = None
+        self._tiles: Optional[Dict[Tuple[int, int], QImage]] = None
+        self._ui_settings = self.UISettings()
 
     @property
     def layers(self):
@@ -254,12 +278,19 @@ class LImage:
     def is_empty(self) -> bool:
         return len(self.layers) == 0
 
-    def rect(self) -> QRect:
-        full_rect = QRect()
-        for layer in self.layers:
-            if layer.active:
-                full_rect = full_rect.united(layer.rect())
-        return full_rect
+    def rect(self, for_ui: bool = False) -> QRect:
+        if not for_ui or not (self.ui_settings.project_random_tiling_map and self.tiling):
+            full_rect = QRect()
+            for layer in self.layers:
+                if layer.active:
+                    full_rect = full_rect.united(layer.rect())
+            return full_rect
+
+        return QRect(
+            0, 0,
+            self.tiling.tile_size[0] * self.ui_settings.tiling_map_size[0],
+            self.tiling.tile_size[1] * self.ui_settings.tiling_map_size[1]
+        )
 
     def content_rect(self) -> QRect:
         full_rect = QRect()
@@ -282,6 +313,13 @@ class LImage:
 
     def set_tiling(self, tiling: Optional[LImageTiling]):
         self._tiling = tiling
+        self._layers_changed()
+
+    @property
+    def ui_settings(self):
+        return self._ui_settings
+
+    def ui_settings_changed(self):
         self._layers_changed()
 
     def add_layer(
@@ -374,11 +412,29 @@ class LImage:
             self._layers_changed()
             return layer
 
-    def paint(self, painter: QPainter):
+    def paint(self, painter: QPainter, for_ui: bool = False):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        for layer in self.layers:
-            layer.paint(painter)
+        if not for_ui or not (self.ui_settings.project_random_tiling_map and self.tiling):
+            for layer in self.layers:
+                layer.paint(painter)
+
+        else:
+            s = self.tiling.tile_size
+            if self._tiles is None:
+                tile_template = self.to_qimage()
+                self._tiles = {}
+                for x, y in self.tiling.attributes_map.keys():
+                    if x * s[0] + s[0] <= tile_template.width() and y * s[1] + s[1] <= tile_template.height():
+                        self._tiles[(x, y)] = tile_template.copy(x * s[0], y * s[1], s[0], s[1])
+                self._tile_map = self.tiling.create_map_stochastic_scanline(
+                    size=self.ui_settings.tiling_map_size,
+                    seed=self.ui_settings.tiling_map_seed,
+                )
+            for y, row in enumerate(self._tile_map):
+                for x, tile_idx in enumerate(row):
+                    if tile_idx in self._tiles.keys():
+                        painter.drawImage(x * s[0], y * s[1], self._tiles[tile_idx])
 
     def get_model(self):
         from .limage_model import LImageModel
@@ -395,6 +451,7 @@ class LImage:
         except ValueError:
             return
 
+        self._tiles = None
         if self._model is not None:
             self._model.dataChanged.emit(
                 self._model.index(index, 0),
@@ -402,6 +459,7 @@ class LImage:
             )
 
     def _layers_changed(self):
+        self._tiles = None
         if self._model is not None:
             self._model.modelReset.emit()
 
@@ -419,6 +477,21 @@ class LImage:
                 "Transform",
                 partial(ImageTransformDialog.run_dialog_on_limage_layer, limage=self, parent=menu, project=project),
             )
+
+            def _repeat_action():
+                accepted, repeat_xy = ParameterDialog.get_parameter_value(
+                    {
+                        "name": "repeat_xy",
+                        "type": "int2",
+                        "default": [2, 2],
+                        "min": [1, 1],
+                    },
+                    title="Repeat image",
+                    parent=menu,
+                )
+                if accepted:
+                    self.selected_layer.repeat_image(*repeat_xy)
+            sub_menu.addAction("Repeat ...", _repeat_action)
 
     def to_qimage(self) -> QImage:
         image = QImage(self.size(), QImage.Format.Format_ARGB32)
@@ -463,6 +536,7 @@ class LImage:
 
         config_data = {
             "selected_index": self.selected_index,
+            "ui_settings": vars(self._ui_settings),
             "tiling": None if self._tiling is None else self._tiling.get_config(),
             "layers": [],
         }
@@ -506,14 +580,23 @@ class LImage:
             self._tiling = LImageTiling()
             self._tiling.set_config(config_data["tiling"])
 
+        if config_data.get("ui_settings"):
+            self._ui_settings = self.UISettings(**config_data["ui_settings"])
+
         if config_data["selected_index"] < len(self._layers):
             self._selected_layer = self._layers[config_data["selected_index"]]
 
-    def paint_grid(self, painter: QPainter, size: Tuple[int, int], offset: Tuple[int, int] = (0, 0)):
+    def paint_grid(
+            self,
+            painter: QPainter,
+            size: Tuple[int, int],
+            offset: Tuple[int, int] = (0, 0),
+            visibility: float = .3,
+    ):
         layer_size = self.size()
 
         painter.setCompositionMode(QPainter.CompositionMode_Xor)
-        painter.setOpacity(.3)
+        painter.setOpacity(visibility)
         painter.setPen(QPen(QColor(255, 255, 255)))
         for y in range(offset[1], layer_size.height(), size[1]):
             painter.drawLine(0, y, layer_size.width(), y)
@@ -523,14 +606,23 @@ class LImage:
         painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
         painter.setOpacity(1.)
 
+    def paint_tiling_grid(self, painter: QPainter):
+        if self._tiling is None:
+            return
+
+        self.paint_grid(
+            painter, self._tiling.tile_size, self._tiling.offset, visibility=self.ui_settings.tiling_visibility,
+        )
+
     def paint_tiling(self, painter: QPainter):
         if self._tiling is None:
             return
 
         tile_size = self._tiling.tile_size
         tiling_offset = QPoint(*self._tiling.offset)
+        visibility = self.ui_settings.tiling_visibility
 
-        self.paint_grid(painter, tile_size, self._tiling.offset)
+        # self.paint_grid(painter, tile_size, self._tiling.offset)
 
         TILING_COLORS = [
             QColor(255, 128, 96),
@@ -549,12 +641,12 @@ class LImage:
                     poly = self._tiling.get_tile_polygon(pos_idx, offset)
                     color = TILING_COLORS[color_idx % len(TILING_COLORS)]
 
-                    painter.setOpacity(.3)
+                    painter.setOpacity(visibility)
                     painter.setPen(Qt.NoPen)
                     painter.setBrush(QBrush(color))
                     painter.drawPolygon(poly)
 
-                    painter.setOpacity(.5)
+                    painter.setOpacity(min(1., visibility * 1.3))
                     painter.setPen(QPen(color.darker(200)))
                     painter.setBrush(Qt.NoBrush)
                     painter.drawPolygon(poly)

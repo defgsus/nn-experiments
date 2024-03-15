@@ -8,6 +8,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from ..limage import LImage, LImageLayer
+# from ..limage_canvas_widget import LImageCanvasWidget
 
 
 image_tools: Dict[str, Type["ImageToolBase"]] = {}
@@ -32,6 +33,9 @@ class MouseEvent:
         self.x = x
         self.y = y
         self.button = button
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(type={repr(self.type)}, x={self.x}, y={self.y}, button={self.button})"
 
     @property
     def pos(self) -> Tuple[int, int]:
@@ -79,7 +83,7 @@ class ImageToolBase:
     def add_menu_actions(self, menu: QMenu, project: "ProjectWidget"):
         pass
 
-    def paint(self, painter: QPainter, event: QPaintEvent):
+    def paint(self, painter: QPainter, event: QPaintEvent, canvas: "LImageCanvasWidget"):
         pass
 
     def mouse_event(self, event: MouseEvent):

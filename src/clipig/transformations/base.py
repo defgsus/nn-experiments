@@ -53,6 +53,10 @@ class TransformBase:
                 )
             transformations[cls.NAME] = cls
 
+    def __init__(self):
+        from ..clipig_task import ClipigTask
+        self._clipig: Optional[ClipigTask] = None
+
     def __call__(self, image: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError
 

@@ -48,7 +48,6 @@ class MainWindow(QMainWindow):
         action.triggered.connect(self.slot_save_project)
         menu.addAction(action)
         self._action_save_project_as = action = QAction(self.tr("Save Project as ..."), self)
-        action.setEnabled(False)
         action.setShortcut("CTRL+SHIFT+S")
         action.triggered.connect(self.slot_save_project_as)
         menu.addAction(action)

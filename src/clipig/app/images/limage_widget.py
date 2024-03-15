@@ -50,17 +50,21 @@ class LImageWidget(QWidget):
         lv = QVBoxLayout(self)
         lv.setContentsMargins(0, 0, 0, 0)
 
-        self.tools_widget = ImageToolsWidget(self)
-        self.tools_widget.signal_tool_changed.connect(self.set_tool)
-        self.tools_widget.signal_tool_config_changed.connect(self.set_tool_config)
-        lv.addWidget(self.tools_widget)
-
         lh = QHBoxLayout()
         lh.setContentsMargins(0, 0, 0, 0)
         lv.addLayout(lh, stretch=100)
 
+        lv2 = QVBoxLayout()
+        lh.addLayout(lv2)
+
         self.color_palette_widget = ColorPaletteWidget(self)
-        lh.addWidget(self.color_palette_widget)
+        lv2.addWidget(self.color_palette_widget)
+
+        self.tools_widget = ImageToolsWidget(self)
+        self.tools_widget.signal_tool_changed.connect(self.set_tool)
+        self.tools_widget.signal_tool_config_changed.connect(self.set_tool_config)
+        lv2.addWidget(self.tools_widget)
+
         self.color_palette_widget.signal_color_changed.connect(self.tools_widget.set_color)
 
         self.scroll_area = QScrollArea(self)
@@ -115,16 +119,22 @@ class LImageWidget(QWidget):
 
     def _context_menu(self, pos: QPoint):
         menu = QMenu()
+
+        # --- LImage menu ---
+
         if self._limage is not None:
             if not self._limage.size().isEmpty():
                 menu.addAction(self.tr("Save image as ..."), self.action_save_image_as)
             menu.addAction(self.tr("To new Task"), partial(self.action_to_new_task, False))
             menu.addAction(self.tr("To new Task (merged)"), partial(self.action_to_new_task, True))
+
             self._limage.add_menu_actions(menu, project=self._project)
             if self._tool:
-                sub_menu = QMenu(self._tool.NAME.capitalize())
+                sub_menu = QMenu(self._tool.NAME.capitalize(), menu)
                 menu.addMenu(sub_menu)
                 self._tool.add_menu_actions(sub_menu, project=self._project)
+
+        # --- open image ---
 
         menu.addSeparator()
         menu.addAction(self.tr("Open image ..."), self.action_load_image_dialog)
@@ -132,6 +142,21 @@ class LImageWidget(QWidget):
             menu.addAction(
                 self.tr("Reload {filename}").format(filename=Path(filename).name),
                 partial(self.action_load_image, filename),
+            )
+
+        # --- show/hide submenu ----
+
+        sub_menu = QMenu(self.tr("Show/hide"), menu)
+        menu.addMenu(sub_menu)
+
+        for key, name in (
+                ("tiling_grid", "tiling grid"),
+                ("tiling", "tiling setup")
+        ):
+            active = self.canvas.is_visible(key)
+            sub_menu.addAction(
+                f"{'Hide' if active else 'Show'} {name}",
+                partial(self.canvas.set_visible, key, not active)
             )
 
         menu.exec(self.mapToGlobal(pos))

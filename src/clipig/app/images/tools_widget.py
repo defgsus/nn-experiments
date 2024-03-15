@@ -24,7 +24,7 @@ class ImageToolsWidget(QWidget):
         self.set_tool("select")
 
     def _create_widgets(self):
-        lh = QHBoxLayout(self)
+        lh = QVBoxLayout(self)
         self.setLayout(lh)
 
         self.tool_buttons = ImageToolButtons(self)

@@ -71,24 +71,29 @@ class ParameterWidget(QWidget):
                 self._ignore_value_change = False
 
     def _set_value(self, value):
-        if self.parameter_type == "bool":
-            self._widget.setChecked(value)
+        try:
+            if self.parameter_type == "bool":
+                self._widget.setChecked(value)
 
-        elif self.parameter_type == "str":
-            self._widget.setText(value)
+            elif self.parameter_type == "str":
+                self._widget.setText(value)
 
-        elif self.parameter_type in ("int", "float"):
-            self._widget.setValue(value)
+            elif self.parameter_type in ("int", "float"):
+                self._widget.setValue(value)
 
-        elif self.parameter_type in ("select", "autoencoder"):
-            self._widget.setCurrentText(value)
+            elif self.parameter_type in ("select", "autoencoder"):
+                self._widget.setCurrentText(value)
 
-        elif self.parameter_type == "image":
-            self._widget.set_value(value)
+            elif self.parameter_type == "image":
+                self._widget.set_value(value)
 
-        elif self._RE_INT_N.match(self.parameter_type) or self._RE_FLOAT_N.match(self.parameter_type):
-            for w, v in zip(self._widgets, value):
-                w.setValue(v)
+            elif self._RE_INT_N.match(self.parameter_type) or self._RE_FLOAT_N.match(self.parameter_type):
+                for w, v in zip(self._widgets, value):
+                    w.setValue(v)
+
+        except TypeError as e:
+            e.args = (*e.args, f"param: {self.parameter}, value: {value}")
+            raise
 
     def _create_widgets(self):
         if self.parameter_type == "bool":

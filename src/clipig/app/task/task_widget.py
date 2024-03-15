@@ -176,6 +176,9 @@ class TaskWidget(QWidget):
             if self.image_widget.limage is not None and not self.image_widget.limage.is_empty():
                 config["input_image"] = self.image_widget.limage.to_torch()
 
+        if self.image_widget.limage.tiling:
+            config["input_tiling"] = self.image_widget.limage.tiling
+
         return config
 
     def save_to_filestream(self, filestream: Filestream, directory: Union[str, Path]):
