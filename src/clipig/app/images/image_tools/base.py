@@ -17,8 +17,8 @@ image_tools: Dict[str, Type["ImageToolBase"]] = {}
 class MouseEvent:
 
     Hover = "hover"
-    Press = "press"
-    Release = "release"
+    Press = "press"         # begin of click
+    Release = "release"     # end of click
     Drag = "drag"
     Click = "click"
 
@@ -57,9 +57,11 @@ class ImageToolBase:
             )
         image_tools[cls.NAME] = cls
 
-    def __init__(self, limage: LImage, config: dict):
+    def __init__(self, limage: LImage, config: dict, project: "ProjectWidget"):
+        from ...project.project_widget import ProjectWidget
         self.limage = limage
         self.config = deepcopy(config)
+        self.project: ProjectWidget = project
 
         for param in self.PARAMS:
             if param["name"] not in self.config:

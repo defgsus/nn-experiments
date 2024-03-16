@@ -127,26 +127,26 @@ class LImageCanvasWidget(QWidget):
         widget = LImageCanvasControls(self)
         return widget
 
-    def event(self, event: QEvent):
-        return super().event(event)
+    def _convert_mouse_event(
+            self,
+            type: str,
+            event: QMouseEvent,
+            button: Optional[int] = None,
+    ):
+        return MouseEvent(
+            type=type,
+            x=int(event.x() * 100 / self._zoom),
+            y=int(event.y() * 100 / self._zoom),
+            button=event.button() if button is None else button,
+        )
 
     def mousePressEvent(self, event: QMouseEvent):
         self._last_mouse_press_button = event.button()
-        event = MouseEvent(
-            type=MouseEvent.Press,
-            x=int(event.x() * 100 / self._zoom),
-            y=int(event.y() * 100 / self._zoom),
-            button=event.button(),
-        )
+        event = self._convert_mouse_event(MouseEvent.Press, event)
         self.signal_mouse_event.emit(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent):
-        event = MouseEvent(
-            type=MouseEvent.Release,
-            x=int(event.x() * 100 / self._zoom),
-            y=int(event.y() * 100 / self._zoom),
-            button=self._last_mouse_press_button,
-        )
+        event = self._convert_mouse_event(MouseEvent.Release, event, button=self._last_mouse_press_button)
         self._last_mouse_press_button = None
         self.signal_mouse_event.emit(event)
 

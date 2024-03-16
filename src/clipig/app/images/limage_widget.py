@@ -99,7 +99,7 @@ class LImageWidget(QWidget):
         self.canvas.set_limage(self._limage)
         self.layers_widget.set_limage(self._limage)
         if self._tool is not None:
-            self._tool = self._tool.__class__(limage=self._limage, config=self._tool.config)
+            self._tool = self._tool.__class__(limage=self._limage, config=self._tool.config, project=self._project)
         self._limage.get_model().dataChanged.connect(lambda *args, **kwargs: self._set_changed())
         self._limage.get_model().modelReset.connect(lambda *args, **kwargs: self._set_changed())
         self._set_changed()
@@ -206,7 +206,7 @@ class LImageWidget(QWidget):
         if not klass:
             return
 
-        self._tool = klass(limage=self._limage, config=config or {})
+        self._tool = klass(limage=self._limage, config=config or {}, project=self._project)
         self._tool.config_changed()
         # copy params back after initialization
         self.tools_widget.set_config(self._tool.config, emit=False)

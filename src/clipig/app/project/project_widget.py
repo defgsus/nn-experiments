@@ -2,7 +2,7 @@ import tarfile
 import os
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict, Hashable, Union, Optional
+from typing import Dict, Hashable, Union, Optional, Callable, List
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -14,6 +14,22 @@ from src.clipig.app.images import LImage
 from src.clipig.app.dialogs import ParameterDialog
 
 from src.util.files import Filestream
+
+
+class UndoAction:
+
+    def __init__(
+            self,
+            name: str,
+            undo: Callable,
+            redo: Callable,
+    ):
+        self.name = name
+        self.undo = undo
+        self.redo = redo
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(\"{self.name}\")"
 
 
 class ProjectWidget(QWidget):
@@ -40,7 +56,11 @@ class ProjectWidget(QWidget):
         self.preset_model = preset_model
 
         self._dialog_settings = {}
-
+        self._undo_actions: List[UndoAction] = []
+        self._undo_index = 0
+        self._undo_action: Optional[QAction] = None
+        self._redo_action: Optional[QAction] = None
+        
         self._create_widgets()
 
     @property
@@ -82,13 +102,58 @@ class ProjectWidget(QWidget):
         lv.addWidget(self.tab_widget)
         self.tab_widget.currentChanged.connect(self.set_menu_changed)
 
+    def push_undo_action(self, name: str, undo: Callable, redo: Callable):
+        self._undo_actions = self._undo_actions[:self._undo_index + 1]
+        self._undo_index = len(self._undo_actions)
+        self._undo_actions.append(UndoAction(name, undo, redo))
+        self._update_undo_qactions()
+    
+    def _update_undo_qactions(self):
+        if self._undo_action is not None:
+            if self._undo_index < 0 or self._undo_index >= len(self._undo_actions):
+                self._undo_action.setText("Undo")
+                self._undo_action.setEnabled(False)
+            else:
+                self._undo_action.setText(f"Undo {self._undo_actions[self._undo_index].name}")
+                self._undo_action.setEnabled(True)
+        if self._redo_action is not None:
+            if self._undo_index >= len(self._undo_actions) - 1:
+                self._redo_action.setText("Redo")
+                self._redo_action.setEnabled(False)
+            else:
+                self._redo_action.setText(f"Redo {self._undo_actions[self._undo_index + 1].name}")
+                self._redo_action.setEnabled(True)
+
     def add_menu_actions(self, menu: QMenu):
+        self._undo_action = action = QAction("Undo", self)
+        action.triggered.connect(self.slot_undo)
+        action.setShortcut("CTRL+Z")
+        menu.addAction(action)
+        self._redo_action = action = QAction("Redo", self)
+        action.triggered.connect(self.slot_redo)
+        action.setShortcut("CTRL+SHIFT+Z")
+        menu.addAction(action)
+        self._update_undo_qactions()
+
+        menu.addSeparator()
         menu.addAction(self.tr("New &Task"), self.slot_new_task, "CTRL+T")
         if self.tab_widget.count():
             menu.addAction(self.tr("&Clone Task"), self.slot_copy_task)
             menu.addAction(self.tr("Delete Task"), self.slot_delete_task)
         menu.addSeparator()
         menu.addAction(self.tr("Rename Project ..."), self.slot_rename)
+    
+    def slot_undo(self):
+        if 0 <= self._undo_index < len(self._undo_actions):
+            self._undo_actions[self._undo_index].undo()
+            self._undo_index -= 1
+            self._update_undo_qactions()
+
+    def slot_redo(self):
+        if self._undo_index < len(self._undo_actions) - 1:
+            self._undo_actions[self._undo_index + 1].redo()
+            self._undo_index += 1
+            self._update_undo_qactions()
 
     def slot_new_task(self) -> TaskWidget:
         task_widget = TaskWidget(self, project=self)
