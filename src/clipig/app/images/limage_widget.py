@@ -108,7 +108,7 @@ class LImageWidget(QWidget):
         """
         Create or replace the layer matching `name` with the given image
         """
-        image = image_to_qimage(image)
+        image = image_to_qimage(image).convertToFormat(QImage.Format_ARGB32)
 
         if layer := self._limage.get_layer(name):
             layer.set_image(image)

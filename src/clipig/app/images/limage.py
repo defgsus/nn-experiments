@@ -420,21 +420,94 @@ class LImage:
                 layer.paint(painter)
 
         else:
+            self._update_tiles()
             s = self.tiling.tile_size
-            if self._tiles is None:
-                tile_template = self.to_qimage()
-                self._tiles = {}
-                for x, y in self.tiling.attributes_map.keys():
-                    if x * s[0] + s[0] <= tile_template.width() and y * s[1] + s[1] <= tile_template.height():
-                        self._tiles[(x, y)] = tile_template.copy(x * s[0], y * s[1], s[0], s[1])
-                self._tile_map = self.tiling.create_map_stochastic_scanline(
-                    size=self.ui_settings.tiling_map_size,
-                    seed=self.ui_settings.tiling_map_seed,
-                )
             for y, row in enumerate(self._tile_map):
                 for x, tile_idx in enumerate(row):
-                    if tile_idx in self._tiles.keys():
+                    if tile_idx in self._tiles:
                         painter.drawImage(x * s[0], y * s[1], self._tiles[tile_idx])
+
+    def _update_tiles(self):
+        if self._tiles is None:
+            self._tiles = {}
+            tile_template = self.to_qimage()
+            s = self.tiling.tile_size
+            for x, y in self.tiling.attributes_map.keys():
+                if x * s[0] + s[0] <= tile_template.width() and y * s[1] + s[1] <= tile_template.height():
+                    self._tiles[(x, y)] = tile_template.copy(x * s[0], y * s[1], s[0], s[1])
+            self._tile_map = self.tiling.create_map_stochastic_scanline(
+                size=self.ui_settings.tiling_map_size,
+                seed=self.ui_settings.tiling_map_seed,
+            )
+
+    def pixel_pos_to_image_pos(self, positions: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+        if not (self.ui_settings.project_random_tiling_map and self.tiling):
+            return positions
+        self._update_tiles()
+        s = self.tiling.tile_size
+        ret_pos = []
+        for p in positions:
+            # pixel pos
+            x, y = p
+            # map pos
+            mx, my = x // s[0], y // s[1]
+            if 0 <= mx < len(self._tile_map[0]) and 0 <= my < len(self._tile_map):
+                # tile pos in image
+                tx, ty = self._tile_map[my][mx]
+                tx, ty = tx * s[0], ty * s[1]
+                # tile pos + offset inside tile
+                ret_pos.append((
+                    tx + x - mx * s[0],
+                    ty + y - my * s[1],
+                ))
+        return ret_pos
+
+    def pixel_rects_to_image_rects(self, rects: List[QRect]) -> List[Tuple[QRect, Tuple[int, int]]]:
+        """
+        Project the rectangles into image space.
+
+        This has only an effect when `tiling` is activated.
+
+        Each rectangle will be moved to the original image position matching the mapped tile
+        and possibly split into parts for each image rectangle.
+
+        :param rects: list of QRect
+        :return: list of tuples of (QRect, (int, int))
+            First argument is the rectangle in image space,
+            Second argument is the offset inside the provided rectangle
+        """
+        if not (self.ui_settings.project_random_tiling_map and self.tiling):
+            return [(r, (0, 0)) for r in rects]
+
+        self._update_tiles()
+        s = self.tiling.tile_size
+        ret_rects = []
+        for rect in rects:
+            mx, my = int(rect.x() // s[0]), int(rect.y() // s[1])
+            mw, mh = int((rect.width() + s[0] - 1) // s[0] + 1), int((rect.height() + s[1] - 1) // s[1] + 1)
+            # print(f"rect={rect}, mxy={(mx, my)}, mwh={(mw, mh)}")
+            mx_, my_ = mx, my
+            for my in range(my_, my_ + mh):
+                for mx in range(mx_, mx_ + mw):
+                    if 0 <= mx < len(self._tile_map[0]) and 0 <= my < len(self._tile_map):
+                        tx, ty = self._tile_map[my][mx]
+                        tx *= s[0]
+                        ty *= s[1]
+                        mrect: QRect = rect.__class__(mx * s[0], my * s[1], s[0], s[1])
+                        irect = rect.intersected(mrect)
+                        # print(f"INTESECT mx{mx}my{my} mrect={mrect}, irect={irect}")
+                        if not irect.isEmpty():
+                            image_rect = irect.__class__(irect)
+                            image_rect.moveTo(
+                                tx + irect.x() - mrect.x(),
+                                ty + irect.y() - mrect.y(),
+                            )
+                            # print(f"rect={rect} mrect={mrect} irect={irect} image={image_rect}".replace("PyQt5.QtCore.QRect", ""))
+                            ret_rects.append((
+                                image_rect,
+                                (irect.x() - rect.x(), irect.y() - rect.y())
+                            ))
+        return ret_rects
 
     def get_model(self):
         from .limage_model import LImageModel

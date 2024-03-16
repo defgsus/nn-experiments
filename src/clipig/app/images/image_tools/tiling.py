@@ -76,7 +76,7 @@ class TilingTool(ImageToolBase):
             self.limage.tiling._tile_size = self.config["tile_size"]
             self.limage.tiling._offset = self.config["offset"]
         self.limage.ui_settings_changed()
-        
+
     def _create_tiling(self):
         return LImageTiling(
             tile_size=self.config["tile_size"],

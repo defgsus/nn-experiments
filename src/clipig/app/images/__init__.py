@@ -7,3 +7,4 @@ from .limage_widget import LImageWidget
 from .limage_simple_widget import LImageSimpleWidget
 from .limage_model import LImageModel
 from .tools_widget import ImageToolsWidget
+from .tiling import LImageTiling

@@ -27,5 +27,5 @@ class PaintTool(ImageToolBase):
                 if self.layer.active:
                     with self.layer.image_painter() as painter:
 
-                        self.brush.apply(painter, event.pos)
+                        self.brush.apply(self.limage, painter, event.pos)
 

@@ -3,6 +3,8 @@ from typing import Tuple, Union
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
+from ..limage import LImage
+
 
 class Brush:
 
@@ -49,6 +51,7 @@ class Brush:
 
     def apply(
             self,
+            limage: LImage,
             painter: QPainter,
             pos: Tuple[int, int],
             delta: Tuple[int, int] = (0, 0),
@@ -60,6 +63,7 @@ class Brush:
         if self.type == "rectangle":
             s = self.size
             rect = QRectF(pos[0] - s[0] / 2, pos[1] - s[1] / 2, s[0], s[1])
-            painter.drawRect(rect)
+            for rect, offset in limage.pixel_rects_to_image_rects([rect]):
+                painter.drawRect(rect)
 
         painter.setOpacity(1.)

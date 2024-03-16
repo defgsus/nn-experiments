@@ -66,7 +66,7 @@ class ImageToolBase:
                 self.config[param["name"]] = param["default"]
 
     @property
-    def layer(self):
+    def layer(self) -> Optional[LImageLayer]:
         return self.limage.selected_layer
 
     def set_config(self, config: dict):
