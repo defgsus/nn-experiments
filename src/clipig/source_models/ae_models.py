@@ -1,5 +1,6 @@
 from typing import Iterator
 
+import torch
 from torch.nn import Parameter
 
 from .base import *
@@ -39,7 +40,6 @@ class AutoencoderModelHxW(SourceModelBase):
             code_size: int,
             grid_size: Tuple[int, int],
             overlap: Tuple[int, int] = (0, 0),
-            std: float = .5,
     ):
         super().__init__()
         self.autoencoder = autoencoder
@@ -47,8 +47,7 @@ class AutoencoderModelHxW(SourceModelBase):
         self.code_size = code_size
         self.grid_size = tuple(reversed(grid_size))
         self.overlap = tuple(reversed(overlap))
-        self.std = std
-        self.code = nn.Parameter(torch.randn(math.prod(self.grid_size), code_size) * std)
+        self.code = nn.Parameter(torch.empty(math.prod(self.grid_size), code_size))
 
     def parameters(self, recurse: bool = True) -> Iterator[Parameter]:
         yield self.code
@@ -91,9 +90,9 @@ class AutoencoderModelHxW(SourceModelBase):
         self.code[:] = torch.zeros_like(self.code)
 
     @torch.no_grad()
-    def randomize(self):
+    def randomize(self, mean: float, std: float):
         with torch.no_grad():
-            self.code[:] = torch.randn_like(self.code) * self.std
+            self.code[:] = torch.randn_like(self.code) * std + mean
 
     @torch.no_grad()
     def set_image(self, image: torch.Tensor):

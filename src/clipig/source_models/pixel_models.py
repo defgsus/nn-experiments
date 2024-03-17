@@ -31,7 +31,6 @@ class PixelModel(SourceModelBase):
         num_channels = channel_map.get(channels, 3)
         self.shape = (num_channels, size[1], size[0])
         self.code = nn.Parameter(torch.empty(self.shape))
-        self.randomize()
 
     def forward(self):
         return self.code
@@ -41,8 +40,8 @@ class PixelModel(SourceModelBase):
         self.code[:] = torch.zeros_like(self.code)
 
     @torch.no_grad()
-    def randomize(self):
-        self.code[:] = torch.randn_like(self.code) * .1 + .3
+    def randomize(self, mean: float, std: float):
+        self.code[:] = (torch.randn_like(self.code) * std + mean).clamp(0, 1)
 
     @torch.no_grad()
     def set_image(self, image: torch.Tensor):
@@ -74,12 +73,12 @@ class PixelHSVModel(PixelModel):
         return hsv_to_rgb(set_image_channels(super().forward(), 3))
 
     @torch.no_grad()
-    def randomize(self):
+    def randomize(self, mean: float, std: float):
         if self.shape[0] == 3:
             self.code[:1] = torch.rand_like(self.code[:1])
-            self.code[1:] = torch.randn_like(self.code[1:]) * .1 + .3
+            self.code[1:] = (torch.randn_like(self.code[1:]) * std + mean).clamp(0, 1)
         else:
-            self.code[:] = torch.randn_like(self.code) * .1 + .3
+            self.code[:] = (torch.randn_like(self.code) * std + mean).clamp(0, 1)
 
     @torch.no_grad()
     def set_image(self, image: torch.Tensor):

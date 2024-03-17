@@ -1,5 +1,7 @@
 import json
 import re
+import math
+import warnings
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
@@ -52,12 +54,14 @@ class ParametersWidget(QWidget):
             if widget := self._widget_map.get(name):
                 widget.set_value(value, emit=emit)
                 self._backup_values[name] = value
+        self._update_visibility()
 
     def set_values(self, values: Dict[str, Any], emit: bool):
         for key, widget in self._widget_map.items():
             if key in values and key not in self._exclude:
                 widget.set_value(values[key], emit=emit)
                 self._backup_values[key] = values[key]
+        self._update_visibility()
 
     def set_parameters(self, parameters: List[dict], values: Optional[Dict[str, Any]] = None, emit: bool = False):
         self._parameters = deepcopy(parameters)
@@ -79,6 +83,7 @@ class ParametersWidget(QWidget):
         self._layout.addWidget(self._widget_container)
 
         self._create_param_widgets()
+        self._update_visibility()
 
     def _create_param_widgets(self):
         self._widget_container.close()
@@ -96,5 +101,23 @@ class ParametersWidget(QWidget):
 
     def _value_changed(self, name: str, v: Any):
         self._backup_values[name] = v
+        self._update_visibility()
         self.signal_value_changed.emit(name, QVariant(v))
         self.signal_values_changed.emit(self.get_values())
+
+    def _update_visibility(self):
+        values = self.get_values()
+        for param in self.parameters:
+            if param.get("$visible"):
+                self._widget_map[param["name"]].setVisible(
+                    self._eval_visible(param["$visible"], values)
+                )
+
+    def _eval_visible(self, expression: str, values: dict):
+        try:
+            return eval(f"bool({expression})", globals(), values)
+        except Exception as e:
+            warnings.warn(
+                f"Parameter $visible expression `{expression}` raised exception {type(e).__name__}: {e}"
+            )
+            return True

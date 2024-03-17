@@ -27,6 +27,17 @@ base:
       - random
       - zero
 
+  - name: init_random_mean
+    type: float
+    default: .3
+    $visible: initialize == "random"
+
+  - name: init_random_var
+    type: float
+    default: .1
+    $visible: initialize == "random"
+
+
 target:
   #- name: prompt
   #  type: str

@@ -32,7 +32,7 @@ class SourceModelBase(nn.Module):
     def clear(self):
         raise NotImplementedError
 
-    def randomize(self):
+    def randomize(self, mean: float, std: float):
         raise NotImplementedError
 
     def set_image(self, image: torch.Tensor):

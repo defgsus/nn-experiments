@@ -98,7 +98,10 @@ class ClipigTask:
 
         init_method = self.config["initialize"]
         if init_method == "random":
-            model.randomize()
+            model.randomize(
+                mean=self.config["init_random_mean"],
+                std=self.config["init_random_var"],
+            )
 
         elif init_method == "input" and ((image := self.get_input_image()) is not None):
             model.set_image(image.to(self.device))

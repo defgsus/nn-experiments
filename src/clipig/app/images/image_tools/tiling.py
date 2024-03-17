@@ -45,12 +45,14 @@ class TilingTool(ImageToolBase):
             "type": "int2",
             "default": [8, 8],
             "min": [1, 1],
+            "$visible": "project_random_map",
         },
         {
             "name": "map_seed",
             "type": "int",
             "default": 23,
             "min": 0,
+            "$visible": "project_random_map",
         },
     ]
 
