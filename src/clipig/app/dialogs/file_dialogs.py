@@ -20,7 +20,7 @@ class FileDialog:
         T_Image: {
             "name": "Image",
             # first is default
-            "extensions": ["png", "jpg", "bmp"],  # ...
+            "extensions": ["png", "jpg", "bmp", "webp"],  # ...
             "default_directory": Path("~/Pictures").expanduser(),
         },
         T_Project: {

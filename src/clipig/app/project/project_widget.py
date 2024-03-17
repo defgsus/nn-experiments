@@ -1,3 +1,4 @@
+import io
 import tarfile
 import os
 from copy import deepcopy
@@ -196,7 +197,16 @@ class ProjectWidget(QWidget):
 
     def slot_copy_task(self):
         task: TaskWidget = self.tab_widget.currentWidget()
-        self.slot_new_task_with(limage=task.limage.copy(), task_config=task.get_task_config())
+        buffer = io.BytesIO()
+        with Filestream(buffer, "w") as fs:
+            task.save_to_filestream(fs, ".")
+
+        new_widget = self.slot_new_task()
+        buffer.seek(0)
+        with Filestream(buffer, "r") as fs:
+            new_widget.load_from_filestream(fs, "config.yaml")
+
+        #self.slot_new_task_with(limage=task.limage.copy(), task_config=task.get_task_config())
 
     def slot_delete_task(self):
         self.tab_widget.removeTab(self.tab_widget.currentIndex())

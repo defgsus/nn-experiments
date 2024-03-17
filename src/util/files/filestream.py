@@ -4,7 +4,7 @@ import datetime
 from functools import partial
 from io import TextIOWrapper, BytesIO, StringIO, FileIO
 from pathlib import Path
-from typing import Optional, Union, Callable, List
+from typing import Optional, Union, Callable, List, IO
 
 import yaml
 
@@ -23,22 +23,27 @@ class Filestream:
 
     def __init__(
             self,
-            filename: Union[str, Path],
+            file: Union[str, Path, IO[bytes]],
             mode: str = "r",
     ):
-        self._filename = filename
+        self._file_arg = file
+        self._is_filename = isinstance(self._file_arg, (str, Path))
         self._mode = mode
         self._file: Optional[FileIO] = None
         self._tar: Optional[tarfile.TarFile] = None
 
     def __enter__(self):
-        self._file = open(self._filename, mode=f"{self._mode[0]}b")
+        if self._is_filename:
+            self._file = open(self._file_arg, mode=f"{self._mode[0]}b")
+        else:
+            self._file = self._file_arg
         self._tar = tarfile.open(fileobj=self._file, mode=self._mode)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._tar.close()
-        self._file.close()
+        if self._is_filename:
+            self._file.close()
 
     def open(self, filename: Union[str, Path], mode: str = "rt", encoding: str = "utf8"):
         """
@@ -133,6 +138,8 @@ class Filestream:
         return image
 
     def _write_buffer_callback(self, filename: Union[str, Path], buffer: "_ByteBuffer"):
+        if self._tar is None:
+            raise RuntimeError(f"Write on unopened Filestream {self}")
         size = buffer.tell()
         buffer.seek(0)
 
