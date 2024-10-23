@@ -1,0 +1,92 @@
+$extends: baseline.yml
+# baseline was compression-ratio 24:1
+
+matrix:
+  model:
+    - 4  # good one
+    #- 7
+  lr:
+    #- 9.375e-7  # original
+    - 9.375e-5
+    # - 9.375e-4  # not working
+
+experiment_name: ae/dcae-${matrix_slug}
+
+globals:
+  SHAPE: (3, 32, 32)
+
+learnrate: ${lr}
+
+model: |
+    from omegaconf import OmegaConf
+    from src.models.efficientvit.dc_ae import DCAE, DCAEConfig
+    
+    CFG_STRINGS = [
+        # original 323M
+        (
+            "latent_channels=32 "
+            "encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] "
+            "encoder.width_list=[128,256,512,512,1024,1024] encoder.depth_list=[0,4,8,2,2,2] "
+            "decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] "
+            "decoder.width_list=[128,256,512,512,1024,1024] decoder.depth_list=[0,5,10,2,2,2] "
+            "decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]"
+        ),
+        # small 30M x6
+        (
+            "latent_channels=32 "
+            "encoder.block_type=[ResBlock,ResBlock,EViT_GLU,EViT_GLU] "
+            "encoder.width_list=[64,128,256,512] encoder.depth_list=[0,4,2,2] "
+            "decoder.block_type=[ResBlock,ResBlock,EViT_GLU,EViT_GLU] "
+            "decoder.width_list=[64,128,256,512] decoder.depth_list=[0,5,2,2] "
+            "decoder.norm=[bn2d,bn2d,trms2d,trms2d] decoder.act=[relu,relu,silu,silu]"
+        ),
+        # dcae-03: 81M x96
+        (
+            "latent_channels=32 "
+            "encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] "
+            "encoder.width_list=[64,128,256,256,512,512] encoder.depth_list=[0,4,8,2,2,2] "
+            "decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] "
+            "decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,2,2] "
+            "decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]"
+        ),
+        # dcae-04: 81M x48 lr=9.375e-5 ve=0.0414 
+        (
+            "latent_channels=64 "
+            "encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] "
+            "encoder.width_list=[64,128,256,256,512,512] encoder.depth_list=[0,4,8,2,2,2] "
+            "decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] "
+            "decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,2,2] "
+            "decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]"
+        ),
+        # dcae-05: 110M x48 lr=9.375e-5 ve=0.0406 
+        (
+            "latent_channels=64 "
+            "encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] "
+            "encoder.width_list=[128,256,256,512,512,512] encoder.depth_list=[0,4,8,2,2,2] "
+            "decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] "
+            "decoder.width_list=[128,256,256,512,512,512] decoder.depth_list=[0,5,10,2,2,2] "
+            "decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]"
+        ),
+        # dcae-06: 142M x48 lr=9.375e-5 ve=almost equal 
+        (
+            "latent_channels=64 "
+            "encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] "
+            "encoder.width_list=[64,128,256,256,512,1024] encoder.depth_list=[0,4,8,2,2,2] "
+            "decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] "
+            "decoder.width_list=[64,128,256,256,512,1024] decoder.depth_list=[0,5,10,2,2,2] "
+            "decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]"
+        ),
+        # copy of 04, but changed depth a bit
+        # dcae-07: 106M x48 lr=9.375e-5 ve=almost equal 
+        (
+            "latent_channels=64 "
+            "encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] "
+            "encoder.width_list=[64,128,256,256,512,512] encoder.depth_list=[0,4,8,2,3,4] "
+            "decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] "
+            "decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,3,4] "
+            "decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]"
+        ),
+    ]
+    cfg = OmegaConf.from_dotlist(CFG_STRINGS[${model}-1].split(" "))
+    cfg: DCAEConfig = OmegaConf.to_object(OmegaConf.merge(OmegaConf.structured(DCAEConfig), cfg))
+    DCAE(cfg)

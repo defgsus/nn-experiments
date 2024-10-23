@@ -62,11 +62,13 @@ class IndexRenderer(marko.Renderer):
         title = self.render_children(element)
         slug = self.slugger.slug(title)
         self.slugs.append(slug)
-        return "{indent}- [:arrow_forward:]({link}) {title}".format(
-            indent="  " * element.level,
-            title=title,
-            link=f"{self.file_path}#{slug}"
-        )
+        if element.level < 4:
+            return "{indent}- [:arrow_forward:]({link}) {title}".format(
+                indent="  " * element.level,
+                title=title,
+                link=f"{self.file_path}#{slug}"
+            )
+        return ""
 
 
 class LinkCheckRenderer(marko.HTMLRenderer):

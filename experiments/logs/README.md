@@ -12,9 +12,15 @@ and look at its parameters and results.
 - [autoencoder-experiments.md](autoencoder-experiments.md)
   - [:arrow_forward:](autoencoder-experiments.md#variational-auto-encoder-on-rpg-tile-dataset) variational auto-encoder on RPG Tile dataset
   - [:arrow_forward:](autoencoder-experiments.md#comparing-different-datasets) comparing different datasets
-        - [:arrow_forward:](autoencoder-experiments.md#take-care-of-the-choice-of-interpolation) Take care of the choice of interpolation
+
   - [:arrow_forward:](autoencoder-experiments.md#2023-12-08-autoencoder-with-histogram-loss) 2023-12-08 autoencoder with histogram loss
   - [:arrow_forward:](autoencoder-experiments.md#2024-01-21-stacked-symmetric-one-layer-at-a-time) 2024-01-21 stacked symmetric one-layer-at-a-time
+  - [:arrow_forward:](autoencoder-experiments.md#2024-10-23-deep-compression-auto-encoder) 2024-10-23 Deep-Compression Auto-Encoder
+
+
+
+
+
 
 
 - [lm-gen.md](lm-gen.md)
