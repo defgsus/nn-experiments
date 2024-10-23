@@ -186,6 +186,10 @@ def dump_experiments_results(
             max_loss = max(max_loss, validation_loss)
             min_loss = min(min_loss, validation_loss)
 
+        if snapshot_data.get("extra"):
+            for key, value in snapshot_data["extra"].items():
+                row[key] = value
+
         if snapshot_data.get("trainable_parameters"):
             row["model params"] = "{:,}".format(snapshot_data["trainable_parameters"][0])
 
@@ -324,6 +328,9 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
     # defaults
     kwargs = {
         "num_epochs_between_validations": 1,
+        "extra_description_values": {
+            "extra": {},
+        },
     }
     for key, value in data.items():
         if key in (
@@ -331,11 +338,13 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
                 "train_set",
                 "validation_set",
         ):
-            value = construct_from_code(value)
+            value, extra_values = construct_from_code(value, with_extra_values=True)
+            kwargs["extra_description_values"]["extra"].update(extra_values)
 
         # interpret multiline strings as code
         elif isinstance(value, str) and "\n" in value:
-            value = construct_from_code(value)
+            value, extra_values = construct_from_code(value, with_extra_values=True)
+            kwargs["extra_description_values"]["extra"].update(extra_values)
 
         kwargs[key] = value
 
@@ -372,6 +381,10 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
         kwargs["schedulers"] = [
             construct_scheduler(kwargs["optimizers"][0], scheduler, {**kwargs, "batch_size": batch_size})
         ]
+
+    if not kwargs["extra_description_values"]["extra"]:
+        del kwargs["extra_description_values"]
+
     return trainer_class, kwargs
 
 
@@ -385,7 +398,7 @@ def construct_scheduler(optimizer: torch.optim.Optimizer, parameter: str, kwargs
     return klass(optimizer, kwargs["max_inputs"] // kwargs["batch_size"])
 
 
-def construct_from_code(code: Any):
+def construct_from_code(code: Any, with_extra_values: bool = False):
     """
     https://stackoverflow.com/questions/39379331/python-exec-a-code-block-and-eval-the-last-line/39381428#39381428
     """
@@ -402,11 +415,17 @@ def construct_from_code(code: Any):
         raise AttributeError(f"{e}, in code:\n{code}") from e
 
     try:
-        _locals = {}
+        _locals = {
+            "EXTRA_VALUES": {}
+        }
         _globals = globals().copy()
         exec(compile(block, '<string>', mode='exec'), _globals, _locals)
         _globals.update(_locals)
-        return eval(compile(last, '<string>', mode='eval'), _globals, _locals)
+        result = eval(compile(last, '<string>', mode='eval'), _globals, _locals)
+        if not with_extra_values:
+            return result
+        else:
+            return result, _locals["EXTRA_VALUES"]
 
     except:
         print("\n".join(

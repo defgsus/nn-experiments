@@ -1,0 +1,27 @@
+$extends: baseline.yml
+
+experiment_name: ae/scriptae-02
+
+globals:
+  SHAPE: (1, 32, 32)
+
+model: |
+  from experiments.ae.models.scriptae import ScriptAE
+  
+  ScriptAE(
+      f"""
+      conv({SHAPE[0]},16,3,1,1)
+      ps(2)
+      conv(64,32,3,1,1)
+      bn(32)
+      ps(2)
+      conv(128,64,3,1,1)
+      bn(64)
+      conv(64,32,3,1,1)
+      ps(2)
+      conv(128,64,3,1,1)
+      bn(64)
+      conv(64,32,3,1,1)
+      conv(32,4,3,1,1)
+      """,
+  )

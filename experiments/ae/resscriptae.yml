@@ -1,0 +1,38 @@
+$extends: baseline.yml
+# baseline was compression-ratio 24:1
+
+matrix:
+  ks:
+    - 5
+  act:
+    - "gelu"
+  res:
+    - "map"
+  groups:
+    - 1
+  script:
+    #- "ch=64|down|ch/4|down|ch/4|down|ch/4|ch/2|ch/2|ch/2|ch=3" # 64:1
+    #- "ch=64|down|ch/4|down|ch/4|down|ch/4|ch/4|ch=4" # 48:1
+    #- "ch=96|down|ch/4|down|ch/4|down|ch/4|ch/4|ch=4" # 48:1
+    #- "ch=32|ch*1|ch*1|ch*1|down|ch*1|ch*1|ch*1|down|ch/2|ch/2|ch/2|down|ch/2|ch=4"  # 48:1 ks5 ve0.043 @ 30m
+    #- "ch=32|down|ch*1|down|ch*1|ch/4|down|ch/4|ch=4" # 48:1
+    #- "ch=32|ch*1|ch*1|ch*1|ch*1|down|ch/4|down|ch/4|down|ch=4" # not as good
+    #- "ch=32|ch*1|down|ch*1|down|ch/4|down|ch=4"
+    - "ch=32|ch*1|ch*1|ch*1|ch*1|ch*1|ch*1|down|ch/4|down|ch/4|down|ch=4"
+
+experiment_name: ae/resscriptae-${matrix_slug}
+
+globals:
+  SHAPE: (3, 32, 32)
+
+model: |
+    from experiments.ae.models.resscriptae import ResidualScriptedAE
+    
+    ResidualScriptedAE(
+        channels=SHAPE[0],
+        kernel_size=${ks},
+        activation="${act}",
+        residual="${res}",
+        groups=${groups},
+        script="${script}",
+    )

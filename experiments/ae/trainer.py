@@ -36,6 +36,16 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
         else:
             feature_batch = self.model.encoder(transformed_batch)
 
+        if not self.extra_description_values:
+            self.extra_description_values = {}
+        if not self.extra_description_values.get("extra"):
+            self.extra_description_values["extra"] = {}
+        if self.extra_description_values["extra"].get("compression-ratio") is None:
+            cr = math.prod(transformed_batch.shape) / math.prod(feature_batch.shape)
+            self.extra_description_values["extra"]["compression-ratio"] = cr
+            print("LATENT SHAPE:", feature_batch.shape[1:])
+            print("COMPRESSION RATIO:", cr)
+
         if hasattr(self.model, "decode"):
             output_batch = self.model.decode(feature_batch)
         else:

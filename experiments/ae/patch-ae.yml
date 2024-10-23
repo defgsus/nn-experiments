@@ -1,0 +1,103 @@
+$extends: baseline.yml
+
+matrix:
+  cs: [128]
+  l:
+    - 1
+    - 2
+    - 3
+    - 0
+  ps:
+    #- 4
+    #- 6
+    - 8
+    #- 16
+  ks:
+    - None
+  ch:
+    - None
+    #- 1024
+    #- 2048
+  act:
+    - "gelu"
+  bn:
+    - False
+
+
+experiment_name: ae/patchae_${matrix_slug}
+
+globals:
+  SHAPE: (1, 32, 32)
+
+model: |
+    class PatchAE(nn.Module):
+    
+        def __init__(
+                self,
+                shape: Tuple[int, int, int],
+                patch_size: int,
+                code_size: int,
+                kernel_size: Optional[int] = None,
+                channels: Optional[int] = None,
+                num_residuals: int = 0,
+                batch_norm: bool = False,
+                activation: Union[None, str, Callable] = None,
+        ):
+            super().__init__()
+            if channels is None:
+                channels = shape[0] * patch_size ** 2
+            if kernel_size is None:
+                kernel_size = patch_size
+            padding = int(math.floor(kernel_size / 2))
+    
+            self.encoder = nn.Sequential()
+            self.encoder.append(
+                nn.Conv2d(shape[0], channels, kernel_size, padding=padding, stride=patch_size)
+            )
+    
+            with torch.no_grad():
+                img = torch.zeros(1, *shape)
+                encoded_shape = self.encoder(img).shape[1:]
+    
+            if batch_norm: 
+                self.encoder.append(nn.BatchNorm2d(encoded_shape[0]))
+    
+            if activation is not None:
+                self.encoder.append(activation_to_module(activation))
+    
+            for i in range(num_residuals):
+                self.encoder.append(ResidualAdd(nn.Conv2d(encoded_shape[0], encoded_shape[0], 3, padding=1)))
+                if activation is not None:
+                    self.encoder.append(activation_to_module(activation))        
+    
+            self.encoder.append(nn.Flatten(-3))
+            self.encoder.append(nn.Linear(math.prod(encoded_shape), code_size))
+    
+            self.decoder = nn.Sequential()
+            self.decoder.append(nn.Linear(code_size, math.prod(encoded_shape), code_size))
+            if activation is not None:
+                self.decoder.append(activation_to_module(activation))        
+            self.decoder.append(Reshape(encoded_shape))
+    
+            for i in range(num_residuals):
+                self.decoder.append(ResidualAdd(nn.Conv2d(encoded_shape[0], encoded_shape[0], 3, padding=1)))
+                if activation is not None:
+                    self.decoder.append(activation_to_module(activation))        
+    
+            self.decoder.append(
+                nn.ConvTranspose2d(channels, shape[0], kernel_size, padding=padding, stride=patch_size)
+            )
+            self.decoder.append(nn.Sigmoid())
+    
+        def forward(self, x):
+            return self.decoder(self.encoder(x))
+    
+    PatchAE(
+        shape=SHAPE,
+        patch_size=${ps},
+        code_size=${cs},
+        kernel_size=${ks},
+        channels=${ch},
+        activation="${act}",
+        num_residuals=${l},
+    )

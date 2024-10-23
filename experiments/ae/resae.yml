@@ -1,0 +1,22 @@
+$extends: baseline.yml
+
+matrix:
+  ch: [16]
+  che: [16]
+  l: [4]
+  ks: [5]
+  act: ["gelu"]
+  bn: [True]
+
+experiment_name: ae/resae4_${matrix_slug}
+#max_inputs: 1_000
+
+globals:
+  SHAPE: (1, 32, 32)
+
+model: |
+  from experiments.ae.models.resae2 import ResAE
+  
+  model = ResAE(SHAPE[0], ${ch}, num_encoded_channels=${che}, num_layers=${l}, batch_norm=${bn}, activation="${act}")
+
+  model

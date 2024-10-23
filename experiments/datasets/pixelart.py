@@ -62,11 +62,13 @@ class PixelartDataset(BaseDataset):
     def __init__(
             self,
             shape: Tuple[int, int, int] = (3, 32, 32),
+            with_meta: bool = False,
             with_label: bool = False,
             with_clip_embedding: bool = False,
             normalized_clip_embedding: bool = True,
     ):
         self._out_shape = shape
+        self._with_meta = with_meta
         self._with_label = with_label
         self._with_clip_embedding = with_clip_embedding
         self._normalized_clip_embedding = normalized_clip_embedding
@@ -94,7 +96,8 @@ class PixelartDataset(BaseDataset):
     def __getitem__(self, index: int):
         self._lazy_load()
         item = self._patch_dataset[index]
-        label = self._patch_df.iloc[index]["label"]
+        meta = self._patch_df.iloc[index]
+        label = meta["label"]
 
         if label not in self._label_to_id:
             for base_label in self.LABELS:
@@ -103,6 +106,10 @@ class PixelartDataset(BaseDataset):
                     break
 
         args = [item]
+
+        if self._with_meta:
+            args.append(meta)
+
         if self._with_label:
             label_id = self._label_to_id.get(label, self._fallback_id)
             args.append(label_id)

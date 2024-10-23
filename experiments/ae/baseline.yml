@@ -16,7 +16,7 @@ loss_function: l1
 max_inputs: 1_000_000
 
 globals:
-  SHAPE: (1, 32, 32)
+  SHAPE: (3, 32, 32)
   CODE_SIZE: 128
 
 model: |

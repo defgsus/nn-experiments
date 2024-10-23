@@ -15,6 +15,9 @@ class BaseDataset(Dataset):
         from .limit import OffsetDataset
         return OffsetDataset(self, offset=offset)
 
+    def skip(self, offset: int):
+        return self.offset(offset)
+
     def sample(self, size: int):
         return next(iter(DataLoader(self, batch_size=size)))
 

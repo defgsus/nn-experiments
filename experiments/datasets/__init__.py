@@ -25,5 +25,6 @@ from .rpg import (
 from .pixelart import PixelartDataset
 from .teletext import (
     TeletextIterableDataset,
+    TeletextPixelIterableDataset,
     TeletextMatrixIterableDataset,
 )

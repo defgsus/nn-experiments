@@ -31,4 +31,5 @@ from .normalize import NormalizeMaxIterableDataset
 from .shuffle import ShuffleDataset, IterableShuffle
 from .split import SplitIterableDataset
 from .pixelart import RpgTileIterableDataset
+from .text2pix import TextToPixelIterableDataset
 from .transform import TransformDataset, TransformIterableDataset

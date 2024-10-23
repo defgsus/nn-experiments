@@ -56,6 +56,7 @@ class Trainer:
             device: Union[None, str, torch.DeviceObjType] = None,
             hparams: Optional[dict] = None,
             weight_image_kwargs: Optional[dict] = None,
+            extra_description_values: Optional[dict] = None,
     ):
         self.experiment_name = experiment_name
         self.model = model
@@ -75,6 +76,7 @@ class Trainer:
         self.gradient_clipping = gradient_clipping
         self.hparams = hparams
         self.weight_image_kwargs = weight_image_kwargs
+        self.extra_description_values = extra_description_values
         self.num_inputs_between_validations = num_inputs_between_validations
         self.num_epochs_between_validations = num_epochs_between_validations
         self.num_inputs_between_checkpoints = num_inputs_between_checkpoints
@@ -208,6 +210,7 @@ class Trainer:
             "num_inputs": self.num_input_steps,
             "training_time": time.time() - self._train_start_time,
             "scalars": self._logged_scalars,
+            **(self.extra_description_values or {}),
             **(extra or {}),
         }, indent=2))
 
