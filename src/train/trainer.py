@@ -51,6 +51,7 @@ class Trainer:
             train_input_transforms: Optional[Iterable[Callable]] = None,
             loss_function: Union[str, Callable, torch.nn.Module] = "l1",
             gradient_clipping: Optional[float] = None,
+            gradient_accumulation: int = 1,
             num_train_loss_steps: int = 1000,
             reset: bool = False,
             device: Union[None, str, torch.DeviceObjType] = None,
@@ -74,6 +75,7 @@ class Trainer:
         self.loss_function = get_loss_callable(loss_function)
         self.num_train_loss_steps = num_train_loss_steps
         self.gradient_clipping = gradient_clipping
+        self.gradient_accumulation = gradient_accumulation
         self.hparams = hparams
         self.weight_image_kwargs = weight_image_kwargs
         self.extra_description_values = extra_description_values
@@ -267,6 +269,7 @@ class Trainer:
 
         self.model.train(True)
 
+        _optimizer_step_called = False
         self.running = True
         while self.running:
 
@@ -279,6 +282,7 @@ class Trainer:
             except:
                 pass
 
+            last_optimizer_batch_idx = -1
             with tqdm(
                     total=total,
                     desc=f"epoch #{self.epoch}",
@@ -313,28 +317,23 @@ class Trainer:
 
                     progress.update(input_batch_size)
 
-                    self.model.zero_grad()
+                    #(loss_result["loss"] / self.gradient_accumulation).backward()
                     loss_result["loss"].backward()
 
-                    if self.gradient_clipping is not None:
-                        torch.nn.utils.clip_grad_value_(
-                            self.model.parameters(),
-                            self.gradient_clipping,
-                            #error_if_nonfinite=True,
-                        )
+                    if (batch_idx + 1) % self.gradient_accumulation == 0:
+                        last_optimizer_batch_idx = batch_idx
+                        _optimizer_step_called = True
+                        self._optimizer_step()
 
-                    for i, opt in enumerate(self.optimizers):
-                        if not self._skip_optimizer or not self._skip_optimizer[i]:
-                            opt.step()
+                    if _optimizer_step_called:
+                        for i, sched in enumerate(self.schedulers):
+                            if not self._skip_optimizer or not self._skip_optimizer[i]:
+                                sched.step()
 
-                    for i, sched in enumerate(self.schedulers):
-                        if not self._skip_optimizer or not self._skip_optimizer[i]:
-                            sched.step()
-
-                            lr = sched.get_last_lr()
-                            if isinstance(lr, (list, tuple)):
-                                lr = lr[0]
-                            self._loss_history.append({f"learnrate_{i+1}_{type(sched.optimizer).__name__}": lr})
+                                lr = sched.get_last_lr()
+                                if isinstance(lr, (list, tuple)):
+                                    lr = lr[0]
+                                self._loss_history.append({f"learnrate_{i+1}_{type(sched.optimizer).__name__}": lr})
 
                     self.num_batch_steps += 1
                     self.num_input_steps += input_batch_size
@@ -380,6 +379,9 @@ class Trainer:
                         self.running = False
                         break
 
+            if last_optimizer_batch_idx != batch_idx:
+                self._optimizer_step()
+
             if self.epoch - last_checkpoint_epoch >= self.num_epochs_between_checkpoints:
                 last_checkpoint_epoch = self.epoch
                 # self.save_checkpoint(f"epoch-{epoch:03d}")
@@ -397,6 +399,22 @@ class Trainer:
         self.run_validation()
 
         self.writer.flush()
+
+    def _optimizer_step(self):
+        if self.gradient_clipping is not None:
+            torch.nn.utils.clip_grad_value_(
+                self.model.parameters(),
+                self.gradient_clipping,
+                #error_if_nonfinite=True,
+            )
+
+        for i, opt in enumerate(self.optimizers):
+            if not self._skip_optimizer or not self._skip_optimizer[i]:
+                opt.step()
+
+        for i, opt in enumerate(self.optimizers):
+            if not self._skip_optimizer or not self._skip_optimizer[i]:
+                opt.zero_grad()
 
     def iter_training_batches(self) -> Generator:
         """
@@ -606,6 +624,7 @@ class Trainer:
         )
 
     def _train_step(self, input_batch: Tuple[torch.Tensor, ...]) -> Union[torch.Tensor, dict]:
+        #torch.set_grad_enabled(True)
         self.model.train(True)
 
         if callable(getattr(self.model, "before_train_step", None)):

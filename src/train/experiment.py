@@ -73,6 +73,10 @@ def run_experiment_from_command_args():
         choices=["run", "show", "results"],
     )
     parser.add_argument(
+        "--load", type=str, default=None,
+        help="Load model from another checkpoint"
+    )
+    parser.add_argument(
         "-s", "--skip", type=bool, nargs="?", default=False, const=True,
         help="Skip experiment if checkpoint exists"
     )
@@ -96,6 +100,7 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
     skip_existing = extra_args.pop("skip")
     exclude_columns = extra_args.pop("exclude_column")
     sort_columns = extra_args.pop("sort_column")
+    load_from_checkpoint = extra_args.pop("load", None)
 
     data = _load_yaml(filename)
 
@@ -152,6 +157,21 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
         if not kwargs["reset"]:
             if not trainer.load_checkpoint("best"):
                 trainer.load_checkpoint()
+
+            if load_from_checkpoint is not None:
+                found_it = False
+                for cp_filename in ("best.pt", "snapshot.pt"):
+                    cp_filename = Path("checkpoints") / load_from_checkpoint / cp_filename
+                    if cp_filename.exists():
+                        found_it = True
+                        print(f"loading model checkpoint {cp_filename}")
+                        checkpoint_data = torch.load(cp_filename)
+                        model.load_state_dict(checkpoint_data["state_dict"])
+                        break
+
+                if not found_it:
+                    print(f"Did not find checkpoint in `{load_from_checkpoint}`")
+                    exit(-1)
 
         trainer.save_description()
         trainer.train()
@@ -332,6 +352,7 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
             "extra": {},
         },
     }
+    # add yaml config
     for key, value in data.items():
         if key in (
                 "model",
@@ -369,8 +390,12 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
         num_workers=num_workers,
     )
 
+    validation_batch_size = kwargs.pop("validation_batch_size", None)
     if validation_set is not None:
-        kwargs["validation_loader"] = DataLoader(validation_set, batch_size=batch_size)
+        kwargs["validation_loader"] = DataLoader(
+            validation_set,
+            batch_size=validation_batch_size or batch_size,
+        )
 
     kwargs["optimizers"] = [
         construct_optimizer(kwargs["model"], learnrate, optimizer)

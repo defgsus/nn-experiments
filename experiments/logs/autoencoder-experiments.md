@@ -355,7 +355,7 @@ Sames as dcae-04 but increased depth.
     "decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]"
 
 
-The original model in the repo has ~310M parameters which i could not train on my GPU, 
+The original model in the repo has 323M parameters which i could not train on my GPU, 
 so i lowered the width of the layers to make it fit. Also increased the learning rate from
 originally `9.375e-7` to `9.375e-5`. Batch size was 64.
 

@@ -33,6 +33,11 @@ class BaseDataset(Dataset):
         from .transform import TransformDataset
         return TransformDataset(self, transforms=transforms, dtype=dtype)
 
+    def resize(self, shape: Tuple[int, int], interpolation=VT.InterpolationMode.NEAREST):
+        return self.transform([
+            VT.Resize(shape, interpolation=interpolation)
+        ])
+
 
 class WrapDataset(BaseDataset):
     def __init__(self, wrapped_dataset: Dataset):

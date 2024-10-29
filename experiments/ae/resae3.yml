@@ -1,0 +1,54 @@
+experiment_name: ae/resae3i-${matrix_slug}
+
+matrix:
+  bs: [32]
+  bn: [False]
+  depth: [0]
+  act: ["gelu"]
+  ch: [64]
+  nl: [11]
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  rpg_tile_dataset_3x32x32(SHAPE, validation=False)
+
+validation_set: |
+  rpg_tile_dataset_3x32x32(SHAPE, validation=True)
+
+batch_size: ${bs}
+#validation_batch_size: 8
+#num_inputs_between_validations: 4000
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 3_000_000
+
+globals:
+  SHAPE: (3, 32, 32)
+
+model: |
+    from experiments.ae.models.resae3 import ResConvStack
+  
+    EncoderDecoder(
+        ResConvStack(
+            channels=[SHAPE[0]] + [${ch}] * (${nl}-1) + [3],
+            kernel_size=3, 
+            padding=1, 
+            scale=(1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1),
+            batch_norm=${bn}, 
+            activation=["${act}"] * (${nl}-1) + [None], 
+            depth=${depth},
+        ),
+        ResConvStack(
+            channels=[SHAPE[0]] + [${ch}] * (${nl}-1) + [3],
+            kernel_size=3, 
+            padding=1, 
+            scale=(1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1),
+            transpose=True,
+            batch_norm=${bn}, 
+            activation=["${act}"] * (${nl}-1) + [None], 
+            depth=${depth},
+        ),
+    )

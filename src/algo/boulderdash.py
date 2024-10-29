@@ -18,7 +18,7 @@ class BoulderDash:
         Player = 5
 
     class STATES:
-        Nop = 0
+        Nothing = 0
         Falling = 1
 
     class ACTIONS:
@@ -131,6 +131,9 @@ class BoulderDash:
                     obj = "."
                 if ansi_colors:
                     color = COLORS.get(obj, CC.LIGHT_GRAY)
+                    obj = f"{obj}{state}"
+                    if state == self.STATES.Falling:
+                        obj = f"{CC.UNDERLINE}{obj}"
                     obj = f"{color}{obj}{CC.Off}"
                 print(obj, end="", file=file)
             print(file=file)
@@ -166,8 +169,8 @@ class BoulderDash:
             obj = self.map[pos[0] + ofs, pos[1], 0]
             if obj in (self.OBJECTS.Empty, self.OBJECTS.Sand, self.OBJECTS.Diamond):
                 is_diamond = obj == self.OBJECTS.Diamond
-                self.map[pos[0] + ofs, pos[1]] = [self.OBJECTS.Player, self.STATES.Nop]
-                self.map[pos[0], pos[1]] = [self.OBJECTS.Empty, self.STATES.Nop]
+                self.map[pos[0] + ofs, pos[1]] = [self.OBJECTS.Player, self.STATES.Nothing]
+                self.map[pos[0], pos[1]] = [self.OBJECTS.Empty, self.STATES.Nothing]
                 if is_diamond:
                     if self.num_diamonds() == 0:
                         return self.RESULTS.CollectedAllDiamonds
@@ -185,8 +188,8 @@ class BoulderDash:
             obj = self.map[pos[0], pos[1] + ofs, 0]
             if obj in (self.OBJECTS.Empty, self.OBJECTS.Sand, self.OBJECTS.Diamond):
                 is_diamond = obj == self.OBJECTS.Diamond
-                self.map[pos[0], pos[1] + ofs] = [self.OBJECTS.Player, self.STATES.Nop]
-                self.map[pos[0], pos[1]] = [self.OBJECTS.Empty, self.STATES.Nop]
+                self.map[pos[0], pos[1] + ofs] = [self.OBJECTS.Player, self.STATES.Nothing]
+                self.map[pos[0], pos[1]] = [self.OBJECTS.Empty, self.STATES.Nothing]
                 if is_diamond:
                     if self.num_diamonds() == 0:
                         return self.RESULTS.CollectedAllDiamonds
@@ -209,9 +212,9 @@ class BoulderDash:
                 if not moveable:
                     return self.RESULTS.Blocked
 
-                self.map[pos[0], x] = [self.OBJECTS.Rock, self.STATES.Nop]
-                self.map[pos[0], pos[1] + ofs] = [self.OBJECTS.Player, self.STATES.Nop]
-                self.map[pos[0], pos[1]] = [self.OBJECTS.Empty, self.STATES.Nop]
+                self.map[pos[0], x] = [self.OBJECTS.Rock, self.STATES.Nothing]
+                self.map[pos[0], pos[1] + ofs] = [self.OBJECTS.Player, self.STATES.Nothing]
+                self.map[pos[0], pos[1]] = [self.OBJECTS.Empty, self.STATES.Nothing]
                 return self.RESULTS.PushedRock
 
     def step(self) -> int:
@@ -225,6 +228,8 @@ class BoulderDash:
         )
         next_map[do_copy, 0] = self.map[do_copy, 0]
 
+        ret_result = self.RESULTS.Nothing
+
         for y in range(self.map.shape[0]):
             for x in range(self.map.shape[1]):
                 obj = self.map[y, x, 0]
@@ -237,21 +242,22 @@ class BoulderDash:
                         if 0 <= next_y < self.shape[0] and 0 <= next_x < self.shape[1]:
                             if self.map[next_y, next_x, 0] == self.OBJECTS.Empty and next_map[next_y, next_x, 0] == self.OBJECTS.Empty:
                                 if next_x == x or (self.map[y, next_x, 0] == self.OBJECTS.Empty and next_map[y, next_x, 0] == self.OBJECTS.Empty):
-                                    # print(f"FALL obj{obj} {x},{y} -> {next_x},{next_y}")
-                                    next_map[next_y, next_x, 0] = obj
-                                    next_map[next_y, next_x, 1] = self.STATES.Falling
+                                    next_map[next_y, next_x] = [obj, self.STATES.Falling]
                                     has_moved = True
                                     break
 
                             # rock lands directly on top of player
                             elif next_map[next_y, next_x, 0] == self.OBJECTS.Player and next_x == x and is_falling:
-                                return self.RESULTS.PlayerDied
+                                ret_result = self.RESULTS.PlayerDied
+                                next_map[next_y, next_x] = [obj, self.STATES.Falling]
+                                has_moved = True
+                                break
 
                     if not has_moved:
-                        next_map[y, x] = obj
+                        next_map[y, x, 0] = obj
 
         self.map = next_map
-        return self.RESULTS.Nothing
+        return ret_result
 
 
 if __name__ == "__main__":

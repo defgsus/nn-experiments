@@ -90,7 +90,7 @@ class Conv2dBlock(nn.Module):
                     transpose=transpose,
                 )
             )
-            if batch_norm:
+            if batch_norm and not is_last_layer:
                 self.layers.append(
                     nn.BatchNorm2d(out_channels * out_channel_mult)
                 )

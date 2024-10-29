@@ -60,3 +60,8 @@ class BaseIterableDataset(IterableDataset):
     ):
         from .transform import TransformIterableDataset
         return TransformIterableDataset(self, transforms=transforms, dtype=dtype)
+
+    def resize(self, shape: Tuple[int, int], interpolation=VT.InterpolationMode.NEAREST):
+        return self.transform([
+            VT.Resize(shape, interpolation=interpolation)
+        ])
