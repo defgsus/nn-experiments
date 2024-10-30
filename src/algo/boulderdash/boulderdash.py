@@ -1,15 +1,47 @@
 import io
 import random
-from typing import Tuple
+from typing import Tuple, Generator, Union, Optional
 
+import torch
 import numpy as np
 
 from src.console import CC
 
 
+class Enum:
+    def __init_subclass__(cls, **kwargs):
+        _key_to_value = {}
+        _value_to_key = {}
+        for key, value in cls.__dict__.items():
+            if isinstance(value, int) and key[0].isupper():
+                _key_to_value[key] = value
+                if value in _value_to_key:
+                    raise ValueError(f"Multiple value {value} in {cls}")
+                _value_to_key[value] = key
+        cls._key_to_value = _key_to_value
+        cls._value_to_key = _value_to_key
+
+    @classmethod
+    def items(cls) -> Generator[Tuple[str, int], None, None]:
+        yield from cls._key_to_value.items()
+
+    @classmethod
+    def count(cls) -> int:
+        return len(cls._key_to_value)
+
+    @classmethod
+    def get(cls, key_or_value: Union[str, int]) -> Union[int, str]:
+        if isinstance(key_or_value, str):
+            return cls._key_to_value[key_or_value]
+        elif isinstance(key_or_value, (int, np.int8)):
+            return cls._value_to_key[key_or_value]
+        else:
+            raise TypeError(f"Expected str or int, got {type(key_or_value).__name__}")
+
+
 class BoulderDash:
 
-    class OBJECTS:
+    class OBJECTS(Enum):
         Empty = 0
         Wall = 1
         Rock = 2
@@ -17,18 +49,18 @@ class BoulderDash:
         Diamond = 4
         Player = 5
 
-    class STATES:
+    class STATES(Enum):
         Nothing = 0
         Falling = 1
 
-    class ACTIONS:
+    class ACTIONS(Enum):
         Nop = 0
         Left = 1
         Up = 2
         Right = 3
         Down = 4
 
-    class RESULTS:
+    class RESULTS(Enum):
         Nothing = 0
         Blocked = 1
         Moved = 2
@@ -38,18 +70,12 @@ class BoulderDash:
         CollectedDiamond = 6
         CollectedAllDiamonds = 7
 
-    NUMBER_TO_OBJECT = {
-        value: key
-        for key, value in OBJECTS.__dict__.items()
-        if isinstance(value, int)
-    }
-
     def __init__(
             self,
             shape: Tuple[int, int],
     ):
         self.shape = shape
-        self.map = np.zeros((*self.shape, 2), dtype=np.dtype)
+        self.map = np.zeros((*self.shape, 2), dtype=np.int8)
 
     @classmethod
     def from_string_map(cls, string: str) -> "BoulderDash":
@@ -81,9 +107,15 @@ class BoulderDash:
             ratio_diamond: float = .01,
             ratio_sand: float = 0.2,
             with_border: bool = False,
+            rng: Union[None, int, random.Random] = None
     ) -> "BoulderDash":
+        if rng is None:
+            rng = random
+        elif isinstance(rng, int):
+            rng = random.Random(rng)
+
         bd = cls(shape=shape)
-        rng = random.Random()
+
         area = bd.shape[0] * bd.shape[1]
         if with_border:
             assert bd.shape[0] > 2 and bd.shape[1] > 2, f"Got: {bd.shape}"
@@ -95,12 +127,13 @@ class BoulderDash:
                 bd.map[0, x, 0] = bd.OBJECTS.Wall
                 bd.map[bd.shape[0] - 1, x, 0] = bd.OBJECTS.Wall
 
+        coordinates = np.argwhere(bd.map[:, :, 0] == bd.OBJECTS.Empty).tolist()
+
         def _place_random(obj: int):
-            for i in range(area * 100):
-                y, x = rng.randint(0, bd.shape[0] - 1), rng.randint(0, bd.shape[1] - 1)
-                if bd.map[y, x, 0] == bd.OBJECTS.Empty:
-                    bd.map[y, x, 0] = obj
-                    break
+            if coordinates:
+                idx = rng.randrange(len(coordinates))
+                y, x = coordinates.pop(idx)
+                bd.map[y, x, 0] = obj
 
         _place_random(bd.OBJECTS.Player)
 
@@ -111,8 +144,12 @@ class BoulderDash:
                 (ratio_sand, bd.OBJECTS.Sand),
         ):
             if ratio > 0:
-                for i in range(max(1, int(ratio * bd.shape[0] * bd.shape[1]))):
+                for i in range(max(1, int(ratio * area))):
+                    if not coordinates:
+                        break
                     _place_random(obj)
+            if not coordinates:
+                break
 
         return bd
 
@@ -126,7 +163,7 @@ class BoulderDash:
         }
         for row in self.map:
             for obj, state in row:
-                obj = self.NUMBER_TO_OBJECT[obj][:1]
+                obj = self.OBJECTS.get(obj)[:1]
                 if obj == "E":
                     obj = "."
                 if ansi_colors:
@@ -137,11 +174,31 @@ class BoulderDash:
                 print(obj, end="", file=file)
             print(file=file)
 
-    def to_string(self, ansi_colors: bool = False) -> str:
+    def to_string_map(self, ansi_colors: bool = False) -> str:
         file = io.StringIO()
         self.dump(ansi_colors=ansi_colors, file=file)
         file.seek(0)
         return file.read()
+
+    def to_tensor(self, dtype: Optional[torch.dtype] = None, zero: float = 0.) -> torch.Tensor:
+        """
+        Returns a tensor of shape [C, H, W] where HxW is the map size
+        and C is channel planes `OBJECTS.count() + STATES.count()`.
+        Each object and each state are encoded as class digits
+        """
+        num_objects = self.OBJECTS.count()
+        num_states = self.STATES.count()
+
+        shape = (*self.shape, num_objects + num_states)
+        if zero:
+            tensor = torch.ones(shape, dtype=dtype) * zero
+        else:
+            tensor = torch.zeros(shape, dtype=dtype)
+
+        map = torch.from_numpy(self.map.astype(np.int_))
+        tensor.scatter_(-1, map[:, :, :1], 1)
+        tensor.scatter_(-1, map[:, :, 1:2] + num_objects, 1)
+        return tensor.permute(2, 0, 1)
 
     def player_position(self) -> Tuple[int, int]:
         for y in range(self.map.shape[0]):
@@ -158,7 +215,7 @@ class BoulderDash:
 
         pos = self.player_position()
         if pos is None:
-            raise AssertionError(f"No player on map:\n{self.to_string()}")
+            raise AssertionError(f"No player on map:\n{self.to_string_map()}")
 
         if action in (self.ACTIONS.Up, self.ACTIONS.Down):
             ofs = -1 if action == self.ACTIONS.Up else 1
@@ -250,40 +307,3 @@ class BoulderDash:
                         self.map[y, x, 1] = self.STATES.Nothing
 
         return ret_result
-
-
-if __name__ == "__main__":
-    def run_cli():
-        bd = BoulderDash.from_random((16, 16))
-        while True:
-            print()
-            bd.dump(ansi_colors=True)
-            cmd = input("\nw/a/s/d> ").lower()
-            action = bd.ACTIONS.Nop
-            if cmd == "q":
-                break
-            elif cmd == "r":
-                bd = bd.from_random(bd.shape)
-                continue
-            elif cmd == "w":
-                action = bd.ACTIONS.Up
-            elif cmd == "a":
-                action = bd.ACTIONS.Left
-            elif cmd == "s":
-                action = bd.ACTIONS.Down
-            elif cmd == "d":
-                action = bd.ACTIONS.Right
-
-            result1 = bd.apply_action(action)
-            result2 = bd.step()
-
-            for key, value in bd.RESULTS.__dict__.items():
-                if value == result1:
-                    r1 = key
-                if value == result2:
-                    r2 = key
-            print(f"result: {r1}, {r2}")
-            if result2 == bd.RESULTS.PlayerDied:
-                print("HIT AND DIED!!")
-
-    run_cli()

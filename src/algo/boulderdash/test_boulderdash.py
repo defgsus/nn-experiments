@@ -1,15 +1,17 @@
+import time
 import unittest
 
 from src.algo.boulderdash import BoulderDash
+from src.tests.base import TestBase
 
 
-class TestBoulderDash(unittest.TestCase):
+class TestBoulderDash(TestBase):
 
     def assert_map(self, bd: BoulderDash, map: str):
         self.assertEqual(
-            BoulderDash.from_string_map(map).to_string(),
-            bd.to_string(),
-            f"\nExpected:\n{BoulderDash.from_string_map(map).to_string()}\nGot:\n{bd.to_string()}"
+            BoulderDash.from_string_map(map).to_string_map(),
+            bd.to_string_map(),
+            f"\nExpected:\n{BoulderDash.from_string_map(map).to_string_map()}\nGot:\n{bd.to_string_map()}"
         )
 
     def assert_step_sequence(self, bd: BoulderDash, *maps: str):
@@ -27,7 +29,7 @@ class TestBoulderDash(unittest.TestCase):
         """)
         self.assertEqual(
             "WWWWWWWWWW\nWDS...R..W\nWW....WWWW\nW..P.....W\nWWWWWWWWWW\n",
-            bd.to_string()
+            bd.to_string_map()
         )
 
     def test_200_actions(self):
@@ -266,3 +268,58 @@ class TestBoulderDash(unittest.TestCase):
         W RP      W
         WWWWWWWWWWW
         """)
+
+    def test_400_to_tensor(self):
+        bd = BoulderDash.from_string_map("""
+        .WRSDP
+        ......
+        """)
+        bd.step()
+        self.assert_map(bd, """
+        .W.S.P
+        ..R.D.
+        """)
+        self.assertTensorEqual(
+            [
+                [[1, 0, 1, 0, 1, 0], [1, 1, 0, 1, 0, 1]],  # empty
+                [[0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]],  # wall
+                [[0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0]],  # rock
+                [[0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 0]],  # sand
+                [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0]],  # diamond
+                [[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 0]],  # player
+                [[1, 1, 1, 1, 1, 1], [1, 1, 0, 1, 0, 1]],  # state: nothing
+                [[0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 1, 0]],  # state: falling
+            ],
+            bd.to_tensor()
+        )
+        self.assertTensorEqual(
+            [
+                [[ 1, -1,  1, -1,  1, -1], [ 1,  1, -1,  1, -1,  1]],  # empty
+                [[-1,  1, -1, -1, -1, -1], [-1, -1, -1, -1, -1, -1]],  # wall
+                [[-1, -1, -1, -1, -1, -1], [-1, -1,  1, -1, -1, -1]],  # rock
+                [[-1, -1, -1,  1, -1, -1], [-1, -1, -1, -1, -1, -1]],  # sand
+                [[-1, -1, -1, -1, -1, -1], [-1, -1, -1, -1,  1, -1]],  # diamond
+                [[-1, -1, -1, -1, -1,  1], [-1, -1, -1, -1, -1, -1]],  # player
+                [[ 1,  1,  1,  1,  1,  1], [ 1,  1, -1,  1, -1,  1]],  # state: nothing
+                [[-1, -1, -1, -1, -1, -1], [-1, -1,  1, -1,  1, -1]],  # state: falling
+            ],
+            bd.to_tensor(zero=-1)
+        )
+
+    def test_450_to_tensor_performance(self):
+        print()
+        for size in (32, 64, 128, 256):
+            bd = BoulderDash.from_random((size, size), rng=42, ratio_diamond=.9)
+            bd.step()  # add some state
+
+            count = 1000
+            start_time = time.time()
+            for i in range(count):
+                bd.to_tensor()
+            seconds = time.time() - start_time
+
+            print(
+                f"BoulderDash(shape={repr(bd.shape):10}).to_tensor()"
+                f" performance: {count/seconds:9.2f}/s"
+                f" {int(count*size*size/seconds):12,} cells/s"
+            )
