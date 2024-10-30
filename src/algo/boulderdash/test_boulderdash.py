@@ -1,6 +1,8 @@
 import time
 import unittest
 
+import numpy as np
+
 from src.algo.boulderdash import BoulderDash, BoulderDashGenerator
 from src.tests.base import TestBase
 
@@ -16,7 +18,7 @@ class TestBoulderDash(TestBase):
 
     def assert_step_sequence(self, bd: BoulderDash, *maps: str):
         for map in maps:
-            bd.step()
+            bd.apply_physics()
             self.assert_map(bd, map)
 
     def test_100_construct(self):
@@ -152,7 +154,7 @@ class TestBoulderDash(TestBase):
         ..
         """)
         for i in range(2):
-            bd.step()
+            bd.apply_physics()
             self.assert_map(bd, """
             ..
             RR
@@ -215,7 +217,7 @@ class TestBoulderDash(TestBase):
         WWWWWWWWWWW
         """)
         self.assertEqual(bd.RESULTS.RemovedSand, bd.apply_action(bd.ACTIONS.Right))
-        self.assertEqual(bd.step(), bd.RESULTS.Nothing)
+        self.assertEqual(bd.apply_physics(), bd.RESULTS.Nothing)
         self.assert_map(bd, """
         WWWWWWWWWWW
         WD        W
@@ -224,7 +226,7 @@ class TestBoulderDash(TestBase):
         WWWWWWWWWWW
         """)
         self.assertEqual(bd.RESULTS.Blocked, bd.apply_action(bd.ACTIONS.Up))
-        self.assertEqual(bd.step(), bd.RESULTS.Nothing)
+        self.assertEqual(bd.apply_physics(), bd.RESULTS.Nothing)
         self.assert_map(bd, """
         WWWWWWWWWWW
         WD        W
@@ -233,7 +235,7 @@ class TestBoulderDash(TestBase):
         WWWWWWWWWWW
         """)
         self.assertEqual(bd.RESULTS.RemovedSand, bd.apply_action(bd.ACTIONS.Right))
-        self.assertEqual(bd.step(), bd.RESULTS.Nothing)
+        self.assertEqual(bd.apply_physics(), bd.RESULTS.Nothing)
         self.assert_map(bd, """
         WWWWWWWWWWW
         W         W
@@ -242,7 +244,7 @@ class TestBoulderDash(TestBase):
         WWWWWWWWWWW
         """)
         self.assertEqual(bd.RESULTS.Moved, bd.apply_action(bd.ACTIONS.Right))
-        self.assertEqual(bd.step(), bd.RESULTS.Nothing)
+        self.assertEqual(bd.apply_physics(), bd.RESULTS.Nothing)
         self.assert_map(bd, """
         WWWWWWWWWWW
         W         W
@@ -251,7 +253,7 @@ class TestBoulderDash(TestBase):
         WWWWWWWWWWW
         """)
         self.assertEqual(bd.RESULTS.Nothing, bd.apply_action(bd.ACTIONS.Nop))
-        self.assertEqual(bd.step(), bd.RESULTS.Nothing)
+        self.assertEqual(bd.apply_physics(), bd.RESULTS.Nothing)
         self.assert_map(bd, """
         WWWWWWWWWWW
         W         W
@@ -260,7 +262,7 @@ class TestBoulderDash(TestBase):
         WWWWWWWWWWW
         """)
         self.assertEqual(bd.RESULTS.CollectedAllDiamonds, bd.apply_action(bd.ACTIONS.Left))
-        self.assertEqual(bd.step(), bd.RESULTS.Nothing)
+        self.assertEqual(bd.apply_physics(), bd.RESULTS.Nothing)
         self.assert_map(bd, """
         WWWWWWWWWWW
         W         W
@@ -274,7 +276,7 @@ class TestBoulderDash(TestBase):
         .WRSDP
         ......
         """)
-        bd.step()
+        bd.apply_physics()
         self.assert_map(bd, """
         .W.S.P
         ..R.D.
@@ -305,12 +307,21 @@ class TestBoulderDash(TestBase):
             ],
             bd.to_tensor(one=2, zero=-1)
         )
+        bd2 = BoulderDash.from_tensor(bd.to_tensor())
+        self.assert_map(bd2, """
+        .W.S.P
+        ..R.D.
+        """)
+        # compare state
+        self.assertTrue(
+            np.all(bd.map == bd2.map)
+        )
 
     def test_450_to_tensor_performance(self):
         print()
         for size in (32, 64, 128, 256):
             bd = BoulderDashGenerator(42).create_random((size, size), ratio_diamond=.3)
-            bd.step()  # add some state
+            bd.apply_physics()  # add some state
 
             count = 1000
             start_time = time.time()

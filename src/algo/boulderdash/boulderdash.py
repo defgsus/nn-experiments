@@ -125,6 +125,16 @@ class BoulderDash:
         file.seek(0)
         return file.read()
 
+    def to_image(self, tile_size: int = 8) -> np.ndarray:
+        from .graphics import BoulderDashGraphics
+
+        image = np.ndarray((3, tile_size * self.shape[0], tile_size * self.shape[1]))
+        for y in range(self.shape[0]):
+            for x in range(self.shape[1]):
+                image[:, y * tile_size: (y + 1) * tile_size, x * tile_size: (x + 1) * tile_size] \
+                    = BoulderDashGraphics.graphic(int(self.map[y, x, 0]), size=tile_size)
+        return image
+
     def to_tensor(
             self,
             one: float = 1.,
@@ -150,6 +160,17 @@ class BoulderDash:
         tensor.scatter_(-1, map[:, :, :1], one)
         tensor.scatter_(-1, map[:, :, 1:2] + num_objects, one)
         return tensor.permute(2, 0, 1)
+
+    @classmethod
+    def from_tensor(cls, tensor: torch.Tensor) -> "BoulderDash":
+        map = tensor.permute(1, 2, 0)
+        bd = BoulderDash(shape=tensor.shape[-2:])
+        num_obj = bd.OBJECTS.count()
+        bd_map = torch.empty(bd.map.shape, dtype=torch.int8)
+        bd_map[:, :, 0] = map[:, :, :num_obj].argmax(dim=2)
+        bd_map[:, :, 1] = map[:, :, num_obj:].argmax(dim=2)
+        bd.map = bd_map.numpy()
+        return bd
 
     def player_position(self) -> Tuple[int, int]:
         for y in range(self.map.shape[0]):
@@ -224,7 +245,7 @@ class BoulderDash:
                 self.map[pos[0], pos[1]] = [self.OBJECTS.Empty, self.STATES.Nothing]
                 return self.RESULTS.PushedRock
 
-    def step(self) -> int:
+    def apply_physics(self) -> int:
 
         ret_result = self.RESULTS.Nothing
 

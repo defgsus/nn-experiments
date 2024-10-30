@@ -34,7 +34,7 @@ def run_boulderdash_console():
             action = bd.ACTIONS.Right
 
         result1 = bd.apply_action(action)
-        result2 = bd.step()
+        result2 = bd.apply_physics()
 
         for key, value in bd.RESULTS.__dict__.items():
             if value == result1:
