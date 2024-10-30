@@ -1,8 +1,19 @@
-from src.algo.boulderdash.boulderdash import BoulderDash
+from src.algo.boulderdash import BoulderDash, BoulderDashGenerator
 
 
 def run_boulderdash_console():
-    bd = BoulderDash.from_random((16, 16))
+    generator_kwargs = dict(
+        shape=(16, 16),
+        ratio_wall=.05,
+        ratio_wall_horizontal=0.2,
+        ratio_wall_horizontal_gap=0.3,
+        ratio_rock=0.05,
+        ratio_diamond=.01,
+        ratio_sand=0.2,
+        with_border=False,
+    )
+    generator = BoulderDashGenerator()
+    bd = generator.create_random(**generator_kwargs)
     while True:
         print()
         bd.dump(ansi_colors=True)
@@ -11,7 +22,7 @@ def run_boulderdash_console():
         if cmd == "q":
             break
         elif cmd == "r":
-            bd = bd.from_random(bd.shape)
+            bd = generator.create_random(**generator_kwargs)
             continue
         elif cmd == "w":
             action = bd.ACTIONS.Up

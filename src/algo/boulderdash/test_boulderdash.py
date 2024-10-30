@@ -1,7 +1,7 @@
 import time
 import unittest
 
-from src.algo.boulderdash import BoulderDash
+from src.algo.boulderdash import BoulderDash, BoulderDashGenerator
 from src.tests.base import TestBase
 
 
@@ -294,22 +294,22 @@ class TestBoulderDash(TestBase):
         )
         self.assertTensorEqual(
             [
-                [[ 1, -1,  1, -1,  1, -1], [ 1,  1, -1,  1, -1,  1]],  # empty
-                [[-1,  1, -1, -1, -1, -1], [-1, -1, -1, -1, -1, -1]],  # wall
-                [[-1, -1, -1, -1, -1, -1], [-1, -1,  1, -1, -1, -1]],  # rock
-                [[-1, -1, -1,  1, -1, -1], [-1, -1, -1, -1, -1, -1]],  # sand
-                [[-1, -1, -1, -1, -1, -1], [-1, -1, -1, -1,  1, -1]],  # diamond
-                [[-1, -1, -1, -1, -1,  1], [-1, -1, -1, -1, -1, -1]],  # player
-                [[ 1,  1,  1,  1,  1,  1], [ 1,  1, -1,  1, -1,  1]],  # state: nothing
-                [[-1, -1, -1, -1, -1, -1], [-1, -1,  1, -1,  1, -1]],  # state: falling
+                [[ 2, -1,  2, -1,  2, -1], [ 2,  2, -1,  2, -1,  2]],  # empty
+                [[-1,  2, -1, -1, -1, -1], [-1, -1, -1, -1, -1, -1]],  # wall
+                [[-1, -1, -1, -1, -1, -1], [-1, -1,  2, -1, -1, -1]],  # rock
+                [[-1, -1, -1,  2, -1, -1], [-1, -1, -1, -1, -1, -1]],  # sand
+                [[-1, -1, -1, -1, -1, -1], [-1, -1, -1, -1,  2, -1]],  # diamond
+                [[-1, -1, -1, -1, -1,  2], [-1, -1, -1, -1, -1, -1]],  # player
+                [[ 2,  2,  2,  2,  2,  2], [ 2,  2, -1,  2, -1,  2]],  # state: nothing
+                [[-1, -1, -1, -1, -1, -1], [-1, -1,  2, -1,  2, -1]],  # state: falling
             ],
-            bd.to_tensor(zero=-1)
+            bd.to_tensor(one=2, zero=-1)
         )
 
     def test_450_to_tensor_performance(self):
         print()
         for size in (32, 64, 128, 256):
-            bd = BoulderDash.from_random((size, size), rng=42, ratio_diamond=.9)
+            bd = BoulderDashGenerator(42).create_random((size, size), ratio_diamond=.3)
             bd.step()  # add some state
 
             count = 1000

@@ -98,61 +98,6 @@ class BoulderDash:
 
         return bd
 
-    @classmethod
-    def from_random(
-            cls,
-            shape: Tuple[int, int],
-            ratio_wall: float = .15,
-            ratio_rock: float = 0.05,
-            ratio_diamond: float = .01,
-            ratio_sand: float = 0.2,
-            with_border: bool = False,
-            rng: Union[None, int, random.Random] = None
-    ) -> "BoulderDash":
-        if rng is None:
-            rng = random
-        elif isinstance(rng, int):
-            rng = random.Random(rng)
-
-        bd = cls(shape=shape)
-
-        area = bd.shape[0] * bd.shape[1]
-        if with_border:
-            assert bd.shape[0] > 2 and bd.shape[1] > 2, f"Got: {bd.shape}"
-            area = (bd.shape[0] - 2) * (bd.shape[1] - 2)
-            for y in range(bd.shape[0]):
-                bd.map[y, 0, 0] = bd.OBJECTS.Wall
-                bd.map[y, bd.shape[1] - 1, 0] = bd.OBJECTS.Wall
-            for x in range(bd.shape[1]):
-                bd.map[0, x, 0] = bd.OBJECTS.Wall
-                bd.map[bd.shape[0] - 1, x, 0] = bd.OBJECTS.Wall
-
-        coordinates = np.argwhere(bd.map[:, :, 0] == bd.OBJECTS.Empty).tolist()
-
-        def _place_random(obj: int):
-            if coordinates:
-                idx = rng.randrange(len(coordinates))
-                y, x = coordinates.pop(idx)
-                bd.map[y, x, 0] = obj
-
-        _place_random(bd.OBJECTS.Player)
-
-        for ratio, obj in (
-                (ratio_wall, bd.OBJECTS.Wall),
-                (ratio_rock, bd.OBJECTS.Rock),
-                (ratio_diamond, bd.OBJECTS.Diamond),
-                (ratio_sand, bd.OBJECTS.Sand),
-        ):
-            if ratio > 0:
-                for i in range(max(1, int(ratio * area))):
-                    if not coordinates:
-                        break
-                    _place_random(obj)
-            if not coordinates:
-                break
-
-        return bd
-
     def dump(self, file=None, ansi_colors: bool = False):
         COLORS = {
             "W": CC.LIGHT_GRAY,
@@ -180,7 +125,12 @@ class BoulderDash:
         file.seek(0)
         return file.read()
 
-    def to_tensor(self, dtype: Optional[torch.dtype] = None, zero: float = 0.) -> torch.Tensor:
+    def to_tensor(
+            self,
+            one: float = 1.,
+            zero: float = 0.,
+            dtype: Optional[torch.dtype] = None,
+    ) -> torch.Tensor:
         """
         Returns a tensor of shape [C, H, W] where HxW is the map size
         and C is channel planes `OBJECTS.count() + STATES.count()`.
@@ -191,13 +141,14 @@ class BoulderDash:
 
         shape = (*self.shape, num_objects + num_states)
         if zero:
-            tensor = torch.ones(shape, dtype=dtype) * zero
+            tensor = torch.empty(shape, dtype=dtype)
+            torch.fill_(tensor, zero)
         else:
             tensor = torch.zeros(shape, dtype=dtype)
 
         map = torch.from_numpy(self.map.astype(np.int_))
-        tensor.scatter_(-1, map[:, :, :1], 1)
-        tensor.scatter_(-1, map[:, :, 1:2] + num_objects, 1)
+        tensor.scatter_(-1, map[:, :, :1], one)
+        tensor.scatter_(-1, map[:, :, 1:2] + num_objects, one)
         return tensor.permute(2, 0, 1)
 
     def player_position(self) -> Tuple[int, int]:
