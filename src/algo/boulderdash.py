@@ -131,9 +131,8 @@ class BoulderDash:
                     obj = "."
                 if ansi_colors:
                     color = COLORS.get(obj, CC.LIGHT_GRAY)
-                    obj = f"{obj}{state}"
                     if state == self.STATES.Falling:
-                        obj = f"{CC.UNDERLINE}{obj}"
+                        obj = f"{CC.BLINK}{obj}"
                     obj = f"{color}{obj}{CC.Off}"
                 print(obj, end="", file=file)
             print(file=file)
@@ -219,18 +218,10 @@ class BoulderDash:
 
     def step(self) -> int:
 
-        # copy wall, sand & player already to next map
-        next_map = np.zeros_like(self.map)
-        do_copy = (
-            (self.map[:, :, 0] == self.OBJECTS.Wall)
-            | (self.map[:, :, 0] == self.OBJECTS.Sand)
-            | (self.map[:, :, 0] == self.OBJECTS.Player)
-        )
-        next_map[do_copy, 0] = self.map[do_copy, 0]
-
         ret_result = self.RESULTS.Nothing
 
         for y in range(self.map.shape[0]):
+            y = self.map.shape[0] - y - 1
             for x in range(self.map.shape[1]):
                 obj = self.map[y, x, 0]
                 is_falling = self.map[y, x, 1] == self.STATES.Falling
@@ -240,23 +231,24 @@ class BoulderDash:
                     has_moved = False
                     for next_y, next_x in ((y + 1, x), (y + 1, x - 1), (y + 1, x + 1)):
                         if 0 <= next_y < self.shape[0] and 0 <= next_x < self.shape[1]:
-                            if self.map[next_y, next_x, 0] == self.OBJECTS.Empty and next_map[next_y, next_x, 0] == self.OBJECTS.Empty:
-                                if next_x == x or (self.map[y, next_x, 0] == self.OBJECTS.Empty and next_map[y, next_x, 0] == self.OBJECTS.Empty):
-                                    next_map[next_y, next_x] = [obj, self.STATES.Falling]
+                            if self.map[next_y, next_x, 0] == self.OBJECTS.Empty:
+                                if next_x == x or self.map[y, next_x, 0] == self.OBJECTS.Empty:
+                                    self.map[next_y, next_x] = [obj, self.STATES.Falling]
                                     has_moved = True
                                     break
 
                             # rock lands directly on top of player
-                            elif next_map[next_y, next_x, 0] == self.OBJECTS.Player and next_x == x and is_falling:
+                            elif self.map[next_y, next_x, 0] == self.OBJECTS.Player and next_x == x and is_falling:
                                 ret_result = self.RESULTS.PlayerDied
-                                next_map[next_y, next_x] = [obj, self.STATES.Falling]
+                                self.map[next_y, next_x] = [obj, self.STATES.Falling]
                                 has_moved = True
                                 break
 
-                    if not has_moved:
-                        next_map[y, x, 0] = obj
+                    if has_moved:
+                        self.map[y, x] = [self.OBJECTS.Empty, self.STATES.Nothing]
+                    else:
+                        self.map[y, x, 1] = self.STATES.Nothing
 
-        self.map = next_map
         return ret_result
 
 

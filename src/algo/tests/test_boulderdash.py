@@ -12,6 +12,11 @@ class TestBoulderDash(unittest.TestCase):
             f"\nExpected:\n{BoulderDash.from_string_map(map).to_string()}\nGot:\n{bd.to_string()}"
         )
 
+    def assert_step_sequence(self, bd: BoulderDash, *maps: str):
+        for map in maps:
+            bd.step()
+            self.assert_map(bd, map)
+
     def test_100_construct(self):
         bd = BoulderDash.from_string_map("""
         WWWWWWWWWW
@@ -49,7 +54,7 @@ class TestBoulderDash(unittest.TestCase):
         WWWWWWWWWW
         """)
         self.assertEqual(
-            bd.RESULTS.CollectedDiamond,
+            bd.RESULTS.CollectedAllDiamonds,
             bd.apply_action(bd.ACTIONS.Left),
         )
         self.assert_map(bd, """
@@ -117,30 +122,27 @@ class TestBoulderDash(unittest.TestCase):
         W         W
         WWWWWWWWWWW
         """)
-        bd.step()
-        self.assert_map(bd, """
-        WWWWWWWWWWW
-        W         W
-        W R RW WWRW
-        W         W
-        WWWWWWWWWWW
-        """)
-        bd.step()
-        self.assert_map(bd, """
-        WWWWWWWWWWW
-        W         W
-        W    W WW W
-        W R R    RW
-        WWWWWWWWWWW
-        """)
-        bd.step()
-        self.assert_map(bd, """
-        WWWWWWWWWWW
-        W         W
-        W    W WW W
-        W R R    RW
-        WWWWWWWWWWW
-        """)
+        self.assert_step_sequence(
+            bd, """
+            WWWWWWWWWWW
+            W         W
+            W R RW WWRW
+            W         W
+            WWWWWWWWWWW
+            """, """
+            WWWWWWWWWWW
+            W         W
+            W    W WW W
+            W R R    RW
+            WWWWWWWWWWW
+            """, """
+            WWWWWWWWWWW
+            W         W
+            W    W WW W
+            W R R    RW
+            WWWWWWWWWWW
+            """
+        )
 
     def test_301_step(self):
         bd = BoulderDash.from_string_map("""
@@ -153,6 +155,54 @@ class TestBoulderDash(unittest.TestCase):
             ..
             RR
             """)
+
+    def test_310_step_successive_falling(self):
+        bd = BoulderDash.from_string_map("""
+        .RDRDRDRDR.
+        .WRDRDRDRD.
+        . W  W WW .
+        .   W     .
+        ...........
+        """)
+        self.assert_step_sequence(
+            bd, """
+            . D  R RD .
+            RWRRDDDDRR.
+            . WDRWRWWD.
+            .   W     .
+            ...........
+            """, """
+            .      R  .
+            .WRDDDRDRD.
+            R WRRWDWWR.
+            .  DW R  D.
+            ...........
+            """, """
+            .         .
+            .WR DDRDR .
+            . WDRWRWWD.
+            R  RW D  R.
+            ...D..R..D.
+            """, """
+            .         .
+            .W  DD D  .
+            . WRRWRWWR.
+            .  DW R  D.
+            R.RD.DR.RD.
+            """, """
+            .         .
+            .W  D  D  .
+            . WRRWDWW .
+            .  DW R  R.
+            R.RD.DRRRDD
+            """, """
+            .         .
+            .W  D  D  .
+            . WRRWDWW .
+            .  DW R  R.
+            R.RD.DRRRDD
+            """
+        )
 
     def test_500_all(self):
         bd = BoulderDash.from_string_map("""
@@ -184,8 +234,8 @@ class TestBoulderDash(unittest.TestCase):
         self.assertEqual(bd.step(), bd.RESULTS.Nothing)
         self.assert_map(bd, """
         WWWWWWWWWWW
-        WD        W
-        WW        W
+        W         W
+        WWD       W
         W RP      W
         WWWWWWWWWWW
         """)
@@ -194,8 +244,8 @@ class TestBoulderDash(unittest.TestCase):
         self.assert_map(bd, """
         WWWWWWWWWWW
         W         W
-        WWD       W
-        W R P     W
+        WW        W
+        W RDP     W
         WWWWWWWWWWW
         """)
         self.assertEqual(bd.RESULTS.Nothing, bd.apply_action(bd.ACTIONS.Nop))
@@ -207,7 +257,7 @@ class TestBoulderDash(unittest.TestCase):
         W RDP     W
         WWWWWWWWWWW
         """)
-        self.assertEqual(bd.RESULTS.CollectedDiamond, bd.apply_action(bd.ACTIONS.Left))
+        self.assertEqual(bd.RESULTS.CollectedAllDiamonds, bd.apply_action(bd.ACTIONS.Left))
         self.assertEqual(bd.step(), bd.RESULTS.Nothing)
         self.assert_map(bd, """
         WWWWWWWWWWW
