@@ -317,7 +317,25 @@ class TestBoulderDash(TestBase):
             np.all(bd.map == bd2.map)
         )
 
-    def test_450_to_tensor_performance(self):
+    def test_500_physics_performance(self):
+        print()
+        for size in (32, 64, 128, 256):
+            bd = BoulderDashGenerator(42).create_random((size, size))
+            bd.apply_physics()  # add some state
+
+            count = 20
+            start_time = time.time()
+            for i in range(count):
+                bd.apply_physics()
+            seconds = time.time() - start_time
+
+            print(
+                f"BoulderDash(shape={repr(bd.shape):10}).apply_physics()"
+                f" performance: {count/seconds:9.2f}/s"
+                f" {int(count*size*size/seconds):12,} cells/s"
+            )
+
+    def test_510_to_tensor_performance(self):
         print()
         for size in (32, 64, 128, 256):
             bd = BoulderDashGenerator(42).create_random((size, size), ratio_diamond=.3)

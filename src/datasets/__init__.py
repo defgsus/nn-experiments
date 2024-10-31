@@ -13,7 +13,10 @@ from .contrastive import ContrastiveIterableDataset
 from .contrastive_image import ContrastiveImageDataset
 from .echords import EChordsIterableDataset
 from .generative import (
-    Kali2dDataset, Kali2dFilteredIterableDataset
+    BoulderDashIterableDataset,
+    IFSDataset, IFSClassIterableDataset,
+    Kali2dDataset, Kali2dFilteredIterableDataset,
+    MengerSponge2dDataset,
 )
 from .image_augmentation import ImageAugmentation
 from .image_combine import ImageCombinePatchIterableDataset
@@ -28,6 +31,7 @@ from .image_scale import ImageScaleIterableDataset
 from .interleave import InterleaveIterableDataset
 from .limit import LimitDataset, OffsetDataset, LimitIterableDataset
 from .normalize import NormalizeMaxIterableDataset
+from .randomcropall import RandomCropAllDataset
 from .shuffle import ShuffleDataset, IterableShuffle
 from .split import SplitIterableDataset
 from .pixelart import RpgTileIterableDataset

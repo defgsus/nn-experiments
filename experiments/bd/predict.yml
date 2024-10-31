@@ -1,0 +1,33 @@
+matrix:
+  opt: ["AdamW"]
+  lr: [0.003]
+  ks: [3]
+  hid: [16]
+  l: [0, 1, 2]
+  act: ["gelu"]
+
+experiment_name: bd/bd-predict-01-sml_${matrix_slug}
+
+trainer: experiments.bd.trainer.TrainBoulderDashPredict
+
+globals:
+  SHAPE: (32, 32)
+
+train_set: |
+  boulderdash_dataset_32x32(validation=False)
+
+validation_set: |
+  boulderdash_dataset_32x32(validation=True)
+
+batch_size: 64
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+
+model: |
+  from experiments.bd.model import BoulderDashPredictModel
+  
+  #nn.Conv2d(8, 8, 3, padding=1)
+  BoulderDashPredictModel(shape=SHAPE, num_hidden=${hid}, kernel_size=${ks}, num_layers=${l}, act="${act}")

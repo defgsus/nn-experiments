@@ -29,14 +29,20 @@ class BaseDataset(Dataset):
             self,
             transforms: Optional[Iterable[Callable]] = None,
             dtype: Optional[torch.dtype] = None,
+            num_repeat: int = 1,
+            transform_all: bool = False,
     ):
         from .transform import TransformDataset
-        return TransformDataset(self, transforms=transforms, dtype=dtype)
+        return TransformDataset(self, transforms=transforms, dtype=dtype, num_repeat=num_repeat, transform_all=transform_all)
 
     def resize(self, shape: Tuple[int, int], interpolation=VT.InterpolationMode.NEAREST):
         return self.transform([
             VT.Resize(shape, interpolation=interpolation)
         ])
+
+    def random_crop_all(self, size: int):
+        from .randomcropall import RandomCropAllDataset
+        return RandomCropAllDataset(self, size=size)
 
 
 class WrapDataset(BaseDataset):

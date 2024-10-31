@@ -15,7 +15,7 @@ class TransformDataset(BaseDataset):
     Optionally convert dtype, multiply by factor and apply list of transforms.
     Can also add features from a DataFrame.
 
-    Transformations only apply to first Tensor in tuple
+    Transformations only apply to first Tensor in tuple unless `transform_all` is True
     """
     def __init__(
             self,
@@ -25,6 +25,7 @@ class TransformDataset(BaseDataset):
             transforms: Optional[Iterable[Callable]] = None,
             num_repeat: int = 1,
             features_dataframe: Optional[pd.DataFrame] = None,
+            transform_all: bool = False,
     ):
         super().__init__()
         self._source_dataset = source_dataset
@@ -33,12 +34,12 @@ class TransformDataset(BaseDataset):
         self._transforms = list(transforms) if transforms is not None else None
         self._num_repeat = num_repeat
         self._features_dataframe = features_dataframe
+        self._transform_all = transform_all
 
     def __len__(self):
         return len(self._source_dataset) * self._num_repeat
 
     def __getitem__(self, index) -> Tuple[torch.Tensor, ...]:
-        repeat_index = index % self._num_repeat
         index = index // self._num_repeat
 
         item = self._source_dataset[index]
@@ -50,6 +51,11 @@ class TransformDataset(BaseDataset):
             item, features = item, None
 
         item = self._transform(item)
+        if self._transform_all and features is not None:
+            features = tuple(
+                self._transform(f) if isinstance(f, torch.Tensor) else f
+                for f in features
+            )
 
         if self._features_dataframe is not None:
             features = torch.Tensor(self._features_dataframe.iloc[index].tolist())

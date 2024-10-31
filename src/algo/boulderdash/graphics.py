@@ -25,12 +25,12 @@ class BoulderDashGraphics:
     def _render(cls, object: int, size: int):
         if object == BoulderDash.OBJECTS.Wall:
             b = max(1, int(size / 8))
-            g = np.ones((3, size, size)) * .5
+            g = np.ones((3, size, size))
             g[:, :b, :] *= 1.5
             g[:, :, :b] *= 1.5
             g[:, -b:, :] *= .7
             g[:, :, -b:] *= .7
-            return np.clip(g, 0, 1)
+            return np.clip(g * .35, 0, 1)
 
         elif object == BoulderDash.OBJECTS.Rock:
             yx = np.mgrid[:size, :size] / size * 2. - 1.
