@@ -95,6 +95,7 @@ class TransformIterableDataset(BaseIterableDataset):
             dtype: Optional[torch.dtype] = None,
             multiply: Optional[float] = None,
             transforms: Optional[Iterable[Callable]] = None,
+            transform_all: bool = False,
             num_repeat: int = 1,
             features_dataframe: Optional[pd.DataFrame] = None,
             remove_tuple: bool = False,
@@ -104,6 +105,7 @@ class TransformIterableDataset(BaseIterableDataset):
         self._dtype = dtype
         self._multiply = multiply
         self._transforms = list(transforms) if transforms is not None else None
+        self._transform_all = transform_all
         self._num_repeat = num_repeat
         self._features_dataframe = features_dataframe
         self._remove_tuple = remove_tuple
@@ -125,8 +127,15 @@ class TransformIterableDataset(BaseIterableDataset):
             for repeat_index in range(self._num_repeat):
                 trans_item = self._transform(item)
 
+                trans_features = features
+                if self._transform_all and features is not None:
+                    trans_features = tuple(
+                        self._transform(f) if isinstance(f, torch.Tensor) else f
+                        for f in features
+                    )
+
                 if is_tuple and not self._remove_tuple:
-                    yield trans_item, *features
+                    yield trans_item, *trans_features
                 else:
                     yield trans_item
 

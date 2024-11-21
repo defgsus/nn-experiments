@@ -377,6 +377,7 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
     optimizer = kwargs.pop("optimizer")
     scheduler = kwargs.pop("scheduler", None)
     num_workers = kwargs.pop("num_workers", 1)
+    dataloader_collate_fn = kwargs.pop("dataloader_collate_fn", None)
 
     if trainer_class is not None:
         trainer_class = get_class(trainer_class)
@@ -388,6 +389,7 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
         batch_size=batch_size,
         shuffle=not isinstance(train_set, IterableDataset),
         num_workers=num_workers,
+        collate_fn=dataloader_collate_fn,
     )
 
     validation_batch_size = kwargs.pop("validation_batch_size", None)
@@ -395,6 +397,7 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
         kwargs["validation_loader"] = DataLoader(
             validation_set,
             batch_size=validation_batch_size or batch_size,
+            collate_fn=dataloader_collate_fn,
         )
 
     kwargs["optimizers"] = [
@@ -415,11 +418,14 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
 
 def construct_optimizer(model: nn.Module, learnrate: float, parameter: str):
     klass = getattr(torch.optim, parameter)
-    return klass(model.parameters(), lr=learnrate)
+    return klass(model.parameters(), lr=float(learnrate))
 
 
 def construct_scheduler(optimizer: torch.optim.Optimizer, parameter: str, kwargs: dict):
-    klass = getattr(torch.optim.lr_scheduler, parameter)
+    import src.scheduler
+    klass = getattr(src.scheduler, parameter, None)
+    if klass is None:
+        klass = getattr(torch.optim.lr_scheduler, parameter)
     return klass(optimizer, kwargs["max_inputs"] // kwargs["batch_size"])
 
 

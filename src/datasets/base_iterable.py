@@ -11,6 +11,10 @@ class BaseIterableDataset(IterableDataset):
         from .limit import LimitIterableDataset
         return LimitIterableDataset(self, size)
 
+    def skip(self, count: int):
+        from .limit import SkipIterableDataset
+        return SkipIterableDataset(self, count)
+
     def shuffle(self, max_shuffle: int, *, seed: Optional[int] = None):
         from .shuffle import IterableShuffle
         return IterableShuffle(self, max_shuffle=max_shuffle, seed=seed)
@@ -57,9 +61,10 @@ class BaseIterableDataset(IterableDataset):
             self,
             transforms: Optional[Iterable[Callable]] = None,
             dtype: Optional[torch.dtype] = None,
+            transform_all: bool = False
     ):
         from .transform import TransformIterableDataset
-        return TransformIterableDataset(self, transforms=transforms, dtype=dtype)
+        return TransformIterableDataset(self, transforms=transforms, dtype=dtype, transform_all=transform_all)
 
     def resize(self, shape: Tuple[int, int], interpolation=VT.InterpolationMode.NEAREST):
         return self.transform([

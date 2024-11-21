@@ -29,7 +29,7 @@ from .image_patch import (
 )
 from .image_scale import ImageScaleIterableDataset
 from .interleave import InterleaveIterableDataset
-from .limit import LimitDataset, OffsetDataset, LimitIterableDataset
+from .limit import LimitDataset, SkipDataset, LimitIterableDataset
 from .normalize import NormalizeMaxIterableDataset
 from .randomcropall import RandomCropAllDataset
 from .shuffle import ShuffleDataset, IterableShuffle

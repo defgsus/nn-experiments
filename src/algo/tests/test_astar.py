@@ -25,7 +25,7 @@ class Map:
             verbose=False,
         )
 
-    def adjacent_nodes(self, pos: Tuple[int, int]) -> Generator[Tuple[int, int], None, None]:
+    def adjacent_nodes(self, pos: Tuple[int, int]) -> Generator[Tuple[Tuple[int, int], float], None, None]:
         for p in (
                 (pos[0] - 1, pos[1]),
                 (pos[0],     pos[1] - 1),

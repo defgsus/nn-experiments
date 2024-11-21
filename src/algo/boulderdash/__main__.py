@@ -41,9 +41,12 @@ def run_boulderdash_console():
                 r1 = key
             if value == result2:
                 r2 = key
+
         print(f"result: {r1}, {r2}")
         if result2 == bd.RESULTS.PlayerDied:
             print("HIT AND DIED!!")
+
+        print(f"closest diamond: {bd.path_to_closest_diamond()}")
 
 
 

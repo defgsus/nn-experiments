@@ -35,7 +35,7 @@ class LimitDataset(BaseDataset):
         raise IndexError(f"{item} is >= {len(self)}")
 
 
-class OffsetDataset(BaseDataset):
+class SkipDataset(BaseDataset):
 
     def __init__(
             self,
@@ -75,3 +75,24 @@ class LimitIterableDataset(BaseIterableDataset):
 
             yield item
             count += 1
+
+
+class SkipIterableDataset(BaseIterableDataset):
+
+    def __init__(
+            self,
+            dataset: Union[IterableDataset, Dataset],
+            offset: int,
+    ):
+        super().__init__()
+        self._dataset = dataset
+        self._offset = offset
+
+    def __len__(self):
+        return max(0, len(self._dataset) - self._offset)
+
+    def __iter__(self):
+        for i, item in enumerate(self._dataset):
+            if i > self._offset:
+                yield item
+

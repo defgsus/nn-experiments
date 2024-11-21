@@ -1,11 +1,12 @@
 import io
 import random
-from typing import Tuple, Generator, Union, Optional
+from typing import Tuple, Generator, Union, Optional, List
 
 import torch
 import numpy as np
 
 from src.console import CC
+from src.algo.astar import astar_search
 
 
 class Enum:
@@ -125,6 +126,15 @@ class BoulderDash:
         file.seek(0)
         return file.read()
 
+    def to_array(self) -> List[int]:
+        return [*self.shape] + self.map.flatten().tolist()
+
+    @classmethod
+    def from_array(cls, a: List[int]):
+        bd = cls(shape=tuple(a[:2]))
+        bd.map = np.array(a[2:], dtype=np.int8).reshape((*bd.shape, 2))
+        return bd
+
     def to_image(self, tile_size: int = 8) -> np.ndarray:
         from .graphics import BoulderDashGraphics
 
@@ -172,11 +182,10 @@ class BoulderDash:
         bd.map = bd_map.numpy()
         return bd
 
-    def player_position(self) -> Tuple[int, int]:
-        for y in range(self.map.shape[0]):
-            for x in range(self.map.shape[1]):
-                if self.map[y, x, 0] == self.OBJECTS.Player:
-                    return y, x
+    def player_position(self) -> Optional[Tuple[int, int]]:
+        positions = np.argwhere(self.map[:, :, 0] == self.OBJECTS.Player)
+        if positions.shape[0]:
+            return int(positions[0][0]), int(positions[0][1])
 
     def num_diamonds(self):
         return np.sum(self.map[:, :, 0] == self.OBJECTS.Diamond)
@@ -245,6 +254,8 @@ class BoulderDash:
                 self.map[pos[0], pos[1]] = [self.OBJECTS.Empty, self.STATES.Nothing]
                 return self.RESULTS.PushedRock
 
+        return self.RESULTS.Nothing
+
     def apply_physics(self) -> int:
 
         ret_result = self.RESULTS.Nothing
@@ -279,3 +290,40 @@ class BoulderDash:
                         self.map[y, x, 1] = self.STATES.Nothing
 
         return ret_result
+
+    def astar(self, start: Tuple[int, int], end: Tuple[int, int]):
+        return astar_search(
+            start_node=start,
+            end_node=end,
+            adjacent_nodes_func=self._adjacent_nodes,
+            goal_cost_func=lambda p1, p2: abs(p1[0] - p2[0]) + abs(p1[1] - p2[1]),
+        )
+
+    def _adjacent_nodes(self, pos: Tuple[int, int]):
+        for p in (
+                (pos[0] - 1, pos[1]),
+                (pos[0],     pos[1] - 1),
+                (pos[0] + 1, pos[1]),
+                (pos[0],     pos[1] + 1),
+        ):
+            if 0 <= p[0] < self.shape[0] and 0 <= p[1] < self.shape[1]:
+                obj = self.map[p[0], p[1], 0]
+                if obj in (self.OBJECTS.Empty, self.OBJECTS.Sand, self.OBJECTS.Player, self.OBJECTS.Diamond):
+                    yield p, 1.
+
+    def path_to_closest_diamond(self, pos: Optional[Tuple[int, int]] = None):
+        if pos is None:
+            pos = self.player_position()
+            assert pos, f"No player on map"
+        diamond_positions = np.argwhere(self.map[:, :, 0] == self.OBJECTS.Diamond)
+        shortest_path = None
+        for obj_pos in diamond_positions:
+            obj_pos = int(obj_pos[0]), int(obj_pos[1])
+            path = self.astar(pos, obj_pos)
+            if path is not None:
+                if shortest_path is None or len(path) < len(shortest_path):
+                    shortest_path = path
+        return shortest_path
+
+
+

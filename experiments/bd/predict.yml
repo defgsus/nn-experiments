@@ -1,12 +1,12 @@
 matrix:
   opt: ["AdamW"]
-  lr: [0.003]
+  lr: [0.001]
   ks: [3]
-  hid: [16]
-  l: [0, 1, 2]
+  hid: [16] #, 32, 48, 64, 80]
+  l: [6]
   act: ["gelu"]
 
-experiment_name: bd/bd-predict-01-sml_${matrix_slug}
+experiment_name: bd/bd-predict-04-dvd-sml_${matrix_slug}
 
 trainer: experiments.bd.trainer.TrainBoulderDashPredict
 
@@ -14,15 +14,15 @@ globals:
   SHAPE: (32, 32)
 
 train_set: |
-  boulderdash_dataset_32x32(validation=False)
+  boulderdash_dataset_32x32(validation=False, diverse=True)
 
 validation_set: |
-  boulderdash_dataset_32x32(validation=True)
+  boulderdash_dataset_32x32(validation=True, diverse=True)
 
 batch_size: 64
 learnrate: ${lr}
 optimizer: ${opt}
-scheduler: CosineAnnealingLR
+scheduler: CosineAnnealingWarmupLR
 loss_function: l1
 max_inputs: 1_000_000
 

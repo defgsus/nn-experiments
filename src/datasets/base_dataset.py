@@ -12,8 +12,8 @@ class BaseDataset(Dataset):
         return LimitDataset(self, size=size, keep_length=keep_length)
 
     def offset(self, offset: int):
-        from .limit import OffsetDataset
-        return OffsetDataset(self, offset=offset)
+        from .limit import SkipDataset
+        return SkipDataset(self, offset=offset)
 
     def skip(self, offset: int):
         return self.offset(offset)

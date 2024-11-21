@@ -16,74 +16,83 @@ from torchvision.utils import make_grid
 from src.util.image import signed_to_image, get_images_from_iterable
 from src.train import Trainer
 from src.algo.boulderdash import BoulderDash
+from .model import BDModelInput, BDModelOutput
+from .datasets import BDEntry
 
 
 class TrainBoulderDashPredict(Trainer):
 
-    def __init__(self, *args, loss_crop: int = 0, **kwargs):
+    def __init__(
+            self,
+            *args,
+            **kwargs,
+    ):
         super().__init__(*args, **kwargs)
-        self._loss_crop = loss_crop
+
+    def _model_forward(self, input_batch) -> BDModelOutput:
+        return self.model(input_batch, **self.model_forward_kwargs)
 
     def train_step(self, input_batch) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
-        map1_batch, map2_batch = input_batch
-        map1_batch = self.transform_input_batch(map1_batch)
+        if isinstance(input_batch, (list, tuple)):
+            input_batch = input_batch[0]
 
-        map2_batch_out = self.model(map1_batch)
+        output_batch = self._model_forward(input_batch)
 
-        if False and not hasattr(self, "_printed_"):
-            self._printed_ = True
-            print("EXPECTED: ", map2_batch[0])
-            print("PREDICTED:", map2_batch_out[0])
+        #if False and not hasattr(self, "_printed_"):
+        #    self._printed_ = True
+        #    print("EXPECTED: ", map2_batch[0])
+        #    print("PREDICTED:", map2_batch_out[0])
 
-        return self._calc_loss(map2_batch, map2_batch_out)
+        return self._calc_loss(input_batch, output_batch)
 
-    def _crop(self, x):
-        if self._loss_crop > 0:
-            return x[..., self._loss_crop:-self._loss_crop, self._loss_crop:-self._loss_crop]
-        return x
-
-    def _calc_loss(self, expected, predicted):
+    def _calc_loss(self, expected: BDEntry, predicted: BDModelOutput):
         num_obj = BoulderDash.OBJECTS.count()
-        expected = self._crop(expected)
-        predicted = self._crop(predicted)
 
         if 0:
             object_loss = self.loss_function(expected[:, :num_obj, :, :], predicted[:, :num_obj, :, :])
             state_loss = self.loss_function(expected[:, num_obj:, :, :], predicted[:, num_obj:, :, :])
 
         else:
-            B, C, H, W = expected.shape
-            expected = expected.permute(0, 2, 3, 1).reshape(B * H * W, -1)
-            predicted = predicted.permute(0, 2, 3, 1).reshape(B * H * W, -1)
+            B, C, H, W = expected.state.shape
+            expected_state = expected.next_state.permute(0, 2, 3, 1).reshape(B * H * W, -1)
+            predicted_state = predicted.next_state.permute(0, 2, 3, 1).reshape(B * H * W, -1)
 
             func = F.soft_margin_loss
 
-            object_loss = func(predicted[:, :num_obj], expected[:, :num_obj])
-            state_loss = func(predicted[:, num_obj:], expected[:, num_obj:])
+            object_loss = func(predicted_state[:, :num_obj], expected_state[:, :num_obj])
+            state_loss = func(predicted_state[:, num_obj:], expected_state[:, num_obj:])
+
+            if predicted.reward is not None:
+                reward_loss = F.l1_loss(predicted.reward, expected.reward)
+            else:
+                reward_loss = torch.tensor(0).to(self.device)
 
         return {
-            "loss": (object_loss + state_loss) / 2,
+            "loss": (object_loss + state_loss) / 2 + reward_loss,
             "loss_object": object_loss,
             "loss_state": state_loss,
+            "loss_reward": reward_loss,
         }
 
     def validation_step(self, input_batch) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
-        map1_batch, map2_batch = input_batch
+        if isinstance(input_batch, (list, tuple)):
+            input_batch = input_batch[0]
 
-        map2_batch_out = self.model(map1_batch)
+        output_batch = self._model_forward(input_batch)
 
-        losses = self._calc_loss(map2_batch, map2_batch_out)
+        losses = self._calc_loss(input_batch, output_batch)
 
-        map2_batch_thresh = self._crop(torch.concat([
-            BoulderDash.from_tensor(map).to_tensor().unsqueeze(0).to(map2_batch_out.device)
-            for map in map2_batch
-        ]))
-        map2_batch_out_thresh = self._crop(torch.concat([
-            BoulderDash.from_tensor(map).to_tensor().unsqueeze(0).to(map2_batch_out.device)
-            for map in map2_batch_out
-        ]))
+        next_state = torch.concat([
+            BoulderDash.from_tensor(map).to_tensor().unsqueeze(0).to(output_batch.next_state.device)
+            for map in input_batch.next_state
+        ])
+        predicted_next_state = torch.concat([
+            BoulderDash.from_tensor(map).to_tensor().unsqueeze(0).to(output_batch.next_state.device)
+            for map in output_batch.next_state
+        ])
 
-        accuracy = ((map2_batch_thresh - map2_batch_out_thresh).abs() < .1).sum() / math.prod(map2_batch.shape) * 100
+        correct_map = ((next_state - predicted_next_state).abs() < .1)
+        accuracy = correct_map.float().mean() * 100
 
         return {
             **losses,
@@ -96,26 +105,26 @@ class TrainBoulderDashPredict(Trainer):
                 batch_iterable, transform: bool = False, max_count: int = 8,
                 size: int = 8,
         ):
-            count = 0
-            map1_batch = []
-            map2_batch = []
-            for map1, map2 in batch_iterable:
-                map1_batch.append(map1)
-                map2_batch.append(map2)
-                count += map1.shape[0]
-                if count >= max_count:
-                    break
-            map1_batch = torch.cat(map1_batch)[:max_count].to(self.device)
-            map2_batch = torch.cat(map2_batch)[:max_count].to(self.device)
+            for batch in batch_iterable:
+                break
+            batch: BDEntry
+            if batch.state is not None:
+                batch.state = batch.state[:max_count]
+            if batch.next_state is not None:
+                batch.next_state = batch.next_state[:max_count]
+            if batch.reward is not None:
+                batch.reward = batch.reward[:max_count]
+            if batch.action is not None:
+                batch.action = batch.action[:max_count]
 
             if transform:
-                map1_batch = self.transform_input_batch(map1_batch)
+                batch.state = self.transform_input_batch(batch.state)
 
-            output_batch = self.model.forward(map1_batch)
+            output_batch = self._model_forward(batch.to(self.device))
 
             grid_maps = []
             grid_images = []
-            for map, repro in zip(map2_batch, output_batch):
+            for map, repro in zip(batch.next_state, output_batch.next_state):
                 grid_maps.append(map[:3])
                 grid_maps.append(repro[:3])
                 grid_maps.append(map[-3:])
@@ -135,3 +144,4 @@ class TrainBoulderDashPredict(Trainer):
         grid_map, grid_image = _get_prediction(self.iter_validation_batches())
         self.log_image("validation_prediction_map", grid_map)
         self.log_image("validation_prediction_image", grid_image)
+

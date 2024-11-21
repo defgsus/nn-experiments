@@ -56,6 +56,7 @@ class Trainer:
             reset: bool = False,
             device: Union[None, str, torch.DeviceObjType] = None,
             hparams: Optional[dict] = None,
+            model_forward_kwargs: Optional[dict] = None,
             weight_image_kwargs: Optional[dict] = None,
             extra_description_values: Optional[dict] = None,
     ):
@@ -77,6 +78,7 @@ class Trainer:
         self.gradient_clipping = gradient_clipping
         self.gradient_accumulation = gradient_accumulation
         self.hparams = hparams
+        self.model_forward_kwargs = model_forward_kwargs or {}
         self.weight_image_kwargs = weight_image_kwargs
         self.extra_description_values = extra_description_values
         self.num_inputs_between_validations = num_inputs_between_validations
@@ -131,7 +133,7 @@ class Trainer:
         input, target_features = input_batch[:2]
         if not self.for_validation:
             input = self.transform_input_batch(input)
-        output_features = self.model(input)
+        output_features = self.model(input, **self.model_forward_kwargs)
 
         return self.loss_function(output_features, target_features)
 
@@ -292,7 +294,7 @@ class Trainer:
                         input_batch = (input_batch, )
 
                     input_batch = [
-                        i.to(self.device) if isinstance(i, torch.Tensor) else i
+                        i.to(self.device) if callable(getattr(i, "to", None)) else i
                         for i in input_batch
                     ]
 
@@ -301,6 +303,8 @@ class Trainer:
                     elif isinstance(input_batch[0], dict):
                         v = input_batch[0][next(iter(input_batch[0].keys()))]
                         input_batch_size = len(v)
+                    elif callable(getattr(input_batch[0], "__len__", None)):
+                        input_batch_size = len(input_batch[0])
                     else:
                         raise TypeError(f"Can't determine input format from type '{type(input_batch[0]).__name__}'")
 
@@ -311,7 +315,7 @@ class Trainer:
                     if self.epoch == 0 and batch_idx == 0:
                         print(" BATCH", ", ".join(str(b.shape) if hasattr(b, "shape") else "?" for b in input_batch))
 
-                    loss_result = self._train_step(tuple(input_batch))
+                    loss_result = self._train_step(input_batch)
                     if not isinstance(loss_result, dict):
                         loss_result = {"loss": loss_result}
 
@@ -491,10 +495,10 @@ class Trainer:
                     if not isinstance(validation_batch, (tuple, list)):
                         validation_batch = validation_batch,
 
-                    validation_batch = tuple(
-                        i.to(self.device) if isinstance(i, torch.Tensor) else i
+                    validation_batch = [
+                        i.to(self.device) if callable(getattr(i, "to", None)) else i
                         for i in validation_batch
-                    )
+                    ]
 
                     loss = self.validation_step(validation_batch)
                     if not isinstance(loss, dict):

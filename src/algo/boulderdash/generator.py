@@ -4,6 +4,7 @@ from typing import Union, Tuple, List
 import numpy as np
 
 from .boulderdash import BoulderDash
+from src.algo import RandomVariable
 
 
 class BoulderDashGenerator:
@@ -22,14 +23,26 @@ class BoulderDashGenerator:
     def create_random(
             self,
             shape: Tuple[int, int],
-            ratio_wall: float = .15,
-            ratio_wall_horizontal: float = 0.,
-            ratio_wall_horizontal_gap: float = 0.3,
-            ratio_rock: float = 0.05,
-            ratio_diamond: float = .01,
-            ratio_sand: float = 0.2,
+            ratio_wall: Union[float, RandomVariable] = .15,
+            ratio_wall_horizontal: Union[float, RandomVariable] = 0.,
+            ratio_wall_horizontal_gap: Union[float, RandomVariable] = 0.3,
+            ratio_rock: Union[float, RandomVariable] = 0.05,
+            ratio_diamond: Union[float, RandomVariable] = .01,
+            ratio_sand: Union[float, RandomVariable] = 0.2,
             with_border: bool = False,
     ) -> BoulderDash:
+
+        def _get_value(x):
+            if isinstance(x, RandomVariable):
+                return x.get(self.rng)
+            return x
+
+        ratio_wall = _get_value(ratio_wall)
+        ratio_wall_horizontal = _get_value(ratio_wall_horizontal)
+        ratio_wall_horizontal_gap = _get_value(ratio_wall_horizontal_gap)
+        ratio_rock = _get_value(ratio_rock)
+        ratio_diamond = _get_value(ratio_diamond)
+        ratio_sand = _get_value(ratio_sand)
 
         bd = BoulderDash(shape=shape)
 
@@ -46,6 +59,8 @@ class BoulderDashGenerator:
             )
 
         coordinates = self._get_free_coordinates(bd)
+        if not coordinates:
+            raise RuntimeError(f"Failed to create a map with a player")
         self._place_random(bd, coordinates, bd.OBJECTS.Player)
 
         for ratio, obj in (

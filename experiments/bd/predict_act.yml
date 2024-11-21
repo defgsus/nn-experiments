@@ -1,0 +1,41 @@
+matrix:
+  opt: ["AdamW"]
+  lr: [3.0e-5]
+  ks: [3]
+  hid: [16] #, 32, 48, 64, 80]
+  l: [6]
+  act: ["gelu"]
+
+globals:
+  SHAPE: (16, 16)
+
+experiment_name: bd/bd-predictact-14-nodia-sml_${matrix_slug}
+
+trainer: experiments.bd.trainer.TrainBoulderDashPredict
+
+dataloader_collate_fn: |
+  from experiments.bd.datasets import bd_collate
+  bd_collate
+
+train_set: |
+  from experiments.bd.datasets import boulderdash_action_predict_dataset_16x16
+  boulderdash_action_predict_dataset_16x16(validation=False)
+
+validation_set: |
+  from experiments.bd.datasets import boulderdash_action_predict_dataset_16x16 
+  boulderdash_action_predict_dataset_16x16(validation=True)
+
+batch_size: 64
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 50_000_000
+num_inputs_between_validations: 100_000
+
+
+model: |
+  from experiments.bd.model import BoulderDashActionPredictModel
+  
+  #nn.Conv2d(8, 8, 3, padding=1)
+  BoulderDashActionPredictModel(shape=SHAPE, num_hidden=${hid}, kernel_size=${ks}, num_layers=${l}, act="${act}")

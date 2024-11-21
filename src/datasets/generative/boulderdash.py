@@ -1,6 +1,6 @@
 import math
 import random
-from typing import List, Iterable, Tuple, Optional, Callable, Union
+from typing import List, Iterable, Tuple, Optional, Callable, Union, Sequence
 
 import torch
 import torch.nn as nn
@@ -23,7 +23,7 @@ class BoulderDashIterableDataset(BaseIterableDataset):
             zero: float = 0.,
             dtype: Optional[torch.dtype] = None,
             seed: Union[None, int] = None,
-            generator_kwargs: Optional[dict] = None,
+            generator_kwargs: Optional[Union[dict, Sequence[dict]]] = None,
             pre_steps: int = 0,
             prediction_steps: Optional[int] = None,
             include_bd: bool = False,
@@ -48,9 +48,17 @@ class BoulderDashIterableDataset(BaseIterableDataset):
         gen = BoulderDashGenerator(rng=self._seed)
 
         for i in range(self._count):
+
+            if self._generator_kwargs is None:
+                generator_kwargs = {}
+            elif isinstance(self._generator_kwargs, dict):
+                generator_kwargs = self._generator_kwargs
+            else:
+                generator_kwargs = gen.rng.choice(self._generator_kwargs)
+
             bd = gen.create_random(
                 shape=self._shape,
-                **(self._generator_kwargs or {}),
+                **generator_kwargs,
             )
             for i in range(self._pre_steps):
                 bd.apply_physics()

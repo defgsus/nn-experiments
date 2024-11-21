@@ -1,6 +1,3 @@
-from .boulderdash import (
-    boulderdash_dataset_32x32,
-)
 from .classic import (
     mnist_dataset,
     fmnist_dataset,

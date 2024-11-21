@@ -33,6 +33,15 @@ class TestBoulderDash(TestBase):
             "WWWWWWWWWW\nWDS...R..W\nWW....WWWW\nW..P.....W\nWWWWWWWWWW\n",
             bd.to_string_map()
         )
+        self.assertEqual(
+            [5, 10, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 4, 0, 3, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+            bd.to_array()
+        )
+        self.assertTrue(
+            np.all(
+                bd.map == BoulderDash.from_array(bd.to_array()).map
+            )
+        )
 
     def test_200_actions(self):
         bd = BoulderDash.from_string_map("""
