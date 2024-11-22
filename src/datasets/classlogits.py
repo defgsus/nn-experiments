@@ -4,8 +4,10 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
+from src.datasets.base_dataset import BaseDataset
 
-class ClassLogitsDataset(Dataset):
+
+class ClassLogitsDataset(BaseDataset):
     """
     Transforms a Dataset with a single label to an n-dim feature vector
     """

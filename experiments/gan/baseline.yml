@@ -1,4 +1,4 @@
-experiment_name: gan/baseline12
+experiment_name: gan/baseline3
 
 trainer: experiments.gan.trainer.TrainGAN
 
@@ -12,8 +12,8 @@ validation_set: |
 
 batch_size: 64
 learnrate: 0.0001
-optimizer: Adam
-scheduler: CosineAnnealingLR
+optimizer: AdamW
+scheduler: CosineAnnealingWarmupLR
 loss_function: l1
 max_inputs: 20_000_000
 

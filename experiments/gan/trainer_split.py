@@ -20,26 +20,30 @@ from src.util.module import num_module_parameters
 from src.util.embedding import normalize_embedding
 
 
-class TrainGAN(Trainer):
+class TrainGANSplit(Trainer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert hasattr(self.model, "generator"), f"Module needs `generator` submodule"
         assert hasattr(self.model.generator, "num_inputs"), f"generator module needs `num_inputs` attribute"
         assert hasattr(self.model, "discriminator"), f"Module needs `discriminator` submodule"
+        self._train_generator = False
+        self._train_flip_count = 0
+        self._discriminator_loss = 1.
+        self._generator_loss = 1.
+        self._train_generator_history = []
         self.logits_real = [1, 0]
         self.logits_fake = [0, 1]
 
-        if 0:
-            self.optimizers = [
-                self.optimizers[0].__class__(self.model.generator.parameters(), **self.optimizers[0].defaults),
-                self.optimizers[0].__class__(self.model.discriminator.parameters(), **self.optimizers[0].defaults),
+        self.optimizers = [
+            self.optimizers[0].__class__(self.model.generator.parameters(), **self.optimizers[0].defaults),
+            self.optimizers[0].__class__(self.model.discriminator.parameters(), **self.optimizers[0].defaults),
+        ]
+        if self.schedulers:
+            self.schedulers = [
+                self.schedulers[0].__class__(self.optimizers[0], self.schedulers[0].T_max),
+                self.schedulers[0].__class__(self.optimizers[1], self.schedulers[0].T_max),
             ]
-            if self.schedulers:
-                self.schedulers = [
-                    self.schedulers[0].__class__(self.optimizers[0], self.schedulers[0].T_max),
-                    self.schedulers[0].__class__(self.optimizers[1], self.schedulers[0].T_max),
-                ]
 
         print(f"generator params:     {num_module_parameters(self.model.generator):,}")
         print(f"discriminator params: {num_module_parameters(self.model.discriminator):,}")
@@ -50,10 +54,47 @@ class TrainGAN(Trainer):
 
         batch_size = input_batch.shape[0]
 
+        if 0:
+            self._train_flip_count += 1
+            if ((self._train_generator and self._train_flip_count >= 20_000 // batch_size)
+                    or (not self._train_generator and self._train_flip_count >= 2_000 // batch_size)):
+                self._train_flip_count = 0
+                self._train_generator = not self._train_generator
+
+        else:
+            _do_train_generator = self._generator_loss > self._discriminator_loss and self.num_input_steps > 20_000
+
+            if _do_train_generator != self._train_generator:
+                print(
+                    "FLIPPING TRAINING TO", "generator" if _do_train_generator else "discriminator",
+                    f", losses G {self._generator_loss:.4f}, D {self._discriminator_loss:.4f}"
+                )
+            self._train_generator = _do_train_generator
+
+        do_train_generator = self._train_generator
+        if random.random() < 0.01:
+            do_train_generator = not do_train_generator
+
+        if do_train_generator:
+            self._skip_optimizer = [False, True]
+        else:
+            self._skip_optimizer = [True, False]
+
+        self._train_generator_history.append(1 if do_train_generator else 0)
+        if len(self._train_generator_history) >= 100:
+            self.log_scalar(
+                "generator_discriminator_train_ratio",
+                sum(self._train_generator_history) / len(self._train_generator_history)
+            )
+            self._train_generator_history.clear()
+
         # -- generate adversarials --
 
         generator_input = self.create_generator_input_batch(batch_size)
         generated_batch = self.model.generator(generator_input)
+
+        #if not do_train_generator:
+        #    generated_batch = generated_batch.detach()
 
         #with torch.no_grad():
         #    random_ids = torch.randperm(batch_size)[:batch_size // 8].to(self.device)
@@ -71,7 +112,7 @@ class TrainGAN(Trainer):
 
         discriminator_input_batch = torch.concat([
             self.transform_input_batch(input_batch),
-            self.transform_input_batch(generated_batch),
+            generated_batch,
         ])
 
         discriminator_output = self.model.discriminator(discriminator_input_batch)
@@ -79,6 +120,18 @@ class TrainGAN(Trainer):
             raise RuntimeError(
                 f"Discriminator output shape expected to be ({batch_size * 2}, 2), got {discriminator_output.shape}"
             )
+
+        #if random.random() < .05:
+        #    discriminator_output = discriminator_output[torch.randperm(discriminator_output.shape[0], device=self.device)]
+
+        #if discriminator_output_real.shape != torch.Size((batch_size, 2)):
+        #    raise RuntimeError(
+        #        f"Discriminator output shape expected to be ({batch_size}, 2), got {discriminator_output_real.shape}"
+        #    )
+        #if discriminator_output_fake.shape != torch.Size((batch_size, 2)):
+        #    raise RuntimeError(
+        #        f"Discriminator output shape expected to be ({batch_size}, 2), got {discriminator_output_fake.shape}"
+        #    )
 
         # -- setup target logits --
 
@@ -90,7 +143,7 @@ class TrainGAN(Trainer):
 
         # discriminator learns to predict real or fake
         discriminator_loss = self.loss_function(
-            discriminator_output, target_logits
+            discriminator_output, target_logits + .01 * torch.randn_like(target_logits)
         )
 
         # DEBUGGING
@@ -103,8 +156,11 @@ class TrainGAN(Trainer):
 
         # generator learns to generate stuff that makes discriminator think it's real
         generator_loss = self.loss_function(
-            discriminator_output[batch_size:], logits_real
+            discriminator_output[batch_size:], logits_real + .01 * torch.randn_like(logits_real)
         )
+        #generator_loss = generator_loss + self.loss_function(
+        #    discriminator_output[:batch_size], logits_fake + .01 * torch.randn_like(logits_real)
+        #)
 
         # --- encourage generator diversity ---
 
@@ -118,7 +174,14 @@ class TrainGAN(Trainer):
         #print("XXX", discriminator_output_real.argmax(dim=-1))
         #print("YYY", discriminator_output_fake.argmax(dim=-1))
 
-        loss = discriminator_loss + generator_loss + 0.01 * generator_std_loss
+        # keep track of running losses
+        self._discriminator_loss += .001 * (float(discriminator_loss) - self._discriminator_loss)
+        self._generator_loss += .001 * (float(generator_loss)  - self._generator_loss)
+
+        if do_train_generator:
+            loss = generator_loss + 0.1 * generator_std_loss
+        else:
+            loss = discriminator_loss
 
         return {
             "loss": loss,
@@ -158,6 +221,21 @@ class TrainGAN(Trainer):
                 break
         validation_batch = torch.concat(validation_batch)[:batch_size]
         assert validation_batch.shape[0] == batch_size
+
+        if 0:
+            discriminator_output_real = self.model.discriminator(validation_batch)
+            discriminator_output_fake = self.model.discriminator(generated_batch)
+            #print("REAL", discriminator_output_real)
+            #print("FAKE", discriminator_output_fake)
+
+            self.log_scalar(
+                "discriminator_validation_accuracy_real",
+                (discriminator_output_real.argmax(dim=-1) == 0).float().mean()
+            )
+            self.log_scalar(
+                "discriminator_validation_accuracy_fake",
+                (discriminator_output_fake.argmax(dim=-1) == 1).float().mean()
+            )
 
         combined_input_batch = torch.concat([validation_batch, generated_batch])
         predicted_batch = self.model.discriminator(combined_input_batch)
