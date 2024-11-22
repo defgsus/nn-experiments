@@ -216,6 +216,9 @@ def dump_experiments_results(
         if snapshot_data.get("training_time"):
             seconds = snapshot_data["training_time"]
             row["train time (minutes)"] = round(seconds / 60., 2)
+            row["throughput"] = "{:,}/s".format(
+                int(num_inputs / snapshot_data["training_time"])
+            )
 
         rows.append(row)
 

@@ -144,6 +144,35 @@ def activation_to_callable(
     raise ValueError(f"Unrecognized activation: {repr(activation)}")
 
 
+def normalization_to_module(
+        normalization: Union[None, str, Type[nn.Module]],
+        *args, **kwargs,
+) -> Optional[Callable]:
+    if normalization is None:
+        return None
+
+    if isinstance(normalization, nn.Module):
+        return normalization
+
+    try:
+        if issubclass(normalization, nn.Module):
+            return normalization(*args, **kwargs)
+    except TypeError:
+        pass
+
+    if isinstance(normalization, str):
+        s = normalization.lower()
+        for module in (torch.nn, ):
+            for key, value in vars(module).items():
+                try:
+                    if key.lower() == s and issubclass(value, nn.Module):
+                        return value(*args, **kwargs)
+                except TypeError:
+                    pass
+
+    raise ValueError(f"Unrecognized normalization: {repr(normalization)}")
+
+
 @torch.no_grad()
 def get_model_weight_images(
         model: nn.Module,

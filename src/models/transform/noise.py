@@ -167,10 +167,14 @@ class RandomCropHalfImage(nn.Module):
             self,
             prob: float = 1.,
             null_value: float = 0.,
+            with_mask: bool = False,
+            mask_value: float = 1.,
     ):
         super().__init__()
         self.prob = prob
         self.null_value = null_value
+        self.with_mask = with_mask
+        self.mask_value = mask_value
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         if input.ndim == 3:
@@ -199,4 +203,8 @@ class RandomCropHalfImage(nn.Module):
 
         new_image = image + 0
         new_image[:, slices[0], slices[1]] = self.null_value
+        if self.with_mask:
+            mask = torch.zeros_like(new_image[:1])
+            mask[:, slices[0], slices[1]] = self.mask_value
+            new_image = torch.cat([new_image, mask], dim=0)
         return new_image

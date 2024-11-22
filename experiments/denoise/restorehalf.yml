@@ -1,0 +1,73 @@
+experiment_name: denoise/restorehalf-m1-${matrix_slug}
+
+matrix:
+  ds:
+    - fmnist
+  l:
+    #- 11
+    - 11
+    #- 21
+  ks:
+    - 3
+  ch:
+    - 32
+  act:
+    - gelu
+  attn:
+    # - 0
+    - 4
+  norm:
+    #- "None"
+    - '"batchnorm2d"'
+#  depth:
+#    - "False"
+
+
+trainer: experiments.denoise.trainer.TrainDenoising
+
+train_set: |
+  {
+      "mnist": mnist_dataset(train=True, shape=SHAPE, interpolation=False),
+      "fmnist": fmnist_dataset(train=True, shape=SHAPE, interpolation=False),
+  }["${ds}"]
+
+validation_set: |
+  {
+      "mnist": mnist_dataset(train=False, shape=SHAPE, interpolation=False),
+      "fmnist": fmnist_dataset(train=False, shape=SHAPE, interpolation=False),
+  }["${ds}"]
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 1_200_000
+freeze_validation_set: True
+train_input_transforms: |
+  [
+    # ImageNoise(amt_min=0.01, amt_max=0.15),  # mid
+    # ImageNoise(amt_min=.15, amt_max=.3),  # strong
+
+    # RandomQuantization(min_quantization=.05, max_quantization=0.3),  # mid
+    # RandomQuantization(min_quantization=.2, max_quantization=0.4),  # strong
+  
+    RandomCropHalfImage(null_value=-1),
+  ]
+
+globals:
+  SHAPE: (1, 28, 28)
+
+model: |
+  from experiments.denoise.restorehalf_resconv import ResConvLayers
+
+  ResConvLayers(
+      channels_in=SHAPE[0],
+      channels_out=SHAPE[0],
+      channels_hidden=${ch},
+      num_layers=${l},
+      kernel_size=${ks},
+      act="${act}",
+      attention=${attn},
+      norm=${norm},
+  )
