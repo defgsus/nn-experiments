@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 import torch
 from torch.utils.data import Dataset, TensorDataset
@@ -12,16 +12,20 @@ from src.util.image import *
 DATASETS_ROOT = "~/prog/data/datasets/"
 
 
-def _uint_dataset(
+def _dataset(
         ds: Dataset,
         shape: Tuple[int, int, int] = (1, 28, 28),
         default_shape: Tuple[int, int, int] = (1, 28, 28),
         interpolation: bool = True,
         normalize_between: Optional[Tuple[float, float]] = None,
+        is_uint: bool = False,
+        pre_transforms: List = (),
 ) -> Dataset:
-    transforms = [
-        lambda x: x.unsqueeze(0).float() / 255.,
-    ]
+    transforms = [*pre_transforms]
+
+    if is_uint:
+        transforms.append(lambda x: x.unsqueeze(0).float() / 255.)
+
     if shape[0] != default_shape[0]:
         transforms.append(lambda x: set_image_channels(x, shape[0]))
 
@@ -54,11 +58,12 @@ def mnist_dataset(
         normalize_between: Optional[Tuple[float, float]] = None,
 ) -> Dataset:
     ds = torchvision.datasets.MNIST("~/prog/data/datasets/", train=train)
-    return _uint_dataset(
+    return _dataset(
         TensorDataset(ds.data, ds.targets),
         shape=shape,
         interpolation=interpolation,
         normalize_between=normalize_between,
+        is_uint=True,
     )
 
 
@@ -69,9 +74,26 @@ def fmnist_dataset(
         normalize_between: Optional[Tuple[float, float]] = None,
 ) -> Dataset:
     ds = torchvision.datasets.FashionMNIST("~/prog/data/datasets/", train=train)
-    return _uint_dataset(
+    return _dataset(
         TensorDataset(ds.data, ds.targets),
         shape=shape,
         interpolation=interpolation,
         normalize_between=normalize_between,
+        is_uint=True,
+    )
+
+
+def cifar10_dataset(
+        train: bool,
+        shape: Tuple[int, int, int] = (3, 32, 32),
+        interpolation: bool = True,
+        normalize_between: Optional[Tuple[float, float]] = None,
+) -> Dataset:
+    ds = torchvision.datasets.CIFAR10("~/prog/data/datasets/", train=train)
+    return _dataset(
+        TensorDataset(torch.Tensor(ds.data).permute(0, 3, 1, 2), torch.tensor(ds.targets, dtype=torch.int64)),
+        shape=shape,
+        interpolation=interpolation,
+        normalize_between=normalize_between,
+        pre_transforms=[lambda x: x / 255.],
     )

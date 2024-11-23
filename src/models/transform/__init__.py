@@ -5,6 +5,7 @@ from .noise import (
     ImageMultiNoise,
     RandomCropHalfImage,
     RandomQuantization,
+    RandomBlur,
 )
 from .reshape import Reshape
 from .sobel import Sobel

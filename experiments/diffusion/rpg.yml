@@ -1,0 +1,29 @@
+$extends: baseline.yml
+
+matrix:
+  ds: ["pix"]
+  opt: ["AdamW"]
+  lr: [0.001]
+  ch: [64]
+  l: [11]
+  # act: ["gelu"]
+
+experiment_name: diffusion/rpg_${matrix_slug}
+
+globals:
+  SHAPE: (3, 32, 32)
+  CLASSES: 30
+
+
+batch_size: 64
+loss_function: l1
+max_inputs: 10_000_000
+#num_inputs_between_validations: 1000
+
+model: |
+    from experiments.diffusion.baseline_model import DiffusionModel
+    DiffusionModel(
+        image_channels=SHAPE[0], 
+        hidden_channels=${ch},
+        num_layers=${l},
+    ) 

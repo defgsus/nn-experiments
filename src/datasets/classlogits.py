@@ -83,7 +83,7 @@ class ClassLogitsDataset(BaseDataset):
         else:
             if self.tuple_position:
                 raise ValueError(
-                    f"tuple_position is {self.tuple_position} but dataset item is type {type(item).__name__}"
+                    f"tuple_position is {self.tuple_position} but dataset item is single type {type(item).__name__}"
                 )
 
         label = item

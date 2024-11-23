@@ -208,3 +208,44 @@ class RandomCropHalfImage(nn.Module):
             mask[:, slices[0], slices[1]] = self.mask_value
             new_image = torch.cat([new_image, mask], dim=0)
         return new_image
+
+
+class RandomBlur(nn.Module):
+
+    def __init__(
+            self,
+            amt_min: float = .01,
+            amt_max: float = 1.,
+            amt_power: float = 1.,
+            kernel_size: int = 5,
+            prob: float = 1.,
+    ):
+        super().__init__()
+        self.amt_min = amt_min
+        self.amt_max = amt_max
+        self.amt_power = amt_power
+        self.prob = prob
+        self.kernel_size = kernel_size
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        if input.ndim == 3:
+            return self._noise(input)
+        elif input.ndim == 4:
+            return torch.concat([
+                self._noise(img).unsqueeze(0)
+                for img in input
+            ])
+        else:
+            raise ValueError(f"input must have 3 or 4 dimensions, got {input}")
+
+    def _noise(self, image: torch.Tensor) -> torch.Tensor:
+        if random.uniform(0, 1) >= self.prob:
+            return image
+
+        amt = math.pow(random.uniform(0, 1), self.amt_power)
+        amt = self.amt_min + (self.amt_max - self.amt_min) * amt
+
+        blurred = VF.gaussian_blur(image, [self.kernel_size, self.kernel_size], [amt, amt])
+
+        return blurred
+

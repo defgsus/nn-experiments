@@ -1,0 +1,67 @@
+experiment_name: denoise/deblur5x10-small2-${matrix_slug}
+
+matrix:
+  bs: [640]
+  opt: ["AdamW"]
+  lr: [.003]
+
+trainer: experiments.denoise.trainer.TrainDenoising
+
+train_set: |
+  {
+      #"mnist": mnist_dataset(train=True, shape=SHAPE, interpolation=False),
+      #"fmnist": fmnist_dataset(train=True, shape=SHAPE, interpolation=False),
+      #"rpg": rpg_tile_dataset_3x32x32(validation=False, shape=SHAPE, interpolation=False), 
+      #"kali": kali_patch_dataset(shape=SHAPE),
+      "all": all_image_patch_dataset(shape=SHAPE),
+  }["all"]
+
+validation_set: |
+  {
+      #"mnist": mnist_dataset(train=False, shape=SHAPE, interpolation=False),
+      #"fmnist": fmnist_dataset(train=False, shape=SHAPE, interpolation=False),
+      #"rpg": rpg_tile_dataset_3x32x32(validation=True, shape=SHAPE, interpolation=False),
+      #"kali": kali_patch_dataset(shape=SHAPE).limit(5000),
+      "all": all_image_patch_dataset(shape=SHAPE).limit(5000),
+  }["all"]
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 10_000_000
+num_inputs_between_validations: 1_000_000
+freeze_validation_set: True
+train_input_transforms: |
+  [
+    #ImageNoise(amt_min=0.01, amt_max=0.15),  # mid
+    #ImageNoise(amt_min=.15, amt_max=.3),  # strong
+    #ImageNoise(amt_min=.01, amt_max=.6),  # heavy
+    
+    #RandomBlur(amt_min=.1, amt_max=10.),
+    VT.GaussianBlur(kernel_size=[5, 5], sigma=[10., 10.])
+  
+    # RandomCropHalfImage(),
+  ]
+  
+
+globals:
+  SHAPE: (3, 48, 48)
+
+model: |
+  
+  model = nn.Sequential(
+      nn.Conv2d(3, 8, 3, padding=1),
+      ResidualAdd(
+          nn.Sequential(
+              nn.Conv2d(8, 8, 3, padding=1),
+              nn.GELU(),
+          )
+      ),
+      nn.Conv2d(8, 3, 3, padding=1),
+  )
+  
+  #nn.Conv2d(3, 3, 3, padding=1)
+  model
+  

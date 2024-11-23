@@ -53,6 +53,51 @@ class ConvBlock(nn.Module):
         return y + x
 
 
+class SelfAttention(nn.Module):
+    def __init__(
+            self,
+            channels: int,
+            heads: int,
+            activation: Union[None, str, Callable] = None,
+            dropout: float = 0.,
+            residual: bool = True,
+    ):
+        super().__init__()
+        self._is_residual = residual
+        self.attn = nn.MultiheadAttention(
+            embed_dim=channels,
+            num_heads=heads,
+            dropout=dropout,
+        )
+        self.act = activation_to_module(activation)
+
+    def extra_repr(self) -> str:
+        return f"residual={self._is_residual}"
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if x.ndim in (2, 3):
+            x_flat = x
+            x_reverse = None
+        elif x.ndim == 4:
+            B, C, H, W = x.shape
+            x_flat = x.permute(0, 2, 3, 1).view(B, H * W, C)
+            x_reverse = lambda x: x.view(B, H, W, C).permute(0, 3, 1, 2)
+        else:
+            raise NotImplementedError(f"ndim must be 2, 3, 4, got {x.shape}")
+
+        y = self.attn(x_flat, x_flat, x_flat)[0]
+
+        if self.act is not None:
+            y = self.act(y)
+
+        if x_reverse is not None:
+            y = x_reverse(y)
+
+        if self._is_residual:
+            y = y + x
+        return y
+
+
 class AttentionConvBlock(nn.Module):
     def __init__(
             self,
@@ -188,6 +233,9 @@ class ResConvLayers(nn.Module):
             kernel_size: int = 3,
             act: str = "gelu",
             attention: Union[bool, int] = False,
+            attention_heads: int = 0,
+            attention_dropout: float = 0.,
+            attention_residual: bool = True,
             norm: Optional[str] = None,
             depth_conv: bool = False,
     ):
@@ -207,15 +255,23 @@ class ResConvLayers(nn.Module):
                 do_attention = attention > 0 and i % attention == 0
 
             if do_attention:
-                if 1:
-                    self.layers.append(AttentionConvBlock(
-                        channels_hidden, channels_hidden, kernel_size=kernel_size, activation=act, residual=True,
-                        norm=norm, # depth_conv=depth_conv,
+                if attention_heads > 0:
+                    self.layers.append(SelfAttention(
+                        channels=channels_hidden,
+                        heads=attention_heads,
+                        dropout=attention_dropout,
+                        residual=attention_residual,
                     ))
                 else:
-                    self.layers.append(ResidualAdd(
-                        LiteMLA(channels_hidden, channels_hidden)
+                    self.layers.append(AttentionConvBlock(
+                        channels_hidden, channels_hidden, kernel_size=kernel_size, activation=act, dropout=attention_dropout,
+                        residual=attention_residual,
+                        norm=norm, # depth_conv=depth_conv,
                     ))
+                #else:
+                #    self.layers.append(ResidualAdd(
+                #        LiteMLA(channels_hidden, channels_hidden)
+                #    ))
 
             else:
                 self.layers.append(ConvBlock(channels_hidden, kernel_size=kernel_size, act=act, depth_conv=depth_conv))

@@ -64,6 +64,8 @@ RESERVED_MATRIX_KEYS = (
     "matrix_id",
 )
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
 
 def run_experiment_from_command_args():
     parser = argparse.ArgumentParser()
@@ -95,11 +97,18 @@ def run_experiment_from_command_args():
     run_experiment(experiment_file, extra_args=args)
 
 
+def load_experiment_trainer(experiment_file, device: str = "auto"):
+    return run_experiment(experiment_file, extra_args={
+        "command": "get_trainer",
+        "device": device,
+    })
+
+
 def run_experiment(filename: Union[str, Path], extra_args: dict):
     command = extra_args.pop("command")
-    skip_existing = extra_args.pop("skip")
-    exclude_columns = extra_args.pop("exclude_column")
-    sort_columns = extra_args.pop("sort_column")
+    skip_existing = extra_args.pop("skip", False)
+    exclude_columns = extra_args.pop("exclude_column", [])
+    sort_columns = extra_args.pop("sort_column", [])
     load_from_checkpoint = extra_args.pop("load", None)
 
     data = _load_yaml(filename)
@@ -125,7 +134,7 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
                     print(f"{key:{max_len}}: {value}")
             print()
 
-        checkpoint_path = Path("./checkpoints") / data["experiment_name"]
+        checkpoint_path = PROJECT_ROOT / "checkpoints" / data["experiment_name"]
         snapshot_json_file = checkpoint_path / "snapshot.json"
 
         if command == "results":
@@ -144,15 +153,19 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
                 continue
 
         model = kwargs["model"]
-        print(model)
+        if command != "get_trainer":
+            print(model)
+
         for key in ("encoder", "decoder"):
             if hasattr(model, key):
                 print(f"{key} params: {num_module_parameters(getattr(model, key)):,}")
 
-        if command != "run":
+        if command not in ("run", "get_trainer"):
             continue
 
         trainer = trainer_klass(**kwargs)
+        if command == "get_trainer":
+            return trainer
 
         if not kwargs["reset"]:
             if not trainer.load_checkpoint("best"):
@@ -161,7 +174,7 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
             if load_from_checkpoint is not None:
                 found_it = False
                 for cp_filename in ("best.pt", "snapshot.pt"):
-                    cp_filename = Path("checkpoints") / load_from_checkpoint / cp_filename
+                    cp_filename = checkpoint_path / load_from_checkpoint / cp_filename
                     if cp_filename.exists():
                         found_it = True
                         print(f"loading model checkpoint {cp_filename}")
@@ -286,12 +299,12 @@ def get_matrix_slug(entry: dict) -> str:
         return str(value)[:40]
 
     slug = "_".join(
-        f"{key}-{_value_str(value)}"
+        f"{key}:{_value_str(value)}"
         for key, value in entry.items()
     )
     return "".join(
         c for c in slug
-        if c.isalnum() or c in ".,-_"
+        if c.isalnum() or c in ".,-_:"
     )
 
 

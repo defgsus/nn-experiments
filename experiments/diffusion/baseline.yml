@@ -1,0 +1,61 @@
+matrix:
+  ds: ["pix"]
+  nexp: [.2]
+  opt: ["AdamW"]
+  lr: [0.001]
+  ch: [32]
+  l: [7]
+  attn: [4]
+  head: [4]
+  # act: ["gelu"]
+
+experiment_name: diffusion/baseline4_${matrix_slug}
+
+trainer: experiments.diffusion.trainer.TrainDiffusion
+
+globals:
+  SHAPE: (3, 32, 32)
+  CLASSES: 30
+
+train_set: |
+  ClassLogitsDataset(
+      {
+          "mnist": mnist_dataset(train=True, shape=SHAPE, interpolation=False),
+          "fmnist": fmnist_dataset(train=True, shape=SHAPE, interpolation=False),
+          "pix": PixelartDataset(shape=SHAPE, with_label=True).skip(3000),
+      }["${ds}"].shuffle(),
+      num_classes=CLASSES, tuple_position=1, label_to_index=True,
+  )
+
+validation_set: |
+  ClassLogitsDataset(
+      {
+          "mnist": mnist_dataset(train=False, shape=SHAPE, interpolation=False),
+          "fmnist": fmnist_dataset(train=False, shape=SHAPE, interpolation=False),
+          "pix": PixelartDataset(shape=SHAPE, with_label=True).limit(3000).shuffle(seed=23),
+      }["${ds}"],
+      num_classes=CLASSES, tuple_position=1, label_to_index=True,
+  )
+
+batch_size: 32
+
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 10_000_000
+num_epochs_between_validations: 1000
+num_inputs_between_validations: 120_000
+generator_shape: |
+  SHAPE
+noise_amount_exponent: ${nexp}
+
+model: |
+    from experiments.diffusion.baseline_model import DiffusionModel
+    DiffusionModel(
+        image_channels=SHAPE[0], 
+        hidden_channels=${ch},
+        num_layers=${l},
+        attention=${attn},
+        attention_heads=${head},
+    ) 

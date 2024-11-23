@@ -28,6 +28,8 @@ from src.util import to_torch_device, num_module_parameters
 from src.util.image import signed_to_image, get_images_from_iterable
 from src.models.util import get_loss_callable
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
 
 class Trainer:
 
@@ -93,8 +95,8 @@ class Trainer:
         self._train_start_time = 0.
         self._logged_scalars = {}
 
-        self.tensorboard_path = Path("./runs/") / self.experiment_name
-        self.checkpoint_path = Path("./checkpoints/") / self.experiment_name
+        self.tensorboard_path = PROJECT_ROOT / "runs" / self.experiment_name
+        self.checkpoint_path = PROJECT_ROOT / "checkpoints" / self.experiment_name
         self.device = to_torch_device(device)
         self._skip_optimizer: Optional[List[bool]] = None
         self._loss_history = []
