@@ -249,3 +249,5 @@ class RandomBlur(nn.Module):
 
         return blurred
 
+
+VT.ElasticTransform

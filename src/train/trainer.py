@@ -93,6 +93,7 @@ class Trainer:
         self._train_input_transforms = None if train_input_transforms is None else list(train_input_transforms)
         self.for_validation = False
         self._train_start_time = 0.
+        self._train_auxiliary_time = 0.
         self._logged_scalars = {}
 
         self.tensorboard_path = PROJECT_ROOT / "runs" / self.experiment_name
@@ -214,7 +215,7 @@ class Trainer:
             "model": repr(self.model),
             "optimizers": [repr(o) for o in self.optimizers],
             "num_inputs": self.num_input_steps,
-            "training_time": time.time() - self._train_start_time,
+            "training_time": time.time() - self._train_start_time - self._train_auxiliary_time,
             "scalars": self._logged_scalars,
             **(self.extra_description_values or {}),
             **(extra or {}),
@@ -257,6 +258,7 @@ class Trainer:
             print(f"trainable params: {num_train_params:,} of {num_params:,}")
 
         self._train_start_time = time.time()
+        self._train_auxiliary_time = 0.
         self._logged_scalars.clear()
 
         last_validation_step = None
@@ -344,6 +346,8 @@ class Trainer:
                     self.num_batch_steps += 1
                     self.num_input_steps += input_batch_size
 
+                    start_time_aux = time.time()
+
                     self._loss_history.append({
                         key: float(value)
                         for key, value in loss_result.items()
@@ -385,8 +389,12 @@ class Trainer:
                         self.running = False
                         break
 
+                    self._train_auxiliary_time += time.time() - start_time_aux
+
             if last_optimizer_batch_idx != batch_idx:
                 self._optimizer_step()
+
+            start_time_aux = time.time()
 
             if self.epoch - last_checkpoint_epoch >= self.num_epochs_between_checkpoints:
                 last_checkpoint_epoch = self.epoch
@@ -401,6 +409,8 @@ class Trainer:
 
             if self.running:
                 self.epoch += 1
+
+            self._train_auxiliary_time += time.time() - start_time_aux
 
         self.run_validation()
 

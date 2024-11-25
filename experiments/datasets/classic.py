@@ -97,3 +97,19 @@ def cifar10_dataset(
         normalize_between=normalize_between,
         pre_transforms=[lambda x: x / 255.],
     )
+
+
+def stl10_dataset(
+        train: bool,
+        shape: Tuple[int, int, int] = (3, 96, 96),
+        interpolation: bool = True,
+        normalize_between: Optional[Tuple[float, float]] = None,
+) -> Dataset:
+    ds = torchvision.datasets.STL10("~/prog/data/datasets/", split="train" if train else "test")
+    return _dataset(
+        TensorDataset(torch.Tensor(ds.data) / 255., torch.tensor(ds.labels, dtype=torch.int64)),
+        shape=shape,
+        interpolation=interpolation,
+        normalize_between=normalize_between,
+        # pre_transforms=[lambda x: x / 255.],
+    )

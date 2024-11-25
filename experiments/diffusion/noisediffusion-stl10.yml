@@ -1,0 +1,88 @@
+experiment_name: diffusion/noisediff-stl10-class_${matrix_slug}
+
+matrix:
+  nexp: [1.]
+  opt: ["AdamW"]
+  lr: [0.003]
+  l:
+    - 11
+  ch:
+    - 64
+  ks:
+    - 3
+    #- [3, 3, 3, 5, 7]
+  pad:
+    - 1
+    #- [1, 1, 1, 2, 3]
+  stride:
+    - 1
+  act:
+    - gelu
+
+trainer: experiments.diffusion.trainer.TrainDiffusion
+#diffusion_sampler: |
+#  from experiments.diffusion.sampler import DiffusionSamplerBlur
+#  DiffusionSamplerBlur(21, 7.)
+
+globals:
+  SHAPE: (3, 92, 92)
+  CLASSES: 10
+
+train_set: |
+  ClassLogitsDataset(
+    stl10_dataset(train=True, shape=SHAPE, interpolation=False) 
+      .transform([
+          lambda x: (x * 255).to(torch.uint8), 
+          VT.TrivialAugmentWide(), 
+          lambda x: x.to(torch.float32) / 255.,
+          VT.RandomCrop(SHAPE[-1]),
+      ]),
+    num_classes=CLASSES, tuple_position=1, label_to_index=True,
+  )
+
+validation_set: |
+  ClassLogitsDataset(
+    stl10_dataset(train=False, shape=SHAPE, interpolation=False)
+      .transform([VT.RandomCrop(SHAPE[-1])]),
+    num_classes=CLASSES, tuple_position=1, label_to_index=True,
+  )
+
+batch_size: 16
+
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 1_200_000
+num_epochs_between_validations: 4
+#num_inputs_between_validations: 120_000
+generator_shape: |
+  (SHAPE[0], SHAPE[1] // 2, SHAPE[2] // 2)
+num_class_logits: |
+  CLASSES
+noise_amount_exponent: ${nexp}
+
+model: |
+  from experiments.diffusion.trainer import DiffusionModelOutput
+  from experiments.denoise.resconv import ResConv
+  
+  class Module(nn.Module):
+      def __init__(self):
+          super().__init__()
+          self.module = ResConv(
+              in_channels=SHAPE[0] + 1 + CLASSES,
+              out_channels=SHAPE[0],
+              num_layers=${l},
+              channels=${ch},
+              stride=${stride},
+              kernel_size=${ks},
+              padding=${pad},
+              activation="${act}",
+              activation_last_layer=None,
+          )
+  
+      def forward(self, input):
+          x = torch.cat([input.images, input.parameter_embedding()], dim=-3)
+          return DiffusionModelOutput(noise=self.module(x)) 
+  
+  Module()

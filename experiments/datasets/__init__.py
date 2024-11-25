@@ -2,6 +2,7 @@ from .classic import (
     mnist_dataset,
     fmnist_dataset,
     cifar10_dataset,
+    stl10_dataset,
 )
 from .clip_noise import (
     ClipNoiseDataset,
