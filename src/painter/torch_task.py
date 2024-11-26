@@ -18,6 +18,7 @@ class TorchTask:
         self.model: Optional[nn.Module] = None
         self.model_name: Optional[str] = None
         self.painter = Painter(worker=None)
+        self.model23 = nn.Conv2d(3, 3, 5, 1, 2)
 
     def info(self) -> dict:
         return {
@@ -25,6 +26,10 @@ class TorchTask:
             #"model_loaded": bool(self.model_name),
             #"model_name": self.model_name,
         }
+
+    def apply_model(self, image: Image):
+        with torch.no_grad():
+            return self.model23(image.tensor).detach()
 
     def paint(self, image: Image, sequence: "PaintSequence"):
         self.painter._paint(image, sequence)

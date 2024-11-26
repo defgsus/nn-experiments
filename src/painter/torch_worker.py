@@ -10,7 +10,6 @@ from torch.multiprocessing import Process, Queue
 from .torch_task import TorchTask
 
 
-
 class TorchWorker:
 
     def __init__(self, verbose: bool = True):

@@ -57,7 +57,7 @@ class Painter:
         self._worker = worker
         self._async_calls = dict()
 
-    def paint(self, x: int, y: int):
+    def paint_add(self, x: int, y: int):
         self._sequence.add(x, y)
 
     def update(self, image: Image) -> Optional[BoundingBox]:
@@ -66,7 +66,7 @@ class Painter:
                 if event.get("call"):
                     event = event["call"]
                     async_call = self._async_calls.pop(event["uuid"])
-                    if event.get("result"):
+                    if event.get("result") is not None:
                         image_rect = event["result"]
                         paint_box = async_call["paint_box"]
                         async_call["image"] = image.tensor[:, paint_box.y1: paint_box.y2, paint_box.x1: paint_box.x2] = image_rect.tensor
@@ -102,7 +102,7 @@ class Painter:
             image: Image,
             sequence: PaintSequence,
     ):
-        # print("PAINT", image.tensor.shape, sequence._sequence)
+        # print("_PAINT", image.tensor.shape, sequence._sequence)
 
         self._current_tool.paint(image, sequence)
         return
@@ -176,7 +176,7 @@ class BrushTool(PaintToolBase):
 
     def __init__(self, mask_size: int = 51):
         super().__init__()
-        self.color = (.8, .9, 1.)
+        self.color = (.8, .9, 1., 1.)
         self.alpha = .1
 
         size = self.mask_size = mask_size
@@ -219,13 +219,22 @@ class BrushTool(PaintToolBase):
     def apply_mask(self, image: Image, mask: torch.Tensor, x: int, y: int):
         x2 = x + mask.shape[-1]
         y2 = y + mask.shape[-2]
-        color = torch.ones(3, *mask.shape) * torch.Tensor(self.color)[:, None, None]
+
+        color = self.color
+        if image.channels != len(color):
+            if len(color) == 3:
+                color = (*color, 1)
+            else:
+                color = color[:3]
+            # raise ValueError(f"Color has {len(color)} channels, image has {image.channels}")
+
+        color = torch.ones(image.channels, *mask.shape) * torch.Tensor(color)[:, None, None]
 
         mask = mask * self.alpha
-        mask = mask[None, :, :].repeat(3, 1, 1)
+        mask = mask[None, :, :].repeat(image.channels, 1, 1)
 
         image_rect = image.tensor[:, y:y2, x:x2]
-        color = 1. - image_rect
+        #color = 1. - image_rect
 
         image.tensor[:, y:y2, x:x2] += mask * (color - image_rect)
 

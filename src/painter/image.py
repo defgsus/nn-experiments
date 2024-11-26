@@ -18,6 +18,9 @@ class Image:
     def __repr__(self):
         return f"Image({self.tensor.shape[0]}x{self.tensor.shape[1]}x{self.tensor.shape[2]})"
 
+    def copy(self):
+        return self.__class__(self.tensor.detach().clone())
+
     @property
     def width(self) -> int:
         return self.tensor.shape[-1]
