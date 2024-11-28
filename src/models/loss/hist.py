@@ -15,8 +15,8 @@ class HistogramLoss(nn.Module):
     def __init__(
             self,
             bins: int,
-            min: float,
-            max: float,
+            min: float = 0.,
+            max: float = 1.,
             sigma: float = 100.,
             normalize: Union[bool, str] = True,
             loss: Union[str, Callable] = "l1",
@@ -30,14 +30,20 @@ class HistogramLoss(nn.Module):
         self.loss_function = get_loss_callable(loss)
 
     def forward(self, output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        assert output.shape == target.shape, f"shape mismatch: output={output.shape}, target={target.shape}"
+        assert output.ndim == 4, f"Expected 4 dimensions, got {output.shape}"
+        assert output.shape == target.shape, f"Shape mismatch: output={output.shape}, target={target.shape}"
+        B, C, H, W = output.shape
 
+        output = output.view(B * C, H, W)
+        target = target.view(B * C, H, W)
         output_hist = soft_histogram(output, self.bins, self.min_value, self.max_value, self.sigma)
         target_hist = soft_histogram(target, self.bins, self.min_value, self.max_value, self.sigma)
+        output_hist = output_hist.view(B, C, self.bins)
+        target_hist = target_hist.view(B, C, self.bins)
 
         if self.normalize:
             if self.normalize is True:
-                factor = math.prod(target.shape[1:])
+                factor = max(1, math.prod(target.shape[-2:]))
             else:
                 factor = 0.0000001 + torch.linalg.norm(output_hist, ord=self.normalize, dim=-1, keepdim=True)
 

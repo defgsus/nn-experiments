@@ -19,7 +19,10 @@ class Application:
 
         self.image = Image.from_file(
             #"/home/bergi/Pictures/__diverse/02capitalism-tm.jpg"
-            "/home/bergi/Pictures/__diverse/shenandoah2.jpg"
+            #"/home/bergi/Pictures/__diverse/shenandoah2.jpg"
+            #"/home/bergi/Pictures/__diverse/_42416379_chloroform203spl.gif"
+            #"/home/bergi/Pictures/__diverse/bush_senior_A.jpg"
+            "/home/bergi/Pictures/__diverse/leostrauss10conn_lg.jpg"
         )
         self.mask = Image(torch.zeros(4, self.image.height, self.image.width))
 
@@ -57,6 +60,9 @@ class Application:
             if event.get("call"):
                 event = event["call"]
                 async_call = self._async_calls.pop(event["uuid"])
+                if event.get("exception"):
+                    print("GOT EXCEPTION")
+                    print(event["exception"]["traceback"])
                 if event.get("result") is not None:
                     image: Image = async_call["image"]
                     mask: Optional[Image] = async_call["mask"]

@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union, Iterable, Callable
+from typing import Optional, Tuple, Union, Iterable, Callable, Any
 
 import torch.utils.data.sampler
 from torch.utils.data import Dataset, IterableDataset, DataLoader
@@ -39,6 +39,10 @@ class BaseDataset(Dataset):
         return self.transform([
             VT.Resize(shape, interpolation=interpolation)
         ])
+
+    def filter(self, *filters: Callable[[Any], bool]):
+        from .filter import FilterIterableDataset
+        return FilterIterableDataset(self, *filters)
 
     def random_crop_all(self, size: int):
         from .randomcropall import RandomCropAllDataset

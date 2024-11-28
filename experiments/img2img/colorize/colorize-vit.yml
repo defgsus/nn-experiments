@@ -1,0 +1,65 @@
+experiment_name: img2img/colorize-vit-${matrix_slug}
+
+matrix:
+  ds: ["cifar10"]
+  bs: [64]
+  opt: ["AdamW"]
+  lr: [.0003]
+  patch:
+    - 4
+  l:
+    - 6
+  dim:
+    - 64
+  mlpdim:
+    - 256
+  head:
+    - 4
+
+trainer: experiments.img2img.trainer.TrainImg2Img
+first_arg_is_transforms: |
+  [
+    VT.Grayscale(),  
+    # RandomCropHalfImage(),
+  ]
+
+train_set: |
+  ${ds}_dataset(train=True, shape=SHAPE, interpolation=False)
+
+validation_set: |
+  ${ds}_dataset(train=False, shape=SHAPE, interpolation=False)
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 1_000_000
+num_inputs_between_validations: 100_000
+freeze_validation_set: True
+
+
+globals:
+  SHAPE: (3, 32, 32)
+
+model: |
+  from experiments.diffusion.vit import ViT
+  
+  class Module(nn.Module):
+      def __init__(self):
+          super().__init__()
+          self.module = ViT(
+              image_channels=1,
+              output_channels=SHAPE[0],
+              image_size=SHAPE[1],
+              patch_size=${patch},
+              num_layers=${l},
+              num_heads=${head},
+              hidden_dim=${dim},
+              mlp_dim=${mlpdim},
+          )
+  
+      def forward(self, x):
+          return self.module(x) 
+  
+  Module()

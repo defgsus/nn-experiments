@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union, Iterable, Callable
+from typing import Optional, Tuple, Union, Iterable, Callable, Any
 
 import torch
 from torch.utils.data import Dataset, IterableDataset, DataLoader
@@ -70,3 +70,7 @@ class BaseIterableDataset(IterableDataset):
         return self.transform([
             VT.Resize(shape, interpolation=interpolation)
         ])
+
+    def filter(self, *filters: Callable[[Any], bool]):
+        from .filter import FilterIterableDataset
+        return FilterIterableDataset(self, *filters)

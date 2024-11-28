@@ -26,6 +26,51 @@ from src.models.transform import *
 from src.models.util import *
 
 
+class SelfAttention(nn.Module):
+    def __init__(
+            self,
+            channels: int,
+            heads: int,
+            activation: Union[None, str, Callable] = None,
+            dropout: float = 0.,
+            residual: bool = True,
+    ):
+        super().__init__()
+        self._is_residual = residual
+        self.attn = nn.MultiheadAttention(
+            embed_dim=channels,
+            num_heads=heads,
+            dropout=dropout,
+        )
+        self.act = activation_to_module(activation)
+
+    def extra_repr(self) -> str:
+        return f"residual={self._is_residual}"
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if x.ndim in (2, 3):
+            x_flat = x
+            x_reverse = None
+        elif x.ndim == 4:
+            B, C, H, W = x.shape
+            x_flat = x.permute(0, 2, 3, 1).view(B, H * W, C)
+            x_reverse = lambda x: x.view(B, H, W, C).permute(0, 3, 1, 2)
+        else:
+            raise NotImplementedError(f"ndim must be 2, 3, 4, got {x.shape}")
+
+        y = self.attn(x_flat, x_flat, x_flat)[0]
+
+        if self.act is not None:
+            y = self.act(y)
+
+        if x_reverse is not None:
+            y = x_reverse(y)
+
+        if self._is_residual:
+            y = y + x
+        return y
+
+
 class ConvLayer(nn.Module):
 
     def __init__(
@@ -41,12 +86,22 @@ class ConvLayer(nn.Module):
             activation: Union[None, str, Callable] = "gelu",
             padding_mode: str = "zeros",
             transposed: bool = False,
+            init_weights: Optional[float] = None,
+            attention: bool = False,
     ):
         super().__init__()
         self._batch_norm_pos = batch_norm_pos
 
         if batch_norm and batch_norm_pos == 0:
             self.bn = nn.BatchNorm2d(in_channels)
+
+        self.attention = None
+        if attention:
+            self.attention = SelfAttention(
+                channels=in_channels,
+                heads=4,
+                activation=activation,
+            )
 
         self.conv = (nn.ConvTranspose2d if transposed else nn.Conv2d)(
             in_channels=in_channels,
@@ -66,6 +121,14 @@ class ConvLayer(nn.Module):
         if batch_norm and batch_norm_pos == 2:
             self.bn = nn.BatchNorm2d(out_channels)
 
+        if init_weights is not None:
+            with torch.no_grad():
+                for p in self.parameters():
+                    p[:] = p * init_weights
+                #self.conv.weight[:] = self.conv.weight * init_weights
+                #if self.conv.bias is not None:
+                #    self.conv.bias[:] = self.conv.bias * init_weights
+
     def forward(
             self,
             x: torch.Tensor,
@@ -73,6 +136,9 @@ class ConvLayer(nn.Module):
     ) -> torch.Tensor:
         if self._batch_norm_pos == 0 and hasattr(self, "bn"):
             x = self.bn(x)
+
+        if self.attention is not None:
+            x = self.attention(x)
 
         x = self.conv(x)
 
@@ -91,6 +157,7 @@ class ConvLayer(nn.Module):
         return x
 
 
+
 class ResConv(nn.Module):
 
     def __init__(
@@ -107,9 +174,11 @@ class ResConv(nn.Module):
             batch_norm: Union[bool, Iterable[bool]] = True,
             activation: Union[None, str, Callable] = "gelu",
             activation_last_layer: Union[None, str, Callable] = None,
+            attention: Union[bool, Iterable[bool]] = False,
             residual_weight: float = 1.,
             batch_norm_pos_encoder: int = 0,
             batch_norm_pos_decoder: int = 0,
+            init_weights: Optional[float] = None,
     ):
         super().__init__()
         self.residual_weight = residual_weight
@@ -126,6 +195,7 @@ class ResConv(nn.Module):
         paddings = param_make_list(padding, num_layers, "padding")
         batch_norms = param_make_list(batch_norm, num_layers, "batch_norm")
         conv_groups = param_make_list(conv_groups, num_layers, "conv_groups")
+        attention = param_make_list(attention, num_layers, "attention")
 
         channels_list = [in_channels, *channels]
 
@@ -133,8 +203,8 @@ class ResConv(nn.Module):
 
         with torch.no_grad():
 
-            for i, (ch, ch_next, kernel_size, stride, pad, batch_norm, groups) in enumerate(
-                    zip(channels_list, channels_list[1:], kernel_sizes, strides, paddings, batch_norms, conv_groups)
+            for i, (ch, ch_next, kernel_size, stride, pad, batch_norm, groups, attn) in enumerate(
+                    zip(channels_list, channels_list[1:], kernel_sizes, strides, paddings, batch_norms, conv_groups, attention)
             ):
                 self.encoder[f"layer_{i + 1}"] = ConvLayer(
                     in_channels=ch,
@@ -147,6 +217,8 @@ class ResConv(nn.Module):
                     padding_mode=padding_mode,
                     batch_norm_pos=batch_norm_pos_encoder,
                     groups=groups,
+                    init_weights=init_weights,
+                    attention=attn,
                 )
 
         channels_list = list(reversed([out_channels, *channels]))
@@ -157,8 +229,8 @@ class ResConv(nn.Module):
         conv_groups = list(reversed(conv_groups))
 
         self.decoder = nn.ModuleDict()
-        for i, (ch, ch_next, kernel_size, stride, pad, batch_norm, groups) in enumerate(
-                zip(channels_list, channels_list[1:], kernel_sizes, strides, paddings, batch_norms, conv_groups)
+        for i, (ch, ch_next, kernel_size, stride, pad, batch_norm, groups, attn) in enumerate(
+                zip(channels_list, channels_list[1:], kernel_sizes, strides, paddings, batch_norms, conv_groups, attention)
         ):
             self.decoder[f"layer_{i + 1}"] = ConvLayer(
                 in_channels=ch,
@@ -172,6 +244,8 @@ class ResConv(nn.Module):
                 transposed=True,
                 batch_norm_pos=batch_norm_pos_decoder,
                 groups=groups,
+                init_weights=init_weights,
+                attention=attn,
             )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

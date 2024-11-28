@@ -113,3 +113,29 @@ def stl10_dataset(
         normalize_between=normalize_between,
         # pre_transforms=[lambda x: x / 255.],
     )
+
+
+def flowers102_dataset(
+        train: bool,
+        shape: Tuple[int, int, int] = (3, 96, 96),
+        interpolation: bool = True,
+) -> Dataset:
+    ds = torchvision.datasets.Flowers102(
+        "~/prog/data/datasets/", split="train" if train else "test", #download=True,
+    )
+    def cropper(item):
+        return image_resize_crop(
+            item,
+            shape=shape[-2:],
+            interpolation=VF.InterpolationMode.BILINEAR if interpolation else VF.InterpolationMode.NEAREST,
+        )
+
+    return (
+        WrapDataset(ds)
+        .transform([
+            VF.to_tensor,
+            cropper,
+        ])
+    )
+    torch.fft.fft2
+

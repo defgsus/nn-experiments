@@ -29,7 +29,7 @@ def soft_histogram_flat(x: torch.Tensor, bins: int, min: float, max: float, sigm
     return x
 
 
-def soft_histogram(x: torch.Tensor, bins: int, min: float, max: float, sigma: float = 100.):
+def soft_histogram(x: torch.Tensor, bins: int, min: float = 0., max: float = 1., sigma: float = 100.):
     """
     Soft differentiable histogram on batches.
 
@@ -37,7 +37,7 @@ def soft_histogram(x: torch.Tensor, bins: int, min: float, max: float, sigma: fl
     :param bins: int, number of bins
     :param min: float, minimum value to consider
     :param max: float, maximum value to consider
-    :param sigma: float, smoothing factor, higher is more prices. For high precision use something like 100_000.
+    :param sigma: float, smoothing factor, higher is more precise. For high precision use something like 100_000.
     :return: Tensor of shape `(batch_size, bins, )`
     """
     if x.ndim == 1:

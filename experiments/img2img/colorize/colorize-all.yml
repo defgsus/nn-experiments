@@ -1,0 +1,78 @@
+experiment_name: img2img/colorize-resconv-${matrix_slug}
+
+matrix:
+  ds:
+    #- "cifar10"
+    - "all"
+  bs: [64]
+  opt: ["AdamW"]
+  lr: [.0003]
+  l:
+    - 11
+  ks:
+    - 3
+  pad:
+    - 1
+  ch:
+    - 48
+  stride:
+    - 1
+  act:
+    - gelu
+
+trainer: experiments.img2img.trainer.TrainImg2Img
+first_arg_is_transforms: |
+  [
+    VT.Grayscale(),  
+    # RandomCropHalfImage(),
+  ]
+
+train_set: |
+  if "${ds}" == "all":
+      ds = all_image_patch_dataset(shape=SHAPE).skip(5000)
+  else:
+      ds = ${ds}_dataset(train=True, shape=SHAPE, interpolation=False)
+  ds
+
+validation_set: |
+  if "${ds}" == "all":
+      ds = all_image_patch_dataset(shape=SHAPE).limit(5000)
+  else:
+      ds = ${ds}_dataset(train=False, shape=SHAPE, interpolation=False)
+  ds
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 10_000_000
+num_inputs_between_validations: 100_000
+freeze_validation_set: True
+
+
+globals:
+  SHAPE: (3, 32, 32)
+
+model: |
+  from experiments.denoise.resconv import ResConv
+  
+  class Module(nn.Module):
+      def __init__(self):
+          super().__init__()
+          self.module = ResConv(
+              in_channels=1,
+              out_channels=SHAPE[0],
+              num_layers=${l},
+              channels=${ch},
+              stride=${stride},
+              kernel_size=${ks},
+              padding=${pad},
+              activation="${act}",
+              activation_last_layer=None,
+          )
+  
+      def forward(self, x):
+          return self.module(x) 
+  
+  Module()

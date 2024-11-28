@@ -34,6 +34,7 @@ import pandas as pd
 from src import console
 from src.util import *
 from src.util.image import *
+from src.functional import *
 from src.train import *
 from src.models.util import *
 from src.models.ca import *
