@@ -181,6 +181,7 @@ class Trainer:
         return True
 
     def save_checkpoint(self, name: str = "snapshot"):
+        start_time_aux = time.time()
         checkpoint_filename = self.checkpoint_path / f"{name}.pt"
         print(f"storing {checkpoint_filename}")
 
@@ -202,6 +203,7 @@ class Trainer:
             },
             checkpoint_filename,
         )
+        self._train_auxiliary_time += time.time() - start_time_aux
 
     def save_description(self, name: str = "description", extra: Optional[dict] = None):
         description_filename = self.checkpoint_path / f"{name}.json"
@@ -216,6 +218,7 @@ class Trainer:
             "optimizers": [repr(o) for o in self.optimizers],
             "num_inputs": self.num_input_steps,
             "training_time": time.time() - self._train_start_time - self._train_auxiliary_time,
+            "auxiliary_time": self._train_auxiliary_time,
             "scalars": self._logged_scalars,
             **(self.extra_description_values or {}),
             **(extra or {}),
@@ -277,6 +280,7 @@ class Trainer:
 
         _optimizer_step_called = False
         self.running = True
+        has_run_validation = False
         while self.running:
 
             if self.max_epoch is not None and self.epoch >= self.max_epoch:
@@ -293,6 +297,7 @@ class Trainer:
                     total=total,
                     desc=f"epoch #{self.epoch}",
             ) as progress:
+                has_run_validation = False
                 for batch_idx, input_batch in enumerate(self.iter_training_batches()):
                     if not isinstance(input_batch, (tuple, list)):
                         input_batch = (input_batch, )
@@ -346,8 +351,6 @@ class Trainer:
                     self.num_batch_steps += 1
                     self.num_input_steps += input_batch_size
 
-                    start_time_aux = time.time()
-
                     self._loss_history.append({
                         key: float(value)
                         for key, value in loss_result.items()
@@ -373,6 +376,7 @@ class Trainer:
                         if self.num_input_steps - last_validation_step >= self.num_inputs_between_validations:
                             last_validation_step = self.num_input_steps
                             last_validation_epoch = self.epoch
+                            has_run_validation = True
                             self.run_validation()
 
                     if last_checkpoint_step is not None:
@@ -389,12 +393,8 @@ class Trainer:
                         self.running = False
                         break
 
-                    self._train_auxiliary_time += time.time() - start_time_aux
-
             if last_optimizer_batch_idx != batch_idx:
                 self._optimizer_step()
-
-            start_time_aux = time.time()
 
             if self.epoch - last_checkpoint_epoch >= self.num_epochs_between_checkpoints:
                 last_checkpoint_epoch = self.epoch
@@ -405,14 +405,14 @@ class Trainer:
                 if self.epoch - last_validation_epoch >= self.num_epochs_between_validations:
                     last_validation_step = self.num_input_steps
                     last_validation_epoch = self.epoch
+                    has_run_validation = True
                     self.run_validation()
 
             if self.running:
                 self.epoch += 1
 
-            self._train_auxiliary_time += time.time() - start_time_aux
-
-        self.run_validation()
+        if not has_run_validation:
+            self.run_validation()
 
         self.writer.flush()
 
@@ -495,6 +495,8 @@ class Trainer:
         if self.validation_loader is None:
             return
 
+        start_time_aux = time.time()
+
         print(f"validation @ {self.num_input_steps:,}")
         with torch.no_grad():
             self.for_validation = True
@@ -551,6 +553,8 @@ class Trainer:
             if self.min_loss is not None and loss <= self.min_loss:
                 print(f"min_loss ({self.min_loss}) reached with validation loss {loss}")
                 self.running = False
+
+        self._train_auxiliary_time += time.time() - start_time_aux
 
     def save_weight_image(
             self,
@@ -652,10 +656,12 @@ class Trainer:
             return self.train_step(input_batch)
 
     def _write_step(self):
+        start_time_aux = time.time()
         if hasattr(self.model, "write_step"):
             self.model.write_step(self)
         else:
             self.write_step()
+        self._train_auxiliary_time += time.time() - start_time_aux
 
     def _setup_every_callbacks(self):
         self._every_callbacks = []
@@ -682,6 +688,7 @@ class Trainer:
                 })
 
     def _run_every_callbacks(self):
+        start_time_aux = time.time()
         for every in self._every_callbacks:
             if every["what"] == "inputs":
                 num = self.num_input_steps
@@ -695,6 +702,7 @@ class Trainer:
             if num - every["last_num"] >= every["num"]:
                 every["callable"]()
                 every["last_num"] = num
+        self._train_auxiliary_time += time.time() - start_time_aux
 
     @classmethod
     def from_dict(cls, data: dict):

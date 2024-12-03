@@ -134,6 +134,8 @@ class ConvLayer(nn.Module):
             x: torch.Tensor,
             output_size: Union[None, Tuple[int, int]] = None,
     ) -> torch.Tensor:
+        original_x = x
+
         if self._batch_norm_pos == 0 and hasattr(self, "bn"):
             x = self.bn(x)
 
@@ -153,6 +155,9 @@ class ConvLayer(nn.Module):
 
         if self._batch_norm_pos == 2 and hasattr(self, "bn"):
             x = self.bn(x)
+
+        if original_x.shape == x.shape:
+            x = x + original_x
 
         return x
 

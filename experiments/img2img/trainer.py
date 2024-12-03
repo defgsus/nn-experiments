@@ -36,12 +36,16 @@ class TrainImg2Img(TrainAutoencoder):
             *args,
             first_arg_is_transforms: List[Callable] = tuple(),
             histogram_loss_weight: float = 0.,
+            image_loss_margin: int = 0,
+            resize_log_images: float = 1.,
             **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self._first_arg_is_transforms = first_arg_is_transforms
         self.histogram_loss_weight = histogram_loss_weight
         self.histogram_loss = HistogramLoss(128)
+        self.image_loss_margin = image_loss_margin
+        self.resize_log_images = resize_log_images
 
     def _split_batch(self, batch):
         transformed_batch = None
@@ -79,6 +83,20 @@ class TrainImg2Img(TrainAutoencoder):
                 f", output_batch = {output_batch.shape}"
             )
 
+        if self.image_loss_margin > 0:
+            image_batch = VF.crop(
+                image_batch,
+                self.image_loss_margin, self.image_loss_margin,
+                image_batch.shape[-2] - 2 * self.image_loss_margin,
+                image_batch.shape[-1] - 2 * self.image_loss_margin,
+            )
+            output_batch = VF.crop(
+                output_batch,
+                self.image_loss_margin, self.image_loss_margin,
+                output_batch.shape[-2] - 2 * self.image_loss_margin,
+                output_batch.shape[-1] - 2 * self.image_loss_margin,
+            )
+
         loss_reconstruction_l1 = F.l1_loss(output_batch, image_batch)
         loss_reconstruction_l2 = F.mse_loss(output_batch, image_batch)
 
@@ -112,6 +130,7 @@ class TrainImg2Img(TrainAutoencoder):
                 count += image_batch.shape[0]
                 if count >= max_count:
                     break
+
             images = torch.cat(images)[:max_count].to(self.device)
             transformed_images = torch.cat(transformed_images)[:max_count].to(self.device)
             # print("XXX", images.shape, transformed_images.shape)
@@ -127,7 +146,14 @@ class TrainImg2Img(TrainAutoencoder):
                 grid_images.append(transformed_images[i])
                 grid_images.append(restored_images[i])
 
-            return images, restored_images, make_grid(grid_images, nrow=3 * 4)
+            grid = make_grid(grid_images, nrow=3 * 4)
+            if self.resize_log_images != 1.:
+                grid = VF.resize(
+                    grid,
+                    [int(s * self.resize_log_images) for s in grid.shape[-2:]],
+                    VF.InterpolationMode.NEAREST, antialias=False,
+                )
+            return images, restored_images, grid
 
         images, restored_images, grid = _get_reconstruction(self.iter_training_batches())
         self.log_image("image_train_reconstruction", grid)

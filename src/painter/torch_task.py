@@ -20,7 +20,8 @@ class TorchTask:
         self.model: Optional[nn.Module] = None
         self.model_name: Optional[str] = None
         self.painter = Painter(worker=None)
-        self.model23 = ColorizeModel()
+        #self.model23 = ColorizeModel()
+        self.model23 = ShinyTubesModel()
 
     def info(self) -> dict:
         return {
@@ -71,7 +72,7 @@ class ExperimentModel:
 class ColorizeModel(ExperimentModel):
 
     def __init__(self):
-        super().__init__("experiments/img2img/colorize/more-colors.yml")
+        super().__init__("experiments/img2img/colorize/colorize-ds.yml")
 
     def __call__(self, image: torch.Tensor):
         orig_channels = image.shape[-3]
@@ -82,3 +83,12 @@ class ColorizeModel(ExperimentModel):
 
         return set_image_channels(output, orig_channels)
 
+
+class ShinyTubesModel(ExperimentModel):
+
+    def __init__(self):
+        super().__init__("experiments/img2img/shinytubes.yml")
+
+    def __call__(self, image: torch.Tensor):
+        self.model.eval()
+        return self.model(image.to(self.device)).clamp(0, 1)

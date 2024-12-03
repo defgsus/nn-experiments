@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Optional, Tuple, Union, Iterable, Callable, Any
 
 import torch
@@ -70,6 +71,10 @@ class BaseIterableDataset(IterableDataset):
         return self.transform([
             VT.Resize(shape, interpolation=interpolation)
         ])
+
+    def center_crop(self, shape: Tuple[int, int], all: bool = False):
+        from .base_dataset import _center_crop_item
+        return self.transform([partial(_center_crop_item, shape=shape, all=all)])
 
     def filter(self, *filters: Callable[[Any], bool]):
         from .filter import FilterIterableDataset

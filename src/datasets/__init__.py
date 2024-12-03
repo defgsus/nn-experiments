@@ -28,6 +28,7 @@ from .image_patch import (
     ImagePatchDataset, ImagePatchIterableDataset, make_image_patch_dataset, RandomImagePatchIterableDataset
 )
 from .image_scale import ImageScaleIterableDataset
+from .image_source_target import ImageSourceTargetDataset, ImageSourceTargetCropDataset
 from .interleave import InterleaveIterableDataset
 from .limit import LimitDataset, SkipDataset, LimitIterableDataset
 from .normalize import NormalizeMaxIterableDataset

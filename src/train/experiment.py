@@ -369,22 +369,26 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
             "extra": {},
         },
     }
+
     # add yaml config
+    locals_ = {
+        "EXTRA_VALUES": {}
+    }
     for key, value in data.items():
         if key in (
                 "model",
                 "train_set",
                 "validation_set",
         ):
-            value, extra_values = construct_from_code(value, with_extra_values=True)
-            kwargs["extra_description_values"]["extra"].update(extra_values)
+            value = construct_from_code(value, locals_)
 
         # interpret multiline strings as code
         elif isinstance(value, str) and "\n" in value:
-            value, extra_values = construct_from_code(value, with_extra_values=True)
-            kwargs["extra_description_values"]["extra"].update(extra_values)
+            value = construct_from_code(value, locals_)
 
         kwargs[key] = value
+
+    kwargs["extra_description_values"]["extra"].update(locals_["EXTRA_VALUES"])
 
     trainer_class = kwargs.pop("trainer", None)
     train_set = kwargs.pop("train_set")
@@ -446,8 +450,10 @@ def construct_scheduler(optimizer: torch.optim.Optimizer, parameter: str, kwargs
     return klass(optimizer, kwargs["max_inputs"] // kwargs["batch_size"])
 
 
-def construct_from_code(code: Any, with_extra_values: bool = False):
+def construct_from_code(code: Any, locals_: Optional[dict] = None) -> Any:
     """
+    Returns last statement
+
     https://stackoverflow.com/questions/39379331/python-exec-a-code-block-and-eval-the-last-line/39381428#39381428
     """
     if not isinstance(code, str):
@@ -463,17 +469,12 @@ def construct_from_code(code: Any, with_extra_values: bool = False):
         raise AttributeError(f"{e}, in code:\n{code}") from e
 
     try:
-        _locals = {
-            "EXTRA_VALUES": {}
-        }
+        _locals = {} if locals_ is None else locals_
         _globals = globals().copy()
         exec(compile(block, '<string>', mode='exec'), _globals, _locals)
         _globals.update(_locals)
         result = eval(compile(last, '<string>', mode='eval'), _globals, _locals)
-        if not with_extra_values:
-            return result
-        else:
-            return result, _locals["EXTRA_VALUES"]
+        return result
 
     except:
         print("\n".join(

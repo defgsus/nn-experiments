@@ -22,7 +22,8 @@ class Application:
             #"/home/bergi/Pictures/__diverse/shenandoah2.jpg"
             #"/home/bergi/Pictures/__diverse/_42416379_chloroform203spl.gif"
             #"/home/bergi/Pictures/__diverse/bush_senior_A.jpg"
-            "/home/bergi/Pictures/__diverse/leostrauss10conn_lg.jpg"
+            #"/home/bergi/Pictures/__diverse/leostrauss10conn_lg.jpg"
+            "datasets/shiny-tubes/validation/source/tubes-01.png"
         )
         self.mask = Image(torch.zeros(4, self.image.height, self.image.width))
 
