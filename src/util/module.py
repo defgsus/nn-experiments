@@ -32,8 +32,7 @@ def dump_module_stacktrace(model: nn.Module, *input) -> Any:
                 str(arg.shape) if isinstance(arg, torch.Tensor) else type(arg).__name__
                 for arg in args
             ]),
-            "params": model.extra_repr(),
-
+            "params": f"{type(model).__name__}({model.extra_repr()})",
         })
 
     def _register_hooks(model, path: List[str], idx: int):
