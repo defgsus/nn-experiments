@@ -1,0 +1,62 @@
+experiment_name: img2img/shinytubes-spikes7b-stacked1-${matrix_slug}
+
+matrix:
+  init:
+    - .01
+  bs: [64]
+  opt: ["AdamW"]
+  lr: [.0005]
+  rnd: [True]
+  l:
+    - 5
+  ks:
+    - 5 #[ 3,  3,  5,  7,  9]
+  ch:
+    #- 32 #[32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32]
+    - 32
+  statech:
+    - 32
+  attn:
+    - 1
+#  gate:
+#    - [0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0]
+  act:
+    - gelu
+
+trainer: experiments.img2img.trainer.TrainImg2Img
+# histogram_loss_weight: 100.
+# image_loss_margin: 2
+resize_log_images: 3.
+
+train_set: |
+  ImageSourceTargetCropDataset("datasets/shiny-tubes3/train", SHAPE[-2:], target_first=True, num_crops=5000, random=${rnd})
+
+validation_set: |
+  ImageSourceTargetCropDataset("datasets/shiny-tubes3/validation", SHAPE[-2:], target_first=True, num_crops=2000, random=False)
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 1_000_000
+num_inputs_between_validations: 100_000
+# freeze_validation_set: True
+
+
+globals:
+  SHAPE: (3, 32, 32)
+
+model: |
+  from experiments.img2img.shinytubes.stacked_model import StackedModel
+  
+  StackedModel(
+      in_channels=SHAPE[0],
+      num_layers=${l},
+      channels=${ch},
+      state_channels=${statech},
+      kernel_size=${ks},
+      activation="${act}",
+      init_weights=${init},
+      attention=${attn},
+  )

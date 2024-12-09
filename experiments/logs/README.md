@@ -23,6 +23,9 @@ and look at its parameters and results.
 
 
 
+- [colorize.md](colorize.md)
+
+
 - [lm-gen.md](lm-gen.md)
   - [:arrow_forward:](lm-gen.md#text-generation-with-microsoftphi-2) text generation with microsoft/phi-2
     - [:arrow_forward:](lm-gen.md#text-completion) text completion
@@ -68,6 +71,10 @@ and look at its parameters and results.
     - [:arrow_forward:](residual-convolution.md#compare-activation-function) Compare activation function
     - [:arrow_forward:](residual-convolution.md#compare-channel-size) Compare channel size
   - [:arrow_forward:](residual-convolution.md#compare-kernel-size) Compare kernel size
+
+
+- [shiny-tubes.md](shiny-tubes.md)
+  - [:arrow_forward:](shiny-tubes.md#2024-12-03-shiny-tubes-increasing-render-quality-with-a-unet) 2024-12-03 "Shiny Tubes": increasing render quality with a UNet
 
 
 - [transformers.md](transformers.md)

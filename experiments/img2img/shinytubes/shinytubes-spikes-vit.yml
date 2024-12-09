@@ -1,4 +1,4 @@
-experiment_name: img2img/shinytubes-spikes-vit-${matrix_slug}
+experiment_name: img2img/shinytubes-spikes7-vit-${matrix_slug}
 
 matrix:
   init:
@@ -23,10 +23,10 @@ trainer: experiments.img2img.trainer.TrainImg2Img
 resize_log_images: 3.
 
 train_set: |
-  ImageSourceTargetCropDataset("datasets/shiny-tubes2/train", SHAPE[-2:], target_first=True, num_crops=5000, random=True)
+  ImageSourceTargetCropDataset("datasets/shiny-tubes3/train", SHAPE[-2:], target_first=True, num_crops=5000, random=True)
 
 validation_set: |
-  ImageSourceTargetCropDataset("datasets/shiny-tubes2/validation", SHAPE[-2:], target_first=True, num_crops=2000, random=False)
+  ImageSourceTargetCropDataset("datasets/shiny-tubes3/validation", SHAPE[-2:], target_first=True, num_crops=2000, random=False)
 
 batch_size: ${bs}
 learnrate: ${lr}

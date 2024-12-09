@@ -2,6 +2,7 @@ import unittest
 import random
 import math
 import time
+import warnings
 from io import BytesIO
 from pathlib import Path
 from collections import OrderedDict
@@ -71,6 +72,116 @@ class SelfAttention(nn.Module):
         return y
 
 
+class ConvMixer(nn.Module):
+
+    def __init__(
+            self,
+            channels: int,
+            factor: int = 8,
+            num_layers: int = 1,
+            kernel_size: int = 5,
+            activation: Union[None, str, Callable] = None,
+            batch_norm: bool = False,
+    ):
+        super().__init__()
+
+        padding = int(math.floor(kernel_size / 2))
+        chan_mult = factor ** 2
+        cur_channels = channels
+
+        self.encoder = nn.Sequential()
+        for i in range(num_layers):
+            self.encoder.add_module(f"unshuffle_{i + 1}", nn.PixelUnshuffle(factor))
+            cur_channels = cur_channels * chan_mult
+            self.encoder.add_module(f"conv_{i + 1}", nn.Conv2d(cur_channels, cur_channels, kernel_size, padding=padding, groups=cur_channels))
+            if activation is not None:
+                self.encoder.add_module(f"act_{i + 1}", activation_to_module(activation))
+            if batch_norm and i < num_layers - 1:
+                self.encoder.add_module(f"norm_{i + 1}", nn.BatchNorm2d(cur_channels))
+
+        self.decoder = nn.Sequential()
+        for i in range(num_layers):
+            self.decoder.add_module(f"shuffle_{i + 1}", nn.PixelShuffle(factor))
+            cur_channels = cur_channels // chan_mult
+            self.decoder.add_module(f"conv_{i + 1}", nn.Conv2d(cur_channels, cur_channels, kernel_size, padding=padding, groups=cur_channels))
+            if activation is not None and i < num_layers - 1:
+                self.decoder.add_module(f"act_{i + 1}", activation_to_module(activation))
+            if batch_norm and i < num_layers - 1:
+                self.decoder.add_module(f"norm_{i + 1}", nn.BatchNorm2d(cur_channels))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.decoder(self.encoder(x)) + x
+
+
+class ConvStrideMixer(nn.Module):
+
+    def __init__(
+            self,
+            channels: int,
+            stride: int,
+            hidden_channels: Optional[int] = None,
+            activation: Union[None, str, Callable] = None,
+            residual: bool = True,
+    ):
+        super().__init__()
+        self._channels = channels
+        self._hidden_channels = channels * stride if hidden_channels is None else hidden_channels
+        self._stride = stride
+        self._residual = residual
+
+        self.encoder = nn.Sequential()
+        self.encoder.add_module("patch", nn.Conv2d(channels, self._hidden_channels, stride * 2, stride=stride))
+        if activation is not None:
+            self.encoder.add_module("act", activation_to_module(activation))
+        self.encoder.add_module("conv", nn.Conv2d(self._hidden_channels, self._hidden_channels, 1))
+        self.encoder.add_module("unpatch", nn.ConvTranspose2d(self._hidden_channels, channels, stride * 2, stride=stride))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        y = self.encoder(x)
+        if self._residual:
+            y = y + x
+        return y
+
+    def extra_repr(self):
+        return f"channels={self._channels}, stride={self._stride}, residual={self._residual}"
+
+
+class ConvDilationMixer(nn.Module):
+
+    def __init__(
+            self,
+            channels: int,
+            dilations: Tuple[int, ...] = (6, 5, 3),
+            hidden_channels: Optional[int] = None,
+            activation: Union[None, str, Callable] = None,
+            residual: bool = True,
+    ):
+        super().__init__()
+        self._channels = channels
+        self._dilations = tuple(dilations)
+        self._hidden_channels = channels if hidden_channels is None else hidden_channels
+        self._residual = residual
+
+        self.encoder = nn.Sequential()
+        ch = channels
+        next_ch = self._hidden_channels
+        for i, dil in enumerate(dilations):
+            self.encoder.add_module(f"conv_{i+1}", nn.Conv2d(ch, next_ch, 3, padding=dil, dilation=dil))
+            if activation is not None:
+                self.encoder.add_module(f"act_{i+1}", activation_to_module(activation))
+            ch = next_ch
+        self.encoder.add_module(f"conv_{i+2}", nn.Conv2d(ch, channels, 3, padding=1))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        y = self.encoder(x)
+        if self._residual:
+            y = y + x
+        return y
+
+    def extra_repr(self):
+        return f"channels={self._channels}, dilations={self._dilations}, residual={self._residual}"
+
+
 class ConvLayer(nn.Module):
 
     def __init__(
@@ -87,7 +198,10 @@ class ConvLayer(nn.Module):
             padding_mode: str = "zeros",
             transposed: bool = False,
             init_weights: Optional[float] = None,
+            wavelet: bool = False,
             attention: bool = False,
+            gating: bool = False,
+            gating_activation: Union[None, str, Callable] = "sigmoid",
     ):
         super().__init__()
         self._batch_norm_pos = batch_norm_pos
@@ -103,7 +217,24 @@ class ConvLayer(nn.Module):
                 activation=activation,
             )
 
-        self.conv = (nn.ConvTranspose2d if transposed else nn.Conv2d)(
+        conv_class = nn.Conv2d
+
+        if wavelet and in_channels == out_channels:
+            from src.models.wavelet import WTConv2d
+            conv_class = WTConv2d
+            if padding or groups:
+                warnings.warn("Can't use padding or groups with Wavelet Conv")
+                def _conv_class(**kwargs):
+                    kwargs.pop("padding", None)
+                    kwargs.pop("padding_mode", None)
+                    kwargs.pop("groups", None)
+                    return WTConv2d(**kwargs)
+                conv_class = _conv_class
+
+        if transposed:
+            conv_class = nn.ConvTranspose2d
+
+        self.conv = conv_class(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=kernel_size,
@@ -112,6 +243,22 @@ class ConvLayer(nn.Module):
             padding_mode=padding_mode,
             groups=groups,
         )
+
+        self.gating_conv = None
+        if gating:
+            self.gating_conv = conv_class(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=padding,
+                padding_mode=padding_mode,
+                groups=groups,
+            )
+            #self.gating_mixer = ConvMixer(out_channels, activation=activation, batch_norm=batch_norm)
+            #self.gating_mixer = ConvStrideMixer(out_channels, stride=16, activation=activation, hidden_channels=out_channels)
+            self.gating_mixer = ConvDilationMixer(out_channels, activation=activation)
+            self.gating_act = activation_to_module(gating_activation)
 
         if batch_norm and batch_norm_pos == 1:
             self.bn = nn.BatchNorm2d(out_channels)
@@ -124,7 +271,8 @@ class ConvLayer(nn.Module):
         if init_weights is not None:
             with torch.no_grad():
                 for p in self.parameters():
-                    p[:] = p * init_weights
+                    if p.requires_grad:
+                        p[:] = p * init_weights
                 #self.conv.weight[:] = self.conv.weight * init_weights
                 #if self.conv.bias is not None:
                 #    self.conv.bias[:] = self.conv.bias * init_weights
@@ -142,6 +290,15 @@ class ConvLayer(nn.Module):
         if self.attention is not None:
             x = self.attention(x)
 
+        gate_x = None
+        if self.gating_conv is not None:
+            gate_x = self.gating_conv(x)
+            if output_size is not None and tuple(gate_x.shape[-2:]) != output_size:
+                gate_x = F.pad(gate_x, (0, output_size[-1] - gate_x.shape[-1], 0, output_size[-2] - gate_x.shape[-2]))
+            gate_x = self.gating_mixer(gate_x)
+            if self.gating_act is not None:
+                gate_x = self.gating_act(gate_x)
+
         x = self.conv(x)
 
         if output_size is not None and tuple(x.shape[-2:]) != output_size:
@@ -156,10 +313,14 @@ class ConvLayer(nn.Module):
         if self._batch_norm_pos == 2 and hasattr(self, "bn"):
             x = self.bn(x)
 
+        if gate_x is not None:
+            x = x * gate_x
+
         if original_x.shape == x.shape:
             x = x + original_x
 
         return x
+
 
 
 
@@ -179,7 +340,9 @@ class ResConv(nn.Module):
             batch_norm: Union[bool, Iterable[bool]] = True,
             activation: Union[None, str, Callable] = "gelu",
             activation_last_layer: Union[None, str, Callable] = None,
+            wavelet: bool = False,
             attention: Union[bool, Iterable[bool]] = False,
+            gating: Union[bool, Iterable[bool]] = False,
             residual_weight: float = 1.,
             batch_norm_pos_encoder: int = 0,
             batch_norm_pos_decoder: int = 0,
@@ -201,6 +364,7 @@ class ResConv(nn.Module):
         batch_norms = param_make_list(batch_norm, num_layers, "batch_norm")
         conv_groups = param_make_list(conv_groups, num_layers, "conv_groups")
         attention = param_make_list(attention, num_layers, "attention")
+        gating = param_make_list(gating, num_layers, "gating")
 
         channels_list = [in_channels, *channels]
 
@@ -208,8 +372,8 @@ class ResConv(nn.Module):
 
         with torch.no_grad():
 
-            for i, (ch, ch_next, kernel_size, stride, pad, batch_norm, groups, attn) in enumerate(
-                    zip(channels_list, channels_list[1:], kernel_sizes, strides, paddings, batch_norms, conv_groups, attention)
+            for i, (ch, ch_next, kernel_size, stride, pad, batch_norm, groups, attn, gate) in enumerate(
+                    zip(channels_list, channels_list[1:], kernel_sizes, strides, paddings, batch_norms, conv_groups, attention, gating)
             ):
                 self.encoder[f"layer_{i + 1}"] = ConvLayer(
                     in_channels=ch,
@@ -223,7 +387,9 @@ class ResConv(nn.Module):
                     batch_norm_pos=batch_norm_pos_encoder,
                     groups=groups,
                     init_weights=init_weights,
+                    wavelet=wavelet,
                     attention=attn,
+                    gating=gate,
                 )
 
         channels_list = list(reversed([out_channels, *channels]))
@@ -232,10 +398,12 @@ class ResConv(nn.Module):
         paddings = list(reversed(paddings))
         batch_norms = list(reversed(batch_norms))
         conv_groups = list(reversed(conv_groups))
+        attention = list(reversed(attention))
+        gating = list(reversed(gating))
 
         self.decoder = nn.ModuleDict()
-        for i, (ch, ch_next, kernel_size, stride, pad, batch_norm, groups, attn) in enumerate(
-                zip(channels_list, channels_list[1:], kernel_sizes, strides, paddings, batch_norms, conv_groups, attention)
+        for i, (ch, ch_next, kernel_size, stride, pad, batch_norm, groups, attn, gate) in enumerate(
+                zip(channels_list, channels_list[1:], kernel_sizes, strides, paddings, batch_norms, conv_groups, attention, gating)
         ):
             self.decoder[f"layer_{i + 1}"] = ConvLayer(
                 in_channels=ch,
@@ -251,6 +419,7 @@ class ResConv(nn.Module):
                 groups=groups,
                 init_weights=init_weights,
                 attention=attn,
+                gating=gate,
             )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
