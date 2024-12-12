@@ -142,8 +142,8 @@ class TrainImg2Img(TrainAutoencoder):
 
             grid_images = []
             for i in range(images.shape[0]):
-                grid_images.append(images[i])
                 grid_images.append(transformed_images[i])
+                grid_images.append(images[i])
                 grid_images.append(restored_images[i])
 
             grid = make_grid(grid_images, nrow=3 * 4)

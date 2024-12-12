@@ -124,6 +124,10 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
 
         data = _load_yaml(filename, matrix_entry)
         data.pop("matrix", None)
+        _load = data.pop("load", None)
+        if _load and not load_from_checkpoint:
+            load_from_checkpoint = _load
+
         if extra_args:
             data.update(extra_args)
 
@@ -172,20 +176,21 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
             if not trainer.load_checkpoint("best"):
                 trainer.load_checkpoint()
 
-            if load_from_checkpoint is not None:
-                found_it = False
-                for cp_filename in ("best.pt", "snapshot.pt"):
-                    cp_filename = checkpoint_path / load_from_checkpoint / cp_filename
-                    if cp_filename.exists():
-                        found_it = True
-                        print(f"loading model checkpoint {cp_filename}")
-                        checkpoint_data = torch.load(cp_filename)
-                        model.load_state_dict(checkpoint_data["state_dict"])
-                        break
+        if load_from_checkpoint is not None:
+            found_it = False
+            for cp_filename in ("best.pt", "snapshot.pt"):
+                cp_filename = Path(load_from_checkpoint) / cp_filename
+                print(cp_filename, cp_filename.exists())
+                if cp_filename.exists():
+                    found_it = True
+                    print(f"loading model checkpoint {cp_filename}")
+                    checkpoint_data = torch.load(cp_filename)
+                    model.load_state_dict(checkpoint_data["state_dict"])
+                    break
 
-                if not found_it:
-                    print(f"Did not find checkpoint in `{load_from_checkpoint}`")
-                    exit(-1)
+            if not found_it:
+                print(f"Did not find checkpoint in `{load_from_checkpoint}`")
+                exit(-1)
 
         trainer.save_description()
         trainer.train()
@@ -316,7 +321,10 @@ def _load_yaml(filename: str, matrix_entry: Optional[Dict] = None):
 
     else:
         text = Path(filename).read_text()
-        text = apply_parameter_matrix(text, matrix_entry)
+        text = apply_parameter_matrix(text, {
+            **matrix_entry,
+            "PATH": str(PROJECT_ROOT),
+        })
 
         fp = StringIO(text)
         data = yaml.load(fp, YamlLoader)

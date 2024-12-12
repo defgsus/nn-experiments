@@ -23,6 +23,7 @@ def iter_image_patches(
         stride: Union[None, int, Iterable[int]] = None,
         padding: Union[int, Iterable[int]] = 0,
         fill: Union[int, float] = 0,
+        random_offset: Union[None, int, Iterable[int]] = None,
         with_pos: bool = False,
         batch_size: Optional[int] = None,
         verbose: bool = False,
@@ -32,6 +33,9 @@ def iter_image_patches(
 ]:
     """
     Iterate through patches of an image
+
+    optionally returns:
+        patch-batch, position-batch (where position is [y, x])
 
     :param image: Tensor of shape [C, H, W]
     :param shape: one or two ints defining the output shape
@@ -58,6 +62,9 @@ def iter_image_patches(
         if any(s < 1 for s in stride):
             raise ValueError(f"stride < 1 not supported, got {stride}")
 
+    if random_offset is not None:
+        random_offset = param_make_tuple(random_offset, 2, "random_offset")
+
     if padding:
         image = VF.pad(image, padding, fill=fill)
 
@@ -68,6 +75,10 @@ def iter_image_patches(
         for y in range(0, height - shape[0] + 1, stride[0]):
             for x in range(0, width - shape[1] + 1, stride[1]):
                 progress.update(1)
+
+                if random_offset is not None:
+                    x = min(x + random.randrange(random_offset[1]), width - shape[1])
+                    y = min(y + random.randrange(random_offset[0]), height - shape[0])
 
                 patch = image[:, y: y + shape[0], x: x + shape[1]]
 

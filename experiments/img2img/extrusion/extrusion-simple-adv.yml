@@ -1,0 +1,70 @@
+experiment_name: img2img/extrusion-simple-adv3-${matrix_slug}
+
+matrix:
+  res: [64]
+  bs: [64]
+  opt: ["AdamW"]
+  lr: [.0003]
+  l:
+    - 6
+  ks:
+    - 5 #[ 3,  3,  5,  7,  9]
+  ch:
+    - 32 #[32, 32, 48, 64, 80]
+  act:
+    - gelu
+
+trainer: experiments.img2img.trainer.TrainImg2Img
+# histogram_loss_weight: 100.
+# image_loss_margin: 2
+resize_log_images: 3.
+
+load: "checkpoints/img2img/extrusion-simple-res:64_bs:64_opt:AdamW_lr:0.0003_l:6_ks:5_ch:32_act:gelu/"
+
+train_set: |
+  ImageSourceTargetCropDataset(
+      "${PATH}/datasets/extrusion/train", SHAPE[-2:], target_first=True, num_crops=5000, 
+      random=True,
+      adversarial_rate=0.5,
+  )
+
+validation_set: |
+  ImageSourceTargetCropDataset(
+      "${PATH}/datasets/extrusion/validation", SHAPE[-2:], target_first=True, num_crops=2000, 
+      random=False,
+      adversarial_rate=1.,
+  )
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 1_000_000
+num_inputs_between_validations: 100_000
+# freeze_validation_set: True
+
+
+globals:
+  SHAPE: (3, ${res}, ${res})
+
+model: |
+  
+  class Module(nn.Module):
+      def __init__(self):
+          super().__init__()
+          
+          padding = int(math.floor(${ks} / 2))
+          self.layers = nn.Sequential()
+          self.layers.add_module("proj_in", nn.Conv2d(SHAPE[0], ${ch}, ${ks}, padding=padding))
+  
+          for i in range(${l}):
+              self.layers.add_module(f"conv_{i}", nn.Conv2d(${ch}, ${ch}, ${ks}, padding=padding))
+              self.layers.add_module(f"act_{i}", activation_to_module("${act}"))
+          
+          self.layers.add_module("proj_out", nn.Conv2d(${ch}, SHAPE[0], ${ks}, padding=padding))
+  
+      def forward(self, x):
+          return self.layers(x) 
+  
+  Module()

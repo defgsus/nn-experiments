@@ -16,14 +16,19 @@ class ImageSourceTargetDataset(BaseDataset):
             path: Union[str, Path],
             source_subpath: str = "source",
             target_subpath: str = "target",
+            adversarials_subpath: str = "adversarial",
             target_first: bool = False,
+            adversarial_rate: float = 0.,
     ):
         path = Path(path)
         self._source_path = path / source_subpath
         self._target_path = path / target_subpath
+        self._adversarials_path = path / adversarials_subpath
         self._source_images: Dict[str, Optional[torch.Tensor]] = {}
         self._target_images: Dict[str, Optional[torch.Tensor]] = {}
+        self._adversarials_images: Dict[str, Optional[torch.Tensor]] = {}
         self._target_first = target_first
+        self._adversarial_rate = adversarial_rate
 
         for filename in sorted(self._source_path.glob("*")):
             if is_image_file(str(filename)):
@@ -33,8 +38,15 @@ class ImageSourceTargetDataset(BaseDataset):
             if is_image_file(str(filename)):
                 self._target_images[filename.name] = VF.to_tensor(PIL.Image.open(filename))
 
+        if self._adversarial_rate > 0:
+            for filename in sorted(self._adversarials_path.glob("*")):
+                if is_image_file(str(filename)):
+                    self._adversarials_images[filename.name] = VF.to_tensor(PIL.Image.open(filename))
+
         if sorted(self._source_images) != sorted(self._target_images):
             raise RuntimeError(f"Source and target filenames are not identical")
+
+        print(f"datatset: {len(self._source_images)} images, {len(self._adversarials_images)} adversarials")
 
         self._index = {
             i: key
@@ -46,11 +58,17 @@ class ImageSourceTargetDataset(BaseDataset):
 
     def __getitem__(self, idx: int):
         key = self._index[idx]
-        if self._target_first:
-            return self._target_images[key], self._source_images[key]
-        else:
-            return self._source_images[key], self._target_images[key]
 
+        target, source = self._target_images[key], self._source_images[key]
+
+        if self._adversarial_rate > 0 and key in self._adversarials_images:
+            if random.uniform(0, 1) < self._adversarial_rate:
+                source = self._adversarials_images[key]
+
+        if self._target_first:
+            return target, source
+        else:
+            return source, target
 
 
 class ImageSourceTargetCropDataset(BaseDataset):
@@ -63,9 +81,11 @@ class ImageSourceTargetCropDataset(BaseDataset):
             target_subpath: str = "target",
             target_first: bool = False,
             random: bool = False,
+            adversarial_rate: float = 0.,
     ):
         self._dataset = ImageSourceTargetDataset(
             path=path, source_subpath=source_subpath, target_subpath=target_subpath, target_first=target_first,
+            adversarial_rate=adversarial_rate,
         )
         self._shape = shape
         self._num_crops = num_crops
