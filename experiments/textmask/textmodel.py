@@ -14,7 +14,7 @@ class ConvTextLayer(nn.Module):
             num_channels_in: int,
             num_channels_out: int,
             kernel_size: int,
-            padding: int,
+            dilation: int,
             norm: Union[None, str, Type[nn.Module]],
             activation: Union[None, str, Callable],
             residual: bool,
@@ -22,8 +22,15 @@ class ConvTextLayer(nn.Module):
         super().__init__()
         self.residual = residual and num_channels_in == num_channels_out
 
+        padding = int(math.floor(kernel_size / 2)) * dilation
         self.norm = normalization_to_module(norm, channels=num_channels_in)
-        self.conv = nn.Conv1d(num_channels_in, num_channels_out, kernel_size=kernel_size, padding=padding)
+        self.conv = nn.Conv1d(
+            num_channels_in,
+            num_channels_out,
+            kernel_size=kernel_size,
+            padding=padding,
+            dilation=dilation,
+        )
         self.act = activation_to_module(activation)
 
     def extra_repr(self) -> str:
@@ -36,6 +43,7 @@ class ConvTextLayer(nn.Module):
             x = self.norm(x)
 
         y = self.conv(x)
+        # print(f"X -> Y: {x.shape} {y.shape}")
 
         if self.act is not None:
             y = self.act(y)
@@ -53,6 +61,7 @@ class ConvTextModel(nn.Module):
             num_layers: int,
             num_channels: Union[int, Iterable[int]],
             kernel_size: Union[int, Iterable[int]] = 3,
+            dilation: Union[int, Iterable[int]] = 1,
             norm: Union[None, str, Type[nn.Module]] = None,
             out_norm: Union[None, str, Type[nn.Module]] = None,
             activation: Union[None, str, Callable] = None,
@@ -76,10 +85,11 @@ class ConvTextModel(nn.Module):
         self.layers = nn.ModuleList()
 
         ch = num_channels
-        for i, next_ch, ks, res in zip(
+        for i, next_ch, ks, dil, res in zip(
                 range(num_layers),
                 layer_output_channels,
                 param_make_tuple(kernel_size, num_layers, "kernel_size"),
+                param_make_tuple(dilation, num_layers, "dilation"),
                 param_make_tuple(residual, num_layers, "residual"),
         ):
             self.layers.add_module(
@@ -91,7 +101,7 @@ class ConvTextModel(nn.Module):
                     ),
                     num_channels_out=next_ch,
                     kernel_size=ks,
-                    padding=int(math.floor(ks / 2)),
+                    dilation=dil,
                     norm=norm,
                     activation=activation,
                     residual=res,
