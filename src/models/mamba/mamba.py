@@ -34,7 +34,7 @@ from einops import rearrange, repeat, einsum
 class ModelArgs:
     d_model: int
     n_layer: int
-    vocab_size: int
+    vocab_size: int = 0
     d_state: int = 16
     expand: int = 2
     dt_rank: Union[int, str] = 'auto'
@@ -67,7 +67,6 @@ class Mamba(nn.Module):
         self.lm_head = nn.Linear(args.d_model, args.vocab_size, bias=False)
         self.lm_head.weight = self.embedding.weight  # Tie output projection to embedding weights.
         # See "Weight Tying" paper
-
 
     def forward(self, input_ids):
         """

@@ -146,7 +146,9 @@ def activation_to_callable(
 
 def normalization_to_module(
         normalization: Union[None, str, Type[nn.Module]],
-        *args, **kwargs,
+        *args,
+        channels: Optional[int] = None,
+        **kwargs,
 ) -> Optional[Callable]:
     if normalization is None:
         return None
@@ -162,12 +164,19 @@ def normalization_to_module(
 
     if isinstance(normalization, str):
         s = normalization.lower()
+        if s == "rms":
+            from src.models.mamba.mamba import RMSNorm
+            return RMSNorm(d_model=channels, **kwargs)
+        elif s in ("bn1d", "batchnorm1d"):
+            return nn.BatchNorm1d(num_features=channels, **kwargs)
+        elif s in ("bn2d", "batchnorm2d"):
+            return nn.BatchNorm2d(num_features=channels, **kwargs)
         for module in (torch.nn, ):
             for key, value in vars(module).items():
                 try:
                     if key.lower() == s and issubclass(value, nn.Module):
                         return value(*args, **kwargs)
-                except TypeError:
+                except TypeError as e:
                     pass
 
     raise ValueError(f"Unrecognized normalization: {repr(normalization)}")
@@ -193,6 +202,9 @@ def get_model_weight_images(
                 continue
             if param.ndim == 2:
                 yield param
+            elif param.ndim == 3:
+                for ch in range(min(max_channels, param.shape[0])):
+                    yield param[ch]
             elif param.ndim == 4:
                 for ch in range(min(max_channels, param.shape[0])):
                     yield param[ch, 0]

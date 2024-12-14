@@ -12,6 +12,7 @@ from .classlogits import ClassLogitsDataset
 from .contrastive import ContrastiveIterableDataset
 from .contrastive_image import ContrastiveImageDataset
 from .echords import EChordsIterableDataset
+from .filenames import FilenameDataset
 from .generative import (
     BoulderDashIterableDataset,
     IFSDataset, IFSClassIterableDataset,
@@ -30,11 +31,18 @@ from .image_patch import (
 from .image_scale import ImageScaleIterableDataset
 from .image_source_target import ImageSourceTargetDataset, ImageSourceTargetCropDataset
 from .interleave import InterleaveIterableDataset
-from .limit import LimitDataset, SkipDataset, LimitIterableDataset
+from .limit import (
+    LimitDataset, SkipDataset, LimitIterableDataset, SkipIterableDataset,
+    RepeatIterableDataset,
+)
 from .normalize import NormalizeMaxIterableDataset
 from .randomcropall import RandomCropAllDataset
 from .shuffle import ShuffleDataset, IterableShuffle
 from .split import SplitIterableDataset
+from .text import (
+    TextSegmentIterableDataset, FileTextSegmentIterableDataset,
+    TextGithubEventIterableDataset,
+)
 from .pixelart import RpgTileIterableDataset
 from .text2pix import TextToPixelIterableDataset
 from .transform import TransformDataset, TransformIterableDataset

@@ -1,0 +1,66 @@
+experiment_name: textmask/convtext-github-cmt_${matrix_slug}
+
+matrix:
+  bs: [64]
+  opt: ["AdamW"]
+  lr: [.0005]
+  size:
+    - 40
+  mask:
+    - 10
+  mt:
+    - "'block'"
+    #- "'single'"
+  l:
+    - 8
+  ch:
+    - 128
+  ks:
+    - 7
+  act:
+    - "gelu"
+
+
+trainer: experiments.textmask.texttrainer.TextMaskTrainer
+mask_size: ${mask}
+mask_type: ${mt}
+
+train_set: |
+  TextGithubEventIterableDataset(
+    fixed_width=${size},
+    min_text_length=${size} * 3 // 2,
+    stride="random",
+    # type=("comment",),
+  ).skip(20000).shuffle(100000)
+
+validation_set: |
+  TextGithubEventIterableDataset(
+    fixed_width=${size},
+    min_text_length=${size} * 3 // 2,
+    stride=None,
+    # type=("comment",),
+  ).limit(5000)
+
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 4_000_000
+#num_epochs_between_validations: 1
+num_inputs_between_validations: 50_000
+freeze_validation_set: True
+
+
+model: |
+  from experiments.textmask.textmodel import ConvTextModel
+  
+  ConvTextModel(
+      vocab_size=256,
+      num_layers=${l},
+      num_channels=${ch},
+      kernel_size=${ks},
+      activation="${act}",
+      residual=True,
+  )

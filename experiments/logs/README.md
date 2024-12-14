@@ -73,6 +73,14 @@ and look at its parameters and results.
   - [:arrow_forward:](residual-convolution.md#compare-kernel-size) Compare kernel size
 
 
+- [selcopy.md](selcopy.md)
+  - [:arrow_forward:](selcopy.md#2024-12-14-selective-copy-problem-with-a-very-small-language-model) 2024-12-14 Selective Copy Problem with a Very Small Language Model
+      - [:arrow_forward:](selcopy.md#comparing-number-of-layers) Comparing number of layers
+
+
+      - [:arrow_forward:](selcopy.md#increasing-kernel-size) Increasing kernel size
+
+
 - [shiny-tubes.md](shiny-tubes.md)
   - [:arrow_forward:](shiny-tubes.md#2024-12-03-shiny-tubes-increasing-render-quality-with-a-unet) 2024-12-03 "Shiny Tubes": increasing render quality with a UNet
 

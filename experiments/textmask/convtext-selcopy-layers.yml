@@ -1,0 +1,71 @@
+experiment_name: textmask/convtext-selcopy_${matrix_slug}
+
+matrix:
+  bs: [64]
+  opt: ["AdamW"]
+  lr: [.0005]
+  nitem:
+    - 10
+  area:
+    - 40
+  l:
+    #- 4
+    - 6
+    - 8
+    - 10
+    - 12
+  ch:
+    - 64
+  ks:
+    - 9
+  norm:
+    - None
+  act:
+    - "gelu"
+
+
+trainer: experiments.textmask.texttrainer.TextMaskTrainer
+mask_is_arg: 1
+
+train_set: |
+  validation_set = TextSelectiveCopyingIterableDataset(
+    count=10000,
+    num_items=${nitem},
+    area=${area},
+    seed=23,
+    with_masked=True,
+  )
+  TextSelectiveCopyingIterableDataset(
+    count=100000,
+    num_items=${nitem},
+    area=${area},
+    with_masked=True,
+    exclude=list(i[0] for i in validation_set),
+  )
+
+validation_set: |
+  validation_set
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 1_000_000
+num_epochs_between_validations: 1
+#num_inputs_between_validations: 50_000
+freeze_validation_set: True
+
+
+model: |
+  from experiments.textmask.textmodel import ConvTextModel
+  
+  ConvTextModel(
+      vocab_size=256,
+      num_layers=${l},
+      num_channels=${ch},
+      kernel_size=${ks},
+      norm=${norm},
+      activation="${act}",
+      residual=True,
+  )

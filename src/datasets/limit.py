@@ -96,3 +96,22 @@ class SkipIterableDataset(BaseIterableDataset):
             if i > self._offset:
                 yield item
 
+
+class RepeatIterableDataset(BaseIterableDataset):
+
+    def __init__(
+            self,
+            dataset: Union[IterableDataset, Dataset],
+            count: int,
+    ):
+        super().__init__()
+        self._dataset = dataset
+        self._count = count
+
+    def __len__(self):
+        return len(self._dataset) * self._count
+
+    def __iter__(self):
+        for i in range(self._count):
+            yield from self._dataset
+

@@ -1,5 +1,6 @@
 from .batches import iter_batches, batch_call, batch_call_iterable
 from .cuda import to_torch_device
+from .font_squares import FontSquares
 from .module import (
     num_module_parameters,
     clip_module_weights,

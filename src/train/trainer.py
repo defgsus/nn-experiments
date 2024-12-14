@@ -312,6 +312,8 @@ class Trainer:
                     elif isinstance(input_batch[0], dict):
                         v = input_batch[0][next(iter(input_batch[0].keys()))]
                         input_batch_size = len(v)
+                    elif isinstance(input_batch[0], list):
+                        input_batch_size = len(input_batch[0])
                     elif callable(getattr(input_batch[0], "__len__", None)):
                         input_batch_size = len(input_batch[0])
                     else:

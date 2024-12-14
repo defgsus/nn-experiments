@@ -16,6 +16,10 @@ class BaseIterableDataset(IterableDataset):
         from .limit import SkipIterableDataset
         return SkipIterableDataset(self, count)
 
+    def repeat(self, count: int):
+        from .limit import RepeatIterableDataset
+        return RepeatIterableDataset(self, count)
+
     def shuffle(self, max_shuffle: int, *, seed: Optional[int] = None):
         from .shuffle import IterableShuffle
         return IterableShuffle(self, max_shuffle=max_shuffle, seed=seed)

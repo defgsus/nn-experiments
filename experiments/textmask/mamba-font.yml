@@ -1,0 +1,94 @@
+experiment_name: textmask/mambaio-font-${matrix_slug}
+
+matrix:
+  bs: [64]
+  opt: ["AdamW"]
+  lr: [.0005]
+  size:
+    - 40
+  mask:
+    - 5
+  l:
+    - 3
+  d_model:
+    - 100
+  d_state:
+    - 16
+  exp:
+    - 2
+
+
+trainer: experiments.textmask.fonttrainer.TextMaskFontTrainer
+mask_size: ${mask}
+
+train_set: |
+  ds = TextSegmentIterableDataset(
+    Path("/home/bergi/text/der_bandwurm.txt").read_text(),
+    #Path("${PATH}/datasets/alice.txt").read_text(),
+    size=${size}, stride=1,
+  ).repeat(20).shuffle(1000)
+
+validation_set: |
+  ds = TextSegmentIterableDataset(
+    Path("/home/bergi/text/der_bandwurm.txt").read_text(),
+    #Path("${PATH}/datasets/alice.txt").read_text(),
+    size=${size}, stride=5,
+  ).shuffle(1000, seed=23).limit(5000)
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 10_000_000
+#num_epochs_between_validations: 1
+num_inputs_between_validations: 50_000
+freeze_validation_set: True
+
+
+model: |
+  from src.models.mamba import MambaImagePatch, ModelArgs
+  
+  class Model(nn.Module):
+    def __init__(
+            self,
+            shape: Tuple[int, int, int] = (1, 8, 8),
+            d_model: int = ${d_model},
+    ):
+        super().__init__()
+        self.shape = shape
+  
+        self.proj_in = nn.Linear(math.prod(shape), d_model)
+        self.layers = nn.Sequential(
+            nn.Conv1d(d_model, d_model, 5, padding=2),
+            nn.GELU(),
+            nn.Conv1d(d_model, d_model, 5, padding=2),
+            nn.GELU(),
+            nn.Conv1d(d_model, d_model, 5, padding=2),
+            nn.GELU(),
+            nn.Conv1d(d_model, d_model, 5, padding=2),
+        )
+        self.proj_out = nn.Linear(d_model, math.prod(shape))
+  
+    def forward(self, input: torch.Tensor):
+        """
+        :param input: Tensor of shape [B, L, C, H, W]
+        """
+        x = self.proj_in(input.flatten(2)).permute(0, 2, 1)
+        
+        for layer in self.layers:
+            x = layer(x)
+        
+        x = x.permute(0, 2, 1)
+        out = self.proj_out(x)
+        return out.view(input.shape)
+
+  MambaImagePatch(
+      (1, 8, 8),
+      ModelArgs(
+          d_model=${d_model},
+          n_layer=${l},
+          d_state=${d_state},
+          expand=${exp},
+      )
+  )
