@@ -1,4 +1,4 @@
-experiment_name: textmask/convtext-QAprog-lpo2b_${matrix_slug}
+experiment_name: textmask/lstm-QAprog-swaponly_${matrix_slug}
 
 matrix:
   bs: [64]
@@ -8,7 +8,10 @@ matrix:
     - 26
   len:
     - 5
-  nops: [5, 6, 7, 3, 4]
+  nops:
+    - [2, 5]
+  vnops:
+    - 5
   l:
     #- 4
     - 6
@@ -16,13 +19,10 @@ matrix:
     #- 10
     #- 12
     #- 18
-  d_model:
-    - 32
-  d_state:
-    - 16
-  exp:
-    - 2
-
+  ch:
+    - 64
+  dropout:
+    - 0.
 
 trainer: experiments.textmask.texttrainer.TextMaskTrainer
 mask_is_arg: 1
@@ -36,7 +36,8 @@ train_set: |
     num_items=${nitem},
     input_length=${len},
     num_operations=${nops},
-    operators={"+": 1., "-": 2/3},
+    validation_num_operations=${vnops},
+    operators={">": 1},# "+": 1., "-": 2/3},
   )
   train_set
 
@@ -55,12 +56,11 @@ freeze_validation_set: True
 
 
 model: |
-  from src.models.mamba.mamba import Mamba, ModelArgs
+  from experiments.textmask.lstm_model import LstmTextModel
   
-  Mamba(ModelArgs(
-      d_model=${d_model},
-      n_layer=${l},
-      d_state=${d_state},
-      expand=${exp},
-      vocab_size=256,
-  ))
+  LstmTextModel(
+    vocab_size=256,
+    num_layers=${l},
+    num_channels=${ch},
+    dropout=${dropout},
+  )

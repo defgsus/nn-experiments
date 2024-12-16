@@ -166,7 +166,7 @@ Here's the loss and error curves of the 18-layer network trained with 5 and 2-5 
 The bright one is the brighter one. Indeed, the 18-layer gets down to 2.5% sample error. It is
 able to solve the task, it could just not learn it from the previous dataset. One could argue,
 though, that it would eventually learn the task just from the 5-operations examples but it would
-probably take 10 to 100 times more time/computation/CO2-emissions/draughts/you-name-it.
+probably take 10 to 100 times more computation / CO2-emissions / floodings / draughts / you-name-it.
 
 |   nitem |   len | nops   | val-nops |   l |   ch |   ks |   validation loss |   validation_mask_error% |   validation_sample_error% | model params   |   train time (minutes) | throughput   |
 |--------:|------:|:-------|---------:|----:|-----:|-----:|------------------:|-------------------------:|---------------------------:|:---------------|-----------------------:|:-------------|
@@ -176,13 +176,50 @@ probably take 10 to 100 times more time/computation/CO2-emissions/draughts/you-n
 
 We can see from the table, that the 12 and especially the 6-layer networks are struggling. 
 Looking at the plots of the 6-layer networks trained with 5 and 2-5 operations, we can 
-see that the mask error decreases by a large amount but actual sample error stays roughly
-the same:
+see that the mask error decreases by a good amount but actual sample error stays roughly
+the same. It learned to put some letters and the right place but still fails
+for almost every validation sample:
 
 ![error curves](img/selcopy2/selcopy2_error-curves_l6-nops-2-5-vnops5.png)
 
-Okay, this is a good point of origin for further experimentation. 
+- Quick takeaway: **Put also some easy examples in the training set!**
+
+The curves suggest, however, that training has not yet converged. There are sure a few more permille
+to squeeze out.
+
+This is a good point of origin for further experimentation. 
 Can we get the 6-layer network to solve the *5-operations Very Selective Copying* problem,
 - without adding so many modules that it actually resembles a 12-layer network
-- without making it execute slower than the 12-layer network
+- without making it slower to execute than the 12-layer network
+- ***bonus***: by keeping the number of model parameters equal or even lower
+
+In other words, is there a trick, maybe to pass data around in a different way, 
+that strongly increases the computational performance?
+
+### Quck comparison with Mamba and LSTM
+
+Just for another set of baselines, i tried the [state-spaces/Mamba](https://github.com/state-spaces/mamba)
+(yet the [slow version](https://github.com/johnma2006/mamba-minimal))
+and the all-beloved LSTM (as [pytorch implementation](https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html)). 
+
+![error curves](img/selcopy2/selcopy2_error-curves_l6-nops-2-5-mamba-and-lstm.png)
+
+The yellow/brownish is the 6-layers model from above, green is Mamba and blue the LSTM. 
+All of them have 6 layers
+
+| nitem |   len | nops   | val-nops |   l | model                           |  validation loss | validation_mask_error% |  validation_sample_error% |  model params |   train time (minutes) | throughput |
+|------:|------:|:-------|---------:|----:|:--------------------------------|-----------------:|-----------------------:|--------------------------:|--------------:|-----------------------:|-----------:|
+|    26 |     5 | 2,5    |        5 |   6 | LSTM hidden_size=64             |         0.264829 |                79.9602 |                       100 |       216,064 |                   6.72 |    9,926/s |
+|    26 |     5 | 2,5    |        5 |   6 | Conv1d channels=64 (from above) |         0.208661 |                60.0816 |                   99.5123 |       237,952 |                  16.55 |    4,027/s |
+|    26 |     5 | 2,5    |        5 |   6 | MAMBA d_model=32 d_state=16     |         0.199433 |                55.8081 |                   99.1839 |        67,936 |                 126.56 |      526/s |
+
+- None of these especially-crafted models reached a significant performance gain. 
+- To be fair: The Mamba model is *very* small compared to the Conv1d, just 28% of parameters. 
+  Though it manages to consume 7.8x more computation time. The first tiny drop in sample error 
+  occurred after 1 hour of training and i do not have the patience today to train an 
+  equally-sized Mamba for comparison. (The dynamics of the curves suggest, that it would not change much)
+- The LSTM basically archived nothing (though equal-sized). It's about as bad as the 6-layer 
+  Conv1d with only 5-operations questions in the training set. At least, it's blazinlgy fast!
+- Disclaimer: I do not know any best practices about using or training LSTMs or Mambas and
+  surely made some mistake..
 
