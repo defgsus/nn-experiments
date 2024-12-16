@@ -5,4 +5,6 @@ from .mengersponge2d import MengerSponge2dDataset
 from .text_gen import (
     TextMathIterableDataset,
     TextSelectiveCopyingIterableDataset,
+    TextQABaseIterableDataset,
+    TextQAProgramIterableDataset,
 )

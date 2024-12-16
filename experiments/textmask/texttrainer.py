@@ -67,12 +67,14 @@ class TextMaskTrainer(Trainer):
         #loss = F.l1_loss(output_logits, target_logits.float())
         with torch.no_grad():
             mask_mask = (masked_batch == 0)
+            error_batch = text_batch != output_logits.argmax(dim=-1)
             return {
                 "loss": loss,
                 "error%": (text_batch != output_logits.argmax(dim=-1)).float().mean() * 100,
                 "mask_error%": (
-                    mask_mask & (text_batch != output_logits.argmax(dim=-1))
+                    mask_mask & error_batch
                 ).float().mean() * 100 / mask_mask.float().mean(),
+                "sample_error%": (error_batch.max(-1)[0] != 0).float().mean() * 100,
             }
 
     def _apply_mask(self, texts: torch.Tensor) -> torch.Tensor:

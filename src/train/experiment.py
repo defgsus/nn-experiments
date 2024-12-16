@@ -85,6 +85,10 @@ def run_experiment_from_command_args():
         help="Skip experiment if checkpoint exists"
     )
     parser.add_argument(
+        "-ic", "--include-column", type=str, nargs="*", default=[],
+        help="one or more scalar values of the experiment results to include in the table"
+    )
+    parser.add_argument(
         "-ec", "--exclude-column", type=str, nargs="*", default=[],
         help="one or more columns to exclude from experiment results"
     )
@@ -110,6 +114,7 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
     command = extra_args.pop("command")
     skip_existing = extra_args.pop("skip", False)
     exclude_columns = extra_args.pop("exclude_column", [])
+    include_columns = extra_args.pop("include_column", [])
     sort_columns = extra_args.pop("sort_column", [])
     load_from_checkpoint = extra_args.pop("load", None)
 
@@ -200,11 +205,16 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
             experiment_results.append((matrix_entry, json.loads(snapshot_json_file.read_text())))
 
     if experiment_results:
-        dump_experiments_results(experiment_results, exclude_columns=exclude_columns, sort_columns=sort_columns)
+        dump_experiments_results(
+            experiment_results,
+            include_columns=include_columns,
+            exclude_columns=exclude_columns, sort_columns=sort_columns
+        )
 
 
 def dump_experiments_results(
         experiment_results: List[Tuple[dict, dict]],
+        include_columns: List[str],
         exclude_columns: List[str],
         sort_columns: List[str],
 ):
@@ -226,6 +236,9 @@ def dump_experiments_results(
             max_loss = max(max_loss, validation_loss)
             min_loss = min(min_loss, validation_loss)
 
+        for key in include_columns:
+            row[key] = snapshot_data["scalars"][key]["value"]
+
         if snapshot_data.get("extra"):
             for key, value in snapshot_data["extra"].items():
                 row[key] = value
@@ -239,6 +252,10 @@ def dump_experiments_results(
             row["throughput"] = "{:,}/s".format(
                 int(num_inputs / snapshot_data["training_time"])
             )
+
+        for key, value in row.items():
+            if isinstance(value, (tuple, list)):
+                row[key] = ",".join(str(v) for v in value)
 
         rows.append(row)
 
@@ -262,7 +279,14 @@ def dump_experiments_results(
         if key.startswith("-"):
             key = key[1:]
             ascending = False
-        df.sort_values(key, ascending=ascending, inplace=True, kind="stable")
+        elif key.endswith("-"):
+            key = key[:-1]
+            ascending = False
+        try:
+            df.sort_values(key, ascending=ascending, inplace=True, kind="stable")
+        except KeyError as e:
+            print("COLUMNS:", df.columns)
+            raise
 
     for key in exclude_columns:
         try:

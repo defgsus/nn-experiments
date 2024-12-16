@@ -74,11 +74,24 @@ and look at its parameters and results.
 
 
 - [selcopy.md](selcopy.md)
-  - [:arrow_forward:](selcopy.md#2024-12-14-selective-copy-problem-with-a-very-small-language-model) 2024-12-14 Selective Copy Problem with a Very Small Language Model
+  - [:arrow_forward:](selcopy.md#2024-12-14-efficiently-solving-the-selective-copying-problem-with-a-very-small-language-model) 2024-12-14 Efficiently solving the Selective Copying Problem with a Very Small Language Model
       - [:arrow_forward:](selcopy.md#comparing-number-of-layers) Comparing number of layers
 
 
       - [:arrow_forward:](selcopy.md#increasing-kernel-size) Increasing kernel size
+      - [:arrow_forward:](selcopy.md#increasing-dilation) Increasing dilation
+      - [:arrow_forward:](selcopy.md#mixing-different-dilation-values) Mixing different dilation values
+
+
+- [selcopy2.md](selcopy2.md)
+  - [:arrow_forward:](selcopy2.md#2024-12-15-solving-the-very-selective-copying-problem-with-a-very-small-language-model) 2024-12-15 Solving the "Very Selective Copying" problem with a Very Small Language Model
+      - [:arrow_forward:](selcopy2.md#preliminary-tests) Preliminary tests
+
+
+      - [:arrow_forward:](selcopy2.md#number-of-operations-versus-number-of-layers) Number of operations versus number of layers
+
+
+
 
 
 - [shiny-tubes.md](shiny-tubes.md)

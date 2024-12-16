@@ -1,42 +1,38 @@
-experiment_name: textmask/convtext-selcopy_dilat_${matrix_slug}
+experiment_name: textmask/convtext-QAprog-swaponly_${matrix_slug}
 
 matrix:
   bs: [64]
   opt: ["AdamW"]
   lr: [.0005]
   nitem:
-    - 10
-  area:
-    - 40
+    - 26
+  len:
+    - 5
+  nops:
+    - [2, 5]
+  vnops:
+    - 5
   l:
-    #- 4
+    #- 18
     - 6
     #- 8
     #- 10
-    #- 12
+    - 12
+    - 18
   ch:
     - 64
+#    - 128
   ks:
     - 9
     #- 11
     #- 13
   dil:
-    - 2
-    - [2, 2, 2, 1, 1, 1]
-    - [2, 2, 2, 2, 1, 1]
-    - [2, 2, 2, 2, 2, 1]
-    - [3, 3, 3, 1, 1, 1]
-    - [4, 4, 4, 1, 1, 1]
-    - [5, 5, 5, 1, 1, 1]
-    - [6, 6, 6, 1, 1, 1]
-    - [5, 4, 3, 2, 1, 1]
-    - [2, 3, 4, 5, 1, 1]
-    - [2, 3, 4, 5, 6, 1]  # best so far
-    - [1, 2, 3, 4, 5, 1]  # bit better
-    - [3, 5, 7, 9, 11, 1]
-
-    - [2, 6, 4, 5, 3, 1]
-    - [2, 4, 6, 3, 5, 1]
+    - [1, 2, 3, 4, 5, 1]  # best on *selective copying*
+    - [1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 1]
+    - [1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 1, 1]
+    #- [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 1, 1, 1]
+    #- 1
+  $filter: isinstance(${dil}, int) or len(${dil}) == ${l}
   norm:
     - None
   act:
@@ -47,20 +43,18 @@ trainer: experiments.textmask.texttrainer.TextMaskTrainer
 mask_is_arg: 1
 
 train_set: |
-  validation_set = TextSelectiveCopyingIterableDataset(
-    count=10000,
-    num_items=${nitem},
-    area=${area},
-    seed=23,
+  train_set, validation_set = TextQAProgramIterableDataset.create_train_and_validation_set(
+    train_count=100_000,
+    validation_count=10_000,
+    validation_seed=23,
     with_masked=True,
-  )
-  TextSelectiveCopyingIterableDataset(
-    count=100000,
     num_items=${nitem},
-    area=${area},
-    with_masked=True,
-    exclude=list(i[0] for i in validation_set),
+    input_length=${len},
+    num_operations=${nops},
+    validation_num_operations=${vnops},
+    operators={">": 1},# "+": 1., "-": 2/3},
   )
+  train_set
 
 validation_set: |
   validation_set
@@ -70,7 +64,7 @@ learnrate: ${lr}
 optimizer: ${opt}
 scheduler: CosineAnnealingWarmupLR
 loss_function: l1
-max_inputs: 1_000_000
+max_inputs: 4_000_000
 num_epochs_between_validations: 1
 #num_inputs_between_validations: 50_000
 freeze_validation_set: True
