@@ -86,7 +86,7 @@ class LinkCheckRenderer(marko.HTMLRenderer):
     def render_link(self, element: marko.block.inline.Link):
         url = element.dest
 
-        if not url.startswith("http"):
+        if "//" not in url:
 
             if url.startswith("#"):
                 self._check_slug(self.file, url[1:])

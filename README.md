@@ -31,7 +31,7 @@ need some documentation.
 
 ### :strawberry: Logbooks
 
-[experiments/logs/](experiments/logs/) contains logbooks of some experiments
+[docs/logs/](docs/logs/) contains logbooks of some experiments
 
 
 ### CLIPig 2 

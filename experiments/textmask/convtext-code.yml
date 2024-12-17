@@ -8,20 +8,33 @@ matrix:
     - 160
   mask:
     - 30
+  maskt:
+    - "block"
   l:
-    - 8
-  rec:
-    - 1
+    - 5
+    #- 12
   ch:
-    - 128
+    - 64
+  #    - 128
   ks:
-    - 7
+    - 9
+    #- 11
+    #- 13
+  dil:
+    - [2, 3, 4, 5, 1]
+    - [1, 2, 3, 4, 5, 1]
+    - [1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 1]
+    - [1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 1, 1]
+  $filter: isinstance(${dil}, int) or len(${dil}) == ${l}
+  attn:
+    - [0, 0, 4, 4, 0]  # +2.5
   act:
     - "gelu"
 
 
 trainer: experiments.textmask.texttrainer.TextMaskTrainer
 mask_size: ${mask}
+mask_type: "${maskt}"
 
 train_set: |
   ds = FileTextSegmentIterableDataset(
@@ -65,7 +78,7 @@ model: |
       num_layers=${l},
       num_channels=${ch},
       kernel_size=${ks},
+      dilation=${dil},
       activation="${act}",
-      residual=True,
-      recurrency=${rec},
+      num_attention_heads=${attn},
   )

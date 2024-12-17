@@ -184,7 +184,7 @@ for almost every validation sample:
 
 - Quick takeaway: **Put also some easy examples in the training set!**
 
-The curves suggest, however, that training has not yet converged. There are sure a few more permille
+The curves suggest, however, that training has not yet converged. There are sure a few more per-mille
 to squeeze out.
 
 This is a good point of origin for further experimentation. 
@@ -223,3 +223,21 @@ All of them have 6 layers
 - Disclaimer: I do not know any best practices about using or training LSTMs or Mambas and
   surely made some mistake..
 
+
+### Attention
+
+![error curves](img/selcopy2/selcopy2_error-curves_l5-vnops5-attention.png)
+
+
+|   nitem |   len | nops   |   vnops |   l |   ch |   ks | attn      |   validation loss | validation_mask_error% | validation_sample_error% | model params   |   train time (minutes) | throughput   |
+|--------:|------:|:-------|--------:|----:|-----:|-----:|:----------|------------------:|-----------------------:|-------------------------:|:---------------|-----------------------:|:-------------|
+|      26 |     5 | 2,5    |       5 |   5 |   64 |    9 | 0,0,4,0,0 |          0.010063 |                2.09793 |                  9.92237 | 291,520        |                  13.09 | 5,094/s      |
+|      26 |     5 | 2,5    |       5 |   5 |   64 |    9 | 0,0,0,0,4 |        0.00499033 |               0.959395 |                  4.76712 | 291,520        |                    8.3 | 8,033/s      |
+|      26 |     5 | 2,5    |       5 |   5 |   64 |    9 | 0,4,0,0,4 |       0.000208627 |              0.0278662 |                 0.139331 | 382,016        |                  11.36 | 5,867/s      |
+|      26 |     5 | 2,5    |       5 |   5 |   64 |    9 | 0,4,4,0,0 |        0.00018748 |              0.0238854 |                 0.119427 | 382,016        |                  14.79 | 4,506/s      |
+|      26 |     5 | 2,5    |       5 |   5 |   64 |    9 | 0,0,4,4,4 |       0.000129913 |              0.0199045 |                0.0995223 | 472,512        |                  13.91 | 4,793/s      |
+|      26 |     5 | 2,5    |       5 |   5 |   64 |    9 | 0,0,0,4,0 |       8.99973e-05 |              0.0119427 |                0.0597134 | 291,520        |                  13.39 | 4,979/s      |
+|      26 |     5 | 2,5    |       5 |   5 |   64 |    9 | 0,0,4,0,4 |       0.000111912 |             0.00995223 |                0.0597134 | 382,016        |                  12.28 | 5,427/s      |
+|      26 |     5 | 2,5    |       5 |   5 |   64 |    9 | 0,4,0,4,0 |       7.71816e-05 |             0.00995223 |                0.0497611 | 382,016        |                  14.58 | 4,572/s      |
+|      26 |     5 | 2,5    |       5 |   5 |   64 |    9 | 0,0,0,4,4 |       4.30281e-05 |             0.00597134 |                0.0298567 | 382,016        |                  11.7  | 5,699/s      |
+|      26 |     5 | 2,5    |       5 |   5 |   64 |    9 | 0,0,4,4,0 |       1.58895e-05 |             0.00398089 |                0.0199045 | 382,016        |                  14.2  | 4,696/s      |

@@ -92,6 +92,7 @@ and look at its parameters and results.
 
 
 
+      - [:arrow_forward:](selcopy2.md#quck-comparison-with-mamba-and-lstm) Quck comparison with Mamba and LSTM
 
 
 - [shiny-tubes.md](shiny-tubes.md)
