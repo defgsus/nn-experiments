@@ -50,13 +50,13 @@
         </div>
 
         <h1 id="efficiently-solving-the-selective-copying-problem-with-a-very-small-language-model">Efficiently solving the Selective Copying Problem with a Very Small Language Model</h1>
-<p>Recently, i tried to understand the original <a href="https://arxiv.org/abs/2312.00752">Mamba paper</a>.
+<p>Recently, i tried to understand the original <a href="https://arxiv.org/abs/2312.00752" target="_blank">Mamba paper</a>.
 It's definitely worth reading. In there, the authors mention the <em>Selective Copying</em> as a toy example
 that is supposedly better handled by time-varying models instead of
 <em>conventional convolutional</em> models.</p>
-<p>I tried the Mamba model, not from the <a href="https://github.com/state-spaces/mamba">original authors</a>,
+<p>I tried the Mamba model, not from the <a href="https://github.com/state-spaces/mamba" target="_blank">original authors</a>,
 because i couldn't bring it to run on my current system,
-but using <a href="https://github.com/johnma2006/mamba-minimal/blob/master/model.py">mamba minimal</a>.</p>
+but using <a href="https://github.com/johnma2006/mamba-minimal/blob/master/model.py" target="_blank">mamba minimal</a>.</p>
 <p>The readable re-implementation lacks all the (unreadable) speed optimization stuff and is indeed
 pretty slow, compared to a simple CNN.
 So i quickly switched back to 1D-convolutions for today's experiment and tried to solve the
@@ -99,7 +99,7 @@ batch-size 64, cross-entropy loss on the class logits, for 1 million steps.</p>
 The validation set contains 5000 positions,
 which are excluded from the (otherwise almost infinite) training set.</p>
 <h3 id="comparing-number-of-layers">Comparing number of layers</h3>
-<p>(experiment done with <a href="https://github.com/defgsus/nn-experiments/blob/b2aaaf4323dd0bb70127fa265d942ec292ce53dc/experiments/textmask/convtext-selcopy-layers.yml">experiments/textmask/convtext-selcopy-layers.yml @ b2aaaf43</a>)</p>
+<p>(experiment done with <a href="https://github.com/defgsus/nn-experiments/blob/b2aaaf4323dd0bb70127fa265d942ec292ce53dc/experiments/textmask/convtext-selcopy-layers.yml" target="_blank">experiments/textmask/convtext-selcopy-layers.yml @ b2aaaf43</a>)</p>
 <p>This is again a topic of <em>receptive fields</em> in CNNs. With an area of 40, some delimiter and
 10 letters for the answer the model has to <em>see</em> 50 cells apart. Or in other words,
 the convolutional layers need to pass information from one cell to as much as 50 cells
@@ -739,13 +739,13 @@ are not required for the vanilla <em>Selective Copying</em> problem.</p>
         <!-- article footer -->
         <div class="flex article-footer">
             <div>
-                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+                 <a target="_blank" href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
             </div>
 
             <div class="flex-grow"></div>
 
             <div>
-                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+                Edit on <a target="_blank" href="https://github.com/defgsus/nn-experiments/blob/master/docs/logs/2024-12-14-selcopy.md">github</a>
             </div>
         </div>
 
@@ -763,7 +763,7 @@ are not required for the vanilla <em>Selective Copying</em> problem.</p>
             <div>
                 
                 <a href="../../html/logs/selcopy2.html">
-                    Solving the &quot;Very Selective Copying&quot; problem with a Very Small Language Model $gt;$gt;
+                    Solving the &quot;Very Selective Copying&quot; problem with a Very Small Language Model &gt;&gt;
                 </a>
                 
             </div>

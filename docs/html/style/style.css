@@ -4,11 +4,17 @@ html {
   color: #ddd; }
 
   a {
-    color: #899ef1; }
+    color: #899ef1;
+    text-decoration: none; }
     a:visited {
       color: #5a78ef; }
       a:hover {
-        color: #8db8fa; }
+        color: #8db8fa;
+        text-decoration: underline; }
+        a[target="_blank"]::before {
+          font-size: 75%;
+          font-weight: bold;
+          content: "↗ "; }
 
 pre {
   background: #191919;
@@ -80,7 +86,7 @@ main.index {
         max-width: 95%;   }
 }
   main.index .article-list .article-item {
-    margin-bottom: 2rem; }
+    margin-bottom: 3rem; }
     main.index .article-list .article-item .date {
       font-size: 120%; }
       main.index .article-list .article-item .link {

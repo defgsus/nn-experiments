@@ -32,8 +32,14 @@ html {
 
 a {
   color: $color-link;
+  text-decoration: none;
   &:visited { color: $color-link-visited; }
-  &:hover { color: $color-link-hover; }
+  &:hover { color: $color-link-hover; text-decoration: underline; }
+  &[target="_blank"]::before {
+    font-size: 75%;
+    font-weight: bold;
+    content: "↗ ";
+  }
 }
 
 pre {
@@ -128,7 +134,7 @@ main.index {
 
   .article-list {
     .article-item {
-      margin-bottom: 2rem;
+      margin-bottom: 3rem;
 
       .date {
         font-size: 120%;

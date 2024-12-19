@@ -25,13 +25,13 @@
         <!-- article footer -->
         <div class="flex article-footer">
             <div>
-                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+                 <a target="_blank" href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
             </div>
 
             <div class="flex-grow"></div>
 
             <div>
-                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/{{page.document.relative_url}}">github</a>
+                Edit on <a target="_blank" href="https://github.com/defgsus/nn-experiments/blob/master/docs/{{page.document.relative_filename}}">github</a>
             </div>
         </div>
 
@@ -49,7 +49,7 @@
             <div>
                 {% if next_page %}
                 <a href="{{page.relative_url(next_page.url)}}">
-                    {{next_page.title}} $gt;$gt;
+                    {{next_page.title}} &gt;&gt;
                 </a>
                 {% endif %}
             </div>

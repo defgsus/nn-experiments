@@ -524,9 +524,9 @@ Can we get the 6-layer network to solve the <em>5-operations Very Selective Copy
 <p>In other words, is there a trick, maybe to pass data around in a different way,
 that strongly increases the computational performance?</p>
 <h3 id="quick-comparison-with-mamba-and-lstm">Quick comparison with Mamba and LSTM</h3>
-<p>Just for another set of baselines, i tried the <a href="https://github.com/state-spaces/mamba">state-spaces/Mamba</a>
-(yet the <a href="https://github.com/johnma2006/mamba-minimal">slow version</a>)
-and the all-beloved LSTM (as <a href="https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html">pytorch implementation</a>). </p>
+<p>Just for another set of baselines, i tried the <a href="https://github.com/state-spaces/mamba" target="_blank">state-spaces/Mamba</a>
+(yet the <a href="https://github.com/johnma2006/mamba-minimal" target="_blank">slow version</a> because the fast doesn't run on my system)
+and the all-beloved LSTM (the <a href="https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html" target="_blank">pytorch implementation</a>). </p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l6-nops-2-5-mamba-and-lstm.png" alt="error curves" /></div></p>
 <p>The yellow/brownish is the 6-layers model from above, green is Mamba and blue the LSTM.
 All of them have 6 layers</p>
@@ -598,8 +598,8 @@ occurred after 1 hour of training and i do not have the patience today to train 
 equally-sized Mamba for comparison. (The dynamics of the curves suggest, that it would not change much)</li>
 <li>The LSTM basically archived nothing (though equal-sized). It's about as bad as the 6-layer
 Conv1d with only 5-operations questions in the training set. At least, it's blazinlgy fast!</li>
-<li>Disclaimer: I do not know any best practices about using or training LSTMs or Mambas and
-surely made some mistake..</li>
+<li>Disclaimer: I do not know any good practices about using or training LSTMs or Mambas and
+surely made some grave mistake..</li>
 </ul>
 <h3 id="attention">Attention</h3>
 <p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l5-vnops5-attention.png" alt="error curves" /></div></p>
@@ -788,13 +788,13 @@ surely made some mistake..</li>
         <!-- article footer -->
         <div class="flex article-footer">
             <div>
-                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+                 <a target="_blank" href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
             </div>
 
             <div class="flex-grow"></div>
 
             <div>
-                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+                Edit on <a target="_blank" href="https://github.com/defgsus/nn-experiments/blob/master/docs/logs/2024-12-15-selcopy2.md">github</a>
             </div>
         </div>
 
@@ -812,7 +812,7 @@ surely made some mistake..</li>
             <div>
                 
                 <a href="../../html/posts/2024/first-post.html">
-                    First post $gt;$gt;
+                    First post &gt;&gt;
                 </a>
                 
             </div>

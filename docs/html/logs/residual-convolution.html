@@ -63,8 +63,8 @@ after a lot of layers - and we all believe that many layers are good</li>
 </ul>
 <p>Since this is a logbook, i might as well write down how the idea came along.
 I was working like a mad person on a
-<a href="https://github.com/defgsus/nn-experiments/blob/master/src/clipig">new CLIPig implementation</a>,
-using OpenAI's <a href="https://github.com/openai/clip">CLIP</a> network to massage
+<a href="https://github.com/defgsus/nn-experiments/blob/master/src/clipig" target="_blank">new CLIPig implementation</a>,
+using OpenAI's <a href="https://github.com/openai/clip" target="_blank">CLIP</a> network to massage
 a mess of pixels into something matching a text prompt and looking good.
 There are much
 cooler things out there, my personal favorite being Stable Diffusion,
@@ -74,19 +74,19 @@ graphics card with 6 GB of VRAM. For artistic reasons, i was interested
 in some form of noise reduction to make the rendered images look more
 pleasing and started with this simple design. </p>
 <p>While network trainings were running, i searched through<br />
-<a href="https://arxiv.org">arxiv.org</a> for image de-noising, quickly limiting
+<a href="https://arxiv.org" target="_blank">arxiv.org</a> for image de-noising, quickly limiting
 results to before 2017, because i really don't understand all this
 Diffusion stuff and its all high computational effort.</p>
-<p>Found this paper: <a href="https://arxiv.org/pdf/1612.03268.pdf">&quot;Generalized Deep Image to Image Regression&quot;</a>
+<p>Found this paper: <a href="https://arxiv.org/pdf/1612.03268.pdf" target="_blank">&quot;Generalized Deep Image to Image Regression&quot;</a>
 which describes a <em>recursive branching</em> design
-and subsequently made a little <a href="https://github.com/defgsus/nn-experiments/blob/master/src/models/img2img/rbdn.py">implementation</a>.
+and subsequently made a little <a href="https://github.com/defgsus/nn-experiments/blob/master/src/models/img2img/rbdn.py" target="_blank">implementation</a>.
 It works quite nice but is mostly too slow for my taste, also i don't like
 the max-pooling layers for generative networks. After some playing around
 with it i came back to the simpler CNNs but remembered a few of the
 ideas and ways of thinking from the above and other papers.</p>
 <p>Now that i have written most of the content below, i make a pause and
 will read
-<a href="https://arxiv.org/abs/1606.08921">Image Restoration Using Convolutional Auto-encoders with Symmetric Skip Connections</a>
+<a href="https://arxiv.org/abs/1606.08921" target="_blank">Image Restoration Using Convolutional Auto-encoders with Symmetric Skip Connections</a>
 which seems to do the exact thing.</p>
 <p>--</p>
 <p>This simple CNN is composed of an encoder and a decoder, while the decoder is
@@ -126,7 +126,7 @@ want, while still being able to train the network. The residual connections
 will propagate the gradients through the whole thing, while demanding tasks
 will utilize the deeper layers because they have a larger <em>receptive field</em>.
 For a little discussion of the receptive field, please check
-<a href="https://arxiv.org/abs/1608.03981">Beyond a Gaussian Denoiser: Residual Learning of Deep CNN for Image Denoising (Zhang et al)</a>.</p>
+<a href="https://arxiv.org/abs/1608.03981" target="_blank">Beyond a Gaussian Denoiser: Residual Learning of Deep CNN for Image Denoising (Zhang et al)</a>.</p>
 <p>All experiments, unless noted otherwise, </p>
 <ul>
 <li>do 3 epochs (3 runs through the 60,000 training images)</li>
@@ -144,7 +144,7 @@ use <code>AdamW</code> optimizer <ul>
 <p>To evaluate the abilities of the network, it's trained to
 <strong>restore the deleted top, bottom, left or right half of an image</strong>.
 In this case, zalando's beloved
-<a href="https://arxiv.org/abs/1708.07747">Fashion-MNIST</a> dataset,
+<a href="https://arxiv.org/abs/1708.07747" target="_blank">Fashion-MNIST</a> dataset,
 scaled to 32x32 pixels (<a href="./2023-11-16-autoencoder-experiments.md#take-care-of-the-choice-of-interpolation">without interpolation</a>).</p>
 <p>It's not completely ridiculous to expect the network to make up a complete half
 since the images are all nicely centered and contain more or less the same
@@ -169,7 +169,7 @@ so it's receptive field is only 3x3 pixels (that of the one convolutional kernel
 It is therefore not able to generate the other half of the image.</p>
 <h2 id="compare-number-of-layers">Compare number of layers</h2>
 <p>Comparing the performance of the number of layers.</p>
-<p>experiment file: <a href="https://github.com/defgsus/nn-experiments/blob/1a74872040ad1062ee2a5f4a46f949b22aa8f08c/experiments/denoise/resconv-test.yml">experiments/denoise/resconv-test.yml @ 1a748720...</a></p>
+<p>experiment file: <a href="https://github.com/defgsus/nn-experiments/blob/1a74872040ad1062ee2a5f4a46f949b22aa8f08c/experiments/denoise/resconv-test.yml" target="_blank">experiments/denoise/resconv-test.yml @ 1a748720...</a></p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/resconv-halfcrop-fmnist-compare-layers.png" alt="training loss plots" /></div></p>
 <div style="overflow: scroll;"><table>
 <thead>
@@ -851,7 +851,7 @@ runs. After some tests, not shown here, the batch normalization
 was <strong>removed from the final encoder and decoder layers</strong>.</p>
 <h2 id="compare-activation-function">Compare activation function</h2>
 <p>Let's take all the good parts from before and compare the standard
-activation functions <a href="https://pytorch.org/docs/stable/nn.html#non-linear-activations-weighted-sum-nonlinearity">available in pytorch</a>.
+activation functions <a href="https://pytorch.org/docs/stable/nn.html#non-linear-activations-weighted-sum-nonlinearity" target="_blank">available in pytorch</a>.
 However, the final decoder layer is always using the <code>Sigmoid</code> activation
 because everybody knows it's a good activation for generating images
 (everything is scaled to [0, 1] range).</p>
@@ -1105,10 +1105,10 @@ because everybody knows it's a good activation for generating images
 of the time, the same ones perform best. Anyway, this result is slightly
 different to my <a href="./2023-11-12-mnist.md#varying-activation-function">MNIST classification results</a>
 but as usual, you are good to choose either
-<a href="https://pytorch.org/docs/stable/generated/torch.nn.GELU.html">GELU</a>,
-one of the <a href="https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html">ReLU</a>
+<a href="https://pytorch.org/docs/stable/generated/torch.nn.GELU.html" target="_blank">GELU</a>,
+one of the <a href="https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html" target="_blank">ReLU</a>
 variants or, as it turns out, the
-<a href="https://pytorch.org/docs/stable/generated/torch.nn.Mish.html#torch.nn.Mish">MISH</a>
+<a href="https://pytorch.org/docs/stable/generated/torch.nn.Mish.html#torch.nn.Mish" target="_blank">MISH</a>
 activation.</p>
 <h2 id="compare-channel-size">Compare channel size</h2>
 <p>Currently all <em>hidden</em> convolutions have had 32 channels. In this experiment,
@@ -1720,13 +1720,13 @@ compare <ul>
         <!-- article footer -->
         <div class="flex article-footer">
             <div>
-                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+                 <a target="_blank" href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
             </div>
 
             <div class="flex-grow"></div>
 
             <div>
-                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+                Edit on <a target="_blank" href="https://github.com/defgsus/nn-experiments/blob/master/docs/logs/2024-02-24-residual-convolution.md">github</a>
             </div>
         </div>
 
@@ -1744,7 +1744,7 @@ compare <ul>
             <div>
                 
                 <a href="../../html/logs/deep-compression-ae.html">
-                    Deep-Compression Auto-Encoder $gt;$gt;
+                    Deep-Compression Auto-Encoder &gt;&gt;
                 </a>
                 
             </div>

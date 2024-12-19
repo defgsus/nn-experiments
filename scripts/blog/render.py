@@ -53,8 +53,14 @@ class HTMLRenderer(GFMRendererMixin, marko.HTMLRenderer):
         return super().render_heading(element)
 
     def render_link(self, element: marko.inline.Link) -> str:
-        element.dest = self._link_mapping.get(element.dest, element.dest)
-        return super().render_link(element)
+        dest = self._link_mapping.get(element.dest, element.dest)
+        external = "//" in dest
+        template = '<a href="{}"{}{}>{}</a>'
+        title = f' title="{self.escape_html(element.title)}"' if element.title else ""
+        target = f' target="_blank"' if external else ""
+        url = self.escape_url(dest)
+        body = self.render_children(element)
+        return template.format(url, title, target, body)
 
     def render_image(self, element: marko.inline.Image) -> str:
         element.dest = self._link_mapping.get(element.dest, element.dest)
