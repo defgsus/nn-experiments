@@ -1,0 +1,66 @@
+experiment_name: textmask/lstm-QAprog-swaponly_${matrix_slug}
+
+matrix:
+  bs: [64]
+  opt: ["AdamW"]
+  lr: [.0005]
+  nitem:
+    - 26
+  len:
+    - 5
+  nops:
+    - [2, 5]
+  vnops:
+    - 5
+  l:
+    #- 4
+    - 6
+    #- 8
+    #- 10
+    #- 12
+    #- 18
+  ch:
+    - 64
+  dropout:
+    - 0.
+
+trainer: experiments.textmask.texttrainer.TextMaskTrainer
+mask_is_arg: 1
+
+train_set: |
+  train_set, validation_set = TextQAProgramIterableDataset.create_train_and_validation_set(
+    train_count=100_000,
+    validation_count=10_000,
+    validation_seed=23,
+    with_masked=True,
+    num_items=${nitem},
+    input_length=${len},
+    num_operations=${nops},
+    validation_num_operations=${vnops},
+    operators={">": 1},# "+": 1., "-": 2/3},
+  )
+  train_set
+
+validation_set: |
+  validation_set
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 4_000_000
+num_epochs_between_validations: 1
+#num_inputs_between_validations: 50_000
+freeze_validation_set: True
+
+
+model: |
+  from experiments.textmask.lstm_model import LstmTextModel
+  
+  LstmTextModel(
+    vocab_size=256,
+    num_layers=${l},
+    num_channels=${ch},
+    dropout=${dropout},
+  )

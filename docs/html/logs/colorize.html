@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Comparing different color-spaces in a grayscale-to-color residual CNN</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#comparing-different-color-spaces-in-a-grayscale-to-color-residual-cnn" title="Comparing different color-spaces in a grayscale-to-color residual CNN">Comparing different color-spaces in a grayscale-to-color residual CNN</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="comparing-different-color-spaces-in-a-grayscale-to-color-residual-cnn">Comparing different color-spaces in a grayscale-to-color residual CNN</h1>
+<pre><code class="language-yaml">experiment_name: img2img/colorize-resconv-${matrix_slug}
+
+matrix:
+  ds:
+    - &quot;cifar10&quot;
+    #- &quot;all&quot;
+  space:
+    - &quot;rgb&quot;
+    - &quot;hsv&quot;
+    - &quot;hsv2&quot;
+    - &quot;lab&quot;
+    - &quot;xyz&quot;
+    - &quot;ycbcr&quot;
+  bs: [64]
+  opt: [&quot;AdamW&quot;]
+  lr: [.0003]
+  l:
+    - 11
+  ks:
+    - 3
+  pad:
+    - 1
+  ch:
+    - 32
+  stride:
+    - 1
+  act:
+    - gelu
+
+trainer: experiments.img2img.trainer.TrainImg2Img
+first_arg_is_transforms: |
+  [
+    VT.Grayscale(),  
+    # RandomCropHalfImage(),
+  ]
+# histogram_loss_weight: 100.
+
+train_set: |
+  if &quot;${ds}&quot; == &quot;all&quot;:
+      ds = all_image_patch_dataset(shape=SHAPE).skip(5000)
+  else:
+      ds = ${ds}_dataset(train=True, shape=SHAPE, interpolation=False)
+  ds
+
+validation_set: |
+  if &quot;${ds}&quot; == &quot;all&quot;:
+      ds = all_image_patch_dataset(shape=SHAPE).limit(5000)
+  else:
+      ds = ${ds}_dataset(train=False, shape=SHAPE, interpolation=False)
+  ds
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 1_000_000
+num_inputs_between_validations: 100_000
+freeze_validation_set: True
+
+
+globals:
+  SHAPE: (3, 32, 32)
+
+model: |
+  from experiments.denoise.resconv import ResConv
+  from src.functional import colorconvert
+  
+  class Module(nn.Module):
+      def __init__(self):
+          super().__init__()
+          self.module = ResConv(
+              in_channels=3,
+              out_channels=SHAPE[0],
+              num_layers=${l},
+              channels=${ch},
+              stride=${stride},
+              kernel_size=${ks},
+              padding=${pad},
+              activation=&quot;${act}&quot;,
+              activation_last_layer=None,
+          )
+  
+      def forward(self, x):
+          y = x.repeat(1, 3, 1, 1)
+          if &quot;${space}&quot; == &quot;hsv2&quot;:
+              y = rgb_to_hsv(y)
+          elif &quot;${space}&quot; != &quot;rgb&quot;:
+              y = colorconvert.rgb2${space}(y)
+          y = self.module(y)
+          if &quot;${space}&quot; == &quot;hsv2&quot;:
+              y = hsv_to_rgb(y)
+          elif &quot;${space}&quot; != &quot;rgb&quot;:
+              y = colorconvert.${space}2rgb(y)
+          return y
+          
+  Module()
+
+</code></pre>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">ds</th>
+<th align="left">space</th>
+<th align="right">bs</th>
+<th align="left">opt</th>
+<th align="right">lr</th>
+<th align="right">l</th>
+<th align="right">ks</th>
+<th align="right">pad</th>
+<th align="right">ch</th>
+<th align="right">stride</th>
+<th align="left">act</th>
+<th align="right">validation loss (1,000,000 steps)</th>
+<th align="left">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="left">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">cifar10</td>
+<td align="left">hsv2</td>
+<td align="right">64</td>
+<td align="left">AdamW</td>
+<td align="right">0.0003</td>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0454638</td>
+<td align="left">187,945</td>
+<td align="right">7.72</td>
+<td align="left">2,159/s</td>
+</tr>
+<tr>
+<td align="left">cifar10</td>
+<td align="left">lab</td>
+<td align="right">64</td>
+<td align="left">AdamW</td>
+<td align="right">0.0003</td>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0454897</td>
+<td align="left">187,945</td>
+<td align="right">9.32</td>
+<td align="left">1,788/s</td>
+</tr>
+<tr>
+<td align="left">cifar10</td>
+<td align="left">rgb</td>
+<td align="right">64</td>
+<td align="left">AdamW</td>
+<td align="right">0.0003</td>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0457786</td>
+<td align="left">187,365</td>
+<td align="right">4.06</td>
+<td align="left">4,105/s</td>
+</tr>
+<tr>
+<td align="left">cifar10</td>
+<td align="left">ycbcr</td>
+<td align="right">64</td>
+<td align="left">AdamW</td>
+<td align="right">0.0003</td>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0466509</td>
+<td align="left">187,945</td>
+<td align="right">8.1</td>
+<td align="left">2,056/s</td>
+</tr>
+<tr>
+<td align="left">cifar10</td>
+<td align="left">xyz</td>
+<td align="right">64</td>
+<td align="left">AdamW</td>
+<td align="right">0.0003</td>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0493999</td>
+<td align="left">187,945</td>
+<td align="right">8.67</td>
+<td align="left">1,921/s</td>
+</tr>
+<tr>
+<td align="left">cifar10</td>
+<td align="left">hsv</td>
+<td align="right">64</td>
+<td align="left">AdamW</td>
+<td align="right">0.0003</td>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.147812</td>
+<td align="left">187,945</td>
+<td align="right">8.29</td>
+<td align="left">2,010/s</td>
+</tr>
+</tbody></table></div>
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../html/logs/deep-compression-ae.html">
+                        &lt;&lt; Deep-Compression Auto-Encoder
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+                <a href="../../../html/logs/shiny-tubes.html">
+                    &quot;Shiny Tubes&quot;: increasing render quality with a UNet $gt;$gt;
+                </a>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

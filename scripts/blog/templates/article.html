@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block body %}
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="{{page.relative_url('index.html')}}">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            {% for a in page.document.anchors %}
+            {% if a.level <= 3 %}
+            <li class="indent-{{a.level}}"><a href="#{{a.slug}}" title="{{a.title}}">{{a.title}}</a></li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="{{page.relative_url('index.html')}}">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        {{html.body}}
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/{{page.document.relative_url}}">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                {% if previous_page %}
+                    <a href="{{page.relative_url(previous_page.url)}}">
+                        &lt;&lt; {{previous_page.title}}
+                    </a>
+                {% endif %}
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                {% if next_page %}
+                <a href="{{page.relative_url(next_page.url)}}">
+                    {{next_page.title}} $gt;$gt;
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</main>
+
+{% endblock %}

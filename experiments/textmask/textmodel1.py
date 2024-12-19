@@ -19,35 +19,35 @@ class ConvTextLayer(nn.Module):
             norm: Union[None, str, Type[nn.Module]],
             activation: Union[None, str, Callable],
             residual: bool,
-            num_attention_heads: int = 0,
     ):
         super().__init__()
         self.residual = residual and num_channels_in == num_channels_out
-        self.num_attention_heads = num_attention_heads
 
         padding = int(math.floor(kernel_size / 2)) * dilation
         self.norm = normalization_to_module(norm, channels=num_channels_in)
         self.conv = nn.Conv1d(
             num_channels_in,
-            num_channels_out * (3 if num_attention_heads else 1),
+            num_channels_out * 3,
             kernel_size=kernel_size,
             padding=padding,
             dilation=dilation,
         )
-        self.attn = None
-        if num_attention_heads:
-            self.attn = nn.MultiheadAttention(
-                embed_dim=num_channels_out,
-                num_heads=num_attention_heads,
-                batch_first=True,
-            )
+        self.attn = nn.MultiheadAttention(
+            embed_dim=num_channels_out,
+            num_heads=4,
+            batch_first=True,
+        )
+        #self.conv2 = nn.Conv1d(
+        #    num_channels_in,
+        #    num_channels_out,
+        #    kernel_size=kernel_size,
+        #    padding=padding,
+        #    dilation=dilation,
+        #)
         self.act = activation_to_module(activation)
 
     def extra_repr(self) -> str:
-        text = f"residual={self.residual}"
-        if self.num_attention_heads:
-            text = f"{text}, num_attention_heads={self.num_attention_heads}"
-        return text
+        return f"residual={self.residual}"
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         original_x = x
@@ -55,13 +55,12 @@ class ConvTextLayer(nn.Module):
         if self.norm is not None:
             x = self.norm(x)
 
-        y = self.conv(x)
+        y3 = self.conv(x).permute(0, 2, 1)
+        third = y3.shape[-1] // 3
+        q, k, v = y3[..., :third], y3[..., third:-third], y3[..., -third:]
 
-        if self.attn is not None:
-            qkv = self.conv(x).permute(0, 2, 1)
-            third = qkv.shape[-1] // 3
-            q, k, v = qkv[..., :third], qkv[..., third:-third], qkv[..., -third:]
-            y = self.attn(q, k, v, need_weights=False)[0].permute(0, 2, 1)
+        y = self.attn(q, k, v, need_weights=False)[0].permute(0, 2, 1)
+        # print(f"X -> Y: {x.shape} {y.shape}")
 
         if self.act is not None:
             y = self.act(y)
@@ -97,7 +96,6 @@ class ConvTextModel(nn.Module):
             norm: Union[None, str, Type[nn.Module]] = None,
             out_norm: Union[None, str, Type[nn.Module]] = None,
             activation: Union[None, str, Callable] = None,
-            num_attention_heads: Union[int, Iterable[int]] = 0,
             residual: Union[bool, Iterable[bool]] = True,
             residual_map: Dict[int, List[int]] = None,  # source layer -> target layer
             residual_map_concat: bool = False,
@@ -124,13 +122,12 @@ class ConvTextModel(nn.Module):
         self.layers = nn.ModuleList()
 
         ch = num_channels
-        for i, next_ch, ks, dil, res, attn_heads in zip(
+        for i, next_ch, ks, dil, res in zip(
                 range(num_layers),
                 layer_output_channels,
                 param_make_tuple(kernel_size, num_layers, "kernel_size"),
                 param_make_tuple(dilation, num_layers, "dilation"),
                 param_make_tuple(residual, num_layers, "residual"),
-                param_make_tuple(num_attention_heads, num_layers, "num_attention_heads"),
         ):
             in_channels = ch
             if residual_map_concat:
@@ -148,7 +145,6 @@ class ConvTextModel(nn.Module):
                     norm=norm,
                     activation=activation,
                     residual=res,
-                    num_attention_heads=attn_heads,
                 )
             )
             ch = next_ch

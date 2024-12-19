@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Solving the &quot;Very Selective Copying&quot; problem with a Very Small Language Model</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#solving-the-quotvery-selective-copyingquot-problem-with-a-very-small-language-model" title="Solving the &quot;Very Selective Copying&quot; problem with a Very Small Language Model">Solving the &quot;Very Selective Copying&quot; problem with a Very Small Language Model</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#preliminary-tests" title="Preliminary tests">Preliminary tests</a></li>
+            
+            
+            
+            
+            
+            
+            
+            <li class="indent-3"><a href="#number-of-operations-versus-number-of-layers" title="Number of operations versus number of layers">Number of operations versus number of layers</a></li>
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            <li class="indent-3"><a href="#quick-comparison-with-mamba-and-lstm" title="Quick comparison with Mamba and LSTM">Quick comparison with Mamba and LSTM</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#attention" title="Attention">Attention</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="solving-the-quotvery-selective-copyingquot-problem-with-a-very-small-language-model">Solving the &quot;Very Selective Copying&quot; problem with a Very Small Language Model</h1>
+<p>To get a grip on the details, please check <a href="../../../html/logs/selcopy.html">&quot;Selective Copying&quot;</a> first.</p>
+<p>Basically, it's a synthetic question-answer dataset that requires some <em>&quot;computational&quot;</em> skill.
+See, if you can find out the rule by yourself:</p>
+<pre><code>NA: 2&gt;1: AN   
+DQ: -1: Q    
+EJWHB: 3&gt;5: EJBHW
+ULHP: 3&gt;4, 2&gt;1: LUPH 
+YNP: 3&gt;1, -3, 2&gt;1: NP   
+EJACQ: 1&gt;2, -1, +3: EAJCQ
+YESBR: 3&gt;5, 5&gt;1, 1&gt;5, 3&gt;4: YEBRS
+UXMP: -2, -3, 1&gt;2, +2: MPU  
+</code></pre>
+<p><strong>Spoiler</strong>: First few letters are the program input, the numbers and operators are the program
+and answer, after the second colon, is the result of the program.
+<code>x&gt;y</code> means: exchange <code>x</code>th item with <code>y</code>th item. <code>-x</code> means: remove <code>x</code>th item from memory and
+put it into the stack. <code>+x</code> means: pop last item from stack and insert at position <code>x</code>.</p>
+<p>I argue, that this dataset</p>
+<ul>
+<li>requires a large enough <em>receptive field</em></li>
+<li>requires some cognitional ability to build up a history and to use it subsequently. </li>
+</ul>
+<h3 id="preliminary-tests">Preliminary tests</h3>
+<p>Just to get a feeling for the dataset, i took the best model from the
+<a href="../../../html/logs/selcopy.html">&quot;Selective Copying&quot;</a> experiment with a few parameter variations
+and ran it on questions that have an input length of 2 to 5 items and 1 to 5 operations:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_mask-error_l6-12-18.png" alt="error curves" /></div></p>
+<p>Training now takes 4 million steps, and could even be a bit longer. But generally, the loss curves
+seem to converge at about there. </p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">nitem</th>
+<th align="left">len</th>
+<th align="left">nops</th>
+<th align="right">l</th>
+<th align="right">ch</th>
+<th align="right">ks</th>
+<th align="left">dil</th>
+<th align="right">validation loss</th>
+<th align="right">validation_mask_error%</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">26</td>
+<td align="left">2,5</td>
+<td align="left">1,5</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">1,2,3,4,5,1</td>
+<td align="right">0.0525558</td>
+<td align="right">17.5876</td>
+<td align="right">237,952</td>
+<td align="right">15.30</td>
+<td align="right">4,358/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="left">2,5</td>
+<td align="left">1,5</td>
+<td align="right">6</td>
+<td align="right">128</td>
+<td align="right">9</td>
+<td align="left">1,2,3,4,5,1</td>
+<td align="right">0.0365154</td>
+<td align="right">11.8352</td>
+<td align="right">918,272</td>
+<td align="right">10.76</td>
+<td align="right">6,195/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="left">2,5</td>
+<td align="left">1,5</td>
+<td align="right">12</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">1,1,2,2,3,3,4,4,5,5,1,1</td>
+<td align="right">0.0076271</td>
+<td align="right">2.0063</td>
+<td align="right">459,520</td>
+<td align="right">27.05</td>
+<td align="right">2,464/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="left">2,5</td>
+<td align="left">1,5</td>
+<td align="right">18</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,1,1,1</td>
+<td align="right">0.0028902</td>
+<td align="right">0.7583</td>
+<td align="right">681,088</td>
+<td align="right">39.80</td>
+<td align="right">1,675/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="left">2,5</td>
+<td align="left">1,5</td>
+<td align="right">12</td>
+<td align="right">128</td>
+<td align="right">9</td>
+<td align="left">1,1,2,2,3,3,4,4,5,5,1,1</td>
+<td align="right">0.0028549</td>
+<td align="right">0.7205</td>
+<td align="right">1,803,776</td>
+<td align="right">18.81</td>
+<td align="right">3,543/s</td>
+</tr>
+</tbody></table></div><p>I'm using dilation all the time, because 1.) it's required for the receptive field of the
+6-layer network and 2.) because it runs faster. For the 12 and 18-layer networks i just expanded the
+dilation settings without much thinking about it. (Actually i did think quite a bit
+about it but decided to evaluate good 12 or 18-layer dilation settings another time)</p>
+<p>Here are examples from the validation set from the worst and the best performing network:</p>
+<h4 id="6-layer32-chan-validation-mask-error-176">6-layer/32-chan: validation mask error 17.6%</h4>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_validation-example_nops1-5_l6-ch64.png" alt="validation example output" /></div></p>
+<p>It is noticeable that long programs seem to be the problem for this network.</p>
+<h4 id="12-layer128-chan-validation-mask-error-07">12-layer/128-chan: validation mask error 0.7%</h4>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_validation-example_nops1-5_l12-ch128.png" alt="validation example output" /></div></p>
+<p>Wow! Everything correct, even the long ones!</p>
+<h3 id="number-of-operations-versus-number-of-layers">Number of operations versus number of layers</h3>
+<p>The above example is a bit messy because it has a variable number of operations and
+we don't know how many answers are fully correct, only how many characters.
+So first, add a new evaluation metric <code>validation_sample_error%</code>. While the mask error gives
+the percentage of wrong characters within the mask area, the sample error gives the percentage
+of wrong answers, even if only one character is wrong.</p>
+<p>Further, to better evaluate the relationship between number of operations (length of the &quot;program&quot;)
+and the number of layers in the network, i set a fixed number of operations.</p>
+<p>I also dropped the stack operations (<code>+</code>/<code>-</code>) for now and made it all a bit tighter because
+i'm not interested in the influence of the receptive field in this experiment.
+Example data with 5 operations looks like this:</p>
+<pre><code>NPFKT:5&gt;4 3&gt;1 1&gt;4 4&gt;2 1&gt;3:NFTPK
+UKLRM:5&gt;1 4&gt;2 1&gt;4 2&gt;4 3&gt;2:KLMRU
+LCEWI:3&gt;5 3&gt;2 4&gt;2 3&gt;1 3&gt;5:CWEIL
+LRUPX:1&gt;4 3&gt;2 5&gt;4 1&gt;3 2&gt;1:URPXL
+UQJOR:5&gt;4 2&gt;5 5&gt;4 4&gt;3 2&gt;5:URQJO
+BYGMJ:5&gt;4 4&gt;3 2&gt;3 5&gt;2 5&gt;3:BMJGY
+PBNFM:3&gt;5 5&gt;1 1&gt;3 2&gt;3 5&gt;3:MNPFB
+TNEOL:1&gt;3 4&gt;1 4&gt;1 4&gt;3 5&gt;3:ENLTO
+ALEVT:1&gt;2 2&gt;1 2&gt;1 4&gt;2 4&gt;3:LVAET
+UIZNQ:3&gt;4 2&gt;3 5&gt;3 4&gt;1 1&gt;5:INQUZ
+</code></pre>
+<p>Running the networks on 2, 3, 4 and 5 operations per question:</p>
+<h4 id="6-layer">6-layer</h4>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l6-nops-2-5.png" alt="error curves" /></div></p>
+<h4 id="12-layer">12-layer</h4>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l12-nops-2-5.png" alt="error curves" /></div></p>
+<h4 id="18-layer">18-layer</h4>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l18-nops-2-5.png" alt="error curves" /></div></p>
+<p>And here is it all together in a table. The dilation settings are left out for readability.
+They are <code>1,2,3,4,5,1</code> for the 6-layer, <code>1,2,3,4,5,1,2,3,4,5,1,1</code> for the 12-layer
+and <code>1,2,3,4,5,1,2,3,4,5,1,2,3,4,5,1,1,1</code> for the 18-layer network.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">nitem</th>
+<th align="right">len</th>
+<th align="right">nops</th>
+<th align="right">l</th>
+<th align="right">ch</th>
+<th align="right">ks</th>
+<th align="right">validation loss</th>
+<th align="right">validation_mask_error%</th>
+<th align="right">validation_sample_error%</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.23663</td>
+<td align="right">71.9705</td>
+<td align="right">99.9104</td>
+<td align="right">237,952</td>
+<td align="right">58.04</td>
+<td align="right">1,145/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">12</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.208893</td>
+<td align="right">63.6883</td>
+<td align="right">99.4327</td>
+<td align="right">459,520</td>
+<td align="right">40.0</td>
+<td align="right">1,660/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">18</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.163338</td>
+<td align="right">50.2667</td>
+<td align="right">98.547</td>
+<td align="right">681,088</td>
+<td align="right">99.0</td>
+<td align="right">670/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="right">4</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.185987</td>
+<td align="right">48.7739</td>
+<td align="right">98.5967</td>
+<td align="right">237,952</td>
+<td align="right">15.1</td>
+<td align="right">4,413/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="right">4</td>
+<td align="right">12</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.0415355</td>
+<td align="right">8.8953</td>
+<td align="right">37.8682</td>
+<td align="right">459,520</td>
+<td align="right">26.03</td>
+<td align="right">2,561/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="right">3</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.00458625</td>
+<td align="right">0.559315</td>
+<td align="right">2.75677</td>
+<td align="right">237,952</td>
+<td align="right">7.32</td>
+<td align="right">9,109/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="right">4</td>
+<td align="right">18</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.000329348</td>
+<td align="right">0.0378185</td>
+<td align="right">0.189092</td>
+<td align="right">681,088</td>
+<td align="right">37.13</td>
+<td align="right">1,795/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="right">3</td>
+<td align="right">18</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">1.86865e-06</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">681,088</td>
+<td align="right">5.07</td>
+<td align="right">13,139/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="right">3</td>
+<td align="right">12</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">3.1804e-06</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">459,520</td>
+<td align="right">11.5</td>
+<td align="right">5,796/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="right">2</td>
+<td align="right">18</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">4.39884e-07</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">681,088</td>
+<td align="right">15.3</td>
+<td align="right">4,357/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="right">2</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">5.3105e-07</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">237,952</td>
+<td align="right">7.15</td>
+<td align="right">9,319/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="right">2</td>
+<td align="right">12</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">1.0319e-06</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">459,520</td>
+<td align="right">11.3</td>
+<td align="right">5,900/s</td>
+</tr>
+</tbody></table></div><p>Something is obviously very strange. None of the networks can handle 5 operations.
+But some of them just did in the last experiment??</p>
+<p>What i really like about this neural net research is that you need a lot of intuition to go ahead.
+We simply don't know enough until all tests are made and this is usually hard to do because
+it takes a lot of time. However, in this case, i would argue that a 5 operations sequence is
+just too long for the network to learn the task in reasonable time. Put yourself into
+the eyes of the model. The training algorithm constantly tells you:</p>
+<blockquote>
+<p>If you see this: <code>PHMTW:5&gt;3 2&gt;3 5&gt;4 5&gt;3 1&gt;3:?????</code>
+you should output that: <code>PHMTW:5&gt;3 2&gt;3 5&gt;4 5&gt;3 1&gt;3:TWPMH</code></p>
+</blockquote>
+<p>on and on ... for millions of examples. Now, for a human, maybe a programmer even, this would
+be solvable pretty quick. Once you have seen 10 examples, you can be pretty sure what the
+algorithm is. But for a neural network trained with <em>stochastic gradient descend</em> it is basically
+a <em>brute-force</em> approach. It's like: Hey network, you gotta lot of parameters, should be fine,
+now if you see this X, and you should output that Y, there is a chance that inreasing this one
+parameter while decreasing that other one would help you to output the correct answer, the
+next time you see the same question. And on and on...</p>
+<p>Once again, intuitively, the network can probably learn the task much easier when it has
+some easier examples in the dataset. Schools and such also don't teach children algebra by
+starting with: <em>What is the answer of 7 + 4 + 9 + 2 + 6 = ??</em></p>
+<p>Now the training set contains questions with 2 to 5 operations, e.g.:</p>
+<pre><code>HGOKX:3&gt;1 5&gt;4:OGHXK
+CXZMN:5&gt;4 2&gt;5:CMZNX
+RMYTC:2&gt;1 4&gt;5 4&gt;2:MCYRT
+DNAHL:1&gt;3 3&gt;4 1&gt;2 4&gt;1 3&gt;2:DHANL
+HSBQA:4&gt;5 4&gt;5:HSBQA
+DTFKS:4&gt;5 3&gt;2 4&gt;5 5&gt;1:SFTKD
+UXGJN:4&gt;2 1&gt;2 1&gt;4 3&gt;1 3&gt;2:GXUJN
+</code></pre>
+<p>and the validation set still holds the same 5-operations-only questions for which all networks have
+failed previously.</p>
+<p>Here's the loss and error curves of the 18-layer network trained with 5 and 2-5 operations:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l18-nops-2-5-vnops5.png" alt="error curves" /></div></p>
+<p>The bright one is the brighter one. Indeed, the 18-layer gets down to 2.5% sample error. It is
+able to solve the task, it could just not learn it from the previous dataset. One could argue,
+though, that it would eventually learn the task just from the 5-operations examples but it would
+probably take 10 to 100 times more computation / CO2-emissions / floodings / draughts / you-name-it.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">nitem</th>
+<th align="right">len</th>
+<th align="left">nops</th>
+<th align="right">val-nops</th>
+<th align="right">l</th>
+<th align="right">ch</th>
+<th align="right">ks</th>
+<th align="right">validation loss</th>
+<th align="right">validation_mask_error%</th>
+<th align="right">validation_sample_error%</th>
+<th align="left">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="left">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.208661</td>
+<td align="right">60.0816</td>
+<td align="right">99.5123</td>
+<td align="left">237,952</td>
+<td align="right">16.55</td>
+<td align="left">4,027/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">12</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.0322987</td>
+<td align="right">6.74761</td>
+<td align="right">27.3885</td>
+<td align="left">459,520</td>
+<td align="right">27.59</td>
+<td align="left">2,416/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">18</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.00329394</td>
+<td align="right">0.565287</td>
+<td align="right">2.5577</td>
+<td align="left">681,088</td>
+<td align="right">41.25</td>
+<td align="left">1,615/s</td>
+</tr>
+</tbody></table></div><p>We can see from the table, that the 12 and especially the 6-layer networks are struggling.
+Looking at the plots of the 6-layer networks trained with 5 and 2-5 operations, we can
+see that the mask error decreases by a good amount but actual sample error stays roughly
+the same. It learned to put some letters and the right place but still fails
+for almost every validation sample:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l6-nops-2-5-vnops5.png" alt="error curves" /></div></p>
+<ul>
+<li>Quick takeaway: <strong>Put also some easy examples in the training set!</strong></li>
+</ul>
+<p>The curves suggest, however, that training has not yet converged. There are sure a few more per-mille
+to squeeze out.</p>
+<p>This is a good point of origin for further experimentation.
+Can we get the 6-layer network to solve the <em>5-operations Very Selective Copying</em> problem,</p>
+<ul>
+<li>without adding so many modules that it actually resembles a 12-layer network</li>
+<li>without making it slower to execute than the 12-layer network</li>
+<li><em><strong>bonus</strong></em>: by keeping the number of model parameters equal or even lower</li>
+</ul>
+<p>In other words, is there a trick, maybe to pass data around in a different way,
+that strongly increases the computational performance?</p>
+<h3 id="quick-comparison-with-mamba-and-lstm">Quick comparison with Mamba and LSTM</h3>
+<p>Just for another set of baselines, i tried the <a href="https://github.com/state-spaces/mamba">state-spaces/Mamba</a>
+(yet the <a href="https://github.com/johnma2006/mamba-minimal">slow version</a>)
+and the all-beloved LSTM (as <a href="https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html">pytorch implementation</a>). </p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l6-nops-2-5-mamba-and-lstm.png" alt="error curves" /></div></p>
+<p>The yellow/brownish is the 6-layers model from above, green is Mamba and blue the LSTM.
+All of them have 6 layers</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">nitem</th>
+<th align="right">len</th>
+<th align="left">nops</th>
+<th align="right">val-nops</th>
+<th align="right">l</th>
+<th align="left">model</th>
+<th align="right">validation loss</th>
+<th align="right">validation_mask_error%</th>
+<th align="right">validation_sample_error%</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">6</td>
+<td align="left">LSTM hidden_size=64</td>
+<td align="right">0.264829</td>
+<td align="right">79.9602</td>
+<td align="right">100</td>
+<td align="right">216,064</td>
+<td align="right">6.72</td>
+<td align="right">9,926/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">6</td>
+<td align="left">Conv1d channels=64 (from above)</td>
+<td align="right">0.208661</td>
+<td align="right">60.0816</td>
+<td align="right">99.5123</td>
+<td align="right">237,952</td>
+<td align="right">16.55</td>
+<td align="right">4,027/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">6</td>
+<td align="left">MAMBA d_model=32 d_state=16</td>
+<td align="right">0.199433</td>
+<td align="right">55.8081</td>
+<td align="right">99.1839</td>
+<td align="right">67,936</td>
+<td align="right">126.56</td>
+<td align="right">526/s</td>
+</tr>
+</tbody></table></div><ul>
+<li>None of these especially-crafted models reached a significant performance gain. </li>
+<li>To be fair: The Mamba model is <em>very</em> small compared to the Conv1d, just 28% of parameters.
+Though it manages to consume 7.8x more computation time. The first tiny drop in sample error
+occurred after 1 hour of training and i do not have the patience today to train an
+equally-sized Mamba for comparison. (The dynamics of the curves suggest, that it would not change much)</li>
+<li>The LSTM basically archived nothing (though equal-sized). It's about as bad as the 6-layer
+Conv1d with only 5-operations questions in the training set. At least, it's blazinlgy fast!</li>
+<li>Disclaimer: I do not know any best practices about using or training LSTMs or Mambas and
+surely made some mistake..</li>
+</ul>
+<h3 id="attention">Attention</h3>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l5-vnops5-attention.png" alt="error curves" /></div></p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">nitem</th>
+<th align="right">len</th>
+<th align="left">nops</th>
+<th align="right">vnops</th>
+<th align="right">l</th>
+<th align="right">ch</th>
+<th align="right">ks</th>
+<th align="left">attn</th>
+<th align="right">validation loss</th>
+<th align="right">validation_mask_error%</th>
+<th align="right">validation_sample_error%</th>
+<th align="left">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="left">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">0,0,4,0,0</td>
+<td align="right">0.010063</td>
+<td align="right">2.09793</td>
+<td align="right">9.92237</td>
+<td align="left">291,520</td>
+<td align="right">13.09</td>
+<td align="left">5,094/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">0,0,0,0,4</td>
+<td align="right">0.00499033</td>
+<td align="right">0.959395</td>
+<td align="right">4.76712</td>
+<td align="left">291,520</td>
+<td align="right">8.3</td>
+<td align="left">8,033/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">0,4,0,0,4</td>
+<td align="right">0.000208627</td>
+<td align="right">0.0278662</td>
+<td align="right">0.139331</td>
+<td align="left">382,016</td>
+<td align="right">11.36</td>
+<td align="left">5,867/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">0,4,4,0,0</td>
+<td align="right">0.00018748</td>
+<td align="right">0.0238854</td>
+<td align="right">0.119427</td>
+<td align="left">382,016</td>
+<td align="right">14.79</td>
+<td align="left">4,506/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">0,0,4,4,4</td>
+<td align="right">0.000129913</td>
+<td align="right">0.0199045</td>
+<td align="right">0.0995223</td>
+<td align="left">472,512</td>
+<td align="right">13.91</td>
+<td align="left">4,793/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">0,0,0,4,0</td>
+<td align="right">8.99973e-05</td>
+<td align="right">0.0119427</td>
+<td align="right">0.0597134</td>
+<td align="left">291,520</td>
+<td align="right">13.39</td>
+<td align="left">4,979/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">0,0,4,0,4</td>
+<td align="right">0.000111912</td>
+<td align="right">0.00995223</td>
+<td align="right">0.0597134</td>
+<td align="left">382,016</td>
+<td align="right">12.28</td>
+<td align="left">5,427/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">0,4,0,4,0</td>
+<td align="right">7.71816e-05</td>
+<td align="right">0.00995223</td>
+<td align="right">0.0497611</td>
+<td align="left">382,016</td>
+<td align="right">14.58</td>
+<td align="left">4,572/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">0,0,0,4,4</td>
+<td align="right">4.30281e-05</td>
+<td align="right">0.00597134</td>
+<td align="right">0.0298567</td>
+<td align="left">382,016</td>
+<td align="right">11.7</td>
+<td align="left">5,699/s</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">5</td>
+<td align="left">2,5</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">0,0,4,4,0</td>
+<td align="right">1.58895e-05</td>
+<td align="right">0.00398089</td>
+<td align="right">0.0199045</td>
+<td align="left">382,016</td>
+<td align="right">14.2</td>
+<td align="left">4,696/s</td>
+</tr>
+</tbody></table></div>
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../html/logs/selcopy.html">
+                        &lt;&lt; Efficiently solving the Selective Copying Problem with a Very Small Language Model
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+                <a href="../../../html/posts/2024/first-post.html">
+                    First post $gt;$gt;
+                </a>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

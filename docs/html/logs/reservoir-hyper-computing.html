@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reproducing &quot;Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing&quot;</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#reproducing-quotconnectionist-symbolic-machine-intelligence-using-cellular-automata-based-reservoir-hyperdimensional-computingquot" title="Reproducing &quot;Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing&quot;">Reproducing &quot;Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing&quot;</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#5-bit-xor" title="5-bit xor">5-bit xor</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#8-bit-square" title="8-bit square">8-bit square</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#more-tests" title="more tests">more tests</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="reproducing-quotconnectionist-symbolic-machine-intelligence-using-cellular-automata-based-reservoir-hyperdimensional-computingquot">Reproducing &quot;Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing&quot;</h1>
+<p>by Ozgur Yilmaz, <a href="https://arxiv.org/abs/1503.00851">arxiv.org/abs/1503.00851</a></p>
+<p>So, maybe i miss-read something but one experiment is supposed to input a
+few binary values then run it few hundred iterations and feed a batch of
+the last CA states to a ridge linear readout to recover the inputs.
+It's supposed to show that the CA can hold values over a longer period and
+is therefore suitable as a computing <em>reservoir</em>.  </p>
+<p>Initially i thought it interesting but then i realized that a lot of CA rules
+would satisfy this without much computing going on. Imagine a rule that
+simply copies the alive cell in the middle and all input bits are placed
+with a little distance to each other. Then the readout actually get's the
+unmodified input as source to recover the input, which isn't a proof of anything.</p>
+<p>So i probably misunderstood something. Anyways, i ran the following setup
+to test the idea a bit:</p>
+<p>The dataset consist of the 9-bit binary representations of numbers 0 - 511.
+100 samples are randomly selected and moved to the validation set.</p>
+<p>A single fixed random mapping of the input values to the CA state space is
+used to spread the values across a <strong>200 cell wide</strong> input state such that no
+input is closer than 5 cells to another input. The edges of the state are
+toroid, e.g. they wrap around. Initial state is zero, except the input bits.</p>
+<p>All 256 possible rules in the classic wolfram binary-state 3-neighbourhood CA
+are run for 500 iterations and the last 200 iterations are fed to the
+<code>sklearn.linear_model.Ridge</code> readout. The training-set is used to train
+the readout.</p>
+<p>When simply querying for the reproduction of the input values, in fact
+<strong>169</strong> rules have zero training error and <strong>145</strong> even generalize to
+have zero validation error. (<a href="../../../logs/data/ca1-repl-copy.csv">csv</a>)</p>
+<h3 id="5-bit-xor">5-bit xor</h3>
+<p>Next the readout was trained to produce the <code>xor</code> of the first and last 5 bits
+of a 10-bit number. These sets have <strong>924</strong> and <strong>100</strong> samples for train and test.</p>
+<p>Here are the top-50 rules:</p>
+<p>(mae is mean absolute error, <a href="../../../logs/data/ca1-repl-xor.csv">csv</a>)</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">rule</th>
+<th align="right">correct_train</th>
+<th align="right">mae_train</th>
+<th align="right">correct_test</th>
+<th align="right">mae_test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">153</td>
+<td align="right">924</td>
+<td align="right">0.000018</td>
+<td align="right">100</td>
+<td align="right">0.000153</td>
+</tr>
+<tr>
+<td align="right">60</td>
+<td align="right">924</td>
+<td align="right">0.000018</td>
+<td align="right">100</td>
+<td align="right">0.000153</td>
+</tr>
+<tr>
+<td align="right">195</td>
+<td align="right">924</td>
+<td align="right">0.000018</td>
+<td align="right">100</td>
+<td align="right">0.000153</td>
+</tr>
+<tr>
+<td align="right">102</td>
+<td align="right">924</td>
+<td align="right">0.000018</td>
+<td align="right">100</td>
+<td align="right">0.000153</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">924</td>
+<td align="right">0.000027</td>
+<td align="right">100</td>
+<td align="right">0.032076</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">924</td>
+<td align="right">0.000027</td>
+<td align="right">100</td>
+<td align="right">0.032076</td>
+</tr>
+<tr>
+<td align="right">146</td>
+<td align="right">924</td>
+<td align="right">0.000045</td>
+<td align="right">81</td>
+<td align="right">0.155052</td>
+</tr>
+<tr>
+<td align="right">18</td>
+<td align="right">924</td>
+<td align="right">0.000045</td>
+<td align="right">81</td>
+<td align="right">0.155052</td>
+</tr>
+<tr>
+<td align="right">161</td>
+<td align="right">924</td>
+<td align="right">0.000046</td>
+<td align="right">25</td>
+<td align="right">0.407795</td>
+</tr>
+<tr>
+<td align="right">129</td>
+<td align="right">924</td>
+<td align="right">0.000046</td>
+<td align="right">25</td>
+<td align="right">0.407795</td>
+</tr>
+<tr>
+<td align="right">126</td>
+<td align="right">924</td>
+<td align="right">0.000046</td>
+<td align="right">25</td>
+<td align="right">0.407795</td>
+</tr>
+<tr>
+<td align="right">149</td>
+<td align="right">924</td>
+<td align="right">0.000052</td>
+<td align="right">2</td>
+<td align="right">0.510267</td>
+</tr>
+<tr>
+<td align="right">86</td>
+<td align="right">924</td>
+<td align="right">0.000052</td>
+<td align="right">2</td>
+<td align="right">0.510204</td>
+</tr>
+<tr>
+<td align="right">135</td>
+<td align="right">924</td>
+<td align="right">0.000052</td>
+<td align="right">2</td>
+<td align="right">0.502302</td>
+</tr>
+<tr>
+<td align="right">30</td>
+<td align="right">924</td>
+<td align="right">0.000052</td>
+<td align="right">2</td>
+<td align="right">0.501841</td>
+</tr>
+<tr>
+<td align="right">89</td>
+<td align="right">924</td>
+<td align="right">0.000052</td>
+<td align="right">2</td>
+<td align="right">0.498935</td>
+</tr>
+<tr>
+<td align="right">45</td>
+<td align="right">924</td>
+<td align="right">0.000052</td>
+<td align="right">1</td>
+<td align="right">0.497252</td>
+</tr>
+<tr>
+<td align="right">101</td>
+<td align="right">924</td>
+<td align="right">0.000052</td>
+<td align="right">3</td>
+<td align="right">0.507690</td>
+</tr>
+<tr>
+<td align="right">75</td>
+<td align="right">924</td>
+<td align="right">0.000052</td>
+<td align="right">2</td>
+<td align="right">0.501961</td>
+</tr>
+<tr>
+<td align="right">22</td>
+<td align="right">924</td>
+<td align="right">0.000060</td>
+<td align="right">7</td>
+<td align="right">0.484349</td>
+</tr>
+<tr>
+<td align="right">182</td>
+<td align="right">924</td>
+<td align="right">0.000064</td>
+<td align="right">64</td>
+<td align="right">0.298419</td>
+</tr>
+<tr>
+<td align="right">124</td>
+<td align="right">924</td>
+<td align="right">0.000137</td>
+<td align="right">5</td>
+<td align="right">0.440620</td>
+</tr>
+<tr>
+<td align="right">193</td>
+<td align="right">924</td>
+<td align="right">0.000137</td>
+<td align="right">5</td>
+<td align="right">0.441169</td>
+</tr>
+<tr>
+<td align="right">110</td>
+<td align="right">920</td>
+<td align="right">0.001217</td>
+<td align="right">13</td>
+<td align="right">0.425420</td>
+</tr>
+<tr>
+<td align="right">137</td>
+<td align="right">920</td>
+<td align="right">0.001217</td>
+<td align="right">13</td>
+<td align="right">0.426449</td>
+</tr>
+<tr>
+<td align="right">109</td>
+<td align="right">835</td>
+<td align="right">0.025168</td>
+<td align="right">18</td>
+<td align="right">0.317240</td>
+</tr>
+<tr>
+<td align="right">73</td>
+<td align="right">818</td>
+<td align="right">0.033937</td>
+<td align="right">17</td>
+<td align="right">0.357383</td>
+</tr>
+<tr>
+<td align="right">147</td>
+<td align="right">653</td>
+<td align="right">0.114803</td>
+<td align="right">14</td>
+<td align="right">0.403177</td>
+</tr>
+<tr>
+<td align="right">54</td>
+<td align="right">653</td>
+<td align="right">0.114803</td>
+<td align="right">14</td>
+<td align="right">0.402360</td>
+</tr>
+<tr>
+<td align="right">169</td>
+<td align="right">471</td>
+<td align="right">0.195880</td>
+<td align="right">25</td>
+<td align="right">0.326195</td>
+</tr>
+<tr>
+<td align="right">225</td>
+<td align="right">417</td>
+<td align="right">0.222927</td>
+<td align="right">12</td>
+<td align="right">0.354916</td>
+</tr>
+<tr>
+<td align="right">210</td>
+<td align="right">390</td>
+<td align="right">0.211516</td>
+<td align="right">13</td>
+<td align="right">0.290926</td>
+</tr>
+<tr>
+<td align="right">82</td>
+<td align="right">390</td>
+<td align="right">0.211516</td>
+<td align="right">13</td>
+<td align="right">0.290926</td>
+</tr>
+<tr>
+<td align="right">181</td>
+<td align="right">390</td>
+<td align="right">0.211516</td>
+<td align="right">13</td>
+<td align="right">0.290991</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">366</td>
+<td align="right">0.220765</td>
+<td align="right">7</td>
+<td align="right">0.329513</td>
+</tr>
+<tr>
+<td align="right">154</td>
+<td align="right">366</td>
+<td align="right">0.220765</td>
+<td align="right">7</td>
+<td align="right">0.329513</td>
+</tr>
+<tr>
+<td align="right">167</td>
+<td align="right">366</td>
+<td align="right">0.220765</td>
+<td align="right">7</td>
+<td align="right">0.329575</td>
+</tr>
+<tr>
+<td align="right">122</td>
+<td align="right">327</td>
+<td align="right">0.197325</td>
+<td align="right">6</td>
+<td align="right">0.299221</td>
+</tr>
+<tr>
+<td align="right">218</td>
+<td align="right">175</td>
+<td align="right">0.352447</td>
+<td align="right">8</td>
+<td align="right">0.373356</td>
+</tr>
+<tr>
+<td align="right">90</td>
+<td align="right">160</td>
+<td align="right">0.297512</td>
+<td align="right">0</td>
+<td align="right">0.323019</td>
+</tr>
+<tr>
+<td align="right">165</td>
+<td align="right">160</td>
+<td align="right">0.297512</td>
+<td align="right">0</td>
+<td align="right">0.323019</td>
+</tr>
+<tr>
+<td align="right">57</td>
+<td align="right">115</td>
+<td align="right">0.395584</td>
+<td align="right">0</td>
+<td align="right">0.441891</td>
+</tr>
+<tr>
+<td align="right">230</td>
+<td align="right">113</td>
+<td align="right">0.415542</td>
+<td align="right">6</td>
+<td align="right">0.456920</td>
+</tr>
+<tr>
+<td align="right">188</td>
+<td align="right">99</td>
+<td align="right">0.414891</td>
+<td align="right">0</td>
+<td align="right">0.469630</td>
+</tr>
+<tr>
+<td align="right">99</td>
+<td align="right">96</td>
+<td align="right">0.407152</td>
+<td align="right">2</td>
+<td align="right">0.449875</td>
+</tr>
+<tr>
+<td align="right">145</td>
+<td align="right">87</td>
+<td align="right">0.434149</td>
+<td align="right">2</td>
+<td align="right">0.472446</td>
+</tr>
+<tr>
+<td align="right">158</td>
+<td align="right">87</td>
+<td align="right">0.450478</td>
+<td align="right">1</td>
+<td align="right">0.472240</td>
+</tr>
+<tr>
+<td align="right">118</td>
+<td align="right">86</td>
+<td align="right">0.435258</td>
+<td align="right">1</td>
+<td align="right">0.467948</td>
+</tr>
+<tr>
+<td align="right">214</td>
+<td align="right">86</td>
+<td align="right">0.443312</td>
+<td align="right">1</td>
+<td align="right">0.477272</td>
+</tr>
+<tr>
+<td align="right">62</td>
+<td align="right">84</td>
+<td align="right">0.435100</td>
+<td align="right">2</td>
+<td align="right">0.469588</td>
+</tr>
+</tbody></table></div><p>Note that Steven Wolfram's favorite rule 30 is not able to generalize
+to the validation data. Only <strong>6</strong> rules generalize completely and <strong>23</strong>
+have zero training error.</p>
+<h3 id="8-bit-square">8-bit square</h3>
+<p>Here, the 9-bit numbers are used again and the target values are 8-bit
+binary representations of the result of <code>(n * n) mod 251</code>.
+Only <strong>50</strong> samples are moved to the validation set so the training
+set has size <strong>462</strong>.
+Can the CA reservoir generalize to calculate the square of a number?</p>
+<p>(<a href="../../../logs/data/ca1-repl-square.csv">csv</a>)</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">rule</th>
+<th align="right">correct_train</th>
+<th align="right">mae_train</th>
+<th align="right">correct_test</th>
+<th align="right">mae_test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">86</td>
+<td align="right">462</td>
+<td align="right">0.000050</td>
+<td align="right">0</td>
+<td align="right">0.496036</td>
+</tr>
+<tr>
+<td align="right">149</td>
+<td align="right">462</td>
+<td align="right">0.000050</td>
+<td align="right">0</td>
+<td align="right">0.496256</td>
+</tr>
+<tr>
+<td align="right">30</td>
+<td align="right">462</td>
+<td align="right">0.000050</td>
+<td align="right">0</td>
+<td align="right">0.487999</td>
+</tr>
+<tr>
+<td align="right">135</td>
+<td align="right">462</td>
+<td align="right">0.000050</td>
+<td align="right">0</td>
+<td align="right">0.487980</td>
+</tr>
+<tr>
+<td align="right">101</td>
+<td align="right">462</td>
+<td align="right">0.000050</td>
+<td align="right">0</td>
+<td align="right">0.481407</td>
+</tr>
+<tr>
+<td align="right">75</td>
+<td align="right">462</td>
+<td align="right">0.000050</td>
+<td align="right">2</td>
+<td align="right">0.480249</td>
+</tr>
+<tr>
+<td align="right">89</td>
+<td align="right">462</td>
+<td align="right">0.000051</td>
+<td align="right">0</td>
+<td align="right">0.487788</td>
+</tr>
+<tr>
+<td align="right">45</td>
+<td align="right">462</td>
+<td align="right">0.000051</td>
+<td align="right">0</td>
+<td align="right">0.488288</td>
+</tr>
+<tr>
+<td align="right">161</td>
+<td align="right">462</td>
+<td align="right">0.000054</td>
+<td align="right">1</td>
+<td align="right">0.490340</td>
+</tr>
+<tr>
+<td align="right">126</td>
+<td align="right">462</td>
+<td align="right">0.000054</td>
+<td align="right">1</td>
+<td align="right">0.490340</td>
+</tr>
+<tr>
+<td align="right">129</td>
+<td align="right">462</td>
+<td align="right">0.000054</td>
+<td align="right">1</td>
+<td align="right">0.490340</td>
+</tr>
+<tr>
+<td align="right">22</td>
+<td align="right">462</td>
+<td align="right">0.000063</td>
+<td align="right">1</td>
+<td align="right">0.490240</td>
+</tr>
+<tr>
+<td align="right">182</td>
+<td align="right">462</td>
+<td align="right">0.000113</td>
+<td align="right">0</td>
+<td align="right">0.479602</td>
+</tr>
+<tr>
+<td align="right">124</td>
+<td align="right">462</td>
+<td align="right">0.000125</td>
+<td align="right">0</td>
+<td align="right">0.486095</td>
+</tr>
+<tr>
+<td align="right">193</td>
+<td align="right">462</td>
+<td align="right">0.000125</td>
+<td align="right">0</td>
+<td align="right">0.486428</td>
+</tr>
+<tr>
+<td align="right">18</td>
+<td align="right">462</td>
+<td align="right">0.000155</td>
+<td align="right">0</td>
+<td align="right">0.510122</td>
+</tr>
+<tr>
+<td align="right">146</td>
+<td align="right">462</td>
+<td align="right">0.000155</td>
+<td align="right">0</td>
+<td align="right">0.510122</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">462</td>
+<td align="right">0.000372</td>
+<td align="right">0</td>
+<td align="right">0.658249</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">462</td>
+<td align="right">0.000372</td>
+<td align="right">0</td>
+<td align="right">0.658249</td>
+</tr>
+<tr>
+<td align="right">153</td>
+<td align="right">462</td>
+<td align="right">0.012338</td>
+<td align="right">1</td>
+<td align="right">2.193423</td>
+</tr>
+<tr>
+<td align="right">102</td>
+<td align="right">462</td>
+<td align="right">0.012338</td>
+<td align="right">1</td>
+<td align="right">2.193423</td>
+</tr>
+<tr>
+<td align="right">195</td>
+<td align="right">462</td>
+<td align="right">0.012338</td>
+<td align="right">1</td>
+<td align="right">2.193423</td>
+</tr>
+<tr>
+<td align="right">60</td>
+<td align="right">462</td>
+<td align="right">0.012338</td>
+<td align="right">1</td>
+<td align="right">2.193423</td>
+</tr>
+<tr>
+<td align="right">110</td>
+<td align="right">457</td>
+<td align="right">0.003107</td>
+<td align="right">0</td>
+<td align="right">0.493481</td>
+</tr>
+<tr>
+<td align="right">137</td>
+<td align="right">457</td>
+<td align="right">0.003107</td>
+<td align="right">0</td>
+<td align="right">0.493090</td>
+</tr>
+<tr>
+<td align="right">109</td>
+<td align="right">430</td>
+<td align="right">0.038524</td>
+<td align="right">0</td>
+<td align="right">0.530648</td>
+</tr>
+<tr>
+<td align="right">73</td>
+<td align="right">424</td>
+<td align="right">0.030511</td>
+<td align="right">0</td>
+<td align="right">0.514033</td>
+</tr>
+<tr>
+<td align="right">54</td>
+<td align="right">246</td>
+<td align="right">0.176413</td>
+<td align="right">0</td>
+<td align="right">0.523882</td>
+</tr>
+<tr>
+<td align="right">147</td>
+<td align="right">246</td>
+<td align="right">0.176414</td>
+<td align="right">0</td>
+<td align="right">0.523725</td>
+</tr>
+<tr>
+<td align="right">154</td>
+<td align="right">143</td>
+<td align="right">0.296260</td>
+<td align="right">0</td>
+<td align="right">0.581172</td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td align="right">143</td>
+<td align="right">0.296260</td>
+<td align="right">0</td>
+<td align="right">0.581172</td>
+</tr>
+<tr>
+<td align="right">167</td>
+<td align="right">143</td>
+<td align="right">0.296260</td>
+<td align="right">0</td>
+<td align="right">0.581173</td>
+</tr>
+<tr>
+<td align="right">210</td>
+<td align="right">134</td>
+<td align="right">0.282733</td>
+<td align="right">0</td>
+<td align="right">0.550056</td>
+</tr>
+<tr>
+<td align="right">82</td>
+<td align="right">134</td>
+<td align="right">0.282733</td>
+<td align="right">0</td>
+<td align="right">0.550056</td>
+</tr>
+<tr>
+<td align="right">181</td>
+<td align="right">134</td>
+<td align="right">0.282733</td>
+<td align="right">0</td>
+<td align="right">0.550097</td>
+</tr>
+<tr>
+<td align="right">169</td>
+<td align="right">131</td>
+<td align="right">0.296666</td>
+<td align="right">0</td>
+<td align="right">0.581449</td>
+</tr>
+<tr>
+<td align="right">225</td>
+<td align="right">114</td>
+<td align="right">0.317405</td>
+<td align="right">0</td>
+<td align="right">0.528717</td>
+</tr>
+<tr>
+<td align="right">122</td>
+<td align="right">84</td>
+<td align="right">0.335783</td>
+<td align="right">1</td>
+<td align="right">0.501831</td>
+</tr>
+<tr>
+<td align="right">218</td>
+<td align="right">50</td>
+<td align="right">0.418594</td>
+<td align="right">0</td>
+<td align="right">0.496316</td>
+</tr>
+<tr>
+<td align="right">230</td>
+<td align="right">48</td>
+<td align="right">0.390327</td>
+<td align="right">1</td>
+<td align="right">0.495561</td>
+</tr>
+<tr>
+<td align="right">188</td>
+<td align="right">43</td>
+<td align="right">0.404201</td>
+<td align="right">0</td>
+<td align="right">0.501767</td>
+</tr>
+<tr>
+<td align="right">131</td>
+<td align="right">39</td>
+<td align="right">0.408533</td>
+<td align="right">1</td>
+<td align="right">0.499596</td>
+</tr>
+<tr>
+<td align="right">145</td>
+<td align="right">35</td>
+<td align="right">0.405773</td>
+<td align="right">0</td>
+<td align="right">0.502563</td>
+</tr>
+<tr>
+<td align="right">118</td>
+<td align="right">35</td>
+<td align="right">0.410958</td>
+<td align="right">0</td>
+<td align="right">0.502439</td>
+</tr>
+<tr>
+<td align="right">62</td>
+<td align="right">34</td>
+<td align="right">0.412358</td>
+<td align="right">0</td>
+<td align="right">0.504509</td>
+</tr>
+<tr>
+<td align="right">158</td>
+<td align="right">27</td>
+<td align="right">0.442094</td>
+<td align="right">0</td>
+<td align="right">0.502145</td>
+</tr>
+<tr>
+<td align="right">214</td>
+<td align="right">25</td>
+<td align="right">0.438685</td>
+<td align="right">0</td>
+<td align="right">0.491097</td>
+</tr>
+<tr>
+<td align="right">222</td>
+<td align="right">24</td>
+<td align="right">0.447798</td>
+<td align="right">0</td>
+<td align="right">0.494096</td>
+</tr>
+<tr>
+<td align="right">133</td>
+<td align="right">18</td>
+<td align="right">0.430502</td>
+<td align="right">0</td>
+<td align="right">0.500568</td>
+</tr>
+<tr>
+<td align="right">94</td>
+<td align="right">18</td>
+<td align="right">0.430502</td>
+<td align="right">0</td>
+<td align="right">0.500568</td>
+</tr>
+</tbody></table></div><p>It seems, no. The top-most number of correct validation results is <strong>2</strong>
+among all 256 rules. Again, <strong>23</strong> rules have zero training error. At least.</p>
+<p>The well-performing rules are identical in both experiments:</p>
+<pre><code> 18,  22,  30,  45,  60,  75,  86,  89, 101, 102, 105, 124, 
+126, 129, 135, 146, 149, 150, 153, 161, 182, 193, 195
+</code></pre>
+<p>Shown as binary representation, which are the lookup values for
+the 3-neighbourhood (<code>*</code> marks rules that generalized perfectly in
+the xor experiment):</p>
+<pre><code> 18: [0, 1, 0, 0, 1, 0, 0, 0]
+ 22: [0, 1, 1, 0, 1, 0, 0, 0]
+ 30: [0, 1, 1, 1, 1, 0, 0, 0]
+ 45: [1, 0, 1, 1, 0, 1, 0, 0]
+ 60: [0, 0, 1, 1, 1, 1, 0, 0] *
+ 75: [1, 1, 0, 1, 0, 0, 1, 0]
+ 86: [0, 1, 1, 0, 1, 0, 1, 0]
+ 89: [1, 0, 0, 1, 1, 0, 1, 0]
+101: [1, 0, 1, 0, 0, 1, 1, 0]
+102: [0, 1, 1, 0, 0, 1, 1, 0] *
+105: [1, 0, 0, 1, 0, 1, 1, 0] *
+124: [0, 0, 1, 1, 1, 1, 1, 0]
+126: [0, 1, 1, 1, 1, 1, 1, 0]
+129: [1, 0, 0, 0, 0, 0, 0, 1]
+135: [1, 1, 1, 0, 0, 0, 0, 1]
+146: [0, 1, 0, 0, 1, 0, 0, 1]
+149: [1, 0, 1, 0, 1, 0, 0, 1]
+150: [0, 1, 1, 0, 1, 0, 0, 1] *
+153: [1, 0, 0, 1, 1, 0, 0, 1] *
+161: [1, 0, 0, 0, 0, 1, 0, 1]
+182: [0, 1, 1, 0, 1, 1, 0, 1]
+193: [1, 0, 0, 0, 0, 0, 1, 1]
+195: [1, 1, 0, 0, 0, 0, 1, 1] *
+
+the bits correspond to these neighbourhood states:
+
+000 100 010 110 001 101 011 111
+</code></pre>
+<p>Below are plots of the state history (100 iterations, toroid 101-cell state)
+for these particular rules, starting from a single seed cell:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/ca1-repl-good-rules.png" alt="ca state history" /></div></p>
+<h3 id="more-tests">more tests</h3>
+<p>Tried a couple of things :rofl:</p>
+<p>Among them is feeding the input data sequentially to the CA state.
+For the following table, the input sequence is placed in the first state slice
+as above, then every <code>seq_input_stride</code> steps the input is inserted again to
+the running CA state. Either a copy of the first input slice or sequentially:
+every input bit one after another, at their respective fixed random positions.</p>
+<p>Training objective was to reproduce the binary float representation of the
+input number (0 to 511). Only tried the 23 <em>strong</em> rules from above and
+<code>iterations</code> and <code>output_steps</code> where fixed after preliminary tests.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">rule</th>
+<th align="right">iterations</th>
+<th align="right">output_steps</th>
+<th align="left">wrap</th>
+<th align="left">seq_input</th>
+<th align="right">seq_input_stride</th>
+<th align="right">readout_var</th>
+<th align="right">correct_train</th>
+<th align="right">mae_train</th>
+<th align="right">correct_test</th>
+<th align="right">mae_test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">none</td>
+<td align="right">0</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">sequential</td>
+<td align="right">1</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">repeat</td>
+<td align="right">7</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">sequential</td>
+<td align="right">7</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">repeat</td>
+<td align="right">1</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">sequential</td>
+<td align="right">1</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">repeat</td>
+<td align="right">1</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">repeat</td>
+<td align="right">3</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">repeat</td>
+<td align="right">3</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">repeat</td>
+<td align="right">7</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">sequential</td>
+<td align="right">7</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">none</td>
+<td align="right">0</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">sequential</td>
+<td align="right">3</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">sequential</td>
+<td align="right">3</td>
+<td align="right">0.000482</td>
+<td align="right">412</td>
+<td align="right">0.000057</td>
+<td align="right">96</td>
+<td align="right">0.032667</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">sequential</td>
+<td align="right">3</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">18</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">repeat</td>
+<td align="right">3</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">sequential</td>
+<td align="right">1</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">repeat</td>
+<td align="right">1</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">sequential</td>
+<td align="right">3</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">146</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">none</td>
+<td align="right">0</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">sequential</td>
+<td align="right">7</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">18</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">none</td>
+<td align="right">0</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">repeat</td>
+<td align="right">3</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">146</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">repeat</td>
+<td align="right">1</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">repeat</td>
+<td align="right">3</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">repeat</td>
+<td align="right">1</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">sequential</td>
+<td align="right">7</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">sequential</td>
+<td align="right">1</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">18</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">sequential</td>
+<td align="right">3</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">146</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">repeat</td>
+<td align="right">3</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">18</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">repeat</td>
+<td align="right">1</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">repeat</td>
+<td align="right">7</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">18</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">sequential</td>
+<td align="right">1</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">146</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">sequential</td>
+<td align="right">1</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">146</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">sequential</td>
+<td align="right">3</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">18</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">repeat</td>
+<td align="right">7</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">105</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">none</td>
+<td align="right">0</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">none</td>
+<td align="right">0</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">18</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">sequential</td>
+<td align="right">7</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">146</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">sequential</td>
+<td align="right">7</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">150</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">repeat</td>
+<td align="right">7</td>
+<td align="right">0.000511</td>
+<td align="right">412</td>
+<td align="right">0.000058</td>
+<td align="right">91</td>
+<td align="right">0.043323</td>
+</tr>
+<tr>
+<td align="right">146</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">False</td>
+<td align="left">repeat</td>
+<td align="right">7</td>
+<td align="right">0.000642</td>
+<td align="right">412</td>
+<td align="right">0.000077</td>
+<td align="right">91</td>
+<td align="right">0.033158</td>
+</tr>
+<tr>
+<td align="right">60</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">sequential</td>
+<td align="right">1</td>
+<td align="right">0.000764</td>
+<td align="right">412</td>
+<td align="right">0.016511</td>
+<td align="right">90</td>
+<td align="right">0.040892</td>
+</tr>
+<tr>
+<td align="right">102</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">sequential</td>
+<td align="right">1</td>
+<td align="right">0.000764</td>
+<td align="right">412</td>
+<td align="right">0.016511</td>
+<td align="right">90</td>
+<td align="right">0.040892</td>
+</tr>
+<tr>
+<td align="right">102</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">none</td>
+<td align="right">0</td>
+<td align="right">0.000764</td>
+<td align="right">412</td>
+<td align="right">0.016511</td>
+<td align="right">90</td>
+<td align="right">0.040892</td>
+</tr>
+<tr>
+<td align="right">153</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">repeat</td>
+<td align="right">3</td>
+<td align="right">0.000764</td>
+<td align="right">412</td>
+<td align="right">0.016511</td>
+<td align="right">90</td>
+<td align="right">0.040892</td>
+</tr>
+<tr>
+<td align="right">153</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">repeat</td>
+<td align="right">7</td>
+<td align="right">0.000764</td>
+<td align="right">412</td>
+<td align="right">0.016511</td>
+<td align="right">90</td>
+<td align="right">0.040892</td>
+</tr>
+<tr>
+<td align="right">195</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">repeat</td>
+<td align="right">7</td>
+<td align="right">0.000764</td>
+<td align="right">412</td>
+<td align="right">0.016511</td>
+<td align="right">90</td>
+<td align="right">0.040892</td>
+</tr>
+<tr>
+<td align="right">102</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">sequential</td>
+<td align="right">3</td>
+<td align="right">0.000764</td>
+<td align="right">412</td>
+<td align="right">0.016511</td>
+<td align="right">90</td>
+<td align="right">0.040892</td>
+</tr>
+<tr>
+<td align="right">60</td>
+<td align="right">200</td>
+<td align="right">100</td>
+<td align="left">True</td>
+<td align="left">sequential</td>
+<td align="right">3</td>
+<td align="right">0.000764</td>
+<td align="right">412</td>
+<td align="right">0.016511</td>
+<td align="right">90</td>
+<td align="right">0.040892</td>
+</tr>
+</tbody></table></div><p>(<code>readout_var</code> is the variance of the linear readout matrix)</p>
+<p>It can generalize to a high degree in this task. Although all the
+sequential-input-or-not and even the different rules do not change the
+numbers too much. For the <em>square of number</em> experiment above
+this setup still does not get better than 6 correct validation samples out of 100.</p>
+<p>Mhh, so what about higher order CAs? If we allow 3 states instead of 2, the
+1D replacement CA suddenly has astonishing <strong>3^3^3</strong>, or <strong>3^27</strong> possible
+rules. A do-nothing python loop through that number already takes 300 hours:</p>
+<pre><code>for r in tqdm(range(7_625_597_484_987)):
+    pass
+
+0%|                  | 567,067,242/7,625,597,484,987 [01:24&lt;314:10:54, 6,741,520.98it/s]
+</code></pre>
+
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../html/logs/ae-histogram-loss.html">
+                        &lt;&lt; autoencoder with histogram loss
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+                <a href="../../../html/logs/ae-stacked.html">
+                    stacked symmetric autoencoder, adding one-layer-at-a-time $gt;$gt;
+                </a>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Autoencoder training on MNIST dataset</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#autoencoder-training-on-mnist-dataset" title="Autoencoder training on MNIST dataset">Autoencoder training on MNIST dataset</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#varying-kernel-size" title="varying kernel size">varying kernel size</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#varying-activation-function" title="varying activation function">varying activation function</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#varying-image-to-code-ratio" title="varying image to code ratio">varying image to code ratio</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#varying-kernel-size-and-number-of-channels" title="varying kernel size and number of channels">varying kernel size and number of channels</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="autoencoder-training-on-mnist-dataset">Autoencoder training on MNIST dataset</h1>
+<h2 id="varying-kernel-size">varying kernel size</h2>
+<p>Using a &quot;classic&quot; CNN autoencoder and varying the kernel size of all layers:</p>
+<pre><code class="language-yaml">matrix:
+  opt: [&quot;Adam&quot;]
+  lr: [0.001]
+  ks: [3, 5, 7, 9, 11, 13]
+
+experiment_name: mnist/mnist3_${matrix_slug}
+
+trainer: TrainAutoencoder
+
+globals:
+  SHAPE: (1, 28, 28)
+  CODE_SIZE: 28 * 28 // 10
+
+train_set: |
+  TransformDataset(
+    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),
+    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
+  )
+
+validation_set: |
+  TransformDataset(
+    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),
+    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
+  )
+
+batch_size: 64
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(16, 32), kernel_size=${ks})
+
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)
+</code></pre>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/simple-ae-mnist-ks.png" alt="loss plots" /></div></p>
+<h2 id="varying-activation-function">varying activation function</h2>
+<pre><code class="language-yaml">matrix:
+  opt: [&quot;Adam&quot;]
+  lr: [0.001]
+  ks: [3]
+  act: [&quot;CELU&quot;, &quot;ELU&quot;, &quot;GELU&quot;, &quot;LeakyReLU&quot;, &quot;ReLU&quot;, &quot;ReLU6&quot;, &quot;RReLU&quot;, &quot;SELU&quot;, &quot;SiLU&quot;, &quot;Sigmoid&quot;]
+
+experiment_name: mnist/mnist4_${matrix_slug}
+
+trainer: TrainAutoencoder
+
+globals:
+  SHAPE: (1, 28, 28)
+  CODE_SIZE: 28 * 28 // 10
+
+train_set: |
+  TransformDataset(
+    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),
+    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
+  )
+
+validation_set: |
+  TransformDataset(
+    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),
+    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
+  )
+
+batch_size: 64
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(16, 32), kernel_size=${ks}, act_fn=nn.${act}())
+
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)
+</code></pre>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/simple-ae-mnist-act.png" alt="loss plots" /></div></p>
+<h2 id="varying-image-to-code-ratio">varying image to code ratio</h2>
+<p><code>ratio</code> below defines the embedding size (1: 768, 10: 76, 500: 1)</p>
+<pre><code class="language-yaml">matrix:
+  opt: [&quot;Adam&quot;]
+  lr: [0.001]
+  ks: [3]
+  act: [&quot;ReLU6&quot;]
+  ratio: [1, 2, 5, 10, 20, 50, 100, 500]
+
+experiment_name: mnist/mnist5_${matrix_slug}
+
+trainer: TrainAutoencoder
+
+globals:
+  SHAPE: (1, 28, 28)
+  CODE_SIZE: 28 * 28 // ${ratio}
+
+train_set: |
+  TransformDataset(
+    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),
+    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
+  )
+
+validation_set: |
+  TransformDataset(
+    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),
+    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
+  )
+
+batch_size: 64
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(16, 32), kernel_size=${ks}, act_fn=nn.${act}())
+
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)
+</code></pre>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/simple-ae-mnist-ratio.png" alt="loss plots" /></div></p>
+<p>Here are the reproductions of the ratio 10, 100 and 500 runs:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th>compreesion ratio: 10</th>
+<th>ratio: 100</th>
+<th>ratio: 500</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/simple-ae-mnist-ratio-10-repros.png" alt="repros" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/simple-ae-mnist-ratio-100-repros.png" alt="repros" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/simple-ae-mnist-ratio-500-repros.png" alt="repros" /></div></td>
+</tr>
+</tbody></table></div><h2 id="varying-kernel-size-and-number-of-channels">varying kernel size and number of channels</h2>
+<pre><code class="language-yaml">matrix:
+  opt: [&quot;Adam&quot;]
+  lr: [0.001]
+  ks: [
+    [3, 3, 3, 3], [3, 5, 3, 3], [3, 3, 5, 3], [3, 3, 3, 5],
+    [3, 3, 5, 7], [3, 5, 7, 7], [7, 5, 3, 3], [3, 7, 3, 7],
+    [3, 5, 7, 11], [11, 7, 5, 3],
+  ]
+  chan: [[32, 32, 32, 32], [64, 64, 64, 64], [128, 128, 128, 128], [32, 64, 96, 128]]
+  $filter: len(${ks}) == len(${chan})
+
+experiment_name: mnist/mnist8_${matrix_slug}
+
+trainer: TrainAutoencoder
+
+globals:
+  SHAPE: (1, 28, 28)
+  CODE_SIZE: 28 * 28 // 10
+
+train_set: |
+  TransformDataset(
+    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),
+    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
+  )
+
+validation_set: |
+  TransformDataset(
+    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),
+    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
+  )
+
+batch_size: 64
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=${chan}, kernel_size=${ks}, act_fn=nn.ReLU6())
+
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)
+</code></pre>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/simple-ae-mnist-ks-chan.png" alt="loss plots" /></div></p>
+
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../html/logs/manifold.html">
+                        &lt;&lt; &quot;implicit neural representation&quot;
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+                <a href="../../../html/logs/autoencoder-experiments.html">
+                    variational auto-encoder on RPG Tile dataset $gt;$gt;
+                </a>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>
