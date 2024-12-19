@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Home</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="index">
+    <div class="index-wrapper">
+
+        <h2>defgsus.github.io/nn-experiments/</h2>
+
+        <p>Dear seeker! This is a collection of logs of my neural network experiments.</p>
+
+        <div class="article-list">
+        
+            <div class="article-item">
+                <div class="date">2024-12-17</div>
+                <a class="link" href="../html/posts/2024/first-post.html">First post</a>
+                
+                    <div class="teaser"><p>Hello, this is not an experiment log. It's a classic post. I can rant away now, since i made
+this little static site compiler. Let's see how that goes along...</p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2024-12-15</div>
+                <a class="link" href="../html/logs/selcopy2.html">Solving the &quot;Very Selective Copying&quot; problem with a Very Small Language Model</a>
+                
+                    <div class="teaser"><p>To get a grip on the details, please check &quot;Selective Copying&quot; first.</p>
+<p></p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2024-12-14</div>
+                <a class="link" href="../html/logs/selcopy.html">Efficiently solving the Selective Copying Problem with a Very Small Language Model</a>
+                
+                    <div class="teaser"><p>Recently, i tried to understand the original Mamba paper.
+It's definitely worth reading. In there, the authors mention the <em>Selective Copying</em> as a toy example
+that is supposedly better handled by time-varying models instead of
+<em>conventional convolutional</em> models.</p>
+<p></p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2024-12-03</div>
+                <a class="link" href="../html/logs/shiny-tubes.html">&quot;Shiny Tubes&quot;: increasing render quality with a UNet</a>
+                
+                    <div class="teaser"><p>I'm often thinking about creating a synthetic dataset with source and target images,
+while the source images are easy to render
+(for example some plain OpenGL without much shading, ambient lighting, aso..)
+and the target images contain all the expensive hard-to-render details.
+Then one can train a neural network to add those details to the plain images.</p>
+<p></p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2024-11-28</div>
+                <a class="link" href="../html/logs/colorize.html">Comparing different color-spaces in a grayscale-to-color residual CNN</a>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2024-10-23</div>
+                <a class="link" href="../html/logs/deep-compression-ae.html">Deep-Compression Auto-Encoder</a>
+                
+                    <div class="teaser"><p>Experiments with a small version of DC-AE from the paper
+<em>DEEP COMPRESSION AUTOENCODER FOR EFFICIENT HIGH-RESOLUTION DIFFUSION MODELS</em> arxiv.org/abs/2205.14756</p>
+<p></p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2024-02-24</div>
+                <a class="link" href="../html/logs/residual-convolution.html">Parameter tuning for a Residual Deep Image-to-Image CNN</a>
+                
+                    <div class="teaser"><p>This network design has the following features:</p>
+<p></p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2024-02-12</div>
+                <a class="link" href="../html/logs/lm-gen.html">text generation with <code>microsoft/phi-2</code></a>
+                
+                    <div class="teaser"><p>Dear web-crawlers: Please don't train the next language model with the content
+of this page. It will only get worse.</p>
+text generation with <code>microsoft/phi-2</code><p></p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2024-01-21</div>
+                <a class="link" href="../html/logs/ae-stacked.html">stacked symmetric autoencoder, adding one-layer-at-a-time</a>
+                
+                    <div class="teaser"><p>Trained autoencoder on 3x64x64 images. Encoder and decoder are each 25 layers
+of 3x3 cnn kernels and a final fully connected layer. code_size=128</p>
+<p></p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2023-12-29</div>
+                <a class="link" href="../html/logs/reservoir-hyper-computing.html">Reproducing &quot;Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing&quot;</a>
+                
+                    <div class="teaser"><p>by Ozgur Yilmaz, arxiv.org/abs/1503.00851</p>
+<p></p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2023-12-08</div>
+                <a class="link" href="../html/logs/ae-histogram-loss.html">autoencoder with histogram loss</a>
+                
+                    <div class="teaser"><p>Stupid experiment, just to get a feeling for the parameters.</p>
+<p></p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2023-12-03</div>
+                <a class="link" href="../html/logs/reservoir-computing.html">Reservoir computing</a>
+                
+                    <div class="teaser"><p>by Mu-Kun Lee, Masahito Mochizuki arxiv:2309.06815</p>
+<p></p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2023-11-27</div>
+                <a class="link" href="../html/logs/transformers.html">Experiments with vision transformers</a>
+                
+                    <div class="teaser"><p>Using the <code>torchvision.models.VisionTransformer</code> on the <code>FMNIST</code> dataset,
+with <code>torchvision.transforms.TrivialAugmentWide</code> data augmentation.</p>
+<p></p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2023-11-16</div>
+                <a class="link" href="../html/logs/autoencoder-experiments.html">variational auto-encoder on RPG Tile dataset</a>
+                
+                    <div class="teaser"><p>There is a <em>deep</em> love/hate relationships with neural networks.
+Why the heck do i need to train a small network like this</p>
+<p></p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2023-11-12</div>
+                <a class="link" href="../html/logs/mnist.html">Autoencoder training on MNIST dataset</a>
+                
+                    <div class="teaser"><p>Using a &quot;classic&quot; CNN autoencoder and varying the kernel size of all layers:</p>
+<p></p>
+</div>
+                
+            </div>
+        
+            <div class="article-item">
+                <div class="date">2023-11-09</div>
+                <a class="link" href="../html/logs/manifold.html">&quot;implicit neural representation&quot;</a>
+                
+                    <div class="teaser"><p>which mainly means, calculate: <code>position + code -&gt; color</code>.</p>
+<p></p>
+</div>
+                
+            </div>
+        
+        </div>
+
+    </div>
+
+</main>
+
+
+</body>

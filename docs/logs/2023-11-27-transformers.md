@@ -1,6 +1,6 @@
 # Experiments with vision transformers
 
-## Classifying FMNIST (2023-11-26)
+## Classifying FMNIST
 
 Using the `torchvision.models.VisionTransformer` on the `FMNIST` dataset,
 with `torchvision.transforms.TrivialAugmentWide` data augmentation.

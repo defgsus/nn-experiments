@@ -1,4 +1,4 @@
-# 2024-12-03 "Shiny Tubes": increasing render quality with a UNet
+# "Shiny Tubes": increasing render quality with a UNet
 
 I'm often thinking about creating a synthetic dataset with source and target images, 
 while the source images are easy to render 
@@ -16,7 +16,7 @@ source & target image pairs and randomly cropped 32x32 blocks during training fo
 2000 crops of a different source/target image pair were used for validation. 
 The images vary a bit in amount and curliness of the strokes.  
 
-I trained a 5 layer, 32 channel convolutional UNet as described in [residual convolution](residual-convolution.md)
+I trained a 5 layer, 32 channel convolutional UNet as described in [residual convolution](2024-02-24-residual-convolution.md)
 and it turns out this particular task is quite easy. The l1 validation error went down to 0.0077. 
 Here are a few samples from the validation set after training (zoomed-in for better seeing the details):
 

@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reservoir computing</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#reservoir-computing" title="Reservoir computing">Reservoir computing</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#reproducing-quothandwritten-digit-recognition-by-spin-waves-in-a-skyrmion-reservoirquot" title="Reproducing &quot;Handwritten Digit Recognition by Spin Waves in a Skyrmion Reservoir&quot;">Reproducing &quot;Handwritten Digit Recognition by Spin Waves in a Skyrmion Reservoir&quot;</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#baseline-without-reservoir" title="Baseline without reservoir">Baseline without reservoir</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#codereservoirnum_inputs16-num_cells100code" title="<code>Reservoir(num_inputs=16, num_cells=100)</code>"><code>Reservoir(num_inputs=16, num_cells=100)</code></a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#codereservoirnum_inputs16-num_cells1000code" title="<code>Reservoir(num_inputs=16, num_cells=1000)</code>"><code>Reservoir(num_inputs=16, num_cells=1000)</code></a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="reservoir-computing">Reservoir computing</h1>
+<h2 id="reproducing-quothandwritten-digit-recognition-by-spin-waves-in-a-skyrmion-reservoirquot">Reproducing &quot;Handwritten Digit Recognition by Spin Waves in a Skyrmion Reservoir&quot;</h2>
+<p>by Mu-Kun Lee, Masahito Mochizuki <a href="https://arxiv.org/abs/2309.06815">arxiv:2309.06815</a></p>
+<p>It's an interesting paper. I try to reproduce the digital part of it:
+classifying the MNIST dataset via linear readout of an &quot;Echo State Network&quot;.</p>
+<p>Here are some generic tests for the &quot;echo state&quot;. The used <code>Reservoir</code> model
+is defined in <a href="https://github.com/defgsus/nn-experiments/blob/master/src/models/reservoir/reservoir.py">src/models/reservoir/reservoir.py</a>.</p>
+<p>The MNIST dataset is cropped and rearranged like in the paper with: 660 train and 330 test
+images for each class, image size 22x16. </p>
+<p>The reservoir has 16 inputs which receive 22 image rows in consecutive order.
+The resulting state map of 22 x <code>num_cells</code> is fed to
+a <code>sklearn.linear_model.Ridge</code> with default parameters and fitted to the
+image's class logits (10 numbers, all zero except one).</p>
+<h3 id="baseline-without-reservoir">Baseline without reservoir</h3>
+<p>Feeding the raw 22x16 images to the <code>Ridge</code> gives</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">dataset</th>
+<th align="right">error l1</th>
+<th align="right">accuracy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">train</td>
+<td align="right">0.136</td>
+<td align="right">0.880</td>
+</tr>
+<tr>
+<td align="left">test</td>
+<td align="right">0.149</td>
+<td align="right">0.824</td>
+</tr>
+</tbody></table></div><h3 id="codereservoirnum_inputs16-num_cells100code"><code>Reservoir(num_inputs=16, num_cells=100)</code></h3>
+<p>Each setup was run 5 times and the average is reported. Table is sorted by <code>test_accuracy</code>.
+Full runtime was 5min.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">id</th>
+<th align="right">train_error_l1</th>
+<th align="right">train_accuracy</th>
+<th align="right">test_error_l1</th>
+<th align="right">test_accuracy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.5 leak_rate=0.1</td>
+<td align="right">0.0913619</td>
+<td align="right">0.973182</td>
+<td align="right">0.11267</td>
+<td align="right">0.916545</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.0 leak_rate=0.1</td>
+<td align="right">0.0909993</td>
+<td align="right">0.972818</td>
+<td align="right">0.111962</td>
+<td align="right">0.916242</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=2.0 leak_rate=0.1</td>
+<td align="right">0.0904363</td>
+<td align="right">0.973939</td>
+<td align="right">0.11214</td>
+<td align="right">0.915212</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=0.5 leak_rate=0.1</td>
+<td align="right">0.0909891</td>
+<td align="right">0.972758</td>
+<td align="right">0.11204</td>
+<td align="right">0.91503</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.0 leak_rate=0.1</td>
+<td align="right">0.0910437</td>
+<td align="right">0.973909</td>
+<td align="right">0.113129</td>
+<td align="right">0.914909</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=0.5 leak_rate=0.1</td>
+<td align="right">0.0908132</td>
+<td align="right">0.974606</td>
+<td align="right">0.112472</td>
+<td align="right">0.914545</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=0.5 leak_rate=0.5</td>
+<td align="right">0.0814378</td>
+<td align="right">0.991667</td>
+<td align="right">0.120942</td>
+<td align="right">0.914303</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0905591</td>
+<td align="right">0.974</td>
+<td align="right">0.112425</td>
+<td align="right">0.91303</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.5 leak_rate=0.1</td>
+<td align="right">0.0913657</td>
+<td align="right">0.973849</td>
+<td align="right">0.113769</td>
+<td align="right">0.912182</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.0 leak_rate=0.5</td>
+<td align="right">0.0919869</td>
+<td align="right">0.971667</td>
+<td align="right">0.114358</td>
+<td align="right">0.912121</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0924256</td>
+<td align="right">0.972212</td>
+<td align="right">0.114403</td>
+<td align="right">0.911091</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=2.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0946606</td>
+<td align="right">0.968242</td>
+<td align="right">0.115533</td>
+<td align="right">0.910667</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0919614</td>
+<td align="right">0.973818</td>
+<td align="right">0.115689</td>
+<td align="right">0.91</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.0 leak_rate=0.5</td>
+<td align="right">0.0912574</td>
+<td align="right">0.97403</td>
+<td align="right">0.114051</td>
+<td align="right">0.91</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.5 leak_rate=0.5</td>
+<td align="right">0.0915149</td>
+<td align="right">0.975667</td>
+<td align="right">0.115996</td>
+<td align="right">0.909939</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.5 leak_rate=0.1</td>
+<td align="right">0.0927401</td>
+<td align="right">0.972394</td>
+<td align="right">0.115492</td>
+<td align="right">0.909879</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=2.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0922088</td>
+<td align="right">0.974364</td>
+<td align="right">0.11642</td>
+<td align="right">0.909758</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=2.0 leak_rate=0.5</td>
+<td align="right">0.0931417</td>
+<td align="right">0.970242</td>
+<td align="right">0.114565</td>
+<td align="right">0.909636</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.0 leak_rate=0.1</td>
+<td align="right">0.0932079</td>
+<td align="right">0.973879</td>
+<td align="right">0.115654</td>
+<td align="right">0.909515</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=0.5 leak_rate=0.5</td>
+<td align="right">0.0935655</td>
+<td align="right">0.968909</td>
+<td align="right">0.114576</td>
+<td align="right">0.909455</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=0.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0846361</td>
+<td align="right">0.989879</td>
+<td align="right">0.122181</td>
+<td align="right">0.909333</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=2.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0927946</td>
+<td align="right">0.974849</td>
+<td align="right">0.118656</td>
+<td align="right">0.90897</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0927865</td>
+<td align="right">0.972212</td>
+<td align="right">0.115058</td>
+<td align="right">0.90897</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=0.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0941282</td>
+<td align="right">0.967879</td>
+<td align="right">0.115</td>
+<td align="right">0.908364</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.5 leak_rate=0.5</td>
+<td align="right">0.092112</td>
+<td align="right">0.973545</td>
+<td align="right">0.115005</td>
+<td align="right">0.908303</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0947395</td>
+<td align="right">0.968333</td>
+<td align="right">0.115974</td>
+<td align="right">0.908182</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.5 leak_rate=0.5</td>
+<td align="right">0.0936448</td>
+<td align="right">0.969576</td>
+<td align="right">0.114822</td>
+<td align="right">0.908061</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=2.0 leak_rate=0.5</td>
+<td align="right">0.0908134</td>
+<td align="right">0.975818</td>
+<td align="right">0.115763</td>
+<td align="right">0.907939</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=2.0 leak_rate=0.1</td>
+<td align="right">0.092655</td>
+<td align="right">0.973727</td>
+<td align="right">0.115907</td>
+<td align="right">0.907879</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0845372</td>
+<td align="right">0.991212</td>
+<td align="right">0.125265</td>
+<td align="right">0.90697</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=0.5 leak_rate=0.1</td>
+<td align="right">0.0940639</td>
+<td align="right">0.970545</td>
+<td align="right">0.115203</td>
+<td align="right">0.90697</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.5 leak_rate=0.1</td>
+<td align="right">0.10626</td>
+<td align="right">0.94497</td>
+<td align="right">0.117461</td>
+<td align="right">0.906606</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=2.0 leak_rate=0.1</td>
+<td align="right">0.104187</td>
+<td align="right">0.948212</td>
+<td align="right">0.116084</td>
+<td align="right">0.906303</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=0.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0857813</td>
+<td align="right">0.990576</td>
+<td align="right">0.126475</td>
+<td align="right">0.906</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.0 leak_rate=0.5</td>
+<td align="right">0.0837917</td>
+<td align="right">0.991788</td>
+<td align="right">0.126254</td>
+<td align="right">0.905939</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=2.0 leak_rate=0.1</td>
+<td align="right">0.0939976</td>
+<td align="right">0.972545</td>
+<td align="right">0.118332</td>
+<td align="right">0.905818</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=2.0 leak_rate=0.1</td>
+<td align="right">0.105004</td>
+<td align="right">0.947333</td>
+<td align="right">0.116669</td>
+<td align="right">0.905576</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.5 leak_rate=0.1</td>
+<td align="right">0.105035</td>
+<td align="right">0.947303</td>
+<td align="right">0.116582</td>
+<td align="right">0.905394</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=2.0 leak_rate=0.5</td>
+<td align="right">0.0938446</td>
+<td align="right">0.973758</td>
+<td align="right">0.11896</td>
+<td align="right">0.904667</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.0 leak_rate=0.1</td>
+<td align="right">0.106686</td>
+<td align="right">0.944121</td>
+<td align="right">0.118094</td>
+<td align="right">0.903818</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=0.5 leak_rate=0.5</td>
+<td align="right">0.0954133</td>
+<td align="right">0.966333</td>
+<td align="right">0.116633</td>
+<td align="right">0.903758</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=0.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0966389</td>
+<td align="right">0.965939</td>
+<td align="right">0.117036</td>
+<td align="right">0.902667</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.0 leak_rate=0.1</td>
+<td align="right">0.108358</td>
+<td align="right">0.942576</td>
+<td align="right">0.119501</td>
+<td align="right">0.902</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.0 leak_rate=0.5</td>
+<td align="right">0.0967201</td>
+<td align="right">0.965636</td>
+<td align="right">0.117628</td>
+<td align="right">0.901697</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.0 leak_rate=0.9</td>
+<td align="right">0.090546</td>
+<td align="right">0.979364</td>
+<td align="right">0.120988</td>
+<td align="right">0.901636</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=0.5 leak_rate=0.5</td>
+<td align="right">0.0849166</td>
+<td align="right">0.992273</td>
+<td align="right">0.128532</td>
+<td align="right">0.901394</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=2.0 leak_rate=0.9</td>
+<td align="right">0.0912182</td>
+<td align="right">0.978303</td>
+<td align="right">0.120617</td>
+<td align="right">0.901273</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.5 leak_rate=0.9</td>
+<td align="right">0.0898494</td>
+<td align="right">0.981849</td>
+<td align="right">0.1218</td>
+<td align="right">0.901273</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.5 leak_rate=0.5</td>
+<td align="right">0.0859504</td>
+<td align="right">0.991727</td>
+<td align="right">0.130171</td>
+<td align="right">0.900303</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=2.0 leak_rate=0.1</td>
+<td align="right">0.107953</td>
+<td align="right">0.943212</td>
+<td align="right">0.11899</td>
+<td align="right">0.900121</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.0 leak_rate=0.9</td>
+<td align="right">0.090948</td>
+<td align="right">0.980667</td>
+<td align="right">0.122263</td>
+<td align="right">0.899576</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.097375</td>
+<td align="right">0.964212</td>
+<td align="right">0.1184</td>
+<td align="right">0.899515</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.5 leak_rate=0.9</td>
+<td align="right">0.0928208</td>
+<td align="right">0.974939</td>
+<td align="right">0.120598</td>
+<td align="right">0.898727</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.5 leak_rate=0.1</td>
+<td align="right">0.108945</td>
+<td align="right">0.941</td>
+<td align="right">0.120246</td>
+<td align="right">0.898545</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=0.5 leak_rate=0.9</td>
+<td align="right">0.0912399</td>
+<td align="right">0.977788</td>
+<td align="right">0.119822</td>
+<td align="right">0.898485</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=0.5 leak_rate=0.1</td>
+<td align="right">0.109638</td>
+<td align="right">0.940121</td>
+<td align="right">0.120644</td>
+<td align="right">0.898303</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0862176</td>
+<td align="right">0.990606</td>
+<td align="right">0.128655</td>
+<td align="right">0.898</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=0.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0875074</td>
+<td align="right">0.98997</td>
+<td align="right">0.131127</td>
+<td align="right">0.897758</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.0 leak_rate=0.1</td>
+<td align="right">0.109694</td>
+<td align="right">0.940364</td>
+<td align="right">0.120842</td>
+<td align="right">0.897455</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.5 leak_rate=0.9</td>
+<td align="right">0.0906575</td>
+<td align="right">0.982242</td>
+<td align="right">0.124433</td>
+<td align="right">0.897333</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=0.5 leak_rate=0.1</td>
+<td align="right">0.109821</td>
+<td align="right">0.940667</td>
+<td align="right">0.12124</td>
+<td align="right">0.897333</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=2.0 leak_rate=0.9</td>
+<td align="right">0.0918953</td>
+<td align="right">0.981636</td>
+<td align="right">0.12488</td>
+<td align="right">0.896788</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.0 leak_rate=0.9</td>
+<td align="right">0.0939872</td>
+<td align="right">0.972364</td>
+<td align="right">0.121576</td>
+<td align="right">0.896424</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=2.0 leak_rate=0.5</td>
+<td align="right">0.0875117</td>
+<td align="right">0.990727</td>
+<td align="right">0.132388</td>
+<td align="right">0.896303</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=0.5 leak_rate=0.9</td>
+<td align="right">0.0848733</td>
+<td align="right">0.993061</td>
+<td align="right">0.133139</td>
+<td align="right">0.895758</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=0.5 leak_rate=0.1</td>
+<td align="right">0.111193</td>
+<td align="right">0.938879</td>
+<td align="right">0.122395</td>
+<td align="right">0.895515</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=0.5 leak_rate=0.9</td>
+<td align="right">0.0938623</td>
+<td align="right">0.973394</td>
+<td align="right">0.121762</td>
+<td align="right">0.895455</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=2.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0881148</td>
+<td align="right">0.990091</td>
+<td align="right">0.131537</td>
+<td align="right">0.895455</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0890663</td>
+<td align="right">0.989909</td>
+<td align="right">0.132775</td>
+<td align="right">0.894182</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=0.5 leak_rate=0.5</td>
+<td align="right">0.0876476</td>
+<td align="right">0.99203</td>
+<td align="right">0.133196</td>
+<td align="right">0.893333</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=0.5 leak_rate=0.5</td>
+<td align="right">0.0990152</td>
+<td align="right">0.96297</td>
+<td align="right">0.120357</td>
+<td align="right">0.893333</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0910776</td>
+<td align="right">0.989242</td>
+<td align="right">0.13638</td>
+<td align="right">0.892909</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=0.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.100388</td>
+<td align="right">0.960121</td>
+<td align="right">0.121514</td>
+<td align="right">0.892121</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=2.0 leak_rate=0.9</td>
+<td align="right">0.0928298</td>
+<td align="right">0.980818</td>
+<td align="right">0.125962</td>
+<td align="right">0.892</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.0 leak_rate=0.9</td>
+<td align="right">0.0874595</td>
+<td align="right">0.992848</td>
+<td align="right">0.137025</td>
+<td align="right">0.890485</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=0.5 leak_rate=0.9</td>
+<td align="right">0.0955993</td>
+<td align="right">0.971727</td>
+<td align="right">0.123394</td>
+<td align="right">0.890303</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0913394</td>
+<td align="right">0.989364</td>
+<td align="right">0.136211</td>
+<td align="right">0.887758</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=2.0 leak_rate=0.5</td>
+<td align="right">0.0913921</td>
+<td align="right">0.990273</td>
+<td align="right">0.138816</td>
+<td align="right">0.886061</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.5 leak_rate=0.5</td>
+<td align="right">0.0911414</td>
+<td align="right">0.990061</td>
+<td align="right">0.138808</td>
+<td align="right">0.885515</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=0.5 leak_rate=0.9</td>
+<td align="right">0.0894512</td>
+<td align="right">0.991909</td>
+<td align="right">0.140217</td>
+<td align="right">0.885515</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.0 leak_rate=0.5</td>
+<td align="right">0.0899039</td>
+<td align="right">0.990394</td>
+<td align="right">0.136814</td>
+<td align="right">0.885333</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.0 leak_rate=0.5</td>
+<td align="right">0.0914824</td>
+<td align="right">0.990152</td>
+<td align="right">0.138184</td>
+<td align="right">0.884909</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=2.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0935883</td>
+<td align="right">0.988333</td>
+<td align="right">0.140191</td>
+<td align="right">0.884061</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=2.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0917636</td>
+<td align="right">0.989333</td>
+<td align="right">0.137269</td>
+<td align="right">0.883091</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.5 leak_rate=0.9</td>
+<td align="right">0.0908111</td>
+<td align="right">0.992121</td>
+<td align="right">0.141601</td>
+<td align="right">0.882242</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0937087</td>
+<td align="right">0.988091</td>
+<td align="right">0.140329</td>
+<td align="right">0.881818</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.5 leak_rate=0.5</td>
+<td align="right">0.0918961</td>
+<td align="right">0.98903</td>
+<td align="right">0.139636</td>
+<td align="right">0.879333</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=2.0 leak_rate=0.5</td>
+<td align="right">0.0934811</td>
+<td align="right">0.990758</td>
+<td align="right">0.141498</td>
+<td align="right">0.879273</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=2.0 leak_rate=0.9</td>
+<td align="right">0.0933614</td>
+<td align="right">0.99097</td>
+<td align="right">0.145027</td>
+<td align="right">0.876606</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=0.5 leak_rate=0.9</td>
+<td align="right">0.0934049</td>
+<td align="right">0.991212</td>
+<td align="right">0.144974</td>
+<td align="right">0.876545</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.0 leak_rate=0.9</td>
+<td align="right">0.0950379</td>
+<td align="right">0.990455</td>
+<td align="right">0.147789</td>
+<td align="right">0.868727</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.0 leak_rate=0.9</td>
+<td align="right">0.0965934</td>
+<td align="right">0.989727</td>
+<td align="right">0.149038</td>
+<td align="right">0.867333</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.5 leak_rate=0.9</td>
+<td align="right">0.0960845</td>
+<td align="right">0.989455</td>
+<td align="right">0.14909</td>
+<td align="right">0.865091</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=2.0 leak_rate=0.9</td>
+<td align="right">0.096801</td>
+<td align="right">0.990152</td>
+<td align="right">0.1499</td>
+<td align="right">0.864667</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=2.0 leak_rate=0.9</td>
+<td align="right">0.0985903</td>
+<td align="right">0.988909</td>
+<td align="right">0.151953</td>
+<td align="right">0.861394</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.5 leak_rate=0.9</td>
+<td align="right">0.098347</td>
+<td align="right">0.989182</td>
+<td align="right">0.151612</td>
+<td align="right">0.86103</td>
+</tr>
+</tbody></table></div><h3 id="codereservoirnum_inputs16-num_cells1000code"><code>Reservoir(num_inputs=16, num_cells=1000)</code></h3>
+<p>Repeat everything with 1000 reservoir cells. Full runtime 67min.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">id</th>
+<th align="right">train_error_l1</th>
+<th align="right">train_accuracy</th>
+<th align="right">test_error_l1</th>
+<th align="right">test_accuracy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.0 leak_rate=0.5</td>
+<td align="right">0.0381668</td>
+<td align="right">0.999879</td>
+<td align="right">0.0982787</td>
+<td align="right">0.952424</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=0.5 leak_rate=0.5</td>
+<td align="right">0.037041</td>
+<td align="right">0.999879</td>
+<td align="right">0.0999229</td>
+<td align="right">0.949273</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0387771</td>
+<td align="right">0.999848</td>
+<td align="right">0.0995846</td>
+<td align="right">0.948485</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=0.5 leak_rate=0.5</td>
+<td align="right">0.0475672</td>
+<td align="right">0.999485</td>
+<td align="right">0.0975823</td>
+<td align="right">0.947758</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=0.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.038247</td>
+<td align="right">0.999909</td>
+<td align="right">0.101271</td>
+<td align="right">0.947697</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=0.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0473766</td>
+<td align="right">0.999667</td>
+<td align="right">0.0989504</td>
+<td align="right">0.946303</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.035789</td>
+<td align="right">0.99997</td>
+<td align="right">0.10656</td>
+<td align="right">0.945152</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=0.5 leak_rate=0.1</td>
+<td align="right">0.0366382</td>
+<td align="right">0.999939</td>
+<td align="right">0.103881</td>
+<td align="right">0.944667</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.5 leak_rate=0.5</td>
+<td align="right">0.0346061</td>
+<td align="right">0.999939</td>
+<td align="right">0.106813</td>
+<td align="right">0.944545</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=0.5 leak_rate=0.5</td>
+<td align="right">0.0337909</td>
+<td align="right">1</td>
+<td align="right">0.107468</td>
+<td align="right">0.943818</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=0.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0342324</td>
+<td align="right">0.99997</td>
+<td align="right">0.108108</td>
+<td align="right">0.943333</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.0 leak_rate=0.1</td>
+<td align="right">0.068811</td>
+<td align="right">0.991818</td>
+<td align="right">0.0938989</td>
+<td align="right">0.94</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.0 leak_rate=0.1</td>
+<td align="right">0.0687783</td>
+<td align="right">0.992424</td>
+<td align="right">0.0948929</td>
+<td align="right">0.939636</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=2.0 leak_rate=0.5</td>
+<td align="right">0.0325047</td>
+<td align="right">1</td>
+<td align="right">0.114238</td>
+<td align="right">0.939455</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.5 leak_rate=0.1</td>
+<td align="right">0.068365</td>
+<td align="right">0.992091</td>
+<td align="right">0.0950397</td>
+<td align="right">0.938667</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=0.5 leak_rate=0.9</td>
+<td align="right">0.0355591</td>
+<td align="right">0.999879</td>
+<td align="right">0.110459</td>
+<td align="right">0.938667</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.5 leak_rate=0.1</td>
+<td align="right">0.0678975</td>
+<td align="right">0.993515</td>
+<td align="right">0.0964695</td>
+<td align="right">0.937515</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=2.0 leak_rate=0.1</td>
+<td align="right">0.067665</td>
+<td align="right">0.993424</td>
+<td align="right">0.0955492</td>
+<td align="right">0.937394</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0320317</td>
+<td align="right">1</td>
+<td align="right">0.11756</td>
+<td align="right">0.936545</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.0 leak_rate=0.1</td>
+<td align="right">0.0331773</td>
+<td align="right">1</td>
+<td align="right">0.113007</td>
+<td align="right">0.936364</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=2.0 leak_rate=0.1</td>
+<td align="right">0.0695632</td>
+<td align="right">0.991212</td>
+<td align="right">0.0943548</td>
+<td align="right">0.936121</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.5 leak_rate=0.1</td>
+<td align="right">0.0711534</td>
+<td align="right">0.989394</td>
+<td align="right">0.0946351</td>
+<td align="right">0.935879</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=0.5 leak_rate=0.1</td>
+<td align="right">0.0705772</td>
+<td align="right">0.990121</td>
+<td align="right">0.0945419</td>
+<td align="right">0.935636</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=0.5 leak_rate=0.1</td>
+<td align="right">0.0328507</td>
+<td align="right">1</td>
+<td align="right">0.113785</td>
+<td align="right">0.935636</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=2.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0334346</td>
+<td align="right">1</td>
+<td align="right">0.114923</td>
+<td align="right">0.935394</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=2.0 leak_rate=0.1</td>
+<td align="right">0.0676327</td>
+<td align="right">0.994485</td>
+<td align="right">0.0973725</td>
+<td align="right">0.935333</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.0 leak_rate=0.5</td>
+<td align="right">0.0327532</td>
+<td align="right">1</td>
+<td align="right">0.11662</td>
+<td align="right">0.934061</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=0.5 leak_rate=0.1</td>
+<td align="right">0.0733776</td>
+<td align="right">0.987424</td>
+<td align="right">0.0963458</td>
+<td align="right">0.933333</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.5 leak_rate=0.1</td>
+<td align="right">0.031549</td>
+<td align="right">1</td>
+<td align="right">0.11696</td>
+<td align="right">0.931879</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.0 leak_rate=0.9</td>
+<td align="right">0.0220503</td>
+<td align="right">1</td>
+<td align="right">0.121302</td>
+<td align="right">0.931879</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.0 leak_rate=0.1</td>
+<td align="right">0.074468</td>
+<td align="right">0.986848</td>
+<td align="right">0.0969672</td>
+<td align="right">0.931697</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=0.5 leak_rate=0.1</td>
+<td align="right">0.0318906</td>
+<td align="right">1</td>
+<td align="right">0.117717</td>
+<td align="right">0.93</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=0.5 leak_rate=0.5</td>
+<td align="right">0.00118011</td>
+<td align="right">1</td>
+<td align="right">0.131636</td>
+<td align="right">0.929697</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=0.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.00137585</td>
+<td align="right">1</td>
+<td align="right">0.134411</td>
+<td align="right">0.92897</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.0 leak_rate=0.1</td>
+<td align="right">0.0289397</td>
+<td align="right">1</td>
+<td align="right">0.124778</td>
+<td align="right">0.927333</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.0 leak_rate=0.1</td>
+<td align="right">0.0304781</td>
+<td align="right">1</td>
+<td align="right">0.121512</td>
+<td align="right">0.927273</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.0 leak_rate=0.5</td>
+<td align="right">0.0301155</td>
+<td align="right">1</td>
+<td align="right">0.127572</td>
+<td align="right">0.927152</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=0.5 leak_rate=0.9</td>
+<td align="right">0.0203429</td>
+<td align="right">1</td>
+<td align="right">0.124832</td>
+<td align="right">0.926909</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=2.0 leak_rate=0.1</td>
+<td align="right">0.0306263</td>
+<td align="right">1</td>
+<td align="right">0.120241</td>
+<td align="right">0.926485</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0310583</td>
+<td align="right">1</td>
+<td align="right">0.128808</td>
+<td align="right">0.924606</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.5 leak_rate=0.1</td>
+<td align="right">0.029312</td>
+<td align="right">1</td>
+<td align="right">0.125112</td>
+<td align="right">0.924242</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.5 leak_rate=0.5</td>
+<td align="right">0.0305194</td>
+<td align="right">1</td>
+<td align="right">0.128429</td>
+<td align="right">0.923939</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=0.5 leak_rate=0.1</td>
+<td align="right">0.0810556</td>
+<td align="right">0.982091</td>
+<td align="right">0.103256</td>
+<td align="right">0.923636</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0303334</td>
+<td align="right">1</td>
+<td align="right">0.127283</td>
+<td align="right">0.923394</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.0 leak_rate=0.5</td>
+<td align="right">0.000661131</td>
+<td align="right">1</td>
+<td align="right">0.139365</td>
+<td align="right">0.921697</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=2.0 leak_rate=0.1</td>
+<td align="right">0.0270765</td>
+<td align="right">1</td>
+<td align="right">0.129459</td>
+<td align="right">0.920849</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=2.0 leak_rate=0.1</td>
+<td align="right">0.0278414</td>
+<td align="right">1</td>
+<td align="right">0.12763</td>
+<td align="right">0.920424</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.5 leak_rate=0.1</td>
+<td align="right">0.0282247</td>
+<td align="right">1</td>
+<td align="right">0.127867</td>
+<td align="right">0.92</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.5 leak_rate=0.5</td>
+<td align="right">0.000572814</td>
+<td align="right">1</td>
+<td align="right">0.14156</td>
+<td align="right">0.919212</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=0.5 leak_rate=0.5</td>
+<td align="right">0.00054803</td>
+<td align="right">1</td>
+<td align="right">0.142264</td>
+<td align="right">0.918667</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0304561</td>
+<td align="right">1</td>
+<td align="right">0.136521</td>
+<td align="right">0.918485</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=0.5 leak_rate=0.9</td>
+<td align="right">0.000173226</td>
+<td align="right">1</td>
+<td align="right">0.135079</td>
+<td align="right">0.918424</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=2.0 leak_rate=0.5</td>
+<td align="right">0.0286785</td>
+<td align="right">1</td>
+<td align="right">0.136517</td>
+<td align="right">0.918</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=0.5 leak_rate=0.5</td>
+<td align="right">0.000610946</td>
+<td align="right">1</td>
+<td align="right">0.139934</td>
+<td align="right">0.917697</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=2.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0296537</td>
+<td align="right">1</td>
+<td align="right">0.136146</td>
+<td align="right">0.915939</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.5 leak_rate=0.5</td>
+<td align="right">0.0283219</td>
+<td align="right">1</td>
+<td align="right">0.138181</td>
+<td align="right">0.915212</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.5 leak_rate=0.5</td>
+<td align="right">0.000447909</td>
+<td align="right">1</td>
+<td align="right">0.145044</td>
+<td align="right">0.914606</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.5 leak_rate=0.5</td>
+<td align="right">0.000464348</td>
+<td align="right">1</td>
+<td align="right">0.145163</td>
+<td align="right">0.914606</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=0.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.000651396</td>
+<td align="right">1</td>
+<td align="right">0.145794</td>
+<td align="right">0.914485</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=1.5 leak_rate=0.9</td>
+<td align="right">0.0175031</td>
+<td align="right">1</td>
+<td align="right">0.138835</td>
+<td align="right">0.914364</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.000837996</td>
+<td align="right">1</td>
+<td align="right">0.145143</td>
+<td align="right">0.914</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.0 leak_rate=0.5</td>
+<td align="right">0.000457013</td>
+<td align="right">1</td>
+<td align="right">0.145044</td>
+<td align="right">0.913091</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=2.0 leak_rate=0.5</td>
+<td align="right">0.000502271</td>
+<td align="right">1</td>
+<td align="right">0.143849</td>
+<td align="right">0.912849</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.0 leak_rate=0.5</td>
+<td align="right">0.000475301</td>
+<td align="right">1</td>
+<td align="right">0.144441</td>
+<td align="right">0.912788</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=2.0 leak_rate=0.5</td>
+<td align="right">0.000444623</td>
+<td align="right">1</td>
+<td align="right">0.145215</td>
+<td align="right">0.912606</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=0.5 leak_rate=0.9</td>
+<td align="right">0.0147044</td>
+<td align="right">1</td>
+<td align="right">0.143055</td>
+<td align="right">0.911879</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.000675669</td>
+<td align="right">1</td>
+<td align="right">0.148757</td>
+<td align="right">0.911394</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.000550349</td>
+<td align="right">1</td>
+<td align="right">0.150015</td>
+<td align="right">0.910545</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=0.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.000584363</td>
+<td align="right">1</td>
+<td align="right">0.148396</td>
+<td align="right">0.910424</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=2.0 leak_rate=0.5</td>
+<td align="right">0.000457479</td>
+<td align="right">1</td>
+<td align="right">0.146638</td>
+<td align="right">0.909818</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.000553626</td>
+<td align="right">1</td>
+<td align="right">0.151664</td>
+<td align="right">0.907515</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.0 leak_rate=0.9</td>
+<td align="right">0.000110608</td>
+<td align="right">1</td>
+<td align="right">0.143074</td>
+<td align="right">0.906848</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=2.0 leak_rate=0.5</td>
+<td align="right">0.0258364</td>
+<td align="right">1</td>
+<td align="right">0.14669</td>
+<td align="right">0.906667</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=2.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.000650342</td>
+<td align="right">1</td>
+<td align="right">0.150516</td>
+<td align="right">0.906606</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.000544296</td>
+<td align="right">1</td>
+<td align="right">0.152909</td>
+<td align="right">0.906545</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=2.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.0297879</td>
+<td align="right">1</td>
+<td align="right">0.142981</td>
+<td align="right">0.906061</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=2.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.00050405</td>
+<td align="right">1</td>
+<td align="right">0.153376</td>
+<td align="right">0.903939</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.1 rec_std=2.0 leak_rate=0.9</td>
+<td align="right">0.0151607</td>
+<td align="right">1</td>
+<td align="right">0.151264</td>
+<td align="right">0.902788</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=0.5 leak_rate=0.9</td>
+<td align="right">0.00010102</td>
+<td align="right">1</td>
+<td align="right">0.144658</td>
+<td align="right">0.901636</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=2.0 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.000494046</td>
+<td align="right">1</td>
+<td align="right">0.154521</td>
+<td align="right">0.901515</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=1.5 leak_rate=0.9</td>
+<td align="right">9.95549e-05</td>
+<td align="right">1</td>
+<td align="right">0.144931</td>
+<td align="right">0.900606</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.5 leak_rate=(0.1, 0.9)</td>
+<td align="right">0.000508447</td>
+<td align="right">1</td>
+<td align="right">0.1539</td>
+<td align="right">0.900061</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=0.5 leak_rate=0.9</td>
+<td align="right">9.21872e-05</td>
+<td align="right">1</td>
+<td align="right">0.146038</td>
+<td align="right">0.895636</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.1 rec_std=2.0 leak_rate=0.9</td>
+<td align="right">8.88148e-05</td>
+<td align="right">1</td>
+<td align="right">0.146944</td>
+<td align="right">0.894424</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.0 leak_rate=0.9</td>
+<td align="right">8.50776e-05</td>
+<td align="right">1</td>
+<td align="right">0.147753</td>
+<td align="right">0.893818</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.0 leak_rate=0.9</td>
+<td align="right">8.35833e-05</td>
+<td align="right">1</td>
+<td align="right">0.148437</td>
+<td align="right">0.892909</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=2.0 leak_rate=0.9</td>
+<td align="right">8.17226e-05</td>
+<td align="right">1</td>
+<td align="right">0.14951</td>
+<td align="right">0.891879</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=1.5 leak_rate=0.9</td>
+<td align="right">8.39818e-05</td>
+<td align="right">1</td>
+<td align="right">0.148282</td>
+<td align="right">0.891515</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.0 leak_rate=0.9</td>
+<td align="right">0.0140698</td>
+<td align="right">1</td>
+<td align="right">0.15804</td>
+<td align="right">0.891515</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=1.0 rec_std=1.5 leak_rate=0.9</td>
+<td align="right">8.32554e-05</td>
+<td align="right">1</td>
+<td align="right">0.148759</td>
+<td align="right">0.890364</td>
+</tr>
+<tr>
+<td align="left">activation=tanh rec_prob=0.5 rec_std=2.0 leak_rate=0.9</td>
+<td align="right">8.46541e-05</td>
+<td align="right">1</td>
+<td align="right">0.150103</td>
+<td align="right">0.887697</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.0 leak_rate=0.9</td>
+<td align="right">0.011545</td>
+<td align="right">1</td>
+<td align="right">0.175481</td>
+<td align="right">0.869879</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=1.5 leak_rate=0.9</td>
+<td align="right">0.012171</td>
+<td align="right">1</td>
+<td align="right">0.177401</td>
+<td align="right">0.864</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=0.5 rec_std=2.0 leak_rate=0.9</td>
+<td align="right">0.0107752</td>
+<td align="right">1</td>
+<td align="right">0.185805</td>
+<td align="right">0.852849</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=1.5 leak_rate=0.9</td>
+<td align="right">0.0106771</td>
+<td align="right">1</td>
+<td align="right">0.186955</td>
+<td align="right">0.848667</td>
+</tr>
+<tr>
+<td align="left">activation=sigmoid rec_prob=1.0 rec_std=2.0 leak_rate=0.9</td>
+<td align="right">0.00964606</td>
+<td align="right">1</td>
+<td align="right">0.194721</td>
+<td align="right">0.835576</td>
+</tr>
+</tbody></table></div>
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../html/logs/transformers.html">
+                        &lt;&lt; Experiments with vision transformers
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+                <a href="../../../html/logs/ae-histogram-loss.html">
+                    autoencoder with histogram loss $gt;$gt;
+                </a>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

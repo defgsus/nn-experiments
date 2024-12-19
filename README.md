@@ -31,7 +31,8 @@ need some documentation.
 
 ### :strawberry: Logbooks
 
-[docs/logs/](docs/logs/) contains logbooks of some experiments
+I'm logging some experiment results, read the markdown files at [docs/logs/](docs/logs/) or 
+view them online at [defgsus.github.io/nn-experiments/](https://defgsus.github.io/nn-experiments/)
 
 
 ### CLIPig 2 

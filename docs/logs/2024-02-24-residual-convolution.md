@@ -1,8 +1,5 @@
 
-
 # Parameter tuning for a Residual Deep Image-to-Image CNN
-
-2024-02-21
 
 This network design has the following features:
 - simple and repetitive, makes programmer's life less troublesome
@@ -100,7 +97,7 @@ To evaluate the abilities of the network, it's trained to
 **restore the deleted top, bottom, left or right half of an image**. 
 In this case, zalando's beloved
 [Fashion-MNIST](https://arxiv.org/abs/1708.07747) dataset,
-scaled to 32x32 pixels ([without interpolation](./autoencoder-experiments.md#take-care-of-the-choice-of-interpolation)).
+scaled to 32x32 pixels ([without interpolation](./2023-11-16-autoencoder-experiments.md#take-care-of-the-choice-of-interpolation)).
 
 It's not completely ridiculous to expect the network to make up a complete half
 since the images are all nicely centered and contain more or less the same
@@ -110,7 +107,9 @@ Here are two examples (from the worst (first image) and the best network
 of the following experiment). Odd rows show the network input and even rows
 the reconstruction from the network.
 
-![worst example](./img/resconv-halfcrop-fmnist-worst.png) ![best example](./img/resconv-halfcrop-fmnist-best.png)
+| worst | best |
+|-------|------|
+| ![worst example](./img/resconv-halfcrop-fmnist-worst.png) | ![best example](./img/resconv-halfcrop-fmnist-best.png) |
 
 The first network only has one layer (one convolution and one de-convolution),
 so it's receptive field is only 3x3 pixels (that of the one convolutional kernel).
@@ -304,7 +303,7 @@ because everybody knows it's a good activation for generating images
 
 Sometimes i wonder why there are so many activation functions when most
 of the time, the same ones perform best. Anyway, this result is slightly
-different to my [MNIST classification results](./mnist.md#varying-activation-function)
+different to my [MNIST classification results](./2023-11-12-mnist.md#varying-activation-function)
 but as usual, you are good to choose either 
 [GELU](https://pytorch.org/docs/stable/generated/torch.nn.GELU.html), 
 one of the [ReLU](https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html)
@@ -349,7 +348,7 @@ What can be learned from it?
 - the difference in archived training loss between 64 and 128 channels is at the 4th digit after the comma, 
   so not really worth considering given the extra amount of required compute.
 
-# Compare kernel size
+## Compare kernel size
 
 Out of old-fashionedness only odd kernel sizes are considered. For a fair comparison, the padding is 
 adjusted to the individual kernel sizes such that each layer still processes the same spatial block (28x28).

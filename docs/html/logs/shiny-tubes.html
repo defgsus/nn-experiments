@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>&quot;Shiny Tubes&quot;: increasing render quality with a UNet</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#quotshiny-tubesquot-increasing-render-quality-with-a-unet" title="&quot;Shiny Tubes&quot;: increasing render quality with a UNet">&quot;Shiny Tubes&quot;: increasing render quality with a UNet</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="quotshiny-tubesquot-increasing-render-quality-with-a-unet">&quot;Shiny Tubes&quot;: increasing render quality with a UNet</h1>
+<p>I'm often thinking about creating a synthetic dataset with source and target images,
+while the source images are easy to render
+(for example some plain OpenGL without much shading, ambient lighting, aso..)
+and the target images contain all the expensive hard-to-render details.
+Then one can train a neural network to add those details to the plain images.</p>
+<p>Here's a little experiment along those lines. Left is one source image and right is the target.</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/shiny-tubes-example.png" alt="example image" /></div></p>
+<p>The task for the network is to render a shiny round tube from any stroke. The dataset was made
+with the good old <a href="https://www.povray.org/">POV-Ray</a> raytracer. To be precise, i created 12 different 1024x1024
+source &amp; target image pairs and randomly cropped 32x32 blocks during training for one million steps.
+2000 crops of a different source/target image pair were used for validation.
+The images vary a bit in amount and curliness of the strokes.  </p>
+<p>I trained a 5 layer, 32 channel convolutional UNet as described in <a href="../../../html/logs/residual-convolution.html">residual convolution</a>
+and it turns out this particular task is quite easy. The l1 validation error went down to 0.0077.
+Here are a few samples from the validation set after training (zoomed-in for better seeing the details):</p>
+<p>(first column: target, second column: source, third column: network output)</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/shiny-tubes-validation.png" alt="validation images" /></div></p>
+<p>And now, one can take this network and apply it to anything that resembles strokes, like text:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/shiny-tubes-hello-world.png" alt="hello world rendered by network" /></div></p>
+<p>or drawings:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/shiny-tubes-drawing.png" alt="drawing re-rendered by network" /></div></p>
+<p>Of course, this is more or less just a nice little convolutional kernel which is not too impressive.
+So i tried to task the network to additionally add some spikes to the tubes. For example:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/shiny-tubes-example-spikes.png" alt="example image with spikes in target" /></div></p>
+<p>The source images are the same while the target images additonally have those spikes attached.
+Unfortunately, no network i tried could produce the spikes. When looking at the validation
+samples after training it becomes kind of clear:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/shiny-tubes-spikes-validation.png" alt="validation images" /></div></p>
+<p>Along the source strokes, there is absolutely no hint when a spike should appear and when there should
+be a gap in-between. I tried various enhancements to UNet, also a small transformer network but
+eventually all models just produced this blurry halo and nothing more. </p>
+<p>In the next experiment, there are some small thickenings in the source images where the target images
+contain the strokes:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/shiny-tubes-example-spikes-and-spheres.png" alt="example image with spheres in source and spikes in target" /></div></p>
+<p>The strokes are consecutive cylinders, while the thickenings are spheres with a 1.4x radius.
+As can be seen from the validation samples after training, this helps the network to create the spikes
+in almost all cases:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/shiny-tubes-spikes-and-spheres-validation.png" alt="validation images" /></div></p>
+<p>Applying this to the letters, it creates some spikes by chance but not much:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/shiny-tubes-hello-world-spikes-and-spheres.png" alt="hello world rendered by network" /></div></p>
+<p>Adding some noise does not help much, either:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/shiny-tubes-hello-world-spikes-and-spheres-noisy.png" alt="hello world rendered by network" /></div></p>
+<p>So i decreased the radius of the spheres in the source strokes to almost unnoticeable 1.2 times
+the cylinder radius. The validation samples still look pretty good, although no human eye
+can make out the thickenings any more:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/shiny-tubes-spikes-and-spheres-1.2-validation.png" alt="validation images" /></div></p>
+<p>Using the right stroke width for the font, it starts to look interesting:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/shiny-tubes-hello-world-spikes-and-spheres-1.2-medium.png" alt="hello world rendered by network" /></div></p>
+
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../html/logs/colorize.html">
+                        &lt;&lt; Comparing different color-spaces in a grayscale-to-color residual CNN
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+                <a href="../../../html/logs/selcopy.html">
+                    Efficiently solving the Selective Copying Problem with a Very Small Language Model $gt;$gt;
+                </a>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

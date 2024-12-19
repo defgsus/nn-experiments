@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block body %}
+
+<main class="index">
+    <div class="index-wrapper">
+
+        <h2>defgsus.github.io/nn-experiments/</h2>
+
+        <p>Dear seeker! This is a collection of logs of my neural network experiments.</p>
+
+        <div class="article-list">
+        {% for p in pages[:-1] %}
+            <div class="article-item">
+                <div class="date">{{p.date}}</div>
+                <a class="link" href="{{page.relative_url(p.url)}}">{{p.title}}</a>
+                {% if p.teaser %}
+                    <div class="teaser">{{p.teaser}}</div>
+                {% endif %}
+            </div>
+        {% endfor %}
+        </div>
+
+    </div>
+
+</main>
+
+{% endblock %}

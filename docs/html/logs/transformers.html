@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Experiments with vision transformers</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#experiments-with-vision-transformers" title="Experiments with vision transformers">Experiments with vision transformers</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#classifying-fmnist" title="Classifying FMNIST">Classifying FMNIST</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="experiments-with-vision-transformers">Experiments with vision transformers</h1>
+<h2 id="classifying-fmnist">Classifying FMNIST</h2>
+<p>Using the <code>torchvision.models.VisionTransformer</code> on the <code>FMNIST</code> dataset,
+with <code>torchvision.transforms.TrivialAugmentWide</code> data augmentation.</p>
+<p>Training is done for 2M steps which translates to ~32 passes through the
+training set.</p>
+<p>The training (and validation) loss is the l2 distance between the
+FMNIST class (10 numbers, either 0 or 1) and the network output.</p>
+<p>There is an additional layer (of size <code>cs</code>) before the classification layer
+that is used as <em>embedding</em>. During validation, a Support Vector Classifier
+(<code>sklearn.svm.SVC</code> with default parameters) is fitted to the embedding/labels to see
+if the embedding contains enough information to classify the images in
+a non-NN fashion (<code>accuracy (svc)</code>). Also the <code>torch.argmax</code> is
+compared between FMNIST class logits and network output (<code>accuracy (argmax)</code>)
+to measure the accuracy of the true network output.</p>
+<pre><code class="language-yaml">matrix:
+  patch: [7]     # transformer input patch size
+  layer: [8]     # number of layers 
+  head: [16]     # number of attention heads
+  hidden: [256]  # size of hidden dimension
+  mlp: [512]     # size of hidden dimension in MLP stage
+  drop: [0.]     # MLP dropout
+  cs: [784]      # size of code before classification layer 
+
+experiment_name: aug/fmnist_vit_trivaug_${matrix_slug}
+
+train_set: |
+  ClassLogitsDataset(
+      fmnist_dataset(train=True, shape=SHAPE),
+      num_classes=CLASSES, tuple_position=1, label_to_index=True,
+  )
+
+validation_set: |
+  ClassLogitsDataset(
+      fmnist_dataset(train=False, shape=SHAPE),
+      num_classes=CLASSES, tuple_position=1, label_to_index=True,
+  )
+
+trainer: experiments.reptrainer.RepresentationClassTrainer
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l2
+max_inputs: 2_000_000
+train_input_transforms: |
+  [
+      lambda x: (x * 255).to(torch.uint8),
+      VT.TrivialAugmentWide(),
+      lambda x: x.to(torch.float32) / 255.,
+  ]
+
+globals:
+  SHAPE: (3, 28, 28)
+  CODE_SIZE: ${cs}
+  CLASSES: 10
+
+model: |
+  class Encoder(nn.Module):
+      def __init__(self):
+          super().__init__()
+    
+          from torchvision.models import VisionTransformer
+          self.encoder = VisionTransformer(
+              image_size=SHAPE[-1],
+              patch_size=${patch},
+              num_layers=${layer},
+              num_heads=${head},
+              hidden_dim=${hidden},
+              mlp_dim=${mlp},
+              num_classes=CODE_SIZE,
+              dropout=${drop},
+          )
+          self.linear = nn.Linear(CODE_SIZE, CLASSES)
+      
+      def forward(self, x):
+          return self.linear(self.encoder(x))
+    
+  Encoder()
+</code></pre>
+<p>I varied a few parameters of the transformer without significant change
+to the downstream accuracy, except, of course, that a much bigger network
+performs much worse (like in previous experiments).</p>
+<p>For comparison there is included an untrained ResNet18 (<code>RN18</code>) and a simple
+ConvEncoder (<code>CNN</code>, ks=3, channels=(32, 32, 32), ReLU, output=128). </p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">model</th>
+<th align="right">patch</th>
+<th align="right">layer</th>
+<th align="right">head</th>
+<th align="right">hidden</th>
+<th align="right">mlp</th>
+<th align="right">drop</th>
+<th align="right">cs</th>
+<th align="right">validation loss (2,000,000 steps)</th>
+<th align="right">accuracy (argmax)</th>
+<th align="right">accuracy (svc)</th>
+<th align="right">model params</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right"><strong>RN18</strong> (white)</td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right">128</td>
+<td align="right"><strong>0.01189</strong></td>
+<td align="right"><strong>0.9206</strong></td>
+<td align="right"><strong>0.9237</strong></td>
+<td align="right">11,243,466</td>
+</tr>
+<tr>
+<td align="right">ViT (grey)</td>
+<td align="right">7</td>
+<td align="right">4</td>
+<td align="right">16</td>
+<td align="right">256</td>
+<td align="right">512</td>
+<td align="right">0</td>
+<td align="right">128</td>
+<td align="right">0.01429</td>
+<td align="right">0.9063</td>
+<td align="right">0.9076</td>
+<td align="right">2,185,610</td>
+</tr>
+<tr>
+<td align="right">ViT (purple)</td>
+<td align="right">7</td>
+<td align="right">4</td>
+<td align="right">8</td>
+<td align="right">256</td>
+<td align="right">512</td>
+<td align="right">0</td>
+<td align="right">128</td>
+<td align="right">0.01460</td>
+<td align="right">0.9034</td>
+<td align="right">0.9042</td>
+<td align="right">2,185,610</td>
+</tr>
+<tr>
+<td align="right">ViT (<em>not shown</em>)</td>
+<td align="right">7</td>
+<td align="right">4</td>
+<td align="right">32</td>
+<td align="right">256</td>
+<td align="right">512</td>
+<td align="right">0</td>
+<td align="right">128</td>
+<td align="right">0.01482</td>
+<td align="right">0.9025</td>
+<td align="right">0.9013</td>
+<td align="right">2,185,610</td>
+</tr>
+<tr>
+<td align="right">ViT (orange)</td>
+<td align="right">7</td>
+<td align="right">8</td>
+<td align="right">8</td>
+<td align="right">256</td>
+<td align="right">512</td>
+<td align="right">0</td>
+<td align="right">128</td>
+<td align="right">0.01499</td>
+<td align="right">0.8992</td>
+<td align="right">0.9014</td>
+<td align="right">4,294,026</td>
+</tr>
+<tr>
+<td align="right">ViT (yellow)</td>
+<td align="right">7</td>
+<td align="right">8</td>
+<td align="right">16</td>
+<td align="right">256</td>
+<td align="right">512</td>
+<td align="right">0</td>
+<td align="right">128</td>
+<td align="right">0.01514</td>
+<td align="right">0.8997</td>
+<td align="right">0.9003</td>
+<td align="right">4,294,026</td>
+</tr>
+<tr>
+<td align="right">ViT (magenta)</td>
+<td align="right">7</td>
+<td align="right">8</td>
+<td align="right">16</td>
+<td align="right">256</td>
+<td align="right">512</td>
+<td align="right">0</td>
+<td align="right">784</td>
+<td align="right">0.01518</td>
+<td align="right">0.8993</td>
+<td align="right">0.9009</td>
+<td align="right">4,469,178</td>
+</tr>
+<tr>
+<td align="right">ViT (red)</td>
+<td align="right">7</td>
+<td align="right">8</td>
+<td align="right">8</td>
+<td align="right">256</td>
+<td align="right">1024</td>
+<td align="right">0</td>
+<td align="right">128</td>
+<td align="right">0.01526</td>
+<td align="right">0.9002</td>
+<td align="right">0.9019</td>
+<td align="right">6,395,274</td>
+</tr>
+<tr>
+<td align="right">ViT (blue)</td>
+<td align="right">7</td>
+<td align="right">4</td>
+<td align="right">4</td>
+<td align="right">256</td>
+<td align="right">512</td>
+<td align="right">0</td>
+<td align="right">128</td>
+<td align="right">0.01529</td>
+<td align="right">0.8958</td>
+<td align="right">0.8980</td>
+<td align="right">2,185,610</td>
+</tr>
+<tr>
+<td align="right">ViT (green)</td>
+<td align="right">7</td>
+<td align="right">16</td>
+<td align="right">8</td>
+<td align="right">256</td>
+<td align="right">512</td>
+<td align="right">0</td>
+<td align="right">128</td>
+<td align="right">(780,000 steps) 0.01897</td>
+<td align="right">0.8665</td>
+<td align="right">0.8728</td>
+<td align="right">8,510,858</td>
+</tr>
+<tr>
+<td align="right"><strong>CNN</strong> (light green)</td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right">128</td>
+<td align="right">0.01962</td>
+<td align="right">0.9086</td>
+<td align="right">0.9181</td>
+<td align="right"><strong>2,002,698</strong></td>
+</tr>
+<tr>
+<td align="right">ViT (dark blue)</td>
+<td align="right">7</td>
+<td align="right">8</td>
+<td align="right">12</td>
+<td align="right">768</td>
+<td align="right">512</td>
+<td align="right">0</td>
+<td align="right">128</td>
+<td align="right">0.02125</td>
+<td align="right">0.8477</td>
+<td align="right">0.8502</td>
+<td align="right">25,453,962</td>
+</tr>
+</tbody></table></div><p><div style="overflow: scroll;"><img src="../../../logs/img/transformer-fmnist-architecture.png" alt="loss plots" /></div></p>
+<p>Noteable things:</p>
+<ul>
+<li><code>TrivialAugmentWide</code> creates quite some training loss noise ;)</li>
+<li>Despite the bad validation loss (l2 distance of class logits), the CNN
+has comparatively good accuracy</li>
+<li>Generally, the validation loss does not entirely correlate with the classification accuracy</li>
+<li>And, of course, i obviously don't know how to train Transformers. The ResNet beats them all!
+It is very likely that 30 epochs are too short to even see a difference between
+the different Transformer sizes. They all seem to converge at roughly the same place after 2M steps,
+with a little trend: smaller is better :facepalm:</li>
+<li>The SVC accuracy is always (very slightly) higher than the argmax accuracy.
+One can probably assume that a Support Vector Machine is more powerful than a
+single linear NN layer.</li>
+</ul>
+
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../html/logs/autoencoder-experiments.html">
+                        &lt;&lt; variational auto-encoder on RPG Tile dataset
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+                <a href="../../../html/logs/reservoir-computing.html">
+                    Reservoir computing $gt;$gt;
+                </a>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

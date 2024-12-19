@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Efficiently solving the Selective Copying Problem with a Very Small Language Model</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#efficiently-solving-the-selective-copying-problem-with-a-very-small-language-model" title="Efficiently solving the Selective Copying Problem with a Very Small Language Model">Efficiently solving the Selective Copying Problem with a Very Small Language Model</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#comparing-number-of-layers" title="Comparing number of layers">Comparing number of layers</a></li>
+            
+            
+            
+            
+            
+            
+            
+            <li class="indent-3"><a href="#increasing-kernel-size" title="Increasing kernel size">Increasing kernel size</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#increasing-dilation" title="Increasing dilation">Increasing dilation</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#mixing-different-dilation-values" title="Mixing different dilation values">Mixing different dilation values</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="efficiently-solving-the-selective-copying-problem-with-a-very-small-language-model">Efficiently solving the Selective Copying Problem with a Very Small Language Model</h1>
+<p>Recently, i tried to understand the original <a href="https://arxiv.org/abs/2312.00752">Mamba paper</a>.
+It's definitely worth reading. In there, the authors mention the <em>Selective Copying</em> as a toy example
+that is supposedly better handled by time-varying models instead of
+<em>conventional convolutional</em> models.</p>
+<p>I tried the Mamba model, not from the <a href="https://github.com/state-spaces/mamba">original authors</a>,
+because i couldn't bring it to run on my current system,
+but using <a href="https://github.com/johnma2006/mamba-minimal/blob/master/model.py">mamba minimal</a>.</p>
+<p>The readable re-implementation lacks all the (unreadable) speed optimization stuff and is indeed
+pretty slow, compared to a simple CNN.
+So i quickly switched back to 1D-convolutions for today's experiment and tried to solve the
+<em>Selective Copying</em> problem with a very very small, fast and general network.</p>
+<p>The model has an input-embedding which is fed by raw byte values of texts.
+It's nasty regarding UTF-8 when reversing the model's output put keeps
+things otherwise simple and easy.</p>
+<p>The <em>Selective Copying</em> Dataset is the (almost) endless stream of combinations of letters,
+arranged in a free space. The task is to pick the letters and concatenate them, e.g.:</p>
+<pre><code>A....D.C..B.. -&gt; ADCB
+C..A....BD... -&gt; CABD
+</code></pre>
+<p>I was previously trying stuff with masking, where parts of a text are hidden and the model learns
+to reproduce the parts, so i used this framework for the <em>Selective Copying</em> dataset,
+which looks like this:</p>
+<pre><code>B..C....A.D.. -&gt; ????
+</code></pre>
+<p>Instead of a <code>?</code>, the mask byte value is actually zero. So, the model get's this sequence of
+text in and produces the same sequence of text, but the masked bytes replaced by the original
+content.</p>
+<p>Here's a typical model:</p>
+<pre><code>ConvTextModel(
+  (embedding): Embedding(256, 64)
+  (layers): ModuleList(
+    (0-5): 6 x ConvTextLayer(
+      (conv): Conv1d(64, 64, kernel_size=(9,), stride=(1,), padding=(3,))
+      (act): GELU(approximate=&#x27;none&#x27;)
+    )
+  )
+  (lm_head): Linear(in_features=64, out_features=256, bias=False)
+)
+</code></pre>
+<p>Feed any number (say L) of text bytes into the embedding, pass 64 x L matrices through
+the stack of 1D convolutions, which keep the resolution (via padding) and add a residual
+short-cut from each layer-input to layer-output. Finally transform the 64-dim <em>latent space</em>
+into L x 256 class logits for the 256 possible byte values.</p>
+<p>Whole thing is trained as usual, with AdamW, lr=0.0005, Cosine Annealing with Warmup,
+batch-size 64, cross-entropy loss on the class logits, for 1 million steps.</p>
+<p>The dataset in this experiment places 10 letters in a 40-letter space.
+The validation set contains 5000 positions,
+which are excluded from the (otherwise almost infinite) training set.</p>
+<h3 id="comparing-number-of-layers">Comparing number of layers</h3>
+<p>(experiment done with <a href="https://github.com/defgsus/nn-experiments/blob/b2aaaf4323dd0bb70127fa265d942ec292ce53dc/experiments/textmask/convtext-selcopy-layers.yml">experiments/textmask/convtext-selcopy-layers.yml @ b2aaaf43</a>)</p>
+<p>This is again a topic of <em>receptive fields</em> in CNNs. With an area of 40, some delimiter and
+10 letters for the answer the model has to <em>see</em> 50 cells apart. Or in other words,
+the convolutional layers need to pass information from one cell to as much as 50 cells
+across, to be able to solve the task.</p>
+<h4 id="6-layers">6 layers</h4>
+<p>The model show above with 6 layers and kernel size 9 can see about 24 cells (6 * floor(9 / 2))
+in each direction, which is not enough to solve the puzzle. After 1M steps, the error on
+the validation set looks like this:</p>
+<p>(It's 64 examples, arranged in two columns. The first row is the original text, the second
+row is the masked input to the model and the third row is the model's reproduction,
+with green background marking a fit and red marking an error.)</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/selcopy-example-validation-l6.png" alt="validation example 6 layers" /></div></p>
+<p>It fails all over the place but predominantly at the beginning of the answer, because
+the information needed for it is too far apart.</p>
+<p>And yes, increasing the number of layers helps a lot:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/selcopy-40-10_mask-error.png" alt="error curves for different layer counts" /></div></p>
+<p>The plots show the error percentage (how many letters are wrong) inside the masked area.
+Text outside the mask must also be reproduced by the model but is not considered in this plot.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">nitem</th>
+<th align="right">area</th>
+<th align="right">l</th>
+<th align="right">ch</th>
+<th align="right">ks</th>
+<th align="right">validation loss</th>
+<th align="left">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="left">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.203547</td>
+<td align="left">237,952</td>
+<td align="right">8.71</td>
+<td align="left">1,913/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">8</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.088512</td>
+<td align="left">311,808</td>
+<td align="right">11.75</td>
+<td align="left">1,418/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">10</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.0164525</td>
+<td align="left">385,664</td>
+<td align="right">14.51</td>
+<td align="left">1,148/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">12</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.00128227</td>
+<td align="left">459,520</td>
+<td align="right">16.5</td>
+<td align="left">1,009/s</td>
+</tr>
+</tbody></table></div><h5 id="12-layers">12 layers</h5>
+<p>The 12-layer network gets down to an error of 0.02%. It can <em>see</em> about 48 cells in each direction,
+which should be just enough to solve this task.</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/selcopy-example-validation-l12.png" alt="validation example 12 layers" /></div></p>
+<p>This is a nice little experiment setup.
+The 12-layer model's performance can be viewed as the baseline.<br />
+The 6-layer model performs terrible (47% error) but at least at twice the speed. Can we
+somehow get to equal performance with only 6 layers?</p>
+<h3 id="increasing-kernel-size">Increasing kernel size</h3>
+<p>The most obvious thing!</p>
+<p>Here's a little demonstration. The first layer is the input and there are 6 layers of the
+output of each convolution. Size is 50. With a kernel size of 3, the information can
+only travel 6 cells in each direction:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks3-dil1-s50.png" alt="convolutional steps" /></div></p>
+<p>Kernel size of 9 allows information to travel 24 cells in each direction:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks9-dil1-s50.png" alt="convolutional steps" /></div></p>
+<p>But since the beginning of the answer needs information of cells that are more than
+40 cells to the left, the network can not learn the task. See how the first cell only
+transmits information along those 24 cells:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks9-dil1-s50-from-left.png" alt="convolutional steps" /></div></p>
+<p>Indeed, with 12 layers, the first cells transmits roughly to the end of the sequence:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l12-ks9-dil1-s50-from-left.png" alt="convolutional steps" /></div></p>
+<p>Now, in 2D image recognition, there seems to be a limit at a kernel size of about 7x7
+after which performance grows marginal compared to the exponentially increased compute demand
+(from a paper i can't remember right now). For this 1D experiment, a kernel size of <strong>17</strong>
+in the 6-layer network performs even better than the 12-layer network.</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks17-dil1-s50-from-left.png" alt="convolutional steps" /></div></p>
+<p>Although, more than 5 times slower:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/selcopy-40-10_mask-error_kernelsize.png" alt="error plots - kernel size" /></div></p>
+<p>For some reason, the 15 and 17 kernels are unbearably slow.
+Or in other words (maybe because of some nifty specialized Cuda implementations)
+up until kernel size 13, the convolutions are blazingly fast.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">nitem</th>
+<th align="right">area</th>
+<th align="right">l</th>
+<th align="right">ch</th>
+<th align="right">ks</th>
+<th align="right">validation loss</th>
+<th align="left">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="left">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="right">0.203547</td>
+<td align="left">237,952</td>
+<td align="right">8.71</td>
+<td align="left">1,913/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">11</td>
+<td align="right">0.12667</td>
+<td align="left">287,104</td>
+<td align="right">8.85</td>
+<td align="left">1,882/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">13</td>
+<td align="right">0.0355833</td>
+<td align="left">336,256</td>
+<td align="right">9.44</td>
+<td align="left">1,764/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">15</td>
+<td align="right">0.00105004</td>
+<td align="left">385,408</td>
+<td align="right">58.02</td>
+<td align="left">286/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">17</td>
+<td align="right">0.000182635</td>
+<td align="left">434,560</td>
+<td align="right">49.15</td>
+<td align="left">339/s</td>
+</tr>
+</tbody></table></div><ul>
+<li><strong>Kernel size 13 for 1D-convolutions has some nice properties</strong>.
+It increases the receptive field a lot, while still being fast to compute.</li>
+<li><strong>After kernel size 13</strong> the computational demand does not justify the increase in performance,
+at least, from my point of view.</li>
+</ul>
+<h3 id="increasing-dilation">Increasing dilation</h3>
+<p><em>Dilation</em> is like increasing the kernel size, without actually creating new weights or adding
+compution. E.g. this example 3x3 kernel with dilation=2 theoretically becomes:</p>
+<pre><code>1 2 3      1 0 2 0 3 0
+4 5 6  -&gt;  0 0 0 0 0 0
+7 8 9      4 0 5 0 6 0
+           0 0 0 0 0 0
+           7 0 8 0 9 0
+           0 0 0 0 0 0
+</code></pre>
+<p>In fact, the zero-multiplications are skipped and the convolution keeps it's pace.
+The only thing that adds a bit of computation is the adjusted padding, to keep the output size
+of the convolution the same as the input size. So the convolutions have to
+process a bit more data, which is just empty at the borders (zero-padded).</p>
+<p>It's comparable to convolutional <em>stride</em>. With dilation of 2, the network sees only every 2nd
+pixel/cell/state. But different to <em>stride</em>, the output resolution is not reduced. And since
+the kernel is applied at every position, <em>essentially</em> no information is lost.</p>
+<p>A dilation of 2 in the 6-layer network has the same receptive field <strong>size</strong> as a 12 layer
+network with dilation 1. Of course, it's not as detailed as a true increase of the kernel size:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks9-dil2-s100.png" alt="convolutional steps" /></div></p>
+<p>Okay, let's plug it in and try some naive settings for dilation:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/selcopy-40-10_mask-error_dilation.png" alt="error curves for different dilations" /></div></p>
+<p>(The 6-layer, 12-layer and 17-kernel networks from above are included for comparison)</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">nitem</th>
+<th align="right">area</th>
+<th align="right">l</th>
+<th align="right">ch</th>
+<th align="right">ks</th>
+<th align="left">dilation</th>
+<th align="right">validation loss</th>
+<th align="left">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="left">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">2</td>
+<td align="right">0.324</td>
+<td align="left">237,952</td>
+<td align="right">1.96</td>
+<td align="left">8,491/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">1</td>
+<td align="right">0.203547</td>
+<td align="left">237,952</td>
+<td align="right">8.71</td>
+<td align="left">1,913/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[2, 2, 2, 1, 1, 1]</td>
+<td align="right">0.0670086</td>
+<td align="left">237,952</td>
+<td align="right">5.26</td>
+<td align="left">3,171/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[2, 2, 2, 2, 1, 1]</td>
+<td align="right">0.0676225</td>
+<td align="left">237,952</td>
+<td align="right">4.24</td>
+<td align="left">3,935/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[2, 2, 2, 2, 2, 1]</td>
+<td align="right">0.0870354</td>
+<td align="left">237,952</td>
+<td align="right">3.28</td>
+<td align="left">5,085/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[3, 3, 3, 1, 1, 1]</td>
+<td align="right">0.0514503</td>
+<td align="left">237,952</td>
+<td align="right">5.17</td>
+<td align="left">3,223/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[4, 4, 4, 1, 1, 1]</td>
+<td align="right">0.0460037</td>
+<td align="left">237,952</td>
+<td align="right">5.37</td>
+<td align="left">3,101/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[5, 5, 5, 1, 1, 1]</td>
+<td align="right">0.042369</td>
+<td align="left">237,952</td>
+<td align="right">5.1</td>
+<td align="left">3,269/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[6, 6, 6, 1, 1, 1]</td>
+<td align="right">0.0363355</td>
+<td align="left">237,952</td>
+<td align="right">5.28</td>
+<td align="left">3,158/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">12</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">1</td>
+<td align="right">0.00128227</td>
+<td align="left">459,520</td>
+<td align="right">16.5</td>
+<td align="left">1,009/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">17</td>
+<td align="left">1</td>
+<td align="right">0.000182635</td>
+<td align="left">434,560</td>
+<td align="right">49.15</td>
+<td align="left">339/s</td>
+</tr>
+</tbody></table></div><ul>
+<li>
+<p><strong>Dilation of 2 in all layers decreases performance</strong>. The last layer
+before the linear readout should probably not have a dilation. But note that my
+software/hardware runs it <strong>4 times faster</strong> than dilation 1!</p>
+</li>
+<li>
+<p><strong>Dilation of 2 for first 3 to 5 layers increases performance</strong>. Although, all by the same amount.
+However, since dilation 2 is super fast, 5 layers of dilation=2 runs faster than 3 layers of dilation=2.</p>
+</li>
+<li>
+<p><strong>Dilation of more than 2 for the first 3 layers does only marginally increase performance</strong></p>
+<p>E.g., here's the dilation=<code>[6, 6, 6, 1, 1, 1]</code> case:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks9-dil666111-s100.png" alt="convolutional steps" /></div></p>
+</li>
+</ul>
+<h3 id="mixing-different-dilation-values">Mixing different dilation values</h3>
+<p>Intuitively, one would think that the same dilation value on each layer creates conditions that
+are sub-optimal for evaluating the whole state. E.g. every 2nd cell is the sum of every 2nd cell,
+and so on. Here shown with dilation 3:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks9-dil3-s100.png" alt="convolutional steps" /></div></p>
+<p>So lets mix different dilation sizes. For example, here, dilation for each layer is 2, 3, 2, 3, 2, 3:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks9-dil232323-s100.png" alt="convolutional steps" /></div></p>
+<p>And voila! Some combinations reach the performance of the 12 layer network
+(up to the 3rd digit after the comma), while being super fast.
+Even faster than the bad 6 layer baseline!</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/selcopy-40-10_mask-error_dilation-mixed.png" alt="error plots - mixed dilations" /></div></p>
+<p>Again, the baselines are included, also the previous dilation experiments and a
+couple of other dilation combinations not shown in the plot:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">nitem</th>
+<th align="right">area</th>
+<th align="right">l</th>
+<th align="right">ch</th>
+<th align="right">ks</th>
+<th align="left">dil</th>
+<th align="right">validation loss</th>
+<th align="left">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="left">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">2</td>
+<td align="right">0.324</td>
+<td align="left">237,952</td>
+<td align="right">1.96</td>
+<td align="left">8,491/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">1</td>
+<td align="right">0.2035470</td>
+<td align="left">237,952</td>
+<td align="right">8.71</td>
+<td align="left">1,913/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[2, 2, 2, 2, 2, 1]</td>
+<td align="right">0.0870354</td>
+<td align="left">237,952</td>
+<td align="right">3.28</td>
+<td align="left">5,085/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[2, 2, 2, 2, 1, 1]</td>
+<td align="right">0.0676225</td>
+<td align="left">237,952</td>
+<td align="right">4.24</td>
+<td align="left">3,935/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[2, 2, 2, 1, 1, 1]</td>
+<td align="right">0.0670086</td>
+<td align="left">237,952</td>
+<td align="right">5.26</td>
+<td align="left">3,171/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[3, 3, 3, 1, 1, 1]</td>
+<td align="right">0.0514503</td>
+<td align="left">237,952</td>
+<td align="right">5.17</td>
+<td align="left">3,223/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[4, 4, 4, 1, 1, 1]</td>
+<td align="right">0.0460037</td>
+<td align="left">237,952</td>
+<td align="right">5.37</td>
+<td align="left">3,101/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[5, 5, 5, 1, 1, 1]</td>
+<td align="right">0.0423690</td>
+<td align="left">237,952</td>
+<td align="right">5.1</td>
+<td align="left">3,269/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[6, 6, 6, 1, 1, 1]</td>
+<td align="right">0.0363355</td>
+<td align="left">237,952</td>
+<td align="right">5.28</td>
+<td align="left">3,158/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[2, 4, 6, 3, 5, 1]</td>
+<td align="right">0.0323526</td>
+<td align="left">237,952</td>
+<td align="right">3.26</td>
+<td align="left">5,116/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[2, 6, 4, 5, 3, 1]</td>
+<td align="right">0.0212173</td>
+<td align="left">237,952</td>
+<td align="right">3.07</td>
+<td align="left">5,428/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[3, 5, 7, 9, 11, 1]</td>
+<td align="right">0.0096797</td>
+<td align="left">237,952</td>
+<td align="right">3.08</td>
+<td align="left">5,407/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[5, 4, 3, 2, 1, 1]</td>
+<td align="right">0.0066358</td>
+<td align="left">237,952</td>
+<td align="right">4.2</td>
+<td align="left">3,967/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[2, 3, 4, 5, 1, 1]</td>
+<td align="right">0.0021815</td>
+<td align="left">237,952</td>
+<td align="right">4.35</td>
+<td align="left">3,828/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[2, 3, 4, 5, 6, 1]</td>
+<td align="right">0.0015734</td>
+<td align="left">237,952</td>
+<td align="right">3.15</td>
+<td align="left">5,292/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">12</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">1</td>
+<td align="right">0.0012822</td>
+<td align="left">459,520</td>
+<td align="right">16.5</td>
+<td align="left">1,009/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">9</td>
+<td align="left">[1, 2, 3, 4, 5, 1]</td>
+<td align="right">0.0002703</td>
+<td align="left">237,952</td>
+<td align="right">4.03</td>
+<td align="left">4,137/s</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td align="right">40</td>
+<td align="right">6</td>
+<td align="right">64</td>
+<td align="right">17</td>
+<td align="left">1</td>
+<td align="right">0.0001826</td>
+<td align="left">434,560</td>
+<td align="right">49.15</td>
+<td align="left">339/s</td>
+</tr>
+</tbody></table></div><ul>
+<li><strong>Larger dilation in later layers works better</strong> than larger dilation in earlier layers.</li>
+<li><strong>The top 6 layer network beats the 12-layer network in validation loss</strong>. Although it
+has a slightly worse validation error of 0.03% instead of 0.02%. Still fine for me ;)
+It's <strong>4 times faster</strong> than the 12-layer, 2 times faster than the original 6-layer with
+dilation 1 and 10 times faster than the 17-kernel version.</li>
+</ul>
+<p>Pretty fine! Just imagine! You're setting up a LARGE experiment for your institution,
+which will be using <strong>400 years of GPU-time</strong> during the next month (160,000 Watt-years)
+and you could maybe have used a simple CNN with dilation instead of the quadratic
+<strong>Attention</strong> and save 350 GPU-years!</p>
+<p>I mean, really! A growing number of people is gaining, through their companies, access to LARGE
+amounts of GPU time and presumably, a good part of it is wasted.</p>
+<p>Anyways. Feels like there is not much more to gain with this particular dataset. I just <em>assume</em>,
+that the 12-layer network is able to do more complicated computations, but they
+are not required for the vanilla <em>Selective Copying</em> problem.</p>
+<p>Continue reading at <a href="../../../html/logs/selcopy2.html">&quot;Very Selective Copying&quot;</a></p>
+
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../html/logs/shiny-tubes.html">
+                        &lt;&lt; &quot;Shiny Tubes&quot;: increasing render quality with a UNet
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+                <a href="../../../html/logs/selcopy2.html">
+                    Solving the &quot;Very Selective Copying&quot; problem with a Very Small Language Model $gt;$gt;
+                </a>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

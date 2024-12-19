@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>variational auto-encoder on RPG Tile dataset</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#variational-auto-encoder-on-rpg-tile-dataset" title="variational auto-encoder on RPG Tile dataset">variational auto-encoder on RPG Tile dataset</a></li>
+            
+            
+            
+            <li class="indent-1"><a href="#comparing-different-datasets" title="comparing different datasets">comparing different datasets</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#take-care-of-the-choice-of-interpolation" title="Take care of the choice of interpolation!">Take care of the choice of interpolation!</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="variational-auto-encoder-on-rpg-tile-dataset">variational auto-encoder on RPG Tile dataset</h1>
+<p>There is a <em>deep</em> love/hate relationships with neural networks.
+Why the heck do i need to train a small network like this</p>
+<pre><code class="language-python">model = VariationalAutoencoderConv(
+    shape=(3, 32, 32), channels=[16, 24, 32], kernel_size=5,
+    latent_dims=128,
+)
+
+optimizer = Adam(model.default_parameters(), lr=.0001, weight_decay=0.000001)
+</code></pre>
+<p>for 10 hours and it still does not reach the optimum?</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/vae-rpg-conv16-24-32-40M.png" alt="loss plots" /></div></p>
+<p>And how could one tell after 30 minutes where this is going
+to go? The plot shows the l1 validation loss (right) over
+<strong>1700 epochs!</strong> Why does this network need to look at
+things 1700 times???</p>
+<p>Well, it's a complicated dataset, for sure.</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/vae-rpg-conv16-24-32-40M-repros.png" alt="reproductions" /></div></p>
+<p>But i feel there is something wrong in the method.
+This <em>backpropagation gradient descent</em>, although
+mathematically grounded, feels like a brute-force approach.</p>
+<h1 id="comparing-different-datasets">comparing different datasets</h1>
+<p>The rpg tile dataset is now fixed to 47579 training and 2505
+validation grayscale images at 32x32 pixels.
+Running the following experiment to compare
+with the <em>&quot;classic&quot;</em> datasets:</p>
+<pre><code class="language-yaml">trainer: src.train.TrainAutoencoder
+
+matrix:
+  ds:
+  - &quot;mnist&quot;
+  - &quot;fmnist&quot;
+  - &quot;rpg&quot;
+
+experiment_name: vae/base28_${matrix_slug}
+
+train_set: | 
+  {
+      &quot;mnist&quot;: mnist_dataset(train=True, shape=SHAPE),
+      &quot;fmnist&quot;: fmnist_dataset(train=True, shape=SHAPE),
+      &quot;rpg&quot;: rpg_tile_dataset_3x32x32(validation=False, shape=SHAPE),
+  }[&quot;${ds}&quot;]
+
+validation_set: |
+  {
+      &quot;mnist&quot;: mnist_dataset(train=False, shape=SHAPE),
+      &quot;fmnist&quot;: fmnist_dataset(train=False, shape=SHAPE),
+      &quot;rpg&quot;: rpg_tile_dataset_3x32x32(validation=True, shape=SHAPE)
+  }[&quot;${ds}&quot;]
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: Adam
+scheduler: CosineAnnealingLR
+max_inputs: 1_000_000
+
+globals:
+  SHAPE: (1, 28, 28)
+  CODE_SIZE: 128
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(16, 24, 32), kernel_size=3)
+  decoder = DecoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(32, 24, 16), kernel_size=3)
+  
+  VariationalAutoencoder(
+      encoder = VariationalEncoder(
+          encoder, CODE_SIZE, CODE_SIZE
+      ),
+      decoder = decoder,
+      reconstruction_loss = &quot;l1&quot;,
+      reconstruction_loss_weight = 1.,
+      kl_loss_weight = 1.,
+  )
+</code></pre>
+<p>Note that the MNIST and <a href="https://arxiv.org/abs/1708.07747">FMNIST</a> images are 28x28 pixels and
+the RPG dataset is resized (via BILINEAR filter) to the same
+resolution.</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/vae-base-28.png" alt="training results" /></div></p>
+<p>So, the RPG datasets seems to be equally easy/complicated
+like MNIST and FMNIST is pretty hard in comparison.
+Doing the same for 32x32 pixels (where the other two datasets
+are resized):</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/vae-base-32.png" alt="training results" /></div></p>
+<p>Huh? Very different results.
+MNIST easiest, FMNIST middle, RPG hardest. </p>
+<h3 id="take-care-of-the-choice-of-interpolation">Take care of the choice of interpolation!</h3>
+<p>After some testing it seems that the interpolation mode
+during resizing has a strong influence. So i ran the above
+experiment on different resolutions (<strong>res</strong>) and with
+interpolation mode <code>BILINEAR</code> (<strong>aa</strong> = True) and
+<code>NEAREST</code> (<strong>aa</strong> = False) and two different
+learning rates (<strong>lr</strong>):</p>
+<p>(using file <code>experiments/vae/compare-datasets.yml</code>)</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">dataset</th>
+<th align="left">aa</th>
+<th align="right">res</th>
+<th align="right">lr</th>
+<th align="right">validation loss (1,000,000 steps)</th>
+<th align="left">meter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">mnist</td>
+<td align="left">False</td>
+<td align="right">20</td>
+<td align="right">0.0003</td>
+<td align="right">0.0274497</td>
+<td align="left">*******</td>
+</tr>
+<tr>
+<td align="left">fmnist</td>
+<td align="left">False</td>
+<td align="right">20</td>
+<td align="right">0.0003</td>
+<td align="right">0.0482327</td>
+<td align="left">******************</td>
+</tr>
+<tr>
+<td align="left">rpg</td>
+<td align="left">False</td>
+<td align="right">20</td>
+<td align="right">0.0003</td>
+<td align="right">0.052915</td>
+<td align="left">********************</td>
+</tr>
+<tr>
+<td align="left">mnist</td>
+<td align="left"></td>
+<td align="right">28</td>
+<td align="right">0.0003</td>
+<td align="right">0.0351929</td>
+<td align="left">***********</td>
+</tr>
+<tr>
+<td align="left">fmnist</td>
+<td align="left"></td>
+<td align="right">28</td>
+<td align="right">0.0003</td>
+<td align="right">0.0534702</td>
+<td align="left">*********************</td>
+</tr>
+<tr>
+<td align="left">rpg</td>
+<td align="left">False</td>
+<td align="right">28</td>
+<td align="right">0.0003</td>
+<td align="right">0.0514313</td>
+<td align="left">*******************</td>
+</tr>
+<tr>
+<td align="left">mnist</td>
+<td align="left">False</td>
+<td align="right">32</td>
+<td align="right">0.0003</td>
+<td align="right">0.0333494</td>
+<td align="left">**********</td>
+</tr>
+<tr>
+<td align="left">fmnist</td>
+<td align="left">False</td>
+<td align="right">32</td>
+<td align="right">0.0003</td>
+<td align="right">0.0495315</td>
+<td align="left">******************</td>
+</tr>
+<tr>
+<td align="left">rpg</td>
+<td align="left"></td>
+<td align="right">32</td>
+<td align="right">0.0003</td>
+<td align="right">0.0532157</td>
+<td align="left">********************</td>
+</tr>
+<tr>
+<td align="left">mnist</td>
+<td align="left">True</td>
+<td align="right">20</td>
+<td align="right">0.0003</td>
+<td align="right">0.0193185</td>
+<td align="left">**</td>
+</tr>
+<tr>
+<td align="left">fmnist</td>
+<td align="left">True</td>
+<td align="right">20</td>
+<td align="right">0.0003</td>
+<td align="right">0.0337913</td>
+<td align="left">**********</td>
+</tr>
+<tr>
+<td align="left">rpg</td>
+<td align="left">True</td>
+<td align="right">20</td>
+<td align="right">0.0003</td>
+<td align="right">0.0337807</td>
+<td align="left">**********</td>
+</tr>
+<tr>
+<td align="left">mnist</td>
+<td align="left"></td>
+<td align="right">28</td>
+<td align="right">0.0003</td>
+<td align="right">0.0357742</td>
+<td align="left">***********</td>
+</tr>
+<tr>
+<td align="left">fmnist</td>
+<td align="left"></td>
+<td align="right">28</td>
+<td align="right">0.0003</td>
+<td align="right">0.0528828</td>
+<td align="left">********************</td>
+</tr>
+<tr>
+<td align="left">rpg</td>
+<td align="left">True</td>
+<td align="right">28</td>
+<td align="right">0.0003</td>
+<td align="right">0.0369611</td>
+<td align="left">************</td>
+</tr>
+<tr>
+<td align="left">mnist</td>
+<td align="left">True</td>
+<td align="right">32</td>
+<td align="right">0.0003</td>
+<td align="right">0.0246818</td>
+<td align="left">*****</td>
+</tr>
+<tr>
+<td align="left">fmnist</td>
+<td align="left">True</td>
+<td align="right">32</td>
+<td align="right">0.0003</td>
+<td align="right">0.0380947</td>
+<td align="left">************</td>
+</tr>
+<tr>
+<td align="left">rpg</td>
+<td align="left"></td>
+<td align="right">32</td>
+<td align="right">0.0003</td>
+<td align="right">0.0533928</td>
+<td align="left">********************</td>
+</tr>
+<tr>
+<td align="left">------</td>
+<td align="left"></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left">mnist</td>
+<td align="left">False</td>
+<td align="right">20</td>
+<td align="right">0.001</td>
+<td align="right">0.0221466</td>
+<td align="left">****</td>
+</tr>
+<tr>
+<td align="left">fmnist</td>
+<td align="left">False</td>
+<td align="right">20</td>
+<td align="right">0.001</td>
+<td align="right">0.0421959</td>
+<td align="left">***************</td>
+</tr>
+<tr>
+<td align="left">rpg</td>
+<td align="left">False</td>
+<td align="right">20</td>
+<td align="right">0.001</td>
+<td align="right">0.0454093</td>
+<td align="left">****************</td>
+</tr>
+<tr>
+<td align="left">mnist</td>
+<td align="left"></td>
+<td align="right">28</td>
+<td align="right">0.001</td>
+<td align="right">0.0326754</td>
+<td align="left">*********</td>
+</tr>
+<tr>
+<td align="left">fmnist</td>
+<td align="left"></td>
+<td align="right">28</td>
+<td align="right">0.001</td>
+<td align="right">0.0491466</td>
+<td align="left">******************</td>
+</tr>
+<tr>
+<td align="left">rpg</td>
+<td align="left">False</td>
+<td align="right">28</td>
+<td align="right">0.001</td>
+<td align="right">0.0472919</td>
+<td align="left">*****************</td>
+</tr>
+<tr>
+<td align="left">mnist</td>
+<td align="left">False</td>
+<td align="right">32</td>
+<td align="right">0.001</td>
+<td align="right">0.0300777</td>
+<td align="left">********</td>
+</tr>
+<tr>
+<td align="left">fmnist</td>
+<td align="left">False</td>
+<td align="right">32</td>
+<td align="right">0.001</td>
+<td align="right">0.0459637</td>
+<td align="left">*****************</td>
+</tr>
+<tr>
+<td align="left">rpg</td>
+<td align="left"></td>
+<td align="right">32</td>
+<td align="right">0.001</td>
+<td align="right">0.0485321</td>
+<td align="left">******************</td>
+</tr>
+<tr>
+<td align="left">mnist</td>
+<td align="left">True</td>
+<td align="right">20</td>
+<td align="right">0.001</td>
+<td align="right">0.0157305</td>
+<td align="left">*</td>
+</tr>
+<tr>
+<td align="left">fmnist</td>
+<td align="left">True</td>
+<td align="right">20</td>
+<td align="right">0.001</td>
+<td align="right">0.0278209</td>
+<td align="left">*******</td>
+</tr>
+<tr>
+<td align="left">rpg</td>
+<td align="left">True</td>
+<td align="right">20</td>
+<td align="right">0.001</td>
+<td align="right">0.0281536</td>
+<td align="left">*******</td>
+</tr>
+<tr>
+<td align="left">mnist</td>
+<td align="left"></td>
+<td align="right">28</td>
+<td align="right">0.001</td>
+<td align="right">0.0321101</td>
+<td align="left">*********</td>
+</tr>
+<tr>
+<td align="left">fmnist</td>
+<td align="left"></td>
+<td align="right">28</td>
+<td align="right">0.001</td>
+<td align="right">0.0492271</td>
+<td align="left">******************</td>
+</tr>
+<tr>
+<td align="left">rpg</td>
+<td align="left">True</td>
+<td align="right">28</td>
+<td align="right">0.001</td>
+<td align="right">0.0349186</td>
+<td align="left">***********</td>
+</tr>
+<tr>
+<td align="left">mnist</td>
+<td align="left">True</td>
+<td align="right">32</td>
+<td align="right">0.001</td>
+<td align="right">0.0221171</td>
+<td align="left">****</td>
+</tr>
+<tr>
+<td align="left">fmnist</td>
+<td align="left">True</td>
+<td align="right">32</td>
+<td align="right">0.001</td>
+<td align="right">0.0357977</td>
+<td align="left">***********</td>
+</tr>
+<tr>
+<td align="left">rpg</td>
+<td align="left"></td>
+<td align="right">32</td>
+<td align="right">0.001</td>
+<td align="right">0.0489479</td>
+<td align="left">******************</td>
+</tr>
+</tbody></table></div><p>(No entry in <strong>aa</strong> means that there was no resizing necessary)</p>
+<p>It confirms the strong correlation of the dataset difficulty
+and the interpolation method. It gave me some headache in
+the beginning but looking at resized examples makes it
+understandable:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th>Original MNIST image (28x28)</th>
+<th>resized to 32x32 <em>without</em></th>
+<th>and <em>with</em> bilinear filtering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-mnist-28-orig.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-mnist-32.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-mnist-32-aa.png" alt="original" /></div></td>
+</tr>
+</tbody></table></div><div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th>Original FMNIST image (28x28)</th>
+<th>resized to 32x32 <em>without</em></th>
+<th>and <em>with</em> bilinear filtering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-fmnist-28-orig.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-fmnist-32.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-fmnist-32-aa.png" alt="original" /></div></td>
+</tr>
+</tbody></table></div><div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th>Original RPG image (32x32)</th>
+<th>resized to 28x28 <em>without</em></th>
+<th>and <em>with</em> bilinear filtering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-rpg-32-orig.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-rpg-28.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-rpg-28-aa.png" alt="original" /></div></td>
+</tr>
+</tbody></table></div><p>The bilinear filter blurs out a lot of the single pixel
+details and makes the images <em>&quot;easier&quot;</em> to auto-encode.
+Ignoring the <code>aa = True</code> runs in the table above we can see
+that the RPG dataset is, in comparison, equally <em>&quot;hard</em>&quot;
+when down-scaled to the FMNIST size and a little harder
+when FMNIST is up-scaled (because some pixels are just
+repeated).</p>
+<p>Side note: Many of the images in RPG are originally 16x16
+but there is a good percentage of images that were 32x32
+or larger. All of them have been resized to 32x32 <strong>without</strong>
+interpolation.</p>
+<p>For comparison, below is a run on a dataset of 60,000
+noise images (mean=0.5, std=0.5, clamped to range [0, 1]),
++10,000 for validation (green). </p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/vae-32-noise.png" alt="loss plots" /></div></p>
+
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../html/logs/mnist.html">
+                        &lt;&lt; Autoencoder training on MNIST dataset
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+                <a href="../../../html/logs/transformers.html">
+                    Experiments with vision transformers $gt;$gt;
+                </a>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>autoencoder with histogram loss</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#autoencoder-with-histogram-loss" title="autoencoder with histogram loss">autoencoder with histogram loss</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="autoencoder-with-histogram-loss">autoencoder with histogram loss</h1>
+<p>Stupid experiment, just to get a feeling for the parameters.</p>
+<p>Basically a simple autoencoder but the loss only considers the histogram
+using the <em>soft histogram</em> mentioned by Tony-Y in the
+<a href="https://discuss.pytorch.org/t/differentiable-torch-histc/25865/4">pytorch forum</a>.</p>
+<pre><code class="language-yaml">matrix:
+  bins: [100, 200, 50]
+  sigma: [100, 200, 50]
+  norm: [False]
+  loss: [&quot;&#x27;l1&#x27;&quot;]
+
+experiment_name: ae/hist/hl-${matrix_slug}
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  rpg_tile_dataset_3x32x32(SHAPE, validation=False)
+
+validation_set: |
+  rpg_tile_dataset_3x32x32(SHAPE, validation=True)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: |
+  HistogramLoss(${bins}, 0., 1., sigma=${sigma}, loss=${loss}, normalize=${norm})
+max_inputs: 500_000
+
+globals:
+  SHAPE: (3, 32, 32)
+  CODE_SIZE: 128
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(24, 32, 48), kernel_size=5)
+
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)
+</code></pre>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-histogramloss.png" alt="loss plots" /></div></p>
+<p>Normalizing the histograms before calculating the difference did not
+converge well. And reproduction look terrible as could be expected: </p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th>green</th>
+<th>yellow</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/ae-histogramloss-repro-green.png" alt="repro" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/ae-histogramloss-repro-yellow.png" alt="repro" /></div></td>
+</tr>
+</tbody></table></div><div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th>purple</th>
+<th>gray</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/ae-histogramloss-repro-purple.png" alt="repro" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/ae-histogramloss-repro-gray.png" alt="repro" /></div></td>
+</tr>
+</tbody></table></div>
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../html/logs/reservoir-computing.html">
+                        &lt;&lt; Reservoir computing
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+                <a href="../../../html/logs/reservoir-hyper-computing.html">
+                    Reproducing &quot;Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing&quot; $gt;$gt;
+                </a>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

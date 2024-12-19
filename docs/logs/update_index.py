@@ -14,7 +14,7 @@ def update_readme():
     documents = []
 
     fp = StringIO()
-    for file in sorted(LOG_PATH.rglob("*.md")):
+    for file in sorted(LOG_PATH.rglob("*.md"), reverse=True):
         if file.name != "README.md":
             documents.append((file, render_file_index(file, fp)))
 
@@ -36,9 +36,12 @@ def update_readme():
         exit(-1)
 
     fp.seek(0)
+    index_markup = "\n".join(
+        list(filter(lambda l: l.strip(), fp.read().splitlines()))
+    )
 
     readme = (LOG_PATH / "README.md").read_text()
-    readme = readme[:readme.index("## Index\n") + 9] + fp.read()
+    readme = readme[:readme.index("## Index\n") + 9] + index_markup
     (LOG_PATH / "README.md").write_text(readme)
     print(readme)
 

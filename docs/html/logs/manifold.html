@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>&quot;implicit neural representation&quot;</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#quotimplicit-neural-representationquot" title="&quot;implicit neural representation&quot;">&quot;implicit neural representation&quot;</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#upgrade-decoder" title="upgrade decoder">upgrade decoder</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#back-to-quotrealquot-dataset" title="back to &quot;real&quot; dataset">back to &quot;real&quot; dataset</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#2023-11-10-back-to-small-dataset" title="2023-11-10: back to small dataset">2023-11-10: back to small dataset</a></li>
+            
+            
+            
+            <li class="indent-1"><a href="#2023-11-12-transformer-on-mnist" title="2023-11-12: transformer on mnist">2023-11-12: transformer on mnist</a></li>
+            
+            
+            
+            <li class="indent-1"><a href="#resnet21-for-embedding--gt-imagemanifoldmodel" title="resnet21 for embedding -&gt; ImageManifoldModel">resnet21 for embedding -&gt; ImageManifoldModel</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#back-to-simple-cnn-encoder" title="back to simple CNN encoder">back to simple CNN encoder</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="quotimplicit-neural-representationquot">&quot;implicit neural representation&quot;</h1>
+<p>which mainly means, calculate: <code>position + code -&gt; color</code>.</p>
+<p>After preliminary experiments, running this setup:</p>
+<pre><code>DalleManifoldAutoencoder(
+    shape=(1, 32, 32), 
+    vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True, 
+    decoder_n_blk=4, decoder_n_layer=2, decoder_n_hid=64,
+)
+encoder params: 1,725,264
+decoder params: 42,497
+batch_size: 64
+steps: 1M
+learnrate: .0003 AdamW, CosineAnnealingLR 
+</code></pre>
+<p>on only 300 (randomly h&amp;v-flipped) images of the RPG-tiles dataset (/scripts/datasets.py).</p>
+<p>Find the code at <a href="https://github.com/defgsus/nn-experiments/blob/master/scripts/train_autoencoder.py">scripts.train_autoencoder</a>.</p>
+<p>The encoder is a small version of the DALL-E VQ-VAE model.
+The decoder is basically a function of</p>
+<pre><code>encoding, pixel-position -&gt; pixel-color
+</code></pre>
+<p>which i call &quot;manifold&quot; for now until i stumble across a better name.
+It's made of X equal blocks of Y fully connected layers with
+batch-normalization and residual skip connections per block.</p>
+<p>Besides l2 reconstruction loss there is an extra constraint on the distribution of the encoding:</p>
+<pre><code>loss_batch_std = (.5 - feature_batch.std(0).mean()).abs()
+loss_batch_mean = (0. - feature_batch.mean()).abs()
+</code></pre>
+<p>The three runs add these losses with factor 0.1 (green), 0.001 (orange) and 0.0 (gray).</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint.png" alt="loss plots" /></div></p>
+<p>Below are reproduced (right) samples of the orange model.</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint-001-repros.png" alt="repros" /></div></p>
+<p>and rendered to 64x64 resolution:
+<div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint-001-repros-64.png" alt="repros" /></div></p>
+<h3 id="upgrade-decoder">upgrade decoder</h3>
+<p>fixed the std/mean loss factor to 0.0001 and increased number of decoder blocks:</p>
+<pre><code>decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649
+</code></pre>
+<p>plots in x = steps (top) and relative time (bottom):
+<div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint-plus-b8.png" alt="loss plots" /></div></p>
+<p>The reproductions from the training set look good enough.
+other tiles can hardly be reproduced:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint-0001-b8-l2-repros.png" alt="repros" /></div>
+<div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint-0001-b8-l2-repros-64.png" alt="repros" /></div></p>
+<p>Some (very short) tests with different block/layer settings:</p>
+<pre><code>(cyan)    decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649 
+(yellow)  decoder_n_blk=8,  decoder_n_layer=4, decoder_n_hid=128, params: 547,841
+(brown)   decoder_n_blk=16, decoder_n_layer=1, decoder_n_hid=128, params: 285,697 
+(magenta) decoder_n_blk=16, decoder_n_layer=2, decoder_n_hid=128, params: 549,889
+</code></pre>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint-block-level-compare.png" alt="repros" /></div></p>
+<h3 id="back-to-quotrealquot-dataset">back to &quot;real&quot; dataset</h3>
+<p>The current dataset of choice for my autoencoders is a mixture of all
+the rpg tiles (about 8k, h&amp;v-flipped) and kali-set fractal patches
+(about 50k, at 128x128 randomly cropped to 32x32).</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-fullds-b8.png" alt="loss plots" /></div></p>
+<pre><code>(light green) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=300, params: 1,490,401
+(dark green)  decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=128, params: 283,649
+(cyan)        sames as dark green but on above small dataset
+</code></pre>
+<p>The light-green model above was quite unsuccessful in terms of
+image quality. It still uses 0.1 factor for std/mean-loss.
+Dark green model uses factor 0.0001 and performs a little better
+even though having less parameters. It's not getting close
+to the desirable baseline of the 300-tile dataset (cyan), though.</p>
+<p>Increasing the number of hidden cells in the decoder to 256 does
+not seem to be enough for acceptable quality:</p>
+<pre><code>(yellow) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=256, params: 1,091,585
+</code></pre>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-fullds-b8-h256.png" alt="loss plots" /></div></p>
+<p>It might get below 0.004 reconstruction loss with another 10 hours
+but i'm targeting &lt; 0.001. Stopping it.</p>
+<h3 id="2023-11-10-back-to-small-dataset">2023-11-10: back to small dataset</h3>
+<p>Changing residual logic to either add (like previous) or concat features:</p>
+<pre><code>decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=64, 
+    decoder_concat_residual=[True, False] * 4,
+    params: 3,502,785
+
+which leads to hidden sizes per block:
+    64, 128, 128, 256, 256, 512, 512, 1024
+</code></pre>
+<p>With no apparent difference within the first 80k steps (cyan)
+compared to the previous small-dataset-experiments.
+Unless it's runtime, which is just terrible:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-smallds-b8l2-64-resTF.png" alt="loss plots" /></div></p>
+<h1 id="2023-11-12-transformer-on-mnist">2023-11-12: transformer on mnist</h1>
+<p>clamped torch's TransformerEncoder/Decoder between a conv layer
+for image patches and tried a couple of parameters:</p>
+<pre><code class="language-yaml">matrix:
+  opt: [&quot;Adam&quot;]
+  lr: [0.001]
+  patch: [4, 8]
+  stride: [2, 4, 8]
+  $filter: ${stride} &lt;= ${patch}
+  l: [2, 4, 8, 12, 16]
+  head: [4, 8]
+  hid: [64, 128, 256]
+
+experiment_name: mnist/tr1_${matrix_slug}
+
+trainer: TrainAutoencoder
+
+globals:
+  SHAPE: (1, 28, 28)
+  CODE_SIZE: 28 * 28 // 10
+
+train_set: |
+  TransformDataset(
+    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),
+    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
+  )
+
+validation_set: |
+  TransformDataset(
+    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),
+    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
+  )
+
+batch_size: 64
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+
+model: |
+  from experiments.ae.transformer import *
+  
+  TransformerAutoencoder(
+      shape=SHAPE, code_size=CODE_SIZE,
+      patch_size=${patch},
+      stride=${stride},
+      num_layers=${l},
+      num_hidden=${hid},
+      num_heads=${head},
+  )
+</code></pre>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/transformer-mnist-architecture.png" alt="validation losses" /></div></p>
+<h1 id="resnet21-for-embedding--gt-imagemanifoldmodel">resnet21 for embedding -&gt; ImageManifoldModel</h1>
+<p>Autoencoder with pre-trained resnet21 (without last avgpool).</p>
+<pre><code class="language-yaml">matrix:
+  # compression ratio
+  cr: [10]
+  opt: [&quot;Adam&quot;]
+  lr: [0.001]
+
+  hid: [256]
+  # blocks
+  bl: [2]
+  # layers per block
+  lpb: [2]
+  act: [&quot;gelu&quot;]
+
+experiment_name: tests/rpg_res5_${matrix_slug}
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+globals:
+  SHAPE: (3, 32, 32)
+  CODE_SIZE: 32 * 32 // ${cr}
+
+train_set: |
+  from experiments.datasets import rpg_tile_dataset 
+  rpg_tile_dataset(SHAPE, validation=False, shuffle=True, random_shift=4, random_flip=True)
+
+freeze_validation_set: True
+validation_set: |
+  from experiments.datasets import rpg_tile_dataset 
+  rpg_tile_dataset(SHAPE, validation=True, shuffle=True, limit=500)
+
+batch_size: 64
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 1_000_000
+
+model: |
+  from src.models.encoder import resnet
+  encoder = resnet.resnet18_open(weights=torchvision.models.ResNet18_Weights.IMAGENET1K_V1)
+  with torch.no_grad():
+      out_shape = encoder(torch.empty(2, *SHAPE)).shape[-3:]
+  encoder = nn.Sequential(
+      encoder,
+      nn.Flatten(1),
+      nn.Linear(math.prod(out_shape), CODE_SIZE)
+  )
+  #for p in encoder.parameters():
+  #  p.requires_grad = False
+  
+  EncoderDecoder(
+      encoder,
+      ImageManifoldDecoder(
+          num_input_channels=CODE_SIZE,
+          num_output_channels=SHAPE[0],
+          default_shape=SHAPE[-2:],
+          num_hidden=${hid},
+          num_blocks=${bl},
+          num_layers_per_block=${lpb},
+          activation=&quot;${act}&quot;,
+      )
+  )
+</code></pre>
+<p>Increasing the <em>number of hidden cells</em>, <em>blocks</em> and <em>layers per block</em>
+did <strong>not</strong> provide a benefit on the 7k rpg tile dataset.
+All larger versions performed worse:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-rpg-size.png" alt="loss plots" /></div></p>
+<p>And, actually, it turns out that a simple 3-layer CNN (ks=3, channels=[16, 24, 32])
+as the encoder performs much better than the resnet:</p>
+<pre><code>(encoder): EncoderConv2d(
+    (convolution): Conv2dBlock(
+      (_act_fn): ReLU()
+      (layers): Sequential(
+        (0): Conv2d(3, 16, kernel_size=(3, 3), stride=(1, 1))
+        (1): ReLU()
+        (2): Conv2d(16, 24, kernel_size=(3, 3), stride=(1, 1))
+        (3): ReLU()
+        (4): Conv2d(24, 32, kernel_size=(3, 3), stride=(1, 1))
+        (5): ReLU()
+      )
+    )
+    (linear): Linear(in_features=21632, out_features=102, bias=True)
+  )
+</code></pre>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-rpg-simple-cnn.png" alt="loss plots" /></div></p>
+<h2 id="back-to-simple-cnn-encoder">back to simple CNN encoder</h2>
+<p>Everything i tried in the last couple of days is performing
+worse, e.g. changing the pos-embedding frequencies,
+using FFTs in some way and increasing the encoder params.</p>
+<p>By the way, running the tests for 1M steps (about 20 epochs
+with the current RPG tile dataset) might not be
+enough either... but i'm actually looking for methods that
+enhance performance already before 1M steps. For the sake
+of logging: </p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-rpg-7M.png" alt="loss plots" /></div></p>
+<p>The gray line is the reference with simple CNN encoder from
+above and yellow has increased the encoder channels from
+<code>(16, 24, 32)</code> to <code>(24, 32, 48)</code> which, of course!, performed
+a little worse than the smaller encoder (:questionmark:).
+Let it run for 7M steps, which is over 200 epochs
+(on a randomly flipped and pixel-shifted dataset).
+It went <strong>below 0.04</strong> l1 validation loss, but this is still bad:</p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-rpg-7M-repros.png" alt="repros" /></div></p>
+<p>The idea behind using the implicit generation is to be
+able to increase the resolution, but if it already looks
+blurry in the original resolution...</p>
+
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../index.html">
+                        &lt;&lt; Home
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+                <a href="../../../html/logs/mnist.html">
+                    Autoencoder training on MNIST dataset $gt;$gt;
+                </a>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

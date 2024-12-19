@@ -1,0 +1,147 @@
+$screen-small: 1000px;
+
+$sidebar-width: 20rem;
+
+$color-font: #000;
+$color-back: #fff;
+$color-back-hover: #ebebeb;
+$color-border: #bababa;
+$color-link: #0d0dee;
+$color-link-hover: #1010f0;
+$color-link-visited: #00e;
+$color-code: #000;
+$color-code-back: #eee;
+@media (prefers-color-scheme: dark) {
+  $color-font: #ddd;
+  $color-back: #222;
+  $color-back-hover: #3a3a3a;
+  $color-border: #5c5c5c;
+  $color-link: #899ef1;
+  $color-link-hover: #8db8fa;
+  $color-link-visited: #5a78ef;
+  $color-code: #fff;
+  $color-code-back: #191919;
+}
+
+
+html {
+  font-family: sans-serif;
+  background: $color-back;
+  color: $color-font;
+}
+
+a {
+  color: $color-link;
+  &:visited { color: $color-link-visited; }
+  &:hover { color: $color-link-hover; }
+}
+
+pre {
+  background: $color-code-back;
+  color: $color-code;
+}
+
+
+h1, h2, h3, h4 {
+  margin-top: 2rem;
+}
+
+
+table {
+  // font-family: monospace;
+  border: 1px solid $color-border;
+
+  td, th {
+    padding: .25rem;
+    vertical-align: top;
+  }
+  tbody {
+    tr {
+      &:hover { background: $color-back-hover; }
+    }
+    td {
+
+    }
+  }
+}
+
+.flex {
+  display: flex;
+  flex-direction: row;
+  &.wrap {
+    flex-wrap: wrap;
+  }
+  .flex-grow {
+    flex-grow: 10;
+  }
+}
+
+li {
+  &.indent-1 { margin-left: .5rem; }
+  &.indent-2 { margin-left: 1rem; }
+  &.indent-3 { margin-left: 1.5rem; }
+}
+
+.show-when-small {
+  display: none;
+  @media (max-width: $screen-small) { display: unset; }
+}
+
+main.article {
+
+  .article-left {
+    width: $sidebar-width;
+    @media (max-width: $screen-small) { display: none; }
+    position: fixed;
+    top: 0;
+  }
+
+  .article-mid {
+    padding-left: $sidebar-width;
+    width: 70%;
+    max-width: 1800px;
+    @media (max-width: $screen-small) { max-width: 95%; padding-left: 0; }
+
+    .article-footer {
+      margin: 3rem 0;
+    }
+
+    img {
+      overflow: scroll;
+      max-width: 100%;
+    }
+
+  }
+
+}
+
+main.index {
+  text-align: center;
+
+  .index-wrapper {
+    max-width: 70%;
+    @media (max-width: $screen-small) {
+      max-width: 95%;
+    }
+    margin: 0 auto;
+  }
+
+  .article-list {
+    .article-item {
+      margin-bottom: 2rem;
+
+      .date {
+        font-size: 120%;
+      }
+
+      .link {
+        font-size: 150%;
+        color: $color-font;
+      }
+
+      .teaser {
+        //max-width: 70%;
+      }
+    }
+  }
+}

@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Parameter tuning for a Residual Deep Image-to-Image CNN</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#parameter-tuning-for-a-residual-deep-image-to-image-cnn" title="Parameter tuning for a Residual Deep Image-to-Image CNN">Parameter tuning for a Residual Deep Image-to-Image CNN</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#compare-number-of-layers" title="Compare number of layers">Compare number of layers</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#compare-residual-weight-factor" title="Compare residual weight factor">Compare residual weight factor</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#compare-position-of-batch-normalization" title="Compare position of batch normalization?">Compare position of batch normalization?</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#compare-activation-function" title="Compare activation function">Compare activation function</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#compare-channel-size" title="Compare channel size">Compare channel size</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#compare-kernel-size" title="Compare kernel size">Compare kernel size</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="parameter-tuning-for-a-residual-deep-image-to-image-cnn">Parameter tuning for a Residual Deep Image-to-Image CNN</h1>
+<p>This network design has the following features:</p>
+<ul>
+<li>simple and repetitive, makes programmer's life less troublesome</li>
+<li>supports any image size (above a certain threshold): put one image in, get the same size out</li>
+<li>supports the all-famous <em>deep</em>-ness, e.g. the training gradient does not vanish
+after a lot of layers - and we all believe that many layers are good</li>
+</ul>
+<p>Since this is a logbook, i might as well write down how the idea came along.
+I was working like a mad person on a
+<a href="https://github.com/defgsus/nn-experiments/blob/master/src/clipig">new CLIPig implementation</a>,
+using OpenAI's <a href="https://github.com/openai/clip">CLIP</a> network to massage
+a mess of pixels into something matching a text prompt and looking good.
+There are much
+cooler things out there, my personal favorite being Stable Diffusion,
+but none of them can be put on my graphics card. So to wrap it short,
+i'm developing image generation tools that run on a, nowadays, average
+graphics card with 6 GB of VRAM. For artistic reasons, i was interested
+in some form of noise reduction to make the rendered images look more
+pleasing and started with this simple design. </p>
+<p>While network trainings were running, i searched through<br />
+<a href="https://arxiv.org">arxiv.org</a> for image de-noising, quickly limiting
+results to before 2017, because i really don't understand all this
+Diffusion stuff and its all high computational effort.</p>
+<p>Found this paper: <a href="https://arxiv.org/pdf/1612.03268.pdf">&quot;Generalized Deep Image to Image Regression&quot;</a>
+which describes a <em>recursive branching</em> design
+and subsequently made a little <a href="https://github.com/defgsus/nn-experiments/blob/master/src/models/img2img/rbdn.py">implementation</a>.
+It works quite nice but is mostly too slow for my taste, also i don't like
+the max-pooling layers for generative networks. After some playing around
+with it i came back to the simpler CNNs but remembered a few of the
+ideas and ways of thinking from the above and other papers.</p>
+<p>Now that i have written most of the content below, i make a pause and
+will read
+<a href="https://arxiv.org/abs/1606.08921">Image Restoration Using Convolutional Auto-encoders with Symmetric Skip Connections</a>
+which seems to do the exact thing.</p>
+<p>--</p>
+<p>This simple CNN is composed of an encoder and a decoder, while the decoder is
+the reverse of the encoder. The layout is (in pytorch style):</p>
+<pre><code>ResConv(
+  (encoder): ModuleDict(
+    (layer_1): ConvLayer(
+      (bn): BatchNorm2d(1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (act): GELU(approximate=&#x27;none&#x27;)
+    )
+    (layer_...): ConvLayer(
+      (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (act): GELU(approximate=&#x27;none&#x27;)
+    )
+  )
+  (decoder): ModuleDict(
+    (layer_...): ConvLayer(
+      (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv): ConvTranspose2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (act): GELU(approximate=&#x27;none&#x27;)
+    )
+    (layer_15): ConvLayer(
+      (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv): ConvTranspose2d(32, 1, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (act): Sigmoid()
+    )
+  )
+)
+</code></pre>
+<p>In the forward pass each encoder layer stores it's result which is later
+added to the input of the inverse decoder layer. In the example above, result
+of <code>layer_1</code> is added to the output of <code>layer_14</code> which is the input of <code>layer_15</code>.</p>
+<p>I think this is basically a U-NET. In any case, we can add as much layers as we
+want, while still being able to train the network. The residual connections
+will propagate the gradients through the whole thing, while demanding tasks
+will utilize the deeper layers because they have a larger <em>receptive field</em>.
+For a little discussion of the receptive field, please check
+<a href="https://arxiv.org/abs/1608.03981">Beyond a Gaussian Denoiser: Residual Learning of Deep CNN for Image Denoising (Zhang et al)</a>.</p>
+<p>All experiments, unless noted otherwise, </p>
+<ul>
+<li>do 3 epochs (3 runs through the 60,000 training images)</li>
+<li>
+use <code>AdamW</code> optimizer <ul>
+<li>with default deltas 0.9, 0.999</li>
+<li>learn rate of 0.0003</li>
+</ul>
+</li>
+<li>use <code>CosineAnnealingLR</code> scheduler (that decreases learn rate to zero using a 1/4 cosine curve over the full run)</li>
+<li>a mini batch size of 64</li>
+<li>use Mean Absolute Error (l1) between output and target image as the loss function
+(The l2 or Mean Squared Error loss is much more common but i personally find the l1 numbers more readable)</li>
+</ul>
+<p>To evaluate the abilities of the network, it's trained to
+<strong>restore the deleted top, bottom, left or right half of an image</strong>.
+In this case, zalando's beloved
+<a href="https://arxiv.org/abs/1708.07747">Fashion-MNIST</a> dataset,
+scaled to 32x32 pixels (<a href="./2023-11-16-autoencoder-experiments.md#take-care-of-the-choice-of-interpolation">without interpolation</a>).</p>
+<p>It's not completely ridiculous to expect the network to make up a complete half
+since the images are all nicely centered and contain more or less the same
+stuff (shirts, jackets, shoes, bags...).</p>
+<p>Here are two examples (from the worst (first image) and the best network
+of the following experiment). Odd rows show the network input and even rows
+the reconstruction from the network.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th>worst</th>
+<th>best</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/resconv-halfcrop-fmnist-worst.png" alt="worst example" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../../logs/img/resconv-halfcrop-fmnist-best.png" alt="best example" /></div></td>
+</tr>
+</tbody></table></div><p>The first network only has one layer (one convolution and one de-convolution),
+so it's receptive field is only 3x3 pixels (that of the one convolutional kernel).
+It is therefore not able to generate the other half of the image.</p>
+<h2 id="compare-number-of-layers">Compare number of layers</h2>
+<p>Comparing the performance of the number of layers.</p>
+<p>experiment file: <a href="https://github.com/defgsus/nn-experiments/blob/1a74872040ad1062ee2a5f4a46f949b22aa8f08c/experiments/denoise/resconv-test.yml">experiments/denoise/resconv-test.yml @ 1a748720...</a></p>
+<p><div style="overflow: scroll;"><img src="../../../logs/img/resconv-halfcrop-fmnist-compare-layers.png" alt="training loss plots" /></div></p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">layers</th>
+<th align="right">ks</th>
+<th align="right">ch</th>
+<th align="right">stride</th>
+<th align="right">pad</th>
+<th align="left">act</th>
+<th align="right">validation loss</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">15</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.054141</td>
+<td align="right">261,411</td>
+<td align="right">4.17</td>
+</tr>
+<tr>
+<td align="right">19</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.054439</td>
+<td align="right">335,907</td>
+<td align="right">5.43</td>
+</tr>
+<tr>
+<td align="right">13</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.054911</td>
+<td align="right">224,163</td>
+<td align="right">3.39</td>
+</tr>
+<tr>
+<td align="right">21</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.055190</td>
+<td align="right">373,155</td>
+<td align="right">5.98</td>
+</tr>
+<tr>
+<td align="right">17</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.055413</td>
+<td align="right">298,659</td>
+<td align="right">4.74</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.057229</td>
+<td align="right">186,915</td>
+<td align="right">3.02</td>
+</tr>
+<tr>
+<td align="right">9</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.061094</td>
+<td align="right">149,667</td>
+<td align="right">2.43</td>
+</tr>
+<tr>
+<td align="right">7</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.070167</td>
+<td align="right">112,419</td>
+<td align="right">1.87</td>
+</tr>
+<tr>
+<td align="right">5</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.079709</td>
+<td align="right">75,171</td>
+<td align="right">1.30</td>
+</tr>
+<tr>
+<td align="right">3</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.102242</td>
+<td align="right">37,923</td>
+<td align="right">0.78</td>
+</tr>
+<tr>
+<td align="right">2</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.124805</td>
+<td align="right">19,299</td>
+<td align="right">0.52</td>
+</tr>
+<tr>
+<td align="right">1</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.164834</td>
+<td align="right">675</td>
+<td align="right">0.36</td>
+</tr>
+</tbody></table></div><p>It's really nice to see such a distinguished parameter-performance scaling, once in a while.
+From 1 to 11 layers, performance increases steadily, then it get's a bit mixed-up.
+Most likely, 11 layers archive a receptive field that includes the whole input patch
+of 32x32. It's <em>kind of</em> proving that the deep layers are used despite the
+residual skip connections.</p>
+<p>I'm not very patient in these regards, but i ran the same experiment on
+64x64 images. Note that the computation time is drastically increased.
+Because of the <code>padding</code> of 1, each layer processes a full 64x64 block on
+32 channels. </p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">layer</th>
+<th align="right">ks</th>
+<th align="right">ch</th>
+<th align="right">stride</th>
+<th align="right">pad</th>
+<th align="left">act</th>
+<th align="right">validation loss</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">21</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0610384</td>
+<td align="right">373,155</td>
+<td align="right">25.13</td>
+</tr>
+<tr>
+<td align="right">30</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0646240</td>
+<td align="right">540,771</td>
+<td align="right">35.27</td>
+</tr>
+<tr>
+<td align="right">17</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0652571</td>
+<td align="right">298,659</td>
+<td align="right">19.57</td>
+</tr>
+<tr>
+<td align="right">19</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0661678</td>
+<td align="right">335,907</td>
+<td align="right">19.95</td>
+</tr>
+<tr>
+<td align="right">15</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0694179</td>
+<td align="right">261,411</td>
+<td align="right">17.27</td>
+</tr>
+<tr>
+<td align="right">13</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0728544</td>
+<td align="right">224,163</td>
+<td align="right">22.02</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0752024</td>
+<td align="right">186,915</td>
+<td align="right">18.75</td>
+</tr>
+<tr>
+<td align="right">9</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0809892</td>
+<td align="right">149,667</td>
+<td align="right">15.87</td>
+</tr>
+<tr>
+<td align="right">7</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0889331</td>
+<td align="right">112,419</td>
+<td align="right">11.31</td>
+</tr>
+<tr>
+<td align="right">5</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.1045170</td>
+<td align="right">75,171</td>
+<td align="right">7.49</td>
+</tr>
+<tr>
+<td align="right">3</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.1328610</td>
+<td align="right">37,923</td>
+<td align="right">3.79</td>
+</tr>
+<tr>
+<td align="right">1</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.1641830</td>
+<td align="right">675</td>
+<td align="right">0.47</td>
+</tr>
+</tbody></table></div><p>The steady increase in precision per extra layer is a bit better than
+with the 32x32 images, although it's not much.</p>
+<p><strong>Note</strong> that the 21-layer network has about the same validation loss as
+the 9-layer network for 32x32 images. Another <em>provy</em> incidence that the
+number of layers directly relates to the <em>receptive field size</em>.
+The 3x3 kernel CNN needs about 20 layers to see an area of about 40x40 pixels.</p>
+<p>However, the 30 layer network does not improve performance. I'm currently unable
+to explain that. It could be related to the
+<a href="#compare-residual-weight-factor">residual weight factor</a>
+of <strong>0.1</strong> that i used up until the next experiment.</p>
+<p>Anyway, it's actually quite interesting how a network with only a few hundred
+thousand parameters can be so slow. And memory hungry. And my laptop is
+starting to burn through my lap. The 30 layer version runs with less than
+a 100 inputs/sec, which is just terrible to bear (Not only because i'm
+inpatient but also because the task is purely academic and the input images
+are scaled from 28x28 to 64x64, so it's a waste of computation). Also
+the batch size needed to be reduced for 21 and 30 layer network training
+to make it fit in my available 6GB GPU RAM. </p>
+<p>For comparing the following parameters i will use the 11 layer network
+on the original FMNIST resolution of 28x28 pixels:</p>
+<h2 id="compare-residual-weight-factor">Compare residual weight factor</h2>
+<p>Should one scale the residual signal that comes from the encoder layers
+before adding it to the decoder layer input? It's denoted <code>RWF</code> in the
+following expression and experimental results.</p>
+<pre><code>dec-layer input N = dec-layer output N-1 + RWF * enc-layer-output -N 
+</code></pre>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">l</th>
+<th align="right">RWF</th>
+<th align="right">ks</th>
+<th align="right">ch</th>
+<th align="right">stride</th>
+<th align="right">pad</th>
+<th align="left">act</th>
+<th align="right">validation loss</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">11</td>
+<td align="right">1.00</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0537689</td>
+<td align="right">186,915</td>
+<td align="right">2.38</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">0.50</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0539687</td>
+<td align="right">186,915</td>
+<td align="right">2.33</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">2.00</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0557501</td>
+<td align="right">186,915</td>
+<td align="right">2.38</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">0.05</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0560915</td>
+<td align="right">186,915</td>
+<td align="right">2.26</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">0.10</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0568670</td>
+<td align="right">186,915</td>
+<td align="right">2.29</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">0.01</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0595923</td>
+<td align="right">186,915</td>
+<td align="right">2.13</td>
+</tr>
+</tbody></table></div><p>It seems like: <strong>no</strong>, don't do it. Just keep it at <strong>1.0</strong>.</p>
+<h2 id="compare-position-of-batch-normalization">Compare position of batch normalization?</h2>
+<p>In each layer, the batch norm was placed at the first position, more
+out of my intuition than actual knowledge.</p>
+<pre><code>ConvLayer(
+  (bn): BatchNorm2d(1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (conv): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (act): GELU(approximate=&#x27;none&#x27;)
+)
+</code></pre>
+<p>It could be placed as well after the convolution:</p>
+<pre><code>ConvLayer(
+  (conv): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (act): GELU(approximate=&#x27;none&#x27;)
+)
+</code></pre>
+<p>or after the activation function</p>
+<pre><code>ConvLayer(
+  (conv): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (act): GELU(approximate=&#x27;none&#x27;)
+  (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+)
+</code></pre>
+<p>The following table lists the results for the different
+batch-norm positions (<code>bnp</code>), separately for encoder (<code>bnp-e</code>)
+and decoder (<code>bnp-d</code>). </p>
+<ul>
+<li><code>0</code> is before convolution</li>
+<li><code>1</code> is after convolution</li>
+<li><code>2</code> is after the activation</li>
+<li><code>-</code> means no batch normalization </li>
+</ul>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">l</th>
+<th align="right">ks</th>
+<th align="right">ch</th>
+<th align="right">stride</th>
+<th align="right">pad</th>
+<th align="left">act</th>
+<th align="right">bnp-e</th>
+<th align="right">bnp-d</th>
+<th align="right">validation loss</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0.0509118</td>
+<td align="right">186,787</td>
+<td align="right">2.07</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.0509330</td>
+<td align="right">186,787</td>
+<td align="right">2.22</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">0.0523070</td>
+<td align="right">186,849</td>
+<td align="right">2.31</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">0.0524035</td>
+<td align="right">186,849</td>
+<td align="right">2.32</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0</td>
+<td align="right">2</td>
+<td align="right">0.0533116</td>
+<td align="right">186,787</td>
+<td align="right">2.25</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">1</td>
+<td align="right">2</td>
+<td align="right">0.0537457</td>
+<td align="right">186,849</td>
+<td align="right">2.32</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">2</td>
+<td align="right">1</td>
+<td align="right">0.0544390</td>
+<td align="right">186,849</td>
+<td align="right">2.33</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">-</td>
+<td align="right">0</td>
+<td align="right">0.0547576</td>
+<td align="right">186,209</td>
+<td align="right">2.22</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">2</td>
+<td align="right">2</td>
+<td align="right">0.0548645</td>
+<td align="right">186,849</td>
+<td align="right">2.33</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">-</td>
+<td align="right">1</td>
+<td align="right">0.0550985</td>
+<td align="right">186,209</td>
+<td align="right">2.21</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">2</td>
+<td align="right">0</td>
+<td align="right">0.0552446</td>
+<td align="right">186,849</td>
+<td align="right">2.33</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0</td>
+<td align="right">-</td>
+<td align="right">0.0559730</td>
+<td align="right">186,147</td>
+<td align="right">2.17</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">1</td>
+<td align="right">-</td>
+<td align="right">0.0576676</td>
+<td align="right">186,209</td>
+<td align="right">2.22</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">2</td>
+<td align="right">-</td>
+<td align="right">0.0577886</td>
+<td align="right">186,209</td>
+<td align="right">2.22</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">-</td>
+<td align="right">2</td>
+<td align="right">0.0587750</td>
+<td align="right">186,209</td>
+<td align="right">2.21</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">-</td>
+<td align="right">-</td>
+<td align="right">0.1163260</td>
+<td align="right">185,569</td>
+<td align="right">2.10</td>
+</tr>
+</tbody></table></div><p><strong>Note</strong> that the best validation loss is actually better than in previous
+runs. After some tests, not shown here, the batch normalization
+was <strong>removed from the final encoder and decoder layers</strong>.</p>
+<h2 id="compare-activation-function">Compare activation function</h2>
+<p>Let's take all the good parts from before and compare the standard
+activation functions <a href="https://pytorch.org/docs/stable/nn.html#non-linear-activations-weighted-sum-nonlinearity">available in pytorch</a>.
+However, the final decoder layer is always using the <code>Sigmoid</code> activation
+because everybody knows it's a good activation for generating images
+(everything is scaled to [0, 1] range).</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">l</th>
+<th align="right">ks</th>
+<th align="right">ch</th>
+<th align="right">stride</th>
+<th align="right">pad</th>
+<th align="left">act</th>
+<th align="right">validation loss</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">Mish</td>
+<td align="right">0.0512072</td>
+<td align="right">186,787</td>
+<td align="right">2.52</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">GELU</td>
+<td align="right">0.0512259</td>
+<td align="right">186,787</td>
+<td align="right">2.29</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">SiLU</td>
+<td align="right">0.0514479</td>
+<td align="right">186,787</td>
+<td align="right">2.46</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">Hardswish</td>
+<td align="right">0.0515750</td>
+<td align="right">186,787</td>
+<td align="right">2.42</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">LeakyReLU</td>
+<td align="right">0.0522968</td>
+<td align="right">186,787</td>
+<td align="right">2.36</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">ReLU6</td>
+<td align="right">0.0524871</td>
+<td align="right">186,787</td>
+<td align="right">2.42</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">ReLU</td>
+<td align="right">0.0530411</td>
+<td align="right">186,787</td>
+<td align="right">2.42</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">PReLU</td>
+<td align="right">0.0533523</td>
+<td align="right">186,807</td>
+<td align="right">2.59</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">Softplus</td>
+<td align="right">0.0544980</td>
+<td align="right">186,787</td>
+<td align="right">2.42</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">LogSigmoid</td>
+<td align="right">0.0547575</td>
+<td align="right">186,787</td>
+<td align="right">2.54</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">CELU</td>
+<td align="right">0.0551080</td>
+<td align="right">186,787</td>
+<td align="right">2.10</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">Tanh</td>
+<td align="right">0.0562118</td>
+<td align="right">186,787</td>
+<td align="right">2.36</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">RReLU</td>
+<td align="right">0.0566449</td>
+<td align="right">186,787</td>
+<td align="right">2.45</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">Hardtanh</td>
+<td align="right">0.0570635</td>
+<td align="right">186,787</td>
+<td align="right">2.47</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">Softsign</td>
+<td align="right">0.0571498</td>
+<td align="right">186,787</td>
+<td align="right">2.95</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">SELU</td>
+<td align="right">0.0601167</td>
+<td align="right">186,787</td>
+<td align="right">2.47</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">Sigmoid</td>
+<td align="right">0.0610033</td>
+<td align="right">186,787</td>
+<td align="right">2.44</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">Hardsigmoid</td>
+<td align="right">0.0647689</td>
+<td align="right">186,787</td>
+<td align="right">2.43</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">Softshrink</td>
+<td align="right">0.0805768</td>
+<td align="right">186,787</td>
+<td align="right">2.34</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">Hardshrink</td>
+<td align="right">0.0974769</td>
+<td align="right">186,787</td>
+<td align="right">2.24</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">Tanhshrink</td>
+<td align="right">0.1122510</td>
+<td align="right">186,787</td>
+<td align="right">2.60</td>
+</tr>
+</tbody></table></div><p>Sometimes i wonder why there are so many activation functions when most
+of the time, the same ones perform best. Anyway, this result is slightly
+different to my <a href="./2023-11-12-mnist.md#varying-activation-function">MNIST classification results</a>
+but as usual, you are good to choose either
+<a href="https://pytorch.org/docs/stable/generated/torch.nn.GELU.html">GELU</a>,
+one of the <a href="https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html">ReLU</a>
+variants or, as it turns out, the
+<a href="https://pytorch.org/docs/stable/generated/torch.nn.Mish.html#torch.nn.Mish">MISH</a>
+activation.</p>
+<h2 id="compare-channel-size">Compare channel size</h2>
+<p>Currently all <em>hidden</em> convolutions have had 32 channels. In this experiment,
+i will test 16, 32, 64 and 128 channels, but also vary the channel size
+along the 11 layers.</p>
+<p>For example <code>ch1 = 16</code> and <code>ch2 = 128</code> means, the encoder uses 16
+channels for the first layer and linearly increases the number to
+128 for the final layer. The decoder always has the reverse channel count,
+to make the skip connections fit.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">l</th>
+<th align="right">ks</th>
+<th align="right">ch1</th>
+<th align="right">ch2</th>
+<th align="right">stride</th>
+<th align="right">pad</th>
+<th align="left">act</th>
+<th align="right">validation loss</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">128</td>
+<td align="right">128</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0443586</td>
+<td align="right">2,958,979</td>
+<td align="right">10.66</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">128</td>
+<td align="right">64</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0443985</td>
+<td align="right">1,712,091</td>
+<td align="right">8.83</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">128</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0448816</td>
+<td align="right">1,280,341</td>
+<td align="right">7.01</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">128</td>
+<td align="right">16</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0449165</td>
+<td align="right">1,109,285</td>
+<td align="right">6.30</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">64</td>
+<td align="right">128</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0450236</td>
+<td align="right">1,710,773</td>
+<td align="right">8.64</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">64</td>
+<td align="right">64</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0459730</td>
+<td align="right">742,211</td>
+<td align="right">4.15</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">128</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0469918</td>
+<td align="right">1,278,363</td>
+<td align="right">7.08</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">16</td>
+<td align="right">128</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0483264</td>
+<td align="right">1,106,979</td>
+<td align="right">6.40</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">64</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0485725</td>
+<td align="right">426,357</td>
+<td align="right">3.48</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">64</td>
+<td align="right">16</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0487565</td>
+<td align="right">319,347</td>
+<td align="right">3.03</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">64</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0488293</td>
+<td align="right">425,699</td>
+<td align="right">3.62</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0512699</td>
+<td align="right">186,787</td>
+<td align="right">2.48</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">16</td>
+<td align="right">64</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0515703</td>
+<td align="right">318,357</td>
+<td align="right">3.03</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">16</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0539735</td>
+<td align="right">105,925</td>
+<td align="right">2.06</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">16</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0546895</td>
+<td align="right">105,595</td>
+<td align="right">1.88</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">16</td>
+<td align="right">16</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0587657</td>
+<td align="right">47,315</td>
+<td align="right">1.39</td>
+</tr>
+</tbody></table></div><p>What can be learned from it?</p>
+<ul>
+<li>more channels (at least up until 64) improve performance (without considering the computational cost).</li>
+<li>increased channel count is more important for the first shallow layers than the later deep layers</li>
+<li>the difference in archived training loss between 64 and 128 channels is at the 4th digit after the comma,
+so not really worth considering given the extra amount of required compute.</li>
+</ul>
+<h2 id="compare-kernel-size">Compare kernel size</h2>
+<p>Out of old-fashionedness only odd kernel sizes are considered. For a fair comparison, the padding is
+adjusted to the individual kernel sizes such that each layer still processes the same spatial block (28x28).</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">l</th>
+<th align="right">ks</th>
+<th align="right">ch</th>
+<th align="right">stride</th>
+<th align="right">pad</th>
+<th align="left">act</th>
+<th align="right">validation loss</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">11</td>
+<td align="right">5</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">2</td>
+<td align="left">gelu</td>
+<td align="right">0.0466142</td>
+<td align="right">515,491</td>
+<td align="right">2.10</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">7</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">3</td>
+<td align="left">gelu</td>
+<td align="right">0.0468494</td>
+<td align="right">1,008,547</td>
+<td align="right">5.12</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">9</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">4</td>
+<td align="left">gelu</td>
+<td align="right">0.0486901</td>
+<td align="right">1,665,955</td>
+<td align="right">7.29</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">11</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">5</td>
+<td align="left">gelu</td>
+<td align="right">0.0501364</td>
+<td align="right">2,487,715</td>
+<td align="right">9.44</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0513643</td>
+<td align="right">186,787</td>
+<td align="right">2.16</td>
+</tr>
+</tbody></table></div><p>Wow, there is a significant perfomance jump from 3 to 5, <strong>and</strong> the 5x5 kernel seems to run equally or
+even faster on my hardware/lib/driver setup. It is very likely, though, that the performance of the
+kernel size must be re-evaluated for each particular task.</p>
+<p>Similar to the channel size abve , the kernel size is varied layer-wise in the following experiment.
+The top performing network with <code>ks1=3</code> and <code>ks2=9</code>, for example, has the following kernel sizes:</p>
+<pre><code>[3, 3, 5, 5, 5, 7, 7, 7, 7, 9, 9]
+</code></pre>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">l</th>
+<th align="right">ks1</th>
+<th align="right">ks2</th>
+<th align="right">ch</th>
+<th align="right">stride</th>
+<th align="left">act</th>
+<th align="right">validation loss</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">9</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0434004</td>
+<td align="right">907,683</td>
+<td align="right">4.37</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">11</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0435886</td>
+<td align="right">1,251,747</td>
+<td align="right">5.57</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">7</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0449416</td>
+<td align="right">596,387</td>
+<td align="right">3.02</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">5</td>
+<td align="right">9</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0454906</td>
+<td align="right">1,105,315</td>
+<td align="right">5.33</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">5</td>
+<td align="right">7</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0461697</td>
+<td align="right">810,403</td>
+<td align="right">4.09</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">5</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0462298</td>
+<td align="right">383,395</td>
+<td align="right">2.15</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">5</td>
+<td align="right">11</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0462772</td>
+<td align="right">1,514,915</td>
+<td align="right">6.67</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">5</td>
+<td align="right">5</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0467664</td>
+<td align="right">515,491</td>
+<td align="right">2.19</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">7</td>
+<td align="right">7</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0469873</td>
+<td align="right">1,008,547</td>
+<td align="right">5.43</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">7</td>
+<td align="right">9</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0474498</td>
+<td align="right">1,401,763</td>
+<td align="right">6.58</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">7</td>
+<td align="right">5</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0478909</td>
+<td align="right">762,787</td>
+<td align="right">3.79</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">7</td>
+<td align="right">11</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0482104</td>
+<td align="right">1,778,595</td>
+<td align="right">7.66</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">7</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0482650</td>
+<td align="right">517,027</td>
+<td align="right">2.97</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">9</td>
+<td align="right">9</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0483184</td>
+<td align="right">1,665,955</td>
+<td align="right">7.72</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">9</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0486722</td>
+<td align="right">764,835</td>
+<td align="right">4.13</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">5</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0486834</td>
+<td align="right">351,651</td>
+<td align="right">2.35</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">9</td>
+<td align="right">5</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0487206</td>
+<td align="right">994,211</td>
+<td align="right">4.92</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">9</td>
+<td align="right">7</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0488068</td>
+<td align="right">1,338,275</td>
+<td align="right">6.61</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">9</td>
+<td align="right">11</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0488103</td>
+<td align="right">2,157,475</td>
+<td align="right">8.94</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">11</td>
+<td align="right">11</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0495152</td>
+<td align="right">2,487,715</td>
+<td align="right">9.59</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">11</td>
+<td align="right">7</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0497081</td>
+<td align="right">1,635,747</td>
+<td align="right">7.20</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">11</td>
+<td align="right">5</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0499655</td>
+<td align="right">1,324,451</td>
+<td align="right">6.13</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0499719</td>
+<td align="right">1,029,539</td>
+<td align="right">5.21</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">11</td>
+<td align="right">9</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0500542</td>
+<td align="right">2,078,115</td>
+<td align="right">8.58</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td align="right">3</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0512497</td>
+<td align="right">186,787</td>
+<td align="right">2.11</td>
+</tr>
+</tbody></table></div><p>Wow, our little 3x3 kernel friend, that was used all the time, has the worst
+performance again. Also the 5x5 from the above experiment is surpassed.
+Generally, one can see: Small kernel size in shallow layers and larger kernel
+size in deeper layers is a good thing.</p>
+<p>TODO: </p>
+<ul>
+<li>
+compare <ul>
+<li>conv groups</li>
+</ul>
+</li>
+</ul>
+
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a href="https://github.com/defgsus/nn-experiments/blob/master/docs/">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../html/logs/lm-gen.html">
+                        &lt;&lt; text generation with <code>microsoft/phi-2</code>
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+                <a href="../../../html/logs/deep-compression-ae.html">
+                    Deep-Compression Auto-Encoder $gt;$gt;
+                </a>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>
