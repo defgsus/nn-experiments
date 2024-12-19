@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>&quot;implicit neural representation&quot;</title>
     <meta name="description" content="" />
-    <link rel="stylesheet" href="../../../html/style/style.css">
+    <link rel="stylesheet" href="../../html/style/style.css">
     
 </head>
 <body>
@@ -13,7 +13,7 @@
 
 <main class="article">
     <div class="article-left">
-        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <h3><a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         <ul>
             
             
@@ -50,7 +50,7 @@
     <div class="article-mid">
 
         <div class="show-when-small">
-            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+            <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
         <h1 id="quotimplicit-neural-representationquot">&quot;implicit neural representation&quot;</h1>
@@ -81,33 +81,33 @@ batch-normalization and residual skip connections per block.</p>
 loss_batch_mean = (0. - feature_batch.mean()).abs()
 </code></pre>
 <p>The three runs add these losses with factor 0.1 (green), 0.001 (orange) and 0.0 (gray).</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint.png" alt="loss plots" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint.png" alt="loss plots" /></div></p>
 <p>Below are reproduced (right) samples of the orange model.</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint-001-repros.png" alt="repros" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-001-repros.png" alt="repros" /></div></p>
 <p>and rendered to 64x64 resolution:
-<div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint-001-repros-64.png" alt="repros" /></div></p>
+<div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-001-repros-64.png" alt="repros" /></div></p>
 <h3 id="upgrade-decoder">upgrade decoder</h3>
 <p>fixed the std/mean loss factor to 0.0001 and increased number of decoder blocks:</p>
 <pre><code>decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649
 </code></pre>
 <p>plots in x = steps (top) and relative time (bottom):
-<div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint-plus-b8.png" alt="loss plots" /></div></p>
+<div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-plus-b8.png" alt="loss plots" /></div></p>
 <p>The reproductions from the training set look good enough.
 other tiles can hardly be reproduced:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint-0001-b8-l2-repros.png" alt="repros" /></div>
-<div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint-0001-b8-l2-repros-64.png" alt="repros" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-0001-b8-l2-repros.png" alt="repros" /></div>
+<div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-0001-b8-l2-repros-64.png" alt="repros" /></div></p>
 <p>Some (very short) tests with different block/layer settings:</p>
 <pre><code>(cyan)    decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649 
 (yellow)  decoder_n_blk=8,  decoder_n_layer=4, decoder_n_hid=128, params: 547,841
 (brown)   decoder_n_blk=16, decoder_n_layer=1, decoder_n_hid=128, params: 285,697 
 (magenta) decoder_n_blk=16, decoder_n_layer=2, decoder_n_hid=128, params: 549,889
 </code></pre>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-std-constraint-block-level-compare.png" alt="repros" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-block-level-compare.png" alt="repros" /></div></p>
 <h3 id="back-to-quotrealquot-dataset">back to &quot;real&quot; dataset</h3>
 <p>The current dataset of choice for my autoencoders is a mixture of all
 the rpg tiles (about 8k, h&amp;v-flipped) and kali-set fractal patches
 (about 50k, at 128x128 randomly cropped to 32x32).</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-fullds-b8.png" alt="loss plots" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-fullds-b8.png" alt="loss plots" /></div></p>
 <pre><code>(light green) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=300, params: 1,490,401
 (dark green)  decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=128, params: 283,649
 (cyan)        sames as dark green but on above small dataset
@@ -121,7 +121,7 @@ to the desirable baseline of the 300-tile dataset (cyan), though.</p>
 not seem to be enough for acceptable quality:</p>
 <pre><code>(yellow) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=256, params: 1,091,585
 </code></pre>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-fullds-b8-h256.png" alt="loss plots" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-fullds-b8-h256.png" alt="loss plots" /></div></p>
 <p>It might get below 0.004 reconstruction loss with another 10 hours
 but i'm targeting &lt; 0.001. Stopping it.</p>
 <h3 id="2023-11-10-back-to-small-dataset">2023-11-10: back to small dataset</h3>
@@ -136,7 +136,7 @@ which leads to hidden sizes per block:
 <p>With no apparent difference within the first 80k steps (cyan)
 compared to the previous small-dataset-experiments.
 Unless it's runtime, which is just terrible:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-smallds-b8l2-64-resTF.png" alt="loss plots" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-smallds-b8l2-64-resTF.png" alt="loss plots" /></div></p>
 <h1 id="2023-11-12-transformer-on-mnist">2023-11-12: transformer on mnist</h1>
 <p>clamped torch's TransformerEncoder/Decoder between a conv layer
 for image patches and tried a couple of parameters:</p>
@@ -189,7 +189,7 @@ model: |
       num_heads=${head},
   )
 </code></pre>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/transformer-mnist-architecture.png" alt="validation losses" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/transformer-mnist-architecture.png" alt="validation losses" /></div></p>
 <h1 id="resnet21-for-embedding--gt-imagemanifoldmodel">resnet21 for embedding -&gt; ImageManifoldModel</h1>
 <p>Autoencoder with pre-trained resnet21 (without last avgpool).</p>
 <pre><code class="language-yaml">matrix:
@@ -258,7 +258,7 @@ model: |
 <p>Increasing the <em>number of hidden cells</em>, <em>blocks</em> and <em>layers per block</em>
 did <strong>not</strong> provide a benefit on the 7k rpg tile dataset.
 All larger versions performed worse:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-rpg-size.png" alt="loss plots" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-rpg-size.png" alt="loss plots" /></div></p>
 <p>And, actually, it turns out that a simple 3-layer CNN (ks=3, channels=[16, 24, 32])
 as the encoder performs much better than the resnet:</p>
 <pre><code>(encoder): EncoderConv2d(
@@ -276,7 +276,7 @@ as the encoder performs much better than the resnet:</p>
     (linear): Linear(in_features=21632, out_features=102, bias=True)
   )
 </code></pre>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-rpg-simple-cnn.png" alt="loss plots" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-rpg-simple-cnn.png" alt="loss plots" /></div></p>
 <h2 id="back-to-simple-cnn-encoder">back to simple CNN encoder</h2>
 <p>Everything i tried in the last couple of days is performing
 worse, e.g. changing the pos-embedding frequencies,
@@ -286,7 +286,7 @@ with the current RPG tile dataset) might not be
 enough either... but i'm actually looking for methods that
 enhance performance already before 1M steps. For the sake
 of logging: </p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-rpg-7M.png" alt="loss plots" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-rpg-7M.png" alt="loss plots" /></div></p>
 <p>The gray line is the reference with simple CNN encoder from
 above and yellow has increased the encoder channels from
 <code>(16, 24, 32)</code> to <code>(24, 32, 48)</code> which, of course!, performed
@@ -294,7 +294,7 @@ a little worse than the smaller encoder (:questionmark:).
 Let it run for 7M steps, which is over 200 epochs
 (on a randomly flipped and pixel-shifted dataset).
 It went <strong>below 0.04</strong> l1 validation loss, but this is still bad:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-manifold-rpg-7M-repros.png" alt="repros" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-rpg-7M-repros.png" alt="repros" /></div></p>
 <p>The idea behind using the implicit generation is to be
 able to increase the resolution, but if it already looks
 blurry in the original resolution...</p>
@@ -316,7 +316,7 @@ blurry in the original resolution...</p>
         <div class="flex article-footer">
             <div>
                 
-                    <a href="../../../index.html">
+                    <a href="../../index.html">
                         &lt;&lt; Home
                     </a>
                 
@@ -326,7 +326,7 @@ blurry in the original resolution...</p>
 
             <div>
                 
-                <a href="../../../html/logs/mnist.html">
+                <a href="../../html/logs/mnist.html">
                     Autoencoder training on MNIST dataset $gt;$gt;
                 </a>
                 

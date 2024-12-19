@@ -43,9 +43,9 @@ class Page:
         :return: a relative url, e.g. ../logs/img/someimage.png
         """
         return (
-            "/".join(".." for _ in Path(self.url).parents)
+            "/".join(".." for p in Path(self.url).parents if str(p) != ".")
             + f"/{filename}"
-        )
+        ).lstrip("/")
 
     @property
     def scss_files(self) -> List[str]:
@@ -59,8 +59,6 @@ class Page:
     def teaser(self) -> str:
         from .render import render_teaser_html
         return render_teaser_html(self.document.document)
-        # TODO: the links in the teaser are not converted to html!
-        # return self.document.teaser
 
     @property
     def date(self) -> datetime.date:

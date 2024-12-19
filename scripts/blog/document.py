@@ -23,7 +23,6 @@ class Document:
             document: marko.block.Document,
             anchors: List[Anchor],
             links: List[str],
-            teaser: Optional[str] = None,
     ):
         from .__main__ import DOCS_PATH
         self.filename = filename
@@ -32,7 +31,6 @@ class Document:
         self.document = document
         self.anchors = anchors
         self.links = links
-        self.teaser = teaser
         self._link_mapping: Optional[Dict[str, str]] = None
         self.assets = [
             link for link in links
@@ -57,7 +55,6 @@ class Document:
             document=doc,
             anchors=renderer.anchors,
             links=renderer.links,
-            teaser=renderer.teaser,
         )
 
     @property
@@ -91,10 +88,7 @@ class Document:
 
                 else:
                     # resolve ../ links
-                    #if ".." in str(filename):
-                    #    print("XX", filename, link, "#", (DOCS_PATH / str(filename.relative_to(DOCS_PATH))).resolve().relative_to(DOCS_PATH))
                     mapped_link = (DOCS_PATH / str(filename.relative_to(DOCS_PATH))).resolve().relative_to(DOCS_PATH)
-                    # print(filename, mapped_link)
                     assert ".." not in str(mapped_link), f"mapped_link={mapped_link}, filename={filename}"
 
                 if slug is not None:
@@ -122,7 +116,6 @@ class ExtractionRenderer(marko.HTMLRenderer):
         self.slugger = slugger
         self.anchors = []
         self.links = []
-        self.teaser = None
 
     # grab heading anchors
     def render_heading(self, element: marko.block.Heading) -> str:
@@ -142,9 +135,3 @@ class ExtractionRenderer(marko.HTMLRenderer):
     def render_image(self, element: inline.Image) -> str:
         self.links.append(element.dest)
         return super().render_image(element)
-
-    def render_paragraph(self, element: block.Paragraph) -> str:
-        paragraph = super().render_paragraph(element)
-        if self.teaser is None:
-            self.teaser = paragraph
-        return paragraph

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Efficiently solving the Selective Copying Problem with a Very Small Language Model</title>
     <meta name="description" content="" />
-    <link rel="stylesheet" href="../../../html/style/style.css">
+    <link rel="stylesheet" href="../../html/style/style.css">
     
 </head>
 <body>
@@ -13,7 +13,7 @@
 
 <main class="article">
     <div class="article-left">
-        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <h3><a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         <ul>
             
             
@@ -46,7 +46,7 @@
     <div class="article-mid">
 
         <div class="show-when-small">
-            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+            <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
         <h1 id="efficiently-solving-the-selective-copying-problem-with-a-very-small-language-model">Efficiently solving the Selective Copying Problem with a Very Small Language Model</h1>
@@ -111,11 +111,11 @@ the validation set looks like this:</p>
 <p>(It's 64 examples, arranged in two columns. The first row is the original text, the second
 row is the masked input to the model and the third row is the model's reproduction,
 with green background marking a fit and red marking an error.)</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/selcopy-example-validation-l6.png" alt="validation example 6 layers" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/selcopy-example-validation-l6.png" alt="validation example 6 layers" /></div></p>
 <p>It fails all over the place but predominantly at the beginning of the answer, because
 the information needed for it is too far apart.</p>
 <p>And yes, increasing the number of layers helps a lot:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/selcopy-40-10_mask-error.png" alt="error curves for different layer counts" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/selcopy-40-10_mask-error.png" alt="error curves for different layer counts" /></div></p>
 <p>The plots show the error percentage (how many letters are wrong) inside the masked area.
 Text outside the mask must also be reproduced by the model but is not considered in this plot.</p>
 <div style="overflow: scroll;"><table>
@@ -180,7 +180,7 @@ Text outside the mask must also be reproduced by the model but is not considered
 </tbody></table></div><h5 id="12-layers">12 layers</h5>
 <p>The 12-layer network gets down to an error of 0.02%. It can <em>see</em> about 48 cells in each direction,
 which should be just enough to solve this task.</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/selcopy-example-validation-l12.png" alt="validation example 12 layers" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/selcopy-example-validation-l12.png" alt="validation example 12 layers" /></div></p>
 <p>This is a nice little experiment setup.
 The 12-layer model's performance can be viewed as the baseline.<br />
 The 6-layer model performs terrible (47% error) but at least at twice the speed. Can we
@@ -190,22 +190,22 @@ somehow get to equal performance with only 6 layers?</p>
 <p>Here's a little demonstration. The first layer is the input and there are 6 layers of the
 output of each convolution. Size is 50. With a kernel size of 3, the information can
 only travel 6 cells in each direction:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks3-dil1-s50.png" alt="convolutional steps" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/conv-l6-ks3-dil1-s50.png" alt="convolutional steps" /></div></p>
 <p>Kernel size of 9 allows information to travel 24 cells in each direction:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks9-dil1-s50.png" alt="convolutional steps" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/conv-l6-ks9-dil1-s50.png" alt="convolutional steps" /></div></p>
 <p>But since the beginning of the answer needs information of cells that are more than
 40 cells to the left, the network can not learn the task. See how the first cell only
 transmits information along those 24 cells:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks9-dil1-s50-from-left.png" alt="convolutional steps" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/conv-l6-ks9-dil1-s50-from-left.png" alt="convolutional steps" /></div></p>
 <p>Indeed, with 12 layers, the first cells transmits roughly to the end of the sequence:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l12-ks9-dil1-s50-from-left.png" alt="convolutional steps" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/conv-l12-ks9-dil1-s50-from-left.png" alt="convolutional steps" /></div></p>
 <p>Now, in 2D image recognition, there seems to be a limit at a kernel size of about 7x7
 after which performance grows marginal compared to the exponentially increased compute demand
 (from a paper i can't remember right now). For this 1D experiment, a kernel size of <strong>17</strong>
 in the 6-layer network performs even better than the 12-layer network.</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks17-dil1-s50-from-left.png" alt="convolutional steps" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/conv-l6-ks17-dil1-s50-from-left.png" alt="convolutional steps" /></div></p>
 <p>Although, more than 5 times slower:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/selcopy-40-10_mask-error_kernelsize.png" alt="error plots - kernel size" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/selcopy-40-10_mask-error_kernelsize.png" alt="error plots - kernel size" /></div></p>
 <p>For some reason, the 15 and 17 kernels are unbearably slow.
 Or in other words (maybe because of some nifty specialized Cuda implementations)
 up until kernel size 13, the convolutions are blazingly fast.</p>
@@ -304,9 +304,9 @@ pixel/cell/state. But different to <em>stride</em>, the output resolution is not
 the kernel is applied at every position, <em>essentially</em> no information is lost.</p>
 <p>A dilation of 2 in the 6-layer network has the same receptive field <strong>size</strong> as a 12 layer
 network with dilation 1. Of course, it's not as detailed as a true increase of the kernel size:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks9-dil2-s100.png" alt="convolutional steps" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/conv-l6-ks9-dil2-s100.png" alt="convolutional steps" /></div></p>
 <p>Okay, let's plug it in and try some naive settings for dilation:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/selcopy-40-10_mask-error_dilation.png" alt="error curves for different dilations" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/selcopy-40-10_mask-error_dilation.png" alt="error curves for different dilations" /></div></p>
 <p>(The 6-layer, 12-layer and 17-kernel networks from above are included for comparison)</p>
 <div style="overflow: scroll;"><table>
 <thead>
@@ -469,20 +469,20 @@ However, since dilation 2 is super fast, 5 layers of dilation=2 runs faster than
 <li>
 <p><strong>Dilation of more than 2 for the first 3 layers does only marginally increase performance</strong></p>
 <p>E.g., here's the dilation=<code>[6, 6, 6, 1, 1, 1]</code> case:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks9-dil666111-s100.png" alt="convolutional steps" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/conv-l6-ks9-dil666111-s100.png" alt="convolutional steps" /></div></p>
 </li>
 </ul>
 <h3 id="mixing-different-dilation-values">Mixing different dilation values</h3>
 <p>Intuitively, one would think that the same dilation value on each layer creates conditions that
 are sub-optimal for evaluating the whole state. E.g. every 2nd cell is the sum of every 2nd cell,
 and so on. Here shown with dilation 3:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks9-dil3-s100.png" alt="convolutional steps" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/conv-l6-ks9-dil3-s100.png" alt="convolutional steps" /></div></p>
 <p>So lets mix different dilation sizes. For example, here, dilation for each layer is 2, 3, 2, 3, 2, 3:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/conv-l6-ks9-dil232323-s100.png" alt="convolutional steps" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/conv-l6-ks9-dil232323-s100.png" alt="convolutional steps" /></div></p>
 <p>And voila! Some combinations reach the performance of the 12 layer network
 (up to the 3rd digit after the comma), while being super fast.
 Even faster than the bad 6 layer baseline!</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy/selcopy-40-10_mask-error_dilation-mixed.png" alt="error plots - mixed dilations" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/selcopy-40-10_mask-error_dilation-mixed.png" alt="error plots - mixed dilations" /></div></p>
 <p>Again, the baselines are included, also the previous dilation experiments and a
 couple of other dilation combinations not shown in the plot:</p>
 <div style="overflow: scroll;"><table>
@@ -733,7 +733,7 @@ amounts of GPU time and presumably, a good part of it is wasted.</p>
 <p>Anyways. Feels like there is not much more to gain with this particular dataset. I just <em>assume</em>,
 that the 12-layer network is able to do more complicated computations, but they
 are not required for the vanilla <em>Selective Copying</em> problem.</p>
-<p>Continue reading at <a href="../../../html/logs/selcopy2.html">&quot;Very Selective Copying&quot;</a></p>
+<p>Continue reading at <a href="../../html/logs/selcopy2.html">&quot;Very Selective Copying&quot;</a></p>
 
 
         <!-- article footer -->
@@ -752,7 +752,7 @@ are not required for the vanilla <em>Selective Copying</em> problem.</p>
         <div class="flex article-footer">
             <div>
                 
-                    <a href="../../../html/logs/shiny-tubes.html">
+                    <a href="../../html/logs/shiny-tubes.html">
                         &lt;&lt; &quot;Shiny Tubes&quot;: increasing render quality with a UNet
                     </a>
                 
@@ -762,7 +762,7 @@ are not required for the vanilla <em>Selective Copying</em> problem.</p>
 
             <div>
                 
-                <a href="../../../html/logs/selcopy2.html">
+                <a href="../../html/logs/selcopy2.html">
                     Solving the &quot;Very Selective Copying&quot; problem with a Very Small Language Model $gt;$gt;
                 </a>
                 

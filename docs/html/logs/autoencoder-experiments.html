@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>variational auto-encoder on RPG Tile dataset</title>
     <meta name="description" content="" />
-    <link rel="stylesheet" href="../../../html/style/style.css">
+    <link rel="stylesheet" href="../../html/style/style.css">
     
 </head>
 <body>
@@ -13,7 +13,7 @@
 
 <main class="article">
     <div class="article-left">
-        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <h3><a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         <ul>
             
             
@@ -34,7 +34,7 @@
     <div class="article-mid">
 
         <div class="show-when-small">
-            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+            <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
         <h1 id="variational-auto-encoder-on-rpg-tile-dataset">variational auto-encoder on RPG Tile dataset</h1>
@@ -48,13 +48,13 @@ Why the heck do i need to train a small network like this</p>
 optimizer = Adam(model.default_parameters(), lr=.0001, weight_decay=0.000001)
 </code></pre>
 <p>for 10 hours and it still does not reach the optimum?</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/vae-rpg-conv16-24-32-40M.png" alt="loss plots" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/vae-rpg-conv16-24-32-40M.png" alt="loss plots" /></div></p>
 <p>And how could one tell after 30 minutes where this is going
 to go? The plot shows the l1 validation loss (right) over
 <strong>1700 epochs!</strong> Why does this network need to look at
 things 1700 times???</p>
 <p>Well, it's a complicated dataset, for sure.</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/vae-rpg-conv16-24-32-40M-repros.png" alt="reproductions" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/vae-rpg-conv16-24-32-40M-repros.png" alt="reproductions" /></div></p>
 <p>But i feel there is something wrong in the method.
 This <em>backpropagation gradient descent</em>, although
 mathematically grounded, feels like a brute-force approach.</p>
@@ -114,12 +114,12 @@ model: |
 <p>Note that the MNIST and <a href="https://arxiv.org/abs/1708.07747">FMNIST</a> images are 28x28 pixels and
 the RPG dataset is resized (via BILINEAR filter) to the same
 resolution.</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/vae-base-28.png" alt="training results" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/vae-base-28.png" alt="training results" /></div></p>
 <p>So, the RPG datasets seems to be equally easy/complicated
 like MNIST and FMNIST is pretty hard in comparison.
 Doing the same for 32x32 pixels (where the other two datasets
 are resized):</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/vae-base-32.png" alt="training results" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/vae-base-32.png" alt="training results" /></div></p>
 <p>Huh? Very different results.
 MNIST easiest, FMNIST middle, RPG hardest. </p>
 <h3 id="take-care-of-the-choice-of-interpolation">Take care of the choice of interpolation!</h3>
@@ -453,9 +453,9 @@ understandable:</p>
 </thead>
 <tbody>
 <tr>
-<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-mnist-28-orig.png" alt="original" /></div></td>
-<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-mnist-32.png" alt="original" /></div></td>
-<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-mnist-32-aa.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/resize-mnist-28-orig.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/resize-mnist-32.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/resize-mnist-32-aa.png" alt="original" /></div></td>
 </tr>
 </tbody></table></div><div style="overflow: scroll;"><table>
 <thead>
@@ -467,9 +467,9 @@ understandable:</p>
 </thead>
 <tbody>
 <tr>
-<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-fmnist-28-orig.png" alt="original" /></div></td>
-<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-fmnist-32.png" alt="original" /></div></td>
-<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-fmnist-32-aa.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/resize-fmnist-28-orig.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/resize-fmnist-32.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/resize-fmnist-32-aa.png" alt="original" /></div></td>
 </tr>
 </tbody></table></div><div style="overflow: scroll;"><table>
 <thead>
@@ -481,9 +481,9 @@ understandable:</p>
 </thead>
 <tbody>
 <tr>
-<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-rpg-32-orig.png" alt="original" /></div></td>
-<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-rpg-28.png" alt="original" /></div></td>
-<td><div style="overflow: scroll;"><img src="../../../logs/img/resize-rpg-28-aa.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/resize-rpg-32-orig.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/resize-rpg-28.png" alt="original" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/resize-rpg-28-aa.png" alt="original" /></div></td>
 </tr>
 </tbody></table></div><p>The bilinear filter blurs out a lot of the single pixel
 details and makes the images <em>&quot;easier&quot;</em> to auto-encode.
@@ -499,7 +499,7 @@ interpolation.</p>
 <p>For comparison, below is a run on a dataset of 60,000
 noise images (mean=0.5, std=0.5, clamped to range [0, 1]),
 +10,000 for validation (green). </p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/vae-32-noise.png" alt="loss plots" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/vae-32-noise.png" alt="loss plots" /></div></p>
 
 
         <!-- article footer -->
@@ -518,7 +518,7 @@ noise images (mean=0.5, std=0.5, clamped to range [0, 1]),
         <div class="flex article-footer">
             <div>
                 
-                    <a href="../../../html/logs/mnist.html">
+                    <a href="../../html/logs/mnist.html">
                         &lt;&lt; Autoencoder training on MNIST dataset
                     </a>
                 
@@ -528,7 +528,7 @@ noise images (mean=0.5, std=0.5, clamped to range [0, 1]),
 
             <div>
                 
-                <a href="../../../html/logs/transformers.html">
+                <a href="../../html/logs/transformers.html">
                     Experiments with vision transformers $gt;$gt;
                 </a>
                 

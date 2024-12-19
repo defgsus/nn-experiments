@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Solving the &quot;Very Selective Copying&quot; problem with a Very Small Language Model</title>
     <meta name="description" content="" />
-    <link rel="stylesheet" href="../../../html/style/style.css">
+    <link rel="stylesheet" href="../../html/style/style.css">
     
 </head>
 <body>
@@ -13,7 +13,7 @@
 
 <main class="article">
     <div class="article-left">
-        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <h3><a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         <ul>
             
             
@@ -52,11 +52,11 @@
     <div class="article-mid">
 
         <div class="show-when-small">
-            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+            <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
         <h1 id="solving-the-quotvery-selective-copyingquot-problem-with-a-very-small-language-model">Solving the &quot;Very Selective Copying&quot; problem with a Very Small Language Model</h1>
-<p>To get a grip on the details, please check <a href="../../../html/logs/selcopy.html">&quot;Selective Copying&quot;</a> first.</p>
+<p>To get a grip on the details, please check <a href="../../html/logs/selcopy.html">&quot;Selective Copying&quot;</a> first.</p>
 <p>Basically, it's a synthetic question-answer dataset that requires some <em>&quot;computational&quot;</em> skill.
 See, if you can find out the rule by yourself:</p>
 <pre><code>NA: 2&gt;1: AN   
@@ -79,9 +79,9 @@ put it into the stack. <code>+x</code> means: pop last item from stack and inser
 </ul>
 <h3 id="preliminary-tests">Preliminary tests</h3>
 <p>Just to get a feeling for the dataset, i took the best model from the
-<a href="../../../html/logs/selcopy.html">&quot;Selective Copying&quot;</a> experiment with a few parameter variations
+<a href="../../html/logs/selcopy.html">&quot;Selective Copying&quot;</a> experiment with a few parameter variations
 and ran it on questions that have an input length of 2 to 5 items and 1 to 5 operations:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_mask-error_l6-12-18.png" alt="error curves" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_mask-error_l6-12-18.png" alt="error curves" /></div></p>
 <p>Training now takes 4 million steps, and could even be a bit longer. But generally, the loss curves
 seem to converge at about there. </p>
 <div style="overflow: scroll;"><table>
@@ -178,10 +178,10 @@ dilation settings without much thinking about it. (Actually i did think quite a 
 about it but decided to evaluate good 12 or 18-layer dilation settings another time)</p>
 <p>Here are examples from the validation set from the worst and the best performing network:</p>
 <h4 id="6-layer32-chan-validation-mask-error-176">6-layer/32-chan: validation mask error 17.6%</h4>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_validation-example_nops1-5_l6-ch64.png" alt="validation example output" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_validation-example_nops1-5_l6-ch64.png" alt="validation example output" /></div></p>
 <p>It is noticeable that long programs seem to be the problem for this network.</p>
 <h4 id="12-layer128-chan-validation-mask-error-07">12-layer/128-chan: validation mask error 0.7%</h4>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_validation-example_nops1-5_l12-ch128.png" alt="validation example output" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_validation-example_nops1-5_l12-ch128.png" alt="validation example output" /></div></p>
 <p>Wow! Everything correct, even the long ones!</p>
 <h3 id="number-of-operations-versus-number-of-layers">Number of operations versus number of layers</h3>
 <p>The above example is a bit messy because it has a variable number of operations and
@@ -207,11 +207,11 @@ UIZNQ:3&gt;4 2&gt;3 5&gt;3 4&gt;1 1&gt;5:INQUZ
 </code></pre>
 <p>Running the networks on 2, 3, 4 and 5 operations per question:</p>
 <h4 id="6-layer">6-layer</h4>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l6-nops-2-5.png" alt="error curves" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l6-nops-2-5.png" alt="error curves" /></div></p>
 <h4 id="12-layer">12-layer</h4>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l12-nops-2-5.png" alt="error curves" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l12-nops-2-5.png" alt="error curves" /></div></p>
 <h4 id="18-layer">18-layer</h4>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l18-nops-2-5.png" alt="error curves" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l18-nops-2-5.png" alt="error curves" /></div></p>
 <p>And here is it all together in a table. The dilation settings are left out for readability.
 They are <code>1,2,3,4,5,1</code> for the 6-layer, <code>1,2,3,4,5,1,2,3,4,5,1,1</code> for the 12-layer
 and <code>1,2,3,4,5,1,2,3,4,5,1,2,3,4,5,1,1,1</code> for the 18-layer network.</p>
@@ -434,7 +434,7 @@ UXGJN:4&gt;2 1&gt;2 1&gt;4 3&gt;1 3&gt;2:GXUJN
 <p>and the validation set still holds the same 5-operations-only questions for which all networks have
 failed previously.</p>
 <p>Here's the loss and error curves of the 18-layer network trained with 5 and 2-5 operations:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l18-nops-2-5-vnops5.png" alt="error curves" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l18-nops-2-5-vnops5.png" alt="error curves" /></div></p>
 <p>The bright one is the brighter one. Indeed, the 18-layer gets down to 2.5% sample error. It is
 able to solve the task, it could just not learn it from the previous dataset. One could argue,
 though, that it would eventually learn the task just from the 5-operations examples but it would
@@ -508,7 +508,7 @@ Looking at the plots of the 6-layer networks trained with 5 and 2-5 operations, 
 see that the mask error decreases by a good amount but actual sample error stays roughly
 the same. It learned to put some letters and the right place but still fails
 for almost every validation sample:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l6-nops-2-5-vnops5.png" alt="error curves" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l6-nops-2-5-vnops5.png" alt="error curves" /></div></p>
 <ul>
 <li>Quick takeaway: <strong>Put also some easy examples in the training set!</strong></li>
 </ul>
@@ -527,7 +527,7 @@ that strongly increases the computational performance?</p>
 <p>Just for another set of baselines, i tried the <a href="https://github.com/state-spaces/mamba">state-spaces/Mamba</a>
 (yet the <a href="https://github.com/johnma2006/mamba-minimal">slow version</a>)
 and the all-beloved LSTM (as <a href="https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html">pytorch implementation</a>). </p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l6-nops-2-5-mamba-and-lstm.png" alt="error curves" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l6-nops-2-5-mamba-and-lstm.png" alt="error curves" /></div></p>
 <p>The yellow/brownish is the 6-layers model from above, green is Mamba and blue the LSTM.
 All of them have 6 layers</p>
 <div style="overflow: scroll;"><table>
@@ -602,7 +602,7 @@ Conv1d with only 5-operations questions in the training set. At least, it's blaz
 surely made some mistake..</li>
 </ul>
 <h3 id="attention">Attention</h3>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/selcopy2/selcopy2_error-curves_l5-vnops5-attention.png" alt="error curves" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l5-vnops5-attention.png" alt="error curves" /></div></p>
 <div style="overflow: scroll;"><table>
 <thead>
 <tr>
@@ -801,7 +801,7 @@ surely made some mistake..</li>
         <div class="flex article-footer">
             <div>
                 
-                    <a href="../../../html/logs/selcopy.html">
+                    <a href="../../html/logs/selcopy.html">
                         &lt;&lt; Efficiently solving the Selective Copying Problem with a Very Small Language Model
                     </a>
                 
@@ -811,7 +811,7 @@ surely made some mistake..</li>
 
             <div>
                 
-                <a href="../../../html/posts/2024/first-post.html">
+                <a href="../../html/posts/2024/first-post.html">
                     First post $gt;$gt;
                 </a>
                 

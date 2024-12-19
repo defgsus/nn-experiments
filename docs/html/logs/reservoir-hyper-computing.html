@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Reproducing &quot;Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing&quot;</title>
     <meta name="description" content="" />
-    <link rel="stylesheet" href="../../../html/style/style.css">
+    <link rel="stylesheet" href="../../html/style/style.css">
     
 </head>
 <body>
@@ -13,7 +13,7 @@
 
 <main class="article">
     <div class="article-left">
-        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <h3><a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         <ul>
             
             
@@ -38,7 +38,7 @@
     <div class="article-mid">
 
         <div class="show-when-small">
-            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+            <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
         <h1 id="reproducing-quotconnectionist-symbolic-machine-intelligence-using-cellular-automata-based-reservoir-hyperdimensional-computingquot">Reproducing &quot;Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing&quot;</h1>
@@ -67,12 +67,12 @@ are run for 500 iterations and the last 200 iterations are fed to the
 the readout.</p>
 <p>When simply querying for the reproduction of the input values, in fact
 <strong>169</strong> rules have zero training error and <strong>145</strong> even generalize to
-have zero validation error. (<a href="../../../logs/data/ca1-repl-copy.csv">csv</a>)</p>
+have zero validation error. (<a href="../../logs/data/ca1-repl-copy.csv">csv</a>)</p>
 <h3 id="5-bit-xor">5-bit xor</h3>
 <p>Next the readout was trained to produce the <code>xor</code> of the first and last 5 bits
 of a 10-bit number. These sets have <strong>924</strong> and <strong>100</strong> samples for train and test.</p>
 <p>Here are the top-50 rules:</p>
-<p>(mae is mean absolute error, <a href="../../../logs/data/ca1-repl-xor.csv">csv</a>)</p>
+<p>(mae is mean absolute error, <a href="../../logs/data/ca1-repl-xor.csv">csv</a>)</p>
 <div style="overflow: scroll;"><table>
 <thead>
 <tr>
@@ -443,7 +443,7 @@ binary representations of the result of <code>(n * n) mod 251</code>.
 Only <strong>50</strong> samples are moved to the validation set so the training
 set has size <strong>462</strong>.
 Can the CA reservoir generalize to calculate the square of a number?</p>
-<p>(<a href="../../../logs/data/ca1-repl-square.csv">csv</a>)</p>
+<p>(<a href="../../logs/data/ca1-repl-square.csv">csv</a>)</p>
 <div style="overflow: scroll;"><table>
 <thead>
 <tr>
@@ -844,7 +844,7 @@ the bits correspond to these neighbourhood states:
 </code></pre>
 <p>Below are plots of the state history (100 iterations, toroid 101-cell state)
 for these particular rules, starting from a single seed cell:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/ca1-repl-good-rules.png" alt="ca state history" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ca1-repl-good-rules.png" alt="ca state history" /></div></p>
 <h3 id="more-tests">more tests</h3>
 <p>Tried a couple of things :rofl:</p>
 <p>Among them is feeding the input data sequentially to the CA state.
@@ -1553,7 +1553,7 @@ rules. A do-nothing python loop through that number already takes 300 hours:</p>
         <div class="flex article-footer">
             <div>
                 
-                    <a href="../../../html/logs/ae-histogram-loss.html">
+                    <a href="../../html/logs/ae-histogram-loss.html">
                         &lt;&lt; autoencoder with histogram loss
                     </a>
                 
@@ -1563,7 +1563,7 @@ rules. A do-nothing python loop through that number already takes 300 hours:</p>
 
             <div>
                 
-                <a href="../../../html/logs/ae-stacked.html">
+                <a href="../../html/logs/ae-stacked.html">
                     stacked symmetric autoencoder, adding one-layer-at-a-time $gt;$gt;
                 </a>
                 

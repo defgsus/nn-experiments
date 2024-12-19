@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>stacked symmetric autoencoder, adding one-layer-at-a-time</title>
     <meta name="description" content="" />
-    <link rel="stylesheet" href="../../../html/style/style.css">
+    <link rel="stylesheet" href="../../html/style/style.css">
     
 </head>
 <body>
@@ -13,7 +13,7 @@
 
 <main class="article">
     <div class="article-left">
-        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <h3><a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         <ul>
             
             
@@ -26,7 +26,7 @@
     <div class="article-mid">
 
         <div class="show-when-small">
-            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+            <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
         <h1 id="stacked-symmetric-autoencoder-adding-one-layer-at-a-time">stacked symmetric autoencoder, adding one-layer-at-a-time</h1>
@@ -35,7 +35,7 @@ of 3x3 cnn kernels and a final fully connected layer. code_size=128</p>
 <p>In training, every N input steps the number of used layers is increased. First,
 the autoencoder only uses first encoder and last decoder layer. That way,
 it's possible to train the whole 25 layers after a time. It's just not good:</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/ae-stacked-64.png" alt="loss plots" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ae-stacked-64.png" alt="loss plots" /></div></p>
 <ul>
 <li><strong>white</strong>: reference baseline cnn (using space-to-depth (or pixel-unshuffle))</li>
 <li><strong>cyan</strong>: 32-chan 25 layer cnn, next layer activated every 47,000 steps (1 epoch)</li>
@@ -64,7 +64,7 @@ slightly below non-symmetric. The biases are not shared between encoder and deco
         <div class="flex article-footer">
             <div>
                 
-                    <a href="../../../html/logs/reservoir-hyper-computing.html">
+                    <a href="../../html/logs/reservoir-hyper-computing.html">
                         &lt;&lt; Reproducing &quot;Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing&quot;
                     </a>
                 
@@ -74,7 +74,7 @@ slightly below non-symmetric. The biases are not shared between encoder and deco
 
             <div>
                 
-                <a href="../../../html/logs/lm-gen.html">
+                <a href="../../html/logs/lm-gen.html">
                     text generation with <code>microsoft/phi-2</code> $gt;$gt;
                 </a>
                 

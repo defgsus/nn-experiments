@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Deep-Compression Auto-Encoder</title>
     <meta name="description" content="" />
-    <link rel="stylesheet" href="../../../html/style/style.css">
+    <link rel="stylesheet" href="../../html/style/style.css">
     
 </head>
 <body>
@@ -13,7 +13,7 @@
 
 <main class="article">
     <div class="article-left">
-        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <h3><a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         <ul>
             
             
@@ -36,7 +36,7 @@
     <div class="article-mid">
 
         <div class="show-when-small">
-            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+            <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
         <h1 id="deep-compression-auto-encoder">Deep-Compression Auto-Encoder</h1>
@@ -45,7 +45,7 @@
 <p>Code can be found here <a href="https://github.com/mit-han-lab/efficientvit">https://github.com/mit-han-lab/efficientvit</a>, and i copied the DC-AE parts and ported
 the type-hints back to python &lt;3.10 <a href="https://github.com/defgsus/nn-experiments/blob/master/src/models/efficientvit">here</a>.</p>
 <p>Using the good ol' 47,579 RPG dataset, for one million 3x32x32 images.</p>
-<p><div style="overflow: scroll;"><img src="../../../logs/img/dc-ae-rpg47k-1M.png" alt="loss plots" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/dc-ae-rpg47k-1M.png" alt="loss plots" /></div></p>
 <p>(Not all runs are finished because they seemed to converge at the same validation error)</p>
 <p>The <strong>baseline (gray)</strong> is the usual stacked symmetric CNN AE with 24, 32, 48 channels, kernel-size 5 and a linear
 layer for latent code size of 128, which results in a <strong>compression ratio of 24</strong>.</p>
@@ -110,8 +110,8 @@ so this is promising. However, none of the changes (dcae-05 to dcae-07) did enha
 </thead>
 <tbody>
 <tr>
-<td><div style="overflow: scroll;"><img src="../../../logs/img/dc-ae-rpg47k-1M-recon-baseline.png" alt="reconstruction plot" /></div></td>
-<td><div style="overflow: scroll;"><img src="../../../logs/img/dc-ae-rpg47k-1M-recon-05.png" alt="reconstruction plot" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/dc-ae-rpg47k-1M-recon-baseline.png" alt="reconstruction plot" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/dc-ae-rpg47k-1M-recon-05.png" alt="reconstruction plot" /></div></td>
 </tr>
 </tbody></table></div>
 
@@ -131,7 +131,7 @@ so this is promising. However, none of the changes (dcae-05 to dcae-07) did enha
         <div class="flex article-footer">
             <div>
                 
-                    <a href="../../../html/logs/residual-convolution.html">
+                    <a href="../../html/logs/residual-convolution.html">
                         &lt;&lt; Parameter tuning for a Residual Deep Image-to-Image CNN
                     </a>
                 
@@ -141,7 +141,7 @@ so this is promising. However, none of the changes (dcae-05 to dcae-07) did enha
 
             <div>
                 
-                <a href="../../../html/logs/colorize.html">
+                <a href="../../html/logs/colorize.html">
                     Comparing different color-spaces in a grayscale-to-color residual CNN $gt;$gt;
                 </a>
                 
