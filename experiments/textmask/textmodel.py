@@ -1,4 +1,5 @@
 import math
+from functools import partial
 from typing import Union, Callable, Type, Dict, List, Iterable
 
 import torch
@@ -6,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from src.models.util import activation_to_module, normalization_to_module
+from src.models.attention import Attention1d
 from src.util.params import param_make_tuple
 
 
@@ -19,34 +21,44 @@ class ConvTextLayer(nn.Module):
             norm: Union[None, str, Type[nn.Module]],
             activation: Union[None, str, Callable],
             residual: bool,
-            num_attention_heads: int = 0,
+            num_attention_heads: Union[bool, int] = 0,
+            attention_invention: str = "QK",  # "QK", "QV", "KV", "QKV"
     ):
         super().__init__()
         self.residual = residual and num_channels_in == num_channels_out
         self.num_attention_heads = num_attention_heads
+        self.attention_invention = attention_invention.upper()
 
         padding = int(math.floor(kernel_size / 2)) * dilation
         self.norm = normalization_to_module(norm, channels=num_channels_in)
         self.conv = nn.Conv1d(
             num_channels_in,
-            num_channels_out * (3 if num_attention_heads else 1),
+            num_channels_out * (len(attention_invention) if num_attention_heads else 1),
             kernel_size=kernel_size,
             padding=padding,
             dilation=dilation,
         )
         self.attn = None
         if num_attention_heads:
-            self.attn = nn.MultiheadAttention(
-                embed_dim=num_channels_out,
-                num_heads=num_attention_heads,
-                batch_first=True,
-            )
+            if num_attention_heads is True:
+                self.attn = Attention1d()
+            else:
+                self.attn_mh = nn.MultiheadAttention(
+                    embed_dim=num_channels_out,
+                    num_heads=num_attention_heads,
+                    batch_first=True,
+                )
+                self.attn = lambda q, k, v: self.attn_mh(q, k, v, need_weights=False)[0]
+
         self.act = activation_to_module(activation)
 
     def extra_repr(self) -> str:
         text = f"residual={self.residual}"
         if self.num_attention_heads:
-            text = f"{text}, num_attention_heads={self.num_attention_heads}"
+            text = (
+                f"{text}, num_attention_heads={self.num_attention_heads}"
+                f", attention_invention='{self.attention_invention}'"
+            )
         return text
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -58,15 +70,31 @@ class ConvTextLayer(nn.Module):
         y = self.conv(x)
 
         if self.attn is not None:
-            qkv = self.conv(x).permute(0, 2, 1)
-            third = qkv.shape[-1] // 3
-            q, k, v = qkv[..., :third], qkv[..., third:-third], qkv[..., -third:]
-            y = self.attn(q, k, v, need_weights=False)[0].permute(0, 2, 1)
+            # channel-wise attention (put channels into last dim)
+            y = y.permute(0, 2, 1)
+            x = x.permute(0, 2, 1)
+
+            if self.attention_invention in ("QK", "KQ"):
+                q, k = torch.split(y, y.shape[-1] // 2, dim=-1)
+                y = self.attn(q, k, x)
+            elif self.attention_invention in ("QV", "VQ"):
+                q, v = torch.split(y, y.shape[-1] // 2, dim=-1)
+                y = self.attn(q, x, v)
+            elif self.attention_invention in ("KV", "VK"):
+                k, v = torch.split(y, y.shape[-1] // 2, dim=-1)
+                y = self.attn(x, k, v)
+            elif self.attention_invention in ("QKV", "QVK", "KQV", "KVQ", "VQK", "VKQ"):
+                q, k, v = torch.split(y, y.shape[-1] // 3, dim=-1)
+                y = self.attn(q, k, v)
+            else:
+                raise AssertionError(f"Invalid `attention_invention` '{self.attention_invention}'")
+
+            y = y.permute(0, 2, 1)
 
         if self.act is not None:
             y = self.act(y)
 
-        if self.residual and y.shape == x.shape:
+        if self.residual and y.shape == original_x.shape:
             y = y + original_x
 
         return y

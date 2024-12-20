@@ -1,51 +1,35 @@
-experiment_name: textmask/convtext-QAmath5_${matrix_slug}
+experiment_name: textmask/convtext-QAprog-9_${matrix_slug}
 
 matrix:
-  bs:
-    - 64
+  bs: [64]
   opt: ["AdamW"]
   lr: [.0005]
   nitem:
-    - 99
+    - 26
+  len:
+    - 5
   nops:
-    - 1 #[1, 2]
+    - [2, 9]
   vnops:
-    - 1
+    - 9
   l:
-    #- 18
-    #- 3
-    #- 4
-    - 6
-    #- 10
-    #- 12
-    #- 18
+    #- 5
+    - 9
   ch:
     - 64
-    #- 128
-    #- 256
+#    - 128
   ks:
-    - 13
+    - 9
     #- 11
     #- 13
   dil:
-    - [3, 5, 1]
-    - [1, 3, 5, 1]
-    - [1, 2, 3, 4, 5, 1]  # best on *selective copying*
+    - [1, 2, 3, 2, 3, 4, 3, 4, 1]
+    #- [2, 3, 4, 5, 2, 3, 4, 5, 1]  # not good
   $filter: (isinstance(${dil}, int) or len(${dil}) == ${l}) and (isinstance(${attn}, int) or len(${attn}) == ${l})
-  posemb: [0]
   attn:
-    - [0, 0, 1] # best fast
-    #    - [0, 1, 0] # bad
-    #- [0, 1, 1]  # bad
-    #- [1, 0, 0] # terrible
-    - [0, 0, 0, 1]
-    #- [0, 0, 0, 4]
-    #- [4, 4, 4]
-    #- [0, 4, 4]
-    #- [0, 0, 4] # best multihead
-    #- [0, 0, 2]
-    #- [0, 0, 8]
-    - [0, 0, 0, 0, 0, 1]
+    - [0, 0, 4, 4, 0]  # good 4-chan
+    #- [0, 0, 0, 0, 0, 0, 4, 4, 0]  # not good
+    - [0, 0, 0, 0, 4, 0, 0, 0, 4]  # not good either
   act:
     - "gelu"
 
@@ -54,16 +38,16 @@ trainer: experiments.textmask.texttrainer.TextMaskTrainer
 mask_is_arg: 1
 
 train_set: |
-  train_set, validation_set = TextQAMathIterableDataset.create_train_and_validation_set(
+  train_set, validation_set = TextQAProgramIterableDataset.create_train_and_validation_set(
     train_count=100_000,
     validation_count=10_000,
     validation_seed=23,
     with_masked=True,
-    max_number=${nitem},
+    num_items=${nitem},
+    input_length=${len},
     num_operations=${nops},
     validation_num_operations=${vnops},
-    fixed_answer_width=3*${vnops},
-    operators=["+", "-", "*"],
+    operators={">": 1},# "+": 1., "-": 2/3},
   )
   train_set
 
@@ -74,8 +58,8 @@ batch_size: ${bs}
 learnrate: ${lr}
 optimizer: ${opt}
 scheduler: CosineAnnealingWarmupLR
-#loss_function: l1
-max_inputs: 1_000_000
+loss_function: l1
+max_inputs: 4_000_000
 num_epochs_between_validations: 1
 #num_inputs_between_validations: 50_000
 freeze_validation_set: True
@@ -83,7 +67,7 @@ freeze_validation_set: True
 
 model: |
   from experiments.textmask.textmodel import ConvTextModel
-  from experiments.textmask.textmodel2 import ConvTextModel2
+  # from experiments.textmask.textmodel2 import ConvTextModel2
   
   ConvTextModel(
       vocab_size=256,
@@ -92,6 +76,5 @@ model: |
       kernel_size=${ks},
       dilation=${dil},
       activation="${act}",
-      pos_embedding=bool(${posemb}),
       num_attention_heads=${attn},
   )

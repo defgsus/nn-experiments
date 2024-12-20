@@ -10,68 +10,6 @@ from torch.utils.data import Dataset, IterableDataset
 from ..base_iterable import BaseIterableDataset
 
 
-class TextMathIterableDataset(BaseIterableDataset):
-    """
-    Yields things like '3 + 4 = 7'
-    """
-    def __init__(
-            self,
-            count: Optional[int] = None,
-            num_operands: int = 1,
-            max_number: int = 10,
-            operators: Iterable[str] = ("+",),
-            sep: str = " ",
-            fixed_width: Optional[int] = None,
-            seed: Optional[int] = None,
-            exclude: Optional[Iterable[str]] = None,
-    ):
-        super().__init__()
-        self._count = count
-        self._num_operands = num_operands
-        self._max_number = max_number
-        self._operators = list(operators)
-        self._sep = sep
-        self._fixed_width = fixed_width
-        self._seed = seed
-        self._exclude = None if exclude is None else set(exclude)
-        if self._count is None:
-            self._count = (max_number ** (num_operands + 1)) * (num_operands ** len(self._operators))
-
-    def __len__(self) -> int:
-        return self._count
-
-    def __iter__(self) -> Generator[str, None, None]:
-        if self._seed is None:
-            rng = random
-        else:
-            rng = random.Random(self._seed)
-
-        num = 0
-        while num < self._count:
-            seq = [str(rng.randint(0, self._max_number))]
-            for j in range(self._num_operands):
-                seq.append(
-                    rng.choice(self._operators)
-                )
-                seq.append(
-                    str(rng.randint(0, self._max_number))
-                )
-
-            expression = self._sep.join(seq)
-            result = str(eval(expression))
-            expression = self._sep.join([expression, "=", result])
-
-            if self._fixed_width:
-                if self._fixed_width:
-                    expression = expression.ljust(self._fixed_width)[:self._fixed_width]
-
-            if self._exclude and expression in self._exclude:
-                continue
-
-            yield expression
-            num += 1
-
-
 class TextQABaseIterableDataset(BaseIterableDataset):
     """
     Yields '<question> : <answer>', '<question> : ??????' (masked with 0)
@@ -172,6 +110,54 @@ class TextQABaseIterableDataset(BaseIterableDataset):
             num += 1
             if num >= self._count:
                 break
+
+
+class TextQAMathIterableDataset(TextQABaseIterableDataset):
+    """
+    Yields things like '3 + 4 = 7'
+    """
+    def __init__(
+            self,
+            count: Optional[int] = None,
+            num_operations: Union[int, Tuple[int, int]] = 1,
+            max_number: int = 10,
+            operators: Iterable[str] = ("+",),
+            fixed_answer_width: Optional[int] = None,
+            seed: Optional[int] = None,
+            exclude: Optional[Iterable[str]] = None,
+            with_masked: bool = False,
+            **kwargs,
+    ):
+        self._operators = list(operators)
+        if count is None:
+            count = (max_number ** (num_operations + 1)) * (num_operations ** len(self._operators))
+        super().__init__(
+            count=count, seed=seed, exclude=exclude, with_masked=with_masked, **kwargs,
+            fixed_answer_width=fixed_answer_width,
+            separator="=",
+        )
+        self._num_operations = num_operations
+        self._max_number = max_number
+
+    def iter_question_answer(self, rng: random.Random) -> Generator[Tuple[str, str], None, None]:
+        while True:
+            seq = [str(rng.randint(0, self._max_number))]
+
+            nops = self._num_operations
+            if isinstance(nops, (list, tuple)):
+                nops = rng.randint(*nops)
+
+            for j in range(nops):
+                seq.append(
+                    rng.choice(self._operators)
+                )
+                seq.append(
+                    str(rng.randint(0, self._max_number))
+                )
+
+            expression = "".join(seq)
+            result = str(eval(expression))
+            yield expression, result
 
 
 class TextSelectiveCopyingIterableDataset(TextQABaseIterableDataset):

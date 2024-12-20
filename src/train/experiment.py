@@ -15,6 +15,7 @@ from pathlib import Path
 import importlib
 from typing import List, Iterable, Tuple, Optional, Callable, Union, Generator, Dict, Type, Any
 
+import numpy as np
 import yaml
 from tqdm import tqdm
 import torch
@@ -96,6 +97,16 @@ def run_experiment_from_command_args():
         "-sc", "--sort-column", type=str, nargs="*", default=[],
         help="one or more columns to sort"
     )
+    parser.add_argument(
+        "-ac", "--average-column", type=str, default=None,
+        help="Ignore value of this column and report average. E.g., add a variable "
+             "`trial: [1, 2, 3, 4, 5]` to the experiment matrix and call `-ac trial` "
+             "to display the average over all trials."
+    )
+    parser.add_argument(
+        "-acs", "--average-column-std", type=str, nargs="+", default=[],
+        help="Also display standard deviation for these columns"
+    )
 
     args = vars(parser.parse_args())
     experiment_file = args.pop("experiment_name")
@@ -116,6 +127,8 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
     exclude_columns = extra_args.pop("exclude_column", [])
     include_columns = extra_args.pop("include_column", [])
     sort_columns = extra_args.pop("sort_column", [])
+    average_column = extra_args.pop("average_column", None)
+    average_column_std = extra_args.pop("average_column_std", [])
     load_from_checkpoint = extra_args.pop("load", None)
 
     data = _load_yaml(filename)
@@ -137,7 +150,7 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
         if extra_args:
             data.update(extra_args)
 
-        if len(matrix_entries) > 1:
+        if len(matrix_entries) > 1 and command != "results":
             print(f"\n--- matrix experiment '{data['experiment_name']}' ---\n")
             max_len = max(list(len(key) for key in matrix_entry.keys()))
             for key, value in matrix_entry.items():
@@ -208,7 +221,8 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
         dump_experiments_results(
             experiment_results,
             include_columns=include_columns,
-            exclude_columns=exclude_columns, sort_columns=sort_columns
+            exclude_columns=exclude_columns, sort_columns=sort_columns,
+            average_column=average_column, average_column_std=average_column_std,
         )
 
 
@@ -217,6 +231,8 @@ def dump_experiments_results(
         include_columns: List[str],
         exclude_columns: List[str],
         sort_columns: List[str],
+        average_column: Optional[str],
+        average_column_std: List[str],
 ):
     rows = []
     min_loss = None
@@ -248,10 +264,8 @@ def dump_experiments_results(
 
         if snapshot_data.get("training_time"):
             seconds = snapshot_data["training_time"]
-            row["train time (minutes)"] = round(seconds / 60., 2)
-            row["throughput"] = "{:,}/s".format(
-                int(num_inputs / snapshot_data["training_time"])
-            )
+            row["train time (minutes)"] = seconds / 60.
+            row["throughput"] = num_inputs / snapshot_data["training_time"]
 
         for key, value in row.items():
             if isinstance(value, (tuple, list)):
@@ -259,14 +273,17 @@ def dump_experiments_results(
 
         rows.append(row)
 
-    if max_loss is not None and max_loss != min_loss:
-        for row in rows:
-            for key, value in list(row.items()):
-                if key.startswith("validation loss") and math.isfinite(value):
-                    length = int((value - min_loss) / (max_loss - min_loss) * 20 + 1)
-                    row["meter"] = "*" * length
+    #if max_loss is not None and max_loss != min_loss:
+    #    for row in rows:
+    #        for key, value in list(row.items()):
+    #            if key.startswith("validation loss") and math.isfinite(value):
+    #                length = int((value - min_loss) / (max_loss - min_loss) * 20 + 1)
+    #                row["meter"] = "*" * length
 
     df = pd.DataFrame(rows)
+
+    if average_column:
+        df = group_df_column(df, average_column, average_column_std)
 
     for key in reversed(sort_columns):
         if key not in df.columns:
@@ -288,6 +305,9 @@ def dump_experiments_results(
             print("COLUMNS:", df.columns)
             raise
 
+    df.loc[:, "train time (minutes)"] = df.loc[:, "train time (minutes)"].round(2)
+    df.loc[:, "throughput"] = df.loc[:, "throughput"].map(lambda t: f"{int(t):,}/s")
+
     for key in exclude_columns:
         try:
             df.drop(key, axis=1, inplace=True)
@@ -300,7 +320,46 @@ def dump_experiments_results(
     except KeyError:
         show_index = False
 
-    print(df.to_markdown(index=show_index))
+    right_columns = ["model params", "throughput"]
+    print(df.to_markdown(
+        index=show_index,
+        colalign=[
+            "right" if c in right_columns else ("left" if df.dtypes[c] == np.object_ else "right")
+            for c in df.columns
+        ]
+    ))
+
+
+def group_df_column(
+        df: pd.DataFrame,
+        column: str,
+        std_columns: List[str],
+) -> pd.DataFrame:
+    column_values = df.loc[:, column].unique()
+
+    def _remove_column_ref(x):
+        for c in column_values:
+            x = x.replace(f"{column}:{c}", "")
+        return x
+
+    df["_id_without"] = df["matrix_slug"].map(_remove_column_ref)
+    group = df.groupby("_id_without")
+    df2 = group.mean(numeric_only=True)  # get mean of float values
+    df2_std = group.std(numeric_only=True)
+    df3 = group.max()                    # get all values (including strings)
+
+    for c in df3.columns:
+        if c not in df2.columns:
+            df2.loc[:, c] = df3.loc[:, c]  # copy strings back
+
+    # restore old column order
+    dic = {}
+    for c in df3:
+        dic[c] = df2.loc[:, c]
+        # add std columns
+        if c in std_columns and c in df2_std:
+            dic[f"{c} (std)"] = df2_std.loc[:, c]
+    return pd.DataFrame(dic).reset_index().drop(["_id_without", column], axis=1)
 
 
 def get_matrix_entries(matrix: Dict[str, List[Any]]) -> List[Dict[str, Any]]:

@@ -1,4 +1,4 @@
-experiment_name: textmask/convtext-QAprog-small2-attn_${matrix_slug}
+experiment_name: textmask/convtext-QAprog-small-attn3_${matrix_slug}
 
 matrix:
   bs:
@@ -16,7 +16,7 @@ matrix:
   l:
     #- 18
     - 3
-    #- 4
+    - 4
     #- 8
     #- 10
     #- 12
@@ -33,18 +33,20 @@ matrix:
     - [3, 5, 1]
     - [1, 3, 5, 1]
     - [1, 2, 3, 4, 5, 1]  # best on *selective copying*
-    - [1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 1]
-    - [1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 1, 1]
-    #- [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 1, 1, 1]
-    #- 1
-  $filter: isinstance(${dil}, int) or len(${dil}) == ${l}
+  $filter: (isinstance(${dil}, int) or len(${dil}) == ${l}) and (isinstance(${attn}, int) or len(${attn}) == ${l})
   posemb: [0]
   attn:
-    - [4, 4, 4]
-    - [0, 4, 4]
-    - [0, 0, 4]
-    - [0, 0, 2]
-    - [0, 0, 8]
+    - [0, 0, 1] # best fast
+#    - [0, 1, 0] # bad
+    #- [0, 1, 1]  # bad
+    #- [1, 0, 0] # terrible
+    - [0, 0, 0, 1]
+    #- [0, 0, 0, 4]
+    #- [4, 4, 4]
+    #- [0, 4, 4]
+   #- [0, 0, 4] # best multihead
+    #- [0, 0, 2]
+    #- [0, 0, 8]
   act:
     - "gelu"
 

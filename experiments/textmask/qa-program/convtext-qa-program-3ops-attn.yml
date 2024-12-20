@@ -1,4 +1,4 @@
-experiment_name: textmask/convtext-QAmath5_${matrix_slug}
+experiment_name: textmask/convtext-QAprog-attnpos_${matrix_slug}
 
 matrix:
   bs:
@@ -6,22 +6,24 @@ matrix:
   opt: ["AdamW"]
   lr: [.0005]
   nitem:
-    - 99
+    - 26
+  len:
+    - 5
   nops:
-    - 1 #[1, 2]
+    - [1, 3]
   vnops:
-    - 1
+    - 3
   l:
     #- 18
-    #- 3
+    - 3
     #- 4
-    - 6
+    #- 8
     #- 10
     #- 12
     #- 18
   ch:
     - 64
-    #- 128
+#    - 128
     #- 256
   ks:
     - 13
@@ -34,7 +36,24 @@ matrix:
   $filter: (isinstance(${dil}, int) or len(${dil}) == ${l}) and (isinstance(${attn}, int) or len(${attn}) == ${l})
   posemb: [0]
   attn:
-    - [0, 0, 1] # best fast
+#    - [0, 0, 0]
+    - [0, 0, True] # best fast
+ #   - [0, 0, 1]
+ #   - [0, 0, 2]
+ #   - [0, 0, 4]
+    - [0, 0, 8]
+ #   - [0, 0, 16]
+    - [0, 8, 0]
+    - [8, 0, 0]
+    - [8, 8, 0]
+    - [0, 8, 8]
+    - [8, 8, 8]
+
+    - [0, True, 0]
+    - [True, 0, 0]
+    - [True, True, 0]
+    - [0, True, True]
+    - [True, True, True]
     #    - [0, 1, 0] # bad
     #- [0, 1, 1]  # bad
     #- [1, 0, 0] # terrible
@@ -42,10 +61,9 @@ matrix:
     #- [0, 0, 0, 4]
     #- [4, 4, 4]
     #- [0, 4, 4]
-    #- [0, 0, 4] # best multihead
+   #- [0, 0, 4] # best multihead
     #- [0, 0, 2]
     #- [0, 0, 8]
-    - [0, 0, 0, 0, 0, 1]
   act:
     - "gelu"
 
@@ -54,16 +72,16 @@ trainer: experiments.textmask.texttrainer.TextMaskTrainer
 mask_is_arg: 1
 
 train_set: |
-  train_set, validation_set = TextQAMathIterableDataset.create_train_and_validation_set(
+  train_set, validation_set = TextQAProgramIterableDataset.create_train_and_validation_set(
     train_count=100_000,
     validation_count=10_000,
     validation_seed=23,
     with_masked=True,
-    max_number=${nitem},
+    num_items=${nitem},
+    input_length=${len},
     num_operations=${nops},
     validation_num_operations=${vnops},
-    fixed_answer_width=3*${vnops},
-    operators=["+", "-", "*"],
+    operators={">": 1},  # "+": 1., "-": 2/3},
   )
   train_set
 
