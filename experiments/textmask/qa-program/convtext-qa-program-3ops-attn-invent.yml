@@ -1,6 +1,7 @@
 experiment_name: textmask/convtext-QAprog-attn-invent2_${matrix_slug}
 
 matrix:
+  trial: [1, 2, 3, 4, 5]
   bs:
     - 64
   opt: ["AdamW"]
@@ -35,11 +36,6 @@ matrix:
     - [1, 2, 3, 4, 5, 1]  # best on *selective copying*
   $filter: (isinstance(${dil}, int) or len(${dil}) == ${l}) and (isinstance(${attn}, int) or len(${attn}) == ${l})
   posemb: [0]
-  qkv:
-    - "QK"
-    - "QV"
-    - "KV"
-    - "QKV"
   attn:
 #    - [0, 0, 0]
     - [0, 0, True] # best fast
@@ -69,9 +65,16 @@ matrix:
    #- [0, 0, 4] # best multihead
     #- [0, 0, 2]
     #- [0, 0, 8]
+  qkv:
+    - "QK"
+    - "QV"
+    - "KV"
+    - "QKV"
+  attnact:
+    - "elu+1"
+    # - "dpfp"
   act:
     - "gelu"
-  trial: [1, 2, 3, 4, 5]
 
 trainer: experiments.textmask.texttrainer.TextMaskTrainer
 mask_is_arg: 1
@@ -117,4 +120,6 @@ model: |
       activation="${act}",
       pos_embedding=bool(${posemb}),
       num_attention_heads=${attn},
+      attention_invention="${qkv}",
+      attention_activation="${attnact}",  
   )

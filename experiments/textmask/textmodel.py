@@ -130,6 +130,7 @@ class ConvTextModel(nn.Module):
             activation: Union[None, str, Callable] = None,
             num_attention_heads: Union[int, Iterable[int]] = 0,
             attention_activation: Union[None, str, Callable] = "elu+1",
+            attention_invention: str = "QK",  # "QK", "QV", "KV", "QKV"
             residual: Union[bool, Iterable[bool]] = True,
             residual_map: Dict[int, List[int]] = None,  # source layer -> target layer
             residual_map_concat: bool = False,
@@ -182,6 +183,7 @@ class ConvTextModel(nn.Module):
                     residual=res,
                     num_attention_heads=attn_heads,
                     attention_activation=attention_activation,
+                    attention_invention=attention_invention,
                 )
             )
             ch = next_ch

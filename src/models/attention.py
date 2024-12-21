@@ -34,12 +34,16 @@ class Attention1d(nn.Module):
             activation: Union[None, str, Callable] = "elu+1",
     ):
         super().__init__()
+        self._activation_param = activation
         if activation == "elu+1":
             self.activation = lambda x: F.elu(x) + 1.
         elif activation == "dpfp":
             self.activation = dpfp
         else:
             self.activation = activation_to_callable(activation)
+
+    def extra_repr(self) -> str:
+        return f"activation={repr(self._activation_param)}"
 
     def forward(self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
         if self.activation:

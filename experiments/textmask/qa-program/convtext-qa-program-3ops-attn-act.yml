@@ -15,13 +15,8 @@ matrix:
   vnops:
     - 3
   l:
-    #- 18
     - 3
     #- 4
-    #- 8
-    #- 10
-    #- 12
-    #- 18
   ch:
     - 64
 #    - 128
@@ -93,4 +88,6 @@ model: |
       activation="${act}",
       pos_embedding=bool(${posemb}),
       num_attention_heads=${attn},
+      attention_invention="${qkv}",
+      attention_activation="${attnact}",
   )
