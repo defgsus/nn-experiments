@@ -356,9 +356,17 @@ def group_df_column(
     dic = {}
     for c in df3:
         dic[c] = df2.loc[:, c]
-        # add std columns
-        if c in std_columns and c in df2_std:
-            dic[f"{c} (std)"] = df2_std.loc[:, c]
+
+        # add min/max/std columns
+        if c in std_columns:
+            for name, extra_df in (
+                    ("min", group.min()),
+                    ("max", group.max()),
+                    ("std", df2_std),
+            ):
+                if c in extra_df:
+                    dic[f"({name})"] = extra_df.loc[:, c]
+
     return pd.DataFrame(dic).reset_index().drop(["_id_without", column], axis=1)
 
 
