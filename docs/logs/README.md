@@ -12,7 +12,10 @@ and look at its parameters and results.
       - [:arrow_forward:](2024-12-15-selcopy2.md#preliminary-tests) Preliminary tests
       - [:arrow_forward:](2024-12-15-selcopy2.md#number-of-operations-versus-number-of-layers) Number of operations versus number of layers
       - [:arrow_forward:](2024-12-15-selcopy2.md#quick-comparison-with-mamba-and-lstm) Quick comparison with Mamba and LSTM
-      - [:arrow_forward:](2024-12-15-selcopy2.md#attention) Attention
+      - [:arrow_forward:](2024-12-15-selcopy2.md#attention-please) Attention, please!
+      - [:arrow_forward:](2024-12-15-selcopy2.md#compare-position-of-self-attention-in-3-layers-network) Compare position of self-attention in 3-layers network
+      - [:arrow_forward:](2024-12-15-selcopy2.md#compare-position-of-self-attention-in-5-layers-network) Compare position of self-attention in 5-layers network
+      - [:arrow_forward:](2024-12-15-selcopy2.md#6-layers) 6-layers
 - [2024-12-14-selcopy.md](2024-12-14-selcopy.md)
   - [:arrow_forward:](2024-12-14-selcopy.md#efficiently-solving-the-selective-copying-problem-with-a-very-small-language-model) Efficiently solving the Selective Copying Problem with a Very Small Language Model
       - [:arrow_forward:](2024-12-14-selcopy.md#comparing-number-of-layers) Comparing number of layers

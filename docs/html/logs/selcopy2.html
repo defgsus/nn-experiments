@@ -43,7 +43,25 @@
             
             
             
-            <li class="indent-3"><a href="#attention" title="Attention">Attention</a></li>
+            <li class="indent-3"><a href="#attention-please" title="Attention, please!">Attention, please!</a></li>
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            <li class="indent-3"><a href="#compare-position-of-self-attention-in-3-layers-network" title="Compare position of self-attention in 3-layers network">Compare position of self-attention in 3-layers network</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#compare-position-of-self-attention-in-5-layers-network" title="Compare position of self-attention in 5-layers network">Compare position of self-attention in 5-layers network</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#6-layers" title="6-layers">6-layers</a></li>
             
             
         </ul>
@@ -69,13 +87,17 @@ YESBR: 3&gt;5, 5&gt;1, 1&gt;5, 3&gt;4: YEBRS
 UXMP: -2, -3, 1&gt;2, +2: MPU  
 </code></pre>
 <p><strong>Spoiler</strong>: First few letters are the program input, the numbers and operators are the program
-and answer, after the second colon, is the result of the program.
-<code>x&gt;y</code> means: exchange <code>x</code>th item with <code>y</code>th item. <code>-x</code> means: remove <code>x</code>th item from memory and
-put it into the stack. <code>+x</code> means: pop last item from stack and insert at position <code>x</code>.</p>
+and answer, after the second colon, is the result of the program. </p>
+<ul>
+<li><code>x&gt;y</code> means: exchange <code>x</code>th item with <code>y</code>th item. </li>
+<li><code>-x</code> means: remove <code>x</code>th item from memory and put it onto the stack. </li>
+<li><code>+x</code> means: pop last item from stack and insert at position <code>x</code></li>
+</ul>
 <p>I argue, that this dataset</p>
 <ul>
 <li>requires a large enough <em>receptive field</em></li>
 <li>requires some cognitional ability to build up a history and to use it subsequently. </li>
+<li>and that it actually should be called <em>Selective Swapping</em> </li>
 </ul>
 <h3 id="preliminary-tests">Preliminary tests</h3>
 <p>Just to get a feeling for the dataset, i took the best model from the
@@ -186,7 +208,7 @@ about it but decided to evaluate good 12 or 18-layer dilation settings another t
 <h3 id="number-of-operations-versus-number-of-layers">Number of operations versus number of layers</h3>
 <p>The above example is a bit messy because it has a variable number of operations and
 we don't know how many answers are fully correct, only how many characters.
-So first, add a new evaluation metric <code>validation_sample_error%</code>. While the mask error gives
+So first, we add a new evaluation metric <code>validation_sample_error%</code>. While the mask error gives
 the percentage of wrong characters within the mask area, the sample error gives the percentage
 of wrong answers, even if only one character is wrong.</p>
 <p>Further, to better evaluate the relationship between number of operations (length of the &quot;program&quot;)
@@ -236,7 +258,7 @@ and <code>1,2,3,4,5,1,2,3,4,5,1,2,3,4,5,1,1,1</code> for the 18-layer network.</
 <tr>
 <td align="right">26</td>
 <td align="right">5</td>
-<td align="right">5</td>
+<td align="right"><strong>5</strong></td>
 <td align="right">6</td>
 <td align="right">64</td>
 <td align="right">9</td>
@@ -250,7 +272,7 @@ and <code>1,2,3,4,5,1,2,3,4,5,1,2,3,4,5,1,1,1</code> for the 18-layer network.</
 <tr>
 <td align="right">26</td>
 <td align="right">5</td>
-<td align="right">5</td>
+<td align="right"><strong>5</strong></td>
 <td align="right">12</td>
 <td align="right">64</td>
 <td align="right">9</td>
@@ -264,7 +286,7 @@ and <code>1,2,3,4,5,1,2,3,4,5,1,2,3,4,5,1,1,1</code> for the 18-layer network.</
 <tr>
 <td align="right">26</td>
 <td align="right">5</td>
-<td align="right">5</td>
+<td align="right"><strong>5</strong></td>
 <td align="right">18</td>
 <td align="right">64</td>
 <td align="right">9</td>
@@ -415,13 +437,13 @@ you should output that: <code>PHMTW:5&gt;3 2&gt;3 5&gt;4 5&gt;3 1&gt;3:TWPMH</co
 <p>on and on ... for millions of examples. Now, for a human, maybe a programmer even, this would
 be solvable pretty quick. Once you have seen 10 examples, you can be pretty sure what the
 algorithm is. But for a neural network trained with <em>stochastic gradient descend</em> it is basically
-a <em>brute-force</em> approach. It's like: Hey network, you gotta lot of parameters, should be fine,
+a <em>brute-force</em> approach. It's like: Hey network, you gotta lot of parameters, that's fine,
 now if you see this X, and you should output that Y, there is a chance that inreasing this one
 parameter while decreasing that other one would help you to output the correct answer, the
 next time you see the same question. And on and on...</p>
 <p>Once again, intuitively, the network can probably learn the task much easier when it has
 some easier examples in the dataset. Schools and such also don't teach children algebra by
-starting with: <em>What is the answer of 7 + 4 + 9 + 2 + 6 = ??</em></p>
+starting with: <em>What is the answer to 7 + 4 + 9 + 2 + 6 = ??</em></p>
 <p>Now the training set contains questions with 2 to 5 operations, e.g.:</p>
 <pre><code>HGOKX:3&gt;1 5&gt;4:OGHXK
 CXZMN:5&gt;4 2&gt;5:CMZNX
@@ -506,14 +528,14 @@ probably take 10 to 100 times more computation / CO2-emissions / floodings / dra
 </tbody></table></div><p>We can see from the table, that the 12 and especially the 6-layer networks are struggling.
 Looking at the plots of the 6-layer networks trained with 5 and 2-5 operations, we can
 see that the mask error decreases by a good amount but actual sample error stays roughly
-the same. It learned to put some letters and the right place but still fails
+the same. It learned to put some letters at the right place but still fails
 for almost every validation sample:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l6-nops-2-5-vnops5.png" alt="error curves" /></div></p>
 <ul>
 <li>Quick takeaway: <strong>Put also some easy examples in the training set!</strong></li>
 </ul>
-<p>The curves suggest, however, that training has not yet converged. There are sure a few more per-mille
-to squeeze out.</p>
+<p>The curves suggest, however, that training has not yet converged.
+There are sure a few more per-mille to squeeze out.</p>
 <p>This is a good point of origin for further experimentation.
 Can we get the 6-layer network to solve the <em>5-operations Very Selective Copying</em> problem,</p>
 <ul>
@@ -601,189 +623,910 @@ Conv1d with only 5-operations questions in the training set. At least, it's blaz
 <li>Disclaimer: I do not know any good practices about using or training LSTMs or Mambas and
 surely made some grave mistake..</li>
 </ul>
-<h3 id="attention">Attention</h3>
-<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l5-vnops5-attention.png" alt="error curves" /></div></p>
+<p>Back to the residual CNN. To find some interesting method, quick,
+i switched to 3 operations and 3-layer networks. The above condition holds as well. The 3-layer
+network is not able to solve the 3-operations task in the validation set, but it only takes about
+2 minutes to find out:</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l3-vnops3.png" alt="error curves" /></div></p>
+<p>The validation sample error stays roughly at 100%.</p>
+<p>I tried a couple of things, like adding cross-residual connections, e.g. from layer 1 to layer 3,
+which did not noticeably improve performance. Also tried <em>learnable</em> weights, so that each layer
+can use as input a weighted mix of all previous layers. Was not much help either, also not for the
+6-layer networks.</p>
+<h3 id="attention-please">Attention, please!</h3>
+<p>Eventually i remembered that, in an age-old lecture by Geoff Hinton, he argued that for this
+particular case he showed, the network can not succeed without a cell-wise multiplication somewhere.
+Then there is this relatively recent Schlag, Irie &amp; Schmidhuber paper
+(<a href="https://arxiv.org/abs/2102.11174" target="_blank">2102.11174</a>)
+&quot;Linear Transformers Are Secretly Fast Weight Programmers&quot;, which states:
+<em>Fast Weight Programmers (FWPs, 1991) program their fast weight memories through sequences of
+outer products between self-invented key and value patterns.</em> I just like the <em>self-invented</em> notion.</p>
+<p>To make it short, i plugged a <code>torch.nn.MultiheadAttention</code> module into the last layer, such that
+the 1d-convolution, which normally outputs 64 channels, now outputs 128 channels, which are split
+into 64 <em>query</em> and 64 <em>key</em> channels and the attention-<em>values</em> are the input of the layer.
+The pseudo-code looks like:</p>
+<pre><code class="language-python">qk = Conv1d(64, 128)(inp)
+q, k = split(qk, 64)
+outp = attention(q=q, k=k, v=inp)
+</code></pre>
+<p>Not shown is, that q, k and v (which are each of shape <code>[B, C, L]</code>) are transposed before the
+attention to move the channels (<code>C</code>) to the last dimension (<code>[B, L, C]</code>), and make it a
+channel-wise attention.</p>
+<p>The pytorch <code>MultiheadAttention</code> has a predefined fixed length, because it adds bias and
+a couple of other learnable parameters, so it has to be used channel-wise, since we don't
+want to fix the sequence length that the network processes.</p>
+<p>But wait, the <em>Fast Weight Programmers</em>-paper, said <em>self-invented <strong>keys and values</strong></em> not
+self-invented keys and queries. So, for completeness, let's test all the combinations</p>
+<h4 id="emself-inventedem-keys-and-values"><em>self-invented</em> keys and values</h4>
+<pre><code class="language-python">kv = Conv1d(64, 128)(inp)
+k, v = split(kv, 64)
+outp = attention(q=inp, k=k, v=v)
+</code></pre>
+<h4 id="emself-inventedem-queries-and-values"><em>self-invented</em> queries and values</h4>
+<pre><code class="language-python">qv = Conv1d(64, 128)(inp)
+q, v = split(qv, 64)
+outp = attention(q=q, k=inp, v=v)
+</code></pre>
+<h4 id="emself-inventedem-queries-keys-and-values"><em>self-invented</em> queries, keys and values</h4>
+<pre><code class="language-python">qkv = Conv1d(64, 192)(inp)
+q, k, v = split(qv, 64)
+outp = attention(q=q, k=k, v=v)
+</code></pre>
+<p>Unfortunately, the validation sample error varies quite a lot for each run of the same network:</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l3-vnops3-5trials.png" alt="different error curves in 5 trials of the same network" /></div></p>
+<p>So i'm doing 5 runs each and report the average. That's 80 runs for this messy plot and the table below!</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l3-vnops3-attention-invention.png" alt="many different error curves" /></div></p>
+<p>Each run has the <strong>same validation set</strong> but different training sets and initial network weights.
+(reproduce with <a href="https://github.com/defgsus/nn-experiments/blob/613064ad85c1baf0032febe159db800537728440/experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml" target="_blank">convtext-qa-program-3ops-attn-invent.yml @ 613064ad</a>)</p>
 <div style="overflow: scroll;"><table>
 <thead>
 <tr>
-<th align="right">nitem</th>
-<th align="right">len</th>
-<th align="left">nops</th>
-<th align="right">vnops</th>
-<th align="right">l</th>
-<th align="right">ch</th>
-<th align="right">ks</th>
+<th align="left">qkv</th>
 <th align="left">attn</th>
 <th align="right">validation loss</th>
 <th align="right">validation_mask_error%</th>
 <th align="right">validation_sample_error%</th>
-<th align="left">model params</th>
+<th align="right">validation_sample_error% (std)</th>
+<th align="right">model params</th>
 <th align="right">train time (minutes)</th>
-<th align="left">throughput</th>
+<th align="right">throughput</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="right">26</td>
-<td align="right">5</td>
-<td align="left">2,5</td>
-<td align="right">5</td>
-<td align="right">5</td>
-<td align="right">64</td>
-<td align="right">9</td>
-<td align="left">0,0,4,0,0</td>
-<td align="right">0.010063</td>
-<td align="right">2.09793</td>
-<td align="right">9.92237</td>
-<td align="left">291,520</td>
-<td align="right">13.09</td>
-<td align="left">5,094/s</td>
+<td align="left"></td>
+<td align="left">0,0,0</td>
+<td align="right">0.316488</td>
+<td align="right">64.9682</td>
+<td align="right">99.5322</td>
+<td align="right"></td>
+<td align="right">176,320</td>
+<td align="right">2.24</td>
+<td align="right">7,434/s</td>
 </tr>
 <tr>
-<td align="right">26</td>
-<td align="right">5</td>
-<td align="left">2,5</td>
-<td align="right">5</td>
-<td align="right">5</td>
-<td align="right">64</td>
-<td align="right">9</td>
-<td align="left">0,0,0,0,4</td>
-<td align="right">0.00499033</td>
-<td align="right">0.959395</td>
-<td align="right">4.76712</td>
-<td align="left">291,520</td>
-<td align="right">8.3</td>
-<td align="left">8,033/s</td>
+<td align="left">QK</td>
+<td align="left">0,0,1</td>
+<td align="right">0.323012</td>
+<td align="right">63.3965</td>
+<td align="right">99.4765</td>
+<td align="right">0.8504</td>
+<td align="right">246,272</td>
+<td align="right">1.77</td>
+<td align="right">9,437/s</td>
 </tr>
 <tr>
-<td align="right">26</td>
-<td align="right">5</td>
-<td align="left">2,5</td>
-<td align="right">5</td>
-<td align="right">5</td>
-<td align="right">64</td>
-<td align="right">9</td>
-<td align="left">0,4,0,0,4</td>
-<td align="right">0.000208627</td>
-<td align="right">0.0278662</td>
-<td align="right">0.139331</td>
-<td align="left">382,016</td>
-<td align="right">11.36</td>
-<td align="left">5,867/s</td>
+<td align="left">QKV</td>
+<td align="left">0,0,1</td>
+<td align="right">0.287839</td>
+<td align="right">56.5426</td>
+<td align="right">93.1568</td>
+<td align="right">14.4636</td>
+<td align="right">246,272</td>
+<td align="right">1.86</td>
+<td align="right">8,950/s</td>
 </tr>
 <tr>
-<td align="right">26</td>
-<td align="right">5</td>
-<td align="left">2,5</td>
-<td align="right">5</td>
-<td align="right">5</td>
-<td align="right">64</td>
-<td align="right">9</td>
-<td align="left">0,4,4,0,0</td>
-<td align="right">0.00018748</td>
-<td align="right">0.0238854</td>
-<td align="right">0.119427</td>
-<td align="left">382,016</td>
-<td align="right">14.79</td>
-<td align="left">4,506/s</td>
+<td align="left">KV</td>
+<td align="left">0,0,1</td>
+<td align="right">0.219660</td>
+<td align="right">41.3674</td>
+<td align="right">86.0450</td>
+<td align="right">16.6931</td>
+<td align="right">246,272</td>
+<td align="right">1.88</td>
+<td align="right">8,884/s</td>
 </tr>
 <tr>
-<td align="right">26</td>
-<td align="right">5</td>
-<td align="left">2,5</td>
-<td align="right">5</td>
-<td align="right">5</td>
-<td align="right">64</td>
-<td align="right">9</td>
-<td align="left">0,0,4,4,4</td>
-<td align="right">0.000129913</td>
+<td align="left">QV</td>
+<td align="left">0,0,1</td>
+<td align="right">0.197362</td>
+<td align="right">38.2166</td>
+<td align="right">75.5036</td>
+<td align="right">29.8328</td>
+<td align="right">246,272</td>
+<td align="right">2.1</td>
+<td align="right">7,963/s</td>
+</tr>
+<tr>
+<td align="left">QV</td>
+<td align="left">0,0,4</td>
+<td align="right">0.151719</td>
+<td align="right">29.0418</td>
+<td align="right">61.0768</td>
+<td align="right">47.2315</td>
+<td align="right">246,272</td>
+<td align="right">1.93</td>
+<td align="right">8,661/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,4</td>
+<td align="right">0.048829</td>
+<td align="right">8.2794</td>
+<td align="right">32.6791</td>
+<td align="right">32.2507</td>
+<td align="right">246,272</td>
+<td align="right">1.93</td>
+<td align="right">8,653/s</td>
+</tr>
+<tr>
+<td align="left">QKV</td>
+<td align="left">0,0,4</td>
+<td align="right">0.051348</td>
+<td align="right">8.4331</td>
+<td align="right">31.2838</td>
+<td align="right">42.0001</td>
+<td align="right">246,272</td>
+<td align="right">1.88</td>
+<td align="right">8,863/s</td>
+</tr>
+<tr>
+<td align="left">KV</td>
+<td align="left">0,0,4</td>
+<td align="right">0.048607</td>
+<td align="right">8.0497</td>
+<td align="right">30.4976</td>
+<td align="right">36.3580</td>
+<td align="right">246,272</td>
+<td align="right">1.87</td>
+<td align="right">8,905/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,8</td>
+<td align="right">0.050850</td>
+<td align="right">8.9243</td>
+<td align="right">25.5235</td>
+<td align="right">40.7858</td>
+<td align="right">246,272</td>
+<td align="right">1.9</td>
+<td align="right">8,771/s</td>
+</tr>
+<tr>
+<td align="left">QV</td>
+<td align="left">0,0,8</td>
+<td align="right">0.034589</td>
+<td align="right">6.0991</td>
+<td align="right">18.8754</td>
+<td align="right">38.8027</td>
+<td align="right">246,272</td>
+<td align="right">1.96</td>
+<td align="right">8,490/s</td>
+</tr>
+<tr>
+<td align="left">QKV</td>
+<td align="left">0,0,8</td>
+<td align="right">0.024016</td>
+<td align="right">3.6755</td>
+<td align="right">15.4618</td>
+<td align="right">27.0721</td>
+<td align="right">246,272</td>
+<td align="right">1.92</td>
+<td align="right">8,698/s</td>
+</tr>
+<tr>
+<td align="left">KV</td>
+<td align="left">0,0,8</td>
+<td align="right">0.002678</td>
+<td align="right">0.2691</td>
+<td align="right">1.3395</td>
+<td align="right">1.0593</td>
+<td align="right">246,272</td>
+<td align="right">2.03</td>
+<td align="right">8,228/s</td>
+</tr>
+<tr>
+<td align="left">QV</td>
+<td align="left">0,0,True</td>
+<td align="right">0.002325</td>
+<td align="right">0.2683</td>
+<td align="right">1.2997</td>
+<td align="right">0.5423</td>
+<td align="right">229,632</td>
+<td align="right">1.77</td>
+<td align="right">9,449/s</td>
+</tr>
+<tr>
+<td align="left">KV</td>
+<td align="left">0,0,True</td>
+<td align="right">0.002089</td>
+<td align="right">0.2316</td>
+<td align="right">1.1504</td>
+<td align="right">0.4276</td>
+<td align="right">229,632</td>
+<td align="right">1.67</td>
+<td align="right">9,973/s</td>
+</tr>
+<tr>
+<td align="left">QKV</td>
+<td align="left">0,0,True</td>
+<td align="right">0.001974</td>
+<td align="right">0.2157</td>
+<td align="right">1.0648</td>
+<td align="right">0.3161</td>
+<td align="right">229,632</td>
+<td align="right">1.84</td>
+<td align="right">9,104/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,True</td>
+<td align="right">0.001686</td>
+<td align="right">0.1755</td>
+<td align="right">0.8638</td>
+<td align="right">0.4294</td>
+<td align="right">229,632</td>
+<td align="right">1.62</td>
+<td align="right">10,301/s</td>
+</tr>
+</tbody></table></div><ul>
+<li>
+<p><code>qkv</code> is one of the <em>self-invented</em> methods above. e.g. <code>QK</code> means, <code>Q</code>uery and <code>K</code>ey come from convolution, <code>V</code>alue is unprocessed.</p>
+</li>
+<li>
+<p><code>attn: 0,0,0</code> is no attention</p>
+</li>
+<li>
+<p><code>attn: 0,0,X</code> is multi-head attention in final layer with <code>X</code> heads</p>
+</li>
+<li>
+<p><code>attn: 0,0,True</code> is a self-built attention, loosely following <strong>equation 6</strong> in
+<em>Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention</em> (<a href="https://arxiv.org/abs/2006.16236" target="_blank">2006.16236</a>]).
+In contrast to the torch <code>MultiheadAttention</code>, The self-made function does not have any
+parameters and works on sequences and channels of any length.</p>
+<pre><code>def attn(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor) -&gt; torch.Tensor:
+    q = F.elu(q) + 1.
+    k = F.elu(k) + 1.
+    return q @ (k.permute(0, 2, 1) @ v) / (v.shape[-1] * v.shape[-2])
+</code></pre>
+</li>
+<li>
+<p><code>(std)</code> is the standard variation given for the validation sample error</p>
+</li>
+</ul>
+<p>So,</p>
+<ul>
+<li>the <strong>average validation sample error</strong> is smallest for the <strong>self-built, self-invented QK</strong> attention,
+followed by all the other self-built variants. </li>
+<li>
+Best number-of-heads for pytorch attention seems to be 8, <ul>
+<li>and the only performing <em>self-invented</em> combination seems to be <strong>K</strong>ey/<strong>V</strong>alue,
+as stated in the FWP paper..</li>
+</ul>
+</li>
+<li>The absolutely-prooven-to-not-working model is pytorch attention with QK and heads=1.</li>
+<li>Generally, the pytorch attention module is very unstable in this experiment.
+Look at the error deviations! Occasionally, one of 5 runs produced a far better
+validation sample error than 0.8%. </li>
+</ul>
+<p>Admittedly, there is something about this so-called <em>Attention</em> that works pretty well.
+Thinking in terms of the <em>receptive field</em>, these two dot-products in the attention formula
+bring every point in the sequence in contact with every other point, in a way that makes some
+sense. How exactly it makes sense, i can not tell. That's why i run these tests.</p>
+<h3 id="compare-position-of-self-attention-in-3-layers-network">Compare position of self-attention in 3-layers network</h3>
+<p>Placing the best (most consistent) attention method from above into all the layers:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">qkv</th>
+<th align="left">attn</th>
+<th align="right">validation loss</th>
+<th align="right">validation_mask_error%</th>
+<th align="right">validation_sample_error%</th>
+<th align="right">validation_sample_error% (std)</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,0,0</td>
+<td align="right">0.292424</td>
+<td align="right">54.8229</td>
+<td align="right">99.1043</td>
+<td align="right">0.0962</td>
+<td align="right">229,632</td>
+<td align="right">2.88</td>
+<td align="right">5,788/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,T,0</td>
+<td align="right">0.196146</td>
+<td align="right">39.6819</td>
+<td align="right">95.0159</td>
+<td align="right">0.6247</td>
+<td align="right">282,944</td>
+<td align="right">2.93</td>
+<td align="right">5,681/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,T,T</td>
+<td align="right">0.088230</td>
+<td align="right">17.0322</td>
+<td align="right">57.3487</td>
+<td align="right">29.2807</td>
+<td align="right">336,256</td>
+<td align="right">2.02</td>
+<td align="right">8,247/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,T,0</td>
+<td align="right">0.053625</td>
+<td align="right">8.9275</td>
+<td align="right">38.6146</td>
+<td align="right">8.3909</td>
+<td align="right">229,632</td>
+<td align="right">2.77</td>
+<td align="right">6,011/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,T</td>
+<td align="right">0.001912</td>
+<td align="right">0.2161</td>
+<td align="right">1.0648</td>
+<td align="right">0.5693</td>
+<td align="right">229,632</td>
+<td align="right">1.54</td>
+<td align="right">10,827/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,T,T</td>
+<td align="right">0.001125</td>
+<td align="right">0.1361</td>
+<td align="right">0.6926</td>
+<td align="right">1.2740</td>
+<td align="right">282,944</td>
+<td align="right">1.80</td>
+<td align="right">9,275/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,0,T</td>
+<td align="right">0.000185</td>
+<td align="right">0.0079</td>
+<td align="right">0.0437</td>
+<td align="right">0.0341</td>
+<td align="right">282,944</td>
+<td align="right">1.71</td>
+<td align="right">9,744/s</td>
+</tr>
+</tbody></table></div><p>Well, how can we explain that?
+It's very unfortunate that there is no obvious rule popping out, where to put the attention layers,
+except that there should be one in the final layer.</p>
+<p>Or do you instantly know how to setup a 5-layer network now for the 5-operations task? </p>
+<h3 id="compare-position-of-self-attention-in-5-layers-network">Compare position of self-attention in 5-layers network</h3>
+<p>For simplicity, keep the above dataset (and the 1 million steps of training),
+and use a 5-layer network with <code>dilation=[2, 3, 4, 5, 1]</code> to try all the attention-permutations.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">qkv</th>
+<th align="left">attn</th>
+<th align="right">validation loss</th>
+<th align="right">validation_mask_error%</th>
+<th align="right">validation_sample_error%</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,0,0,0</td>
+<td align="right">0.226301</td>
+<td align="right">50.4797</td>
+<td align="right">98.7162</td>
+<td align="right">282,944</td>
+<td align="right">2.92</td>
+<td align="right">5,705/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,T,T,T,T</td>
+<td align="right">0.168785</td>
+<td align="right">32.6393</td>
+<td align="right">91.9686</td>
+<td align="right">549,504</td>
+<td align="right">2.88</td>
+<td align="right">5,783/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,0,0,0,0</td>
+<td align="right">0.160457</td>
+<td align="right">29.9224</td>
+<td align="right">87.0521</td>
+<td align="right">336,256</td>
+<td align="right">3.16</td>
+<td align="right">5,276/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,T,T,T,0</td>
+<td align="right">0.143025</td>
+<td align="right">25.5971</td>
+<td align="right">83.1111</td>
+<td align="right">496,192</td>
+<td align="right">3.67</td>
+<td align="right">4,545/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,T,T,0,0</td>
+<td align="right">0.131017</td>
+<td align="right">23.9471</td>
+<td align="right">80.4638</td>
+<td align="right">442,880</td>
+<td align="right">3.47</td>
+<td align="right">4,804/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,T,0,0,0</td>
+<td align="right">0.119354</td>
+<td align="right">22.0004</td>
+<td align="right">75.7564</td>
+<td align="right">389,568</td>
+<td align="right">3.3</td>
+<td align="right">5,053/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,0,0,T,0</td>
+<td align="right">0.103017</td>
+<td align="right">18.4912</td>
+<td align="right">69.4068</td>
+<td align="right">389,568</td>
+<td align="right">3.38</td>
+<td align="right">4,927/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,T,0,T,0</td>
+<td align="right">0.0981063</td>
+<td align="right">17.9598</td>
+<td align="right">66.9984</td>
+<td align="right">442,880</td>
+<td align="right">3.49</td>
+<td align="right">4,769/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,0,T,0,0</td>
+<td align="right">0.0658464</td>
+<td align="right">11.9805</td>
+<td align="right">50.3881</td>
+<td align="right">389,568</td>
+<td align="right">3.36</td>
+<td align="right">4,956/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,0,T,T,T</td>
+<td align="right">0.0689705</td>
+<td align="right">12.0979</td>
+<td align="right">49.4128</td>
+<td align="right">496,192</td>
+<td align="right">2.63</td>
+<td align="right">6,327/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,T,T,0,T</td>
+<td align="right">0.0544455</td>
+<td align="right">9.24164</td>
+<td align="right">40.2170</td>
+<td align="right">496,192</td>
+<td align="right">2.63</td>
+<td align="right">6,334/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,T,0,0,0</td>
+<td align="right">0.0165344</td>
+<td align="right">2.36266</td>
+<td align="right">11.2162</td>
+<td align="right">336,256</td>
+<td align="right">3.17</td>
+<td align="right">5,251/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,0,T,T,0</td>
+<td align="right">0.0127326</td>
+<td align="right">1.93471</td>
+<td align="right">9.40486</td>
+<td align="right">442,880</td>
+<td align="right">3.57</td>
+<td align="right">4,674/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,T,T,T,T</td>
+<td align="right">0.00333168</td>
+<td align="right">0.427946</td>
+<td align="right">2.15963</td>
+<td align="right">496,192</td>
+<td align="right">2.56</td>
+<td align="right">6,512/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,T,0,T,0</td>
+<td align="right">0.00353792</td>
+<td align="right">0.376194</td>
+<td align="right">1.88097</td>
+<td align="right">389,568</td>
+<td align="right">3.36</td>
+<td align="right">4,957/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,T,T,0,0</td>
+<td align="right">0.00345656</td>
+<td align="right">0.350318</td>
+<td align="right">1.75159</td>
+<td align="right">389,568</td>
+<td align="right">3.42</td>
+<td align="right">4,866/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,T,0,T,T</td>
+<td align="right">0.00226949</td>
+<td align="right">0.248806</td>
+<td align="right">1.29379</td>
+<td align="right">496,192</td>
+<td align="right">2.59</td>
+<td align="right">6,447/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,T,0,0</td>
+<td align="right">0.00188953</td>
+<td align="right">0.181131</td>
+<td align="right">0.915605</td>
+<td align="right">336,256</td>
+<td align="right">3.24</td>
+<td align="right">5,138/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,T,T,T,0</td>
+<td align="right">0.00184384</td>
+<td align="right">0.173169</td>
+<td align="right">0.885748</td>
+<td align="right">442,880</td>
+<td align="right">3.53</td>
+<td align="right">4,723/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,T,T,0</td>
+<td align="right">0.00132653</td>
+<td align="right">0.095541</td>
+<td align="right">0.477707</td>
+<td align="right">389,568</td>
+<td align="right">3.23</td>
+<td align="right">5,153/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,0,0,T,T</td>
+<td align="right">0.000828459</td>
+<td align="right">0.083598</td>
+<td align="right">0.417994</td>
+<td align="right">442,880</td>
+<td align="right">2.43</td>
+<td align="right">6,846/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,T,0,T,T</td>
+<td align="right">0.000377713</td>
+<td align="right">0.035828</td>
+<td align="right">0.189092</td>
+<td align="right">442,880</td>
+<td align="right">2.46</td>
+<td align="right">6,767/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,0,T,0</td>
+<td align="right">0.000290391</td>
 <td align="right">0.0199045</td>
 <td align="right">0.0995223</td>
-<td align="left">472,512</td>
-<td align="right">13.91</td>
-<td align="left">4,793/s</td>
+<td align="right">336,256</td>
+<td align="right">3.11</td>
+<td align="right">5,354/s</td>
 </tr>
 <tr>
-<td align="right">26</td>
-<td align="right">5</td>
-<td align="left">2,5</td>
-<td align="right">5</td>
-<td align="right">5</td>
-<td align="right">64</td>
-<td align="right">9</td>
-<td align="left">0,0,0,4,0</td>
-<td align="right">8.99973e-05</td>
+<td align="left">QK</td>
+<td align="left">0,0,T,T,T</td>
+<td align="right">0.000282769</td>
+<td align="right">0.0199045</td>
+<td align="right">0.0995223</td>
+<td align="right">442,880</td>
+<td align="right">2.51</td>
+<td align="right">6,644/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,T,0,0,T</td>
+<td align="right">0.000122952</td>
+<td align="right">0.0159236</td>
+<td align="right">0.0796178</td>
+<td align="right">442,880</td>
+<td align="right">2.41</td>
+<td align="right">6,913/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,T,0,T</td>
+<td align="right">0.000144108</td>
 <td align="right">0.0119427</td>
-<td align="right">0.0597134</td>
-<td align="left">291,520</td>
-<td align="right">13.39</td>
-<td align="left">4,979/s</td>
+<td align="right">0.0696656</td>
+<td align="right">389,568</td>
+<td align="right">2.31</td>
+<td align="right">7,203/s</td>
 </tr>
 <tr>
-<td align="right">26</td>
-<td align="right">5</td>
-<td align="left">2,5</td>
-<td align="right">5</td>
-<td align="right">5</td>
-<td align="right">64</td>
-<td align="right">9</td>
-<td align="left">0,0,4,0,4</td>
-<td align="right">0.000111912</td>
-<td align="right">0.00995223</td>
-<td align="right">0.0597134</td>
-<td align="left">382,016</td>
-<td align="right">12.28</td>
-<td align="left">5,427/s</td>
+<td align="left">QK</td>
+<td align="left">T,0,T,0,T</td>
+<td align="right">0.000167425</td>
+<td align="right">0.00796178</td>
+<td align="right">0.0398089</td>
+<td align="right">442,880</td>
+<td align="right">2.5</td>
+<td align="right">6,664/s</td>
 </tr>
 <tr>
-<td align="right">26</td>
-<td align="right">5</td>
-<td align="left">2,5</td>
-<td align="right">5</td>
-<td align="right">5</td>
-<td align="right">64</td>
-<td align="right">9</td>
-<td align="left">0,4,0,4,0</td>
-<td align="right">7.71816e-05</td>
-<td align="right">0.00995223</td>
-<td align="right">0.0497611</td>
-<td align="left">382,016</td>
-<td align="right">14.58</td>
-<td align="left">4,572/s</td>
-</tr>
-<tr>
-<td align="right">26</td>
-<td align="right">5</td>
-<td align="left">2,5</td>
-<td align="right">5</td>
-<td align="right">5</td>
-<td align="right">64</td>
-<td align="right">9</td>
-<td align="left">0,0,0,4,4</td>
-<td align="right">4.30281e-05</td>
-<td align="right">0.00597134</td>
-<td align="right">0.0298567</td>
-<td align="left">382,016</td>
-<td align="right">11.7</td>
-<td align="left">5,699/s</td>
-</tr>
-<tr>
-<td align="right">26</td>
-<td align="right">5</td>
-<td align="left">2,5</td>
-<td align="right">5</td>
-<td align="right">5</td>
-<td align="right">64</td>
-<td align="right">9</td>
-<td align="left">0,0,4,4,0</td>
-<td align="right">1.58895e-05</td>
+<td align="left">QK</td>
+<td align="left">0,0,0,0,T</td>
+<td align="right">6.164e-05</td>
 <td align="right">0.00398089</td>
 <td align="right">0.0199045</td>
-<td align="left">382,016</td>
-<td align="right">14.2</td>
-<td align="left">4,696/s</td>
+<td align="right">336,256</td>
+<td align="right">2.04</td>
+<td align="right">8,179/s</td>
 </tr>
-</tbody></table></div>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,T,0,0,T</td>
+<td align="right">6.42146e-05</td>
+<td align="right">0.00398089</td>
+<td align="right">0.0199045</td>
+<td align="right">389,568</td>
+<td align="right">2.26</td>
+<td align="right">7,376/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,T,T,0,T</td>
+<td align="right">0.00010805</td>
+<td align="right">0.00398089</td>
+<td align="right">0.0199045</td>
+<td align="right">442,880</td>
+<td align="right">2.5</td>
+<td align="right">6,675/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,0,0,0,T</td>
+<td align="right">0.000154807</td>
+<td align="right">0.00398089</td>
+<td align="right">0.0199045</td>
+<td align="right">389,568</td>
+<td align="right">2.33</td>
+<td align="right">7,141/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,0,T,T</td>
+<td align="right">2.67664e-05</td>
+<td align="right">0</td>
+<td align="right">0.00995223</td>
+<td align="right">389,568</td>
+<td align="right">2.24</td>
+<td align="right">7,453/s</td>
+</tr>
+</tbody></table></div><p>Okay okay, there is some slight pattern for arrangement of the self-attention modules emerging.</p>
+<p>Now pick the best ones and train and test against 5-operations questions (at 4 million training steps):</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">qkv</th>
+<th align="left">attn</th>
+<th align="right">validation loss</th>
+<th align="right">validation_mask_error%</th>
+<th align="right">validation_sample_error%</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,0,T,0,T</td>
+<td align="right">0.107469</td>
+<td align="right">29.7174</td>
+<td align="right">87.2711</td>
+<td align="right">442,880</td>
+<td align="right">10.17</td>
+<td align="right">6,553/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,T,T,0,T</td>
+<td align="right">0.0795734</td>
+<td align="right">21.7874</td>
+<td align="right">74.3432</td>
+<td align="right">442,880</td>
+<td align="right">10.03</td>
+<td align="right">6,648/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,0,0,0,T</td>
+<td align="right">0.0692764</td>
+<td align="right">18.6744</td>
+<td align="right">68.2524</td>
+<td align="right">389,568</td>
+<td align="right">9.57</td>
+<td align="right">6,965/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,T,0,0,T</td>
+<td align="right">0.0635093</td>
+<td align="right">16.5983</td>
+<td align="right">61.6939</td>
+<td align="right">389,568</td>
+<td align="right">9.63</td>
+<td align="right">6,926/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,T,0,T</td>
+<td align="right">0.0525193</td>
+<td align="right">14.9960</td>
+<td align="right">58.0812</td>
+<td align="right">389,568</td>
+<td align="right">9.37</td>
+<td align="right">7,117/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,0,0,T</td>
+<td align="right">0.0072723</td>
+<td align="right">1.72572</td>
+<td align="right">8.1110</td>
+<td align="right">336,256</td>
+<td align="right">8.09</td>
+<td align="right">8,245/s</td>
+</tr>
+</tbody></table></div><p>It's still not completely sufficient. Let's switch back to 6-layer networks, again copying the
+best attention-settings, although, there is only <em>one</em> performing okay-ish,
+the others are worse than 50% error. </p>
+<h3 id="6-layers">6-layers</h3>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">qkv</th>
+<th align="left">attn</th>
+<th align="right">validation loss</th>
+<th align="right">validation_mask_error%</th>
+<th align="right">validation_sample_error%</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">QK</td>
+<td align="left">T,0,0,0,0,T</td>
+<td align="right">0.0529652</td>
+<td align="right">14.0844</td>
+<td align="right">54.9562</td>
+<td align="right">442,880</td>
+<td align="right">10.39</td>
+<td align="right">6,419/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,T,0,0,0,T</td>
+<td align="right">0.0196075</td>
+<td align="right">4.79498</td>
+<td align="right">21.666</td>
+<td align="right">442,880</td>
+<td align="right">14.6</td>
+<td align="right">4,566/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,0,T,0,T</td>
+<td align="right">0.0143111</td>
+<td align="right">3.58081</td>
+<td align="right">16.5705</td>
+<td align="right">442,880</td>
+<td align="right">14.5</td>
+<td align="right">4,599/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,T,0,0,T</td>
+<td align="right">0.0136107</td>
+<td align="right">3.27826</td>
+<td align="right">15.2767</td>
+<td align="right">442,880</td>
+<td align="right">14.49</td>
+<td align="right">4,601/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,0,0,T,T</td>
+<td align="right">0.00143896</td>
+<td align="right">0.254777</td>
+<td align="right">1.27389</td>
+<td align="right">442,880</td>
+<td align="right">14.59</td>
+<td align="right">4,569/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,0,0,0,T</td>
+<td align="right">6.6917e-05</td>
+<td align="right">0.00995223</td>
+<td align="right">0.0597134</td>
+<td align="right">389,568</td>
+<td align="right">13.82</td>
+<td align="right">4,823/s</td>
+</tr>
+</tbody></table></div><p>Well, i'm a bit tired of this topic right now. </p>
+<p>Let's wrap the findings up, quickly: </p>
+<ul>
+<li>a 6-layer network can solve the 5-operations task, if we add self-attention to the last layer.</li>
+<li>The number of model parameters increased from 237,952 to 389,568 (because i still used
+the 13-kernels from the 3-layers experiments and the one 64-128 convolution for the <em>self-invented</em> QK) </li>
+<li>The training time increased from <del>14 minutes to </del>17. </li>
+<li>Validation sample error decreased from 99% to 0.06%</li>
+<li>Is this a passable building block for a <em>Very Small Language Model</em>?
+I might have said yes but right now i say: Don't know, have to test it...</li>
+</ul>
+<p>A little graphical disorder at the end of the day:</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_messy-end-of-day.png" alt="error curves" /></div></p>
+
 
         <!-- article footer -->
         <div class="flex article-footer">
