@@ -53,6 +53,10 @@
             
             
             
+            <li class="indent-3"><a href="#compare-attention-activation-function" title="Compare attention activation function">Compare attention activation function</a></li>
+            
+            
+            
             <li class="indent-3"><a href="#compare-position-of-self-attention-in-3-layers-network" title="Compare position of self-attention in 3-layers network">Compare position of self-attention in 3-layers network</a></li>
             
             
@@ -924,8 +928,57 @@ validation sample error than 0.8%. </li>
 Thinking in terms of the <em>receptive field</em>, these two dot-products in the attention formula
 bring every point in the sequence in contact with every other point, in a way that makes some
 sense. How exactly it makes sense, i can not tell. That's why i run these tests.</p>
+<h3 id="compare-attention-activation-function">Compare attention activation function</h3>
+<p>The above activation function in the self-built attention module, <code>elu(x) + 1</code>, is suggested
+by the authors (<a href="https://arxiv.org/abs/2006.16236" target="_blank">2006.16236</a>]), mainly because it needs
+to be &gt;= 0 and the elu gives a smooth gradient (unlike relu). </p>
+<p>The <em>Fast Weight Programmers</em>-paper (<a href="https://arxiv.org/abs/2102.11174" target="_blank">2102.11174</a>) suggests to
+replace this function with a more sparsity &amp; orthogonality - aimed
+<em>Deterministic Parameter-Free Projection</em> (DPFP). Comparing the two activations
+for the 3-operators, 3-layers, 1-million-steps setup, averaged over 5 runs each, gives:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">qkv</th>
+<th align="left">attn</th>
+<th align="left">attnact</th>
+<th align="right">validation loss</th>
+<th align="right">validation_mask_error%</th>
+<th align="right">validation_sample_error%</th>
+<th align="right">validation_sample_error% (std)</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,True</td>
+<td align="left">dpfp</td>
+<td align="right">0.00149588</td>
+<td align="right">0.164013</td>
+<td align="right">0.79816</td>
+<td align="right">0.538314</td>
+<td align="right">229,632</td>
+<td align="right">1.56</td>
+<td align="right">10,723/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,True</td>
+<td align="left">elu+1</td>
+<td align="right">0.00110781</td>
+<td align="right">0.091162</td>
+<td align="right">0.44785</td>
+<td align="right">0.211001</td>
+<td align="right">229,632</td>
+<td align="right">1.52</td>
+<td align="right">10,981/s</td>
+</tr>
+</tbody></table></div><p>Well, there is certainly a more powerful activation to be found for this particular task..</p>
 <h3 id="compare-position-of-self-attention-in-3-layers-network">Compare position of self-attention in 3-layers network</h3>
-<p>Placing the best (most consistent) attention method from above into all the layers:</p>
+<p>Placing the best (most consistent) attention method from above into <em>all the layers</em>:</p>
 <div style="overflow: scroll;"><table>
 <thead>
 <tr>
@@ -1021,9 +1074,9 @@ sense. How exactly it makes sense, i can not tell. That's why i run these tests.
 </tbody></table></div><p>Well, how can we explain that?
 It's very unfortunate that there is no obvious rule popping out, where to put the attention layers,
 except that there should be one in the final layer.</p>
-<p>Or do you instantly know how to setup a 5-layer network now for the 5-operations task? </p>
+<p>Or do you instantly know how to setup a 5-layer network for the 5-operations task, now? </p>
 <h3 id="compare-position-of-self-attention-in-5-layers-network">Compare position of self-attention in 5-layers network</h3>
-<p>For simplicity, keep the above dataset (and the 1 million steps of training),
+<p>For efficiency, keep the above dataset (and the 1 million steps of training),
 and use a 5-layer network with <code>dilation=[2, 3, 4, 5, 1]</code> to try all the attention-permutations.</p>
 <div style="overflow: scroll;"><table>
 <thead>

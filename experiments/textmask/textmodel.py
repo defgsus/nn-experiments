@@ -23,6 +23,7 @@ class ConvTextLayer(nn.Module):
             residual: bool,
             num_attention_heads: Union[bool, int] = 0,
             attention_invention: str = "QK",  # "QK", "QV", "KV", "QKV"
+            attention_activation: Union[None, str, Callable] = "elu+1",
     ):
         super().__init__()
         self.residual = residual and num_channels_in == num_channels_out
@@ -41,7 +42,9 @@ class ConvTextLayer(nn.Module):
         self.attn = None
         if num_attention_heads:
             if num_attention_heads is True:
-                self.attn = Attention1d()
+                self.attn = Attention1d(
+                    activation=attention_activation,
+                )
             else:
                 self.attn_mh = nn.MultiheadAttention(
                     embed_dim=num_channels_out,
@@ -126,6 +129,7 @@ class ConvTextModel(nn.Module):
             out_norm: Union[None, str, Type[nn.Module]] = None,
             activation: Union[None, str, Callable] = None,
             num_attention_heads: Union[int, Iterable[int]] = 0,
+            attention_activation: Union[None, str, Callable] = "elu+1",
             residual: Union[bool, Iterable[bool]] = True,
             residual_map: Dict[int, List[int]] = None,  # source layer -> target layer
             residual_map_concat: bool = False,
@@ -177,6 +181,7 @@ class ConvTextModel(nn.Module):
                     activation=activation,
                     residual=res,
                     num_attention_heads=attn_heads,
+                    attention_activation=attention_activation,
                 )
             )
             ch = next_ch

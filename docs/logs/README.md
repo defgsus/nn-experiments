@@ -13,6 +13,7 @@ and look at its parameters and results.
       - [:arrow_forward:](2024-12-15-selcopy2.md#number-of-operations-versus-number-of-layers) Number of operations versus number of layers
       - [:arrow_forward:](2024-12-15-selcopy2.md#quick-comparison-with-mamba-and-lstm) Quick comparison with Mamba and LSTM
       - [:arrow_forward:](2024-12-15-selcopy2.md#attention-please) Attention, please!
+      - [:arrow_forward:](2024-12-15-selcopy2.md#compare-attention-activation-function) Compare attention activation function
       - [:arrow_forward:](2024-12-15-selcopy2.md#compare-position-of-self-attention-in-3-layers-network) Compare position of self-attention in 3-layers network
       - [:arrow_forward:](2024-12-15-selcopy2.md#compare-position-of-self-attention-in-5-layers-network) Compare position of self-attention in 5-layers network
       - [:arrow_forward:](2024-12-15-selcopy2.md#6-layers) 6-layers
