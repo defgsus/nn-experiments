@@ -45,8 +45,8 @@
             <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
-        <h1 id="reservoir-computing">Reservoir computing</h1>
-<h2 id="reproducing-quothandwritten-digit-recognition-by-spin-waves-in-a-skyrmion-reservoirquot">Reproducing &quot;Handwritten Digit Recognition by Spin Waves in a Skyrmion Reservoir&quot;</h2>
+        <h1 id="reservoir-computing">Reservoir computing <a href="#reservoir-computing" class="heading-linker">←</a></h1>
+<h2 id="reproducing-quothandwritten-digit-recognition-by-spin-waves-in-a-skyrmion-reservoirquot">Reproducing &quot;Handwritten Digit Recognition by Spin Waves in a Skyrmion Reservoir&quot; <a href="#reproducing-quothandwritten-digit-recognition-by-spin-waves-in-a-skyrmion-reservoirquot" class="heading-linker">←</a></h2>
 <p>by Mu-Kun Lee, Masahito Mochizuki <a href="https://arxiv.org/abs/2309.06815" target="_blank">arxiv:2309.06815</a></p>
 <p>It's an interesting paper. I try to reproduce the digital part of it:
 classifying the MNIST dataset via linear readout of an &quot;Echo State Network&quot;.</p>
@@ -58,7 +58,7 @@ images for each class, image size 22x16. </p>
 The resulting state map of 22 x <code>num_cells</code> is fed to
 a <code>sklearn.linear_model.Ridge</code> with default parameters and fitted to the
 image's class logits (10 numbers, all zero except one).</p>
-<h3 id="baseline-without-reservoir">Baseline without reservoir</h3>
+<h3 id="baseline-without-reservoir">Baseline without reservoir <a href="#baseline-without-reservoir" class="heading-linker">←</a></h3>
 <p>Feeding the raw 22x16 images to the <code>Ridge</code> gives</p>
 <div style="overflow: scroll;"><table>
 <thead>
@@ -79,7 +79,7 @@ image's class logits (10 numbers, all zero except one).</p>
 <td align="right">0.149</td>
 <td align="right">0.824</td>
 </tr>
-</tbody></table></div><h3 id="codereservoirnum_inputs16-num_cells100code"><code>Reservoir(num_inputs=16, num_cells=100)</code></h3>
+</tbody></table></div><h3 id="codereservoirnum_inputs16-num_cells100code"><code>Reservoir(num_inputs=16, num_cells=100)</code> <a href="#codereservoirnum_inputs16-num_cells100code" class="heading-linker">←</a></h3>
 <p>Each setup was run 5 times and the average is reported. Table is sorted by <code>test_accuracy</code>.
 Full runtime was 5min.</p>
 <div style="overflow: scroll;"><table>
@@ -765,7 +765,7 @@ Full runtime was 5min.</p>
 <td align="right">0.151612</td>
 <td align="right">0.86103</td>
 </tr>
-</tbody></table></div><h3 id="codereservoirnum_inputs16-num_cells1000code"><code>Reservoir(num_inputs=16, num_cells=1000)</code></h3>
+</tbody></table></div><h3 id="codereservoirnum_inputs16-num_cells1000code"><code>Reservoir(num_inputs=16, num_cells=1000)</code> <a href="#codereservoirnum_inputs16-num_cells1000code" class="heading-linker">←</a></h3>
 <p>Repeat everything with 1000 reservoir cells. Full runtime 67min.</p>
 <div style="overflow: scroll;"><table>
 <thead>

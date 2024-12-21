@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Corrections of wrong <em>Very Selective Copying</em> experiments</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#corrections-of-wrong-emvery-selective-copyingem-experiments" title="Corrections of wrong <em>Very Selective Copying</em> experiments">Corrections of wrong <em>Very Selective Copying</em> experiments</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#compare-attention-activation-function" title="Compare attention activation function">Compare attention activation function</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#compare-attention-invention" title="Compare attention invention">Compare attention invention</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="corrections-of-wrong-emvery-selective-copyingem-experiments">Corrections of wrong <em>Very Selective Copying</em> experiments <a href="#corrections-of-wrong-emvery-selective-copyingem-experiments" class="heading-linker">←</a></h1>
+<h3 id="compare-attention-activation-function">Compare attention activation function <a href="#compare-attention-activation-function" class="heading-linker">←</a></h3>
+<p>Reproduce with <a href="https://github.com/defgsus/nn-experiments/blob/6bedc89667062f7f8d18d77df0b6bec253836bc8/experiments/textmask/qa-program/convtext-qa-program-3ops-attn-act.yml" target="_blank">convtext-qa-program-3ops-attn-act.yml @ 6bedc896</a></p>
+<p>Here's the 5-runs average for each activation function. </p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">qkv</th>
+<th align="left">attn</th>
+<th align="left">attnact</th>
+<th align="right">validation loss</th>
+<th align="right">validation_mask_error%</th>
+<th align="right">validation_sample_error%</th>
+<th align="right">(min)</th>
+<th align="right">(max)</th>
+<th align="right">(std)</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,T</td>
+<td align="left">elu+1</td>
+<td align="right">0.00131346</td>
+<td align="right">0.142118</td>
+<td align="right">0.676752</td>
+<td align="right">0.199045</td>
+<td align="right">1.05494</td>
+<td align="right">0.346975</td>
+<td align="right">229,632</td>
+<td align="right">1.51</td>
+<td align="right">11,066/s</td>
+</tr>
+<tr>
+<td align="left">QK</td>
+<td align="left">0,0,T</td>
+<td align="left">dpfp</td>
+<td align="right">0.000896075</td>
+<td align="right">0.119029</td>
+<td align="right">0.597134</td>
+<td align="right">0.17914</td>
+<td align="right">1.23408</td>
+<td align="right">0.54615</td>
+<td align="right">229,632</td>
+<td align="right">1.69</td>
+<td align="right">9,871/s</td>
+</tr>
+</tbody></table></div><p>The <strong>dpfp</strong> seems to perform a little better (it's certainly converging a bit earlier in training)
+but looking at the individual runs i retract and rather think there is nothing that can be said
+with any evidence:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">trial</th>
+<th align="left">qkv</th>
+<th align="left">attn</th>
+<th align="left">attnact</th>
+<th align="right">validation loss</th>
+<th align="right">validation_mask_error%</th>
+<th align="right">validation_sample_error%</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">2</td>
+<td align="left">QK</td>
+<td align="left">0,0,T</td>
+<td align="left">dpfp</td>
+<td align="right">0.00161164</td>
+<td align="right">0.248806</td>
+<td align="right">1.23408</td>
+<td align="right">229,632</td>
+<td align="right">1.67</td>
+<td align="right">9,979/s</td>
+</tr>
+<tr>
+<td align="right">5</td>
+<td align="left">QK</td>
+<td align="left">0,0,T</td>
+<td align="left">dpfp</td>
+<td align="right">0.00167819</td>
+<td align="right">0.230892</td>
+<td align="right">1.15446</td>
+<td align="right">229,632</td>
+<td align="right">1.76</td>
+<td align="right">9,491/s</td>
+</tr>
+<tr>
+<td align="right">5</td>
+<td align="left">QK</td>
+<td align="left">0,0,T</td>
+<td align="left">elu+1</td>
+<td align="right">0.00170212</td>
+<td align="right">0.222930</td>
+<td align="right">1.05494</td>
+<td align="right">229,632</td>
+<td align="right">1.61</td>
+<td align="right">10,347/s</td>
+</tr>
+<tr>
+<td align="right">2</td>
+<td align="left">QK</td>
+<td align="left">0,0,T</td>
+<td align="left">elu+1</td>
+<td align="right">0.00170096</td>
+<td align="right">0.191083</td>
+<td align="right">0.88574</td>
+<td align="right">229,632</td>
+<td align="right">1.47</td>
+<td align="right">11,317/s</td>
+</tr>
+<tr>
+<td align="right">1</td>
+<td align="left">QK</td>
+<td align="left">0,0,T</td>
+<td align="left">elu+1</td>
+<td align="right">0.00159251</td>
+<td align="right">0.163217</td>
+<td align="right">0.79617</td>
+<td align="right">229,632</td>
+<td align="right">1.33</td>
+<td align="right">12,507/s</td>
+</tr>
+<tr>
+<td align="right">3</td>
+<td align="left">QK</td>
+<td align="left">0,0,T</td>
+<td align="left">elu+1</td>
+<td align="right">0.00101384</td>
+<td align="right">0.095541</td>
+<td align="right">0.44785</td>
+<td align="right">229,632</td>
+<td align="right">1.54</td>
+<td align="right">10,842/s</td>
+</tr>
+<tr>
+<td align="right">1</td>
+<td align="left">QK</td>
+<td align="left">0,0,T</td>
+<td align="left">dpfp</td>
+<td align="right">0.00042169</td>
+<td align="right">0.045780</td>
+<td align="right">0.22890</td>
+<td align="right">229,632</td>
+<td align="right">1.59</td>
+<td align="right">10,498/s</td>
+</tr>
+<tr>
+<td align="right">4</td>
+<td align="left">QK</td>
+<td align="left">0,0,T</td>
+<td align="left">elu+1</td>
+<td align="right">0.00055788</td>
+<td align="right">0.037818</td>
+<td align="right">0.19904</td>
+<td align="right">229,632</td>
+<td align="right">1.62</td>
+<td align="right">10,314/s</td>
+</tr>
+<tr>
+<td align="right">4</td>
+<td align="left">QK</td>
+<td align="left">0,0,T</td>
+<td align="left">dpfp</td>
+<td align="right">0.00034492</td>
+<td align="right">0.035828</td>
+<td align="right">0.18909</td>
+<td align="right">229,632</td>
+<td align="right">1.74</td>
+<td align="right">9,552/s</td>
+</tr>
+<tr>
+<td align="right">3</td>
+<td align="left">QK</td>
+<td align="left">0,0,T</td>
+<td align="left">dpfp</td>
+<td align="right">0.00042392</td>
+<td align="right">0.033837</td>
+<td align="right">0.17914</td>
+<td align="right">229,632</td>
+<td align="right">1.69</td>
+<td align="right">9,834/s</td>
+</tr>
+</tbody></table></div><h3 id="compare-attention-invention">Compare attention invention <a href="#compare-attention-invention" class="heading-linker">←</a></h3>
+<p>Reproduce with <a href="https://github.com/defgsus/nn-experiments/blob/6bedc89667062f7f8d18d77df0b6bec253836bc8/experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml" target="_blank">convtext-qa-program-3ops-attn-invent.yml @ 6bedc896</a></p>
+<p>Still running...</p>
+
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a target="_blank" href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a target="_blank" href="https://github.com/defgsus/nn-experiments/blob/master/docs/logs/2024-12-21-selcopy2-corrections.md">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../html/posts/2024/papers-of-the-week.html">
+                        &lt;&lt; 2024-12-20-papers-of-the-week
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

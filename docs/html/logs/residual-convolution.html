@@ -53,7 +53,7 @@
             <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
-        <h1 id="parameter-tuning-for-a-residual-deep-image-to-image-cnn">Parameter tuning for a Residual Deep Image-to-Image CNN</h1>
+        <h1 id="parameter-tuning-for-a-residual-deep-image-to-image-cnn">Parameter tuning for a Residual Deep Image-to-Image CNN <a href="#parameter-tuning-for-a-residual-deep-image-to-image-cnn" class="heading-linker">←</a></h1>
 <p>This network design has the following features:</p>
 <ul>
 <li>simple and repetitive, makes programmer's life less troublesome</li>
@@ -167,7 +167,7 @@ the reconstruction from the network.</p>
 </tbody></table></div><p>The first network only has one layer (one convolution and one de-convolution),
 so it's receptive field is only 3x3 pixels (that of the one convolutional kernel).
 It is therefore not able to generate the other half of the image.</p>
-<h2 id="compare-number-of-layers">Compare number of layers</h2>
+<h2 id="compare-number-of-layers">Compare number of layers <a href="#compare-number-of-layers" class="heading-linker">←</a></h2>
 <p>Comparing the performance of the number of layers.</p>
 <p>experiment file: <a href="https://github.com/defgsus/nn-experiments/blob/1a74872040ad1062ee2a5f4a46f949b22aa8f08c/experiments/denoise/resconv-test.yml" target="_blank">experiments/denoise/resconv-test.yml @ 1a748720...</a></p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/resconv-halfcrop-fmnist-compare-layers.png" alt="training loss plots" /></div></p>
@@ -494,7 +494,7 @@ the batch size needed to be reduced for 21 and 30 layer network training
 to make it fit in my available 6GB GPU RAM. </p>
 <p>For comparing the following parameters i will use the 11 layer network
 on the original FMNIST resolution of 28x28 pixels:</p>
-<h2 id="compare-residual-weight-factor">Compare residual weight factor</h2>
+<h2 id="compare-residual-weight-factor">Compare residual weight factor <a href="#compare-residual-weight-factor" class="heading-linker">←</a></h2>
 <p>Should one scale the residual signal that comes from the encoder layers
 before adding it to the decoder layer input? It's denoted <code>RWF</code> in the
 following expression and experimental results.</p>
@@ -589,7 +589,7 @@ following expression and experimental results.</p>
 <td align="right">2.13</td>
 </tr>
 </tbody></table></div><p>It seems like: <strong>no</strong>, don't do it. Just keep it at <strong>1.0</strong>.</p>
-<h2 id="compare-position-of-batch-normalization">Compare position of batch normalization?</h2>
+<h2 id="compare-position-of-batch-normalization">Compare position of batch normalization? <a href="#compare-position-of-batch-normalization" class="heading-linker">←</a></h2>
 <p>In each layer, the batch norm was placed at the first position, more
 out of my intuition than actual knowledge.</p>
 <pre><code>ConvLayer(
@@ -849,7 +849,7 @@ and decoder (<code>bnp-d</code>). </p>
 </tbody></table></div><p><strong>Note</strong> that the best validation loss is actually better than in previous
 runs. After some tests, not shown here, the batch normalization
 was <strong>removed from the final encoder and decoder layers</strong>.</p>
-<h2 id="compare-activation-function">Compare activation function</h2>
+<h2 id="compare-activation-function">Compare activation function <a href="#compare-activation-function" class="heading-linker">←</a></h2>
 <p>Let's take all the good parts from before and compare the standard
 activation functions <a href="https://pytorch.org/docs/stable/nn.html#non-linear-activations-weighted-sum-nonlinearity" target="_blank">available in pytorch</a>.
 However, the final decoder layer is always using the <code>Sigmoid</code> activation
@@ -1110,7 +1110,7 @@ one of the <a href="https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html
 variants or, as it turns out, the
 <a href="https://pytorch.org/docs/stable/generated/torch.nn.Mish.html#torch.nn.Mish" target="_blank">MISH</a>
 activation.</p>
-<h2 id="compare-channel-size">Compare channel size</h2>
+<h2 id="compare-channel-size">Compare channel size <a href="#compare-channel-size" class="heading-linker">←</a></h2>
 <p>Currently all <em>hidden</em> convolutions have had 32 channels. In this experiment,
 i will test 16, 32, 64 and 128 channels, but also vary the channel size
 along the 11 layers.</p>
@@ -1333,7 +1333,7 @@ to make the skip connections fit.</p>
 <li>the difference in archived training loss between 64 and 128 channels is at the 4th digit after the comma,
 so not really worth considering given the extra amount of required compute.</li>
 </ul>
-<h2 id="compare-kernel-size">Compare kernel size</h2>
+<h2 id="compare-kernel-size">Compare kernel size <a href="#compare-kernel-size" class="heading-linker">←</a></h2>
 <p>Out of old-fashionedness only odd kernel sizes are considered. For a fair comparison, the padding is
 adjusted to the individual kernel sizes such that each layer still processes the same spatial block (28x28).</p>
 <div style="overflow: scroll;"><table>

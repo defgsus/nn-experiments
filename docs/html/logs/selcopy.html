@@ -49,7 +49,7 @@
             <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
-        <h1 id="efficiently-solving-the-selective-copying-problem-with-a-very-small-language-model">Efficiently solving the Selective Copying Problem with a Very Small Language Model</h1>
+        <h1 id="efficiently-solving-the-selective-copying-problem-with-a-very-small-language-model">Efficiently solving the Selective Copying Problem with a Very Small Language Model <a href="#efficiently-solving-the-selective-copying-problem-with-a-very-small-language-model" class="heading-linker">←</a></h1>
 <p>Recently, i tried to understand the original <a href="https://arxiv.org/abs/2312.00752" target="_blank">Mamba paper</a>.
 It's definitely worth reading. In there, the authors mention the <em>Selective Copying</em> as a toy example
 that is supposedly better handled by time-varying models instead of
@@ -98,13 +98,13 @@ batch-size 64, cross-entropy loss on the class logits, for 1 million steps.</p>
 <p>The dataset in this experiment places 10 letters in a 40-letter space.
 The validation set contains 5000 positions,
 which are excluded from the (otherwise almost infinite) training set.</p>
-<h3 id="comparing-number-of-layers">Comparing number of layers</h3>
+<h3 id="comparing-number-of-layers">Comparing number of layers <a href="#comparing-number-of-layers" class="heading-linker">←</a></h3>
 <p>(experiment done with <a href="https://github.com/defgsus/nn-experiments/blob/b2aaaf4323dd0bb70127fa265d942ec292ce53dc/experiments/textmask/convtext-selcopy-layers.yml" target="_blank">experiments/textmask/convtext-selcopy-layers.yml @ b2aaaf43</a>)</p>
 <p>This is again a topic of <em>receptive fields</em> in CNNs. With an area of 40, some delimiter and
 10 letters for the answer the model has to <em>see</em> 50 cells apart. Or in other words,
 the convolutional layers need to pass information from one cell to as much as 50 cells
 across, to be able to solve the task.</p>
-<h4 id="6-layers">6 layers</h4>
+<h4 id="6-layers">6 layers <a href="#6-layers" class="heading-linker">←</a></h4>
 <p>The model show above with 6 layers and kernel size 9 can see about 24 cells (6 * floor(9 / 2))
 in each direction, which is not enough to solve the puzzle. After 1M steps, the error on
 the validation set looks like this:</p>
@@ -177,7 +177,7 @@ Text outside the mask must also be reproduced by the model but is not considered
 <td align="right">16.5</td>
 <td align="left">1,009/s</td>
 </tr>
-</tbody></table></div><h5 id="12-layers">12 layers</h5>
+</tbody></table></div><h5 id="12-layers">12 layers <a href="#12-layers" class="heading-linker">←</a></h5>
 <p>The 12-layer network gets down to an error of 0.02%. It can <em>see</em> about 48 cells in each direction,
 which should be just enough to solve this task.</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/selcopy-example-validation-l12.png" alt="validation example 12 layers" /></div></p>
@@ -185,7 +185,7 @@ which should be just enough to solve this task.</p>
 The 12-layer model's performance can be viewed as the baseline.<br />
 The 6-layer model performs terrible (47% error) but at least at twice the speed. Can we
 somehow get to equal performance with only 6 layers?</p>
-<h3 id="increasing-kernel-size">Increasing kernel size</h3>
+<h3 id="increasing-kernel-size">Increasing kernel size <a href="#increasing-kernel-size" class="heading-linker">←</a></h3>
 <p>The most obvious thing!</p>
 <p>Here's a little demonstration. The first layer is the input and there are 6 layers of the
 output of each convolution. Size is 50. With a kernel size of 3, the information can
@@ -285,7 +285,7 @@ It increases the receptive field a lot, while still being fast to compute.</li>
 <li><strong>After kernel size 13</strong> the computational demand does not justify the increase in performance,
 at least, from my point of view.</li>
 </ul>
-<h3 id="increasing-dilation">Increasing dilation</h3>
+<h3 id="increasing-dilation">Increasing dilation <a href="#increasing-dilation" class="heading-linker">←</a></h3>
 <p><em>Dilation</em> is like increasing the kernel size, without actually creating new weights or adding
 compution. E.g. this example 3x3 kernel with dilation=2 theoretically becomes:</p>
 <pre><code>1 2 3      1 0 2 0 3 0
@@ -472,7 +472,7 @@ However, since dilation 2 is super fast, 5 layers of dilation=2 runs faster than
 <p><div style="overflow: scroll;"><img src="../../logs/img/selcopy/conv-l6-ks9-dil666111-s100.png" alt="convolutional steps" /></div></p>
 </li>
 </ul>
-<h3 id="mixing-different-dilation-values">Mixing different dilation values</h3>
+<h3 id="mixing-different-dilation-values">Mixing different dilation values <a href="#mixing-different-dilation-values" class="heading-linker">←</a></h3>
 <p>Intuitively, one would think that the same dilation value on each layer creates conditions that
 are sub-optimal for evaluating the whole state. E.g. every 2nd cell is the sum of every 2nd cell,
 and so on. Here shown with dilation 3:</p>

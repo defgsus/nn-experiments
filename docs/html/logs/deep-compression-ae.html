@@ -39,7 +39,7 @@
             <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
-        <h1 id="deep-compression-auto-encoder">Deep-Compression Auto-Encoder</h1>
+        <h1 id="deep-compression-auto-encoder">Deep-Compression Auto-Encoder <a href="#deep-compression-auto-encoder" class="heading-linker">←</a></h1>
 <p>Experiments with a small version of DC-AE from the paper
 <em>DEEP COMPRESSION AUTOENCODER FOR EFFICIENT HIGH-RESOLUTION DIFFUSION MODELS</em> <a href="https://arxiv.org/abs/2205.14756" target="_blank">arxiv.org/abs/2205.14756</a></p>
 <p>Code can be found here <a href="https://github.com/mit-han-lab/efficientvit" target="_blank">https://github.com/mit-han-lab/efficientvit</a>, and i copied the DC-AE parts and ported
@@ -50,7 +50,7 @@ the type-hints back to python &lt;3.10 <a href="https://github.com/defgsus/nn-ex
 <p>The <strong>baseline (gray)</strong> is the usual stacked symmetric CNN AE with 24, 32, 48 channels, kernel-size 5 and a linear
 layer for latent code size of 128, which results in a <strong>compression ratio of 24</strong>.</p>
 <p>The DC-AE model configurations i tried are:</p>
-<h4 id="dcae-03-yellow-params-81m-ratio-96">dcae-03 (yellow) params: 81M, ratio 96</h4>
+<h4 id="dcae-03-yellow-params-81m-ratio-96">dcae-03 (yellow) params: 81M, ratio 96 <a href="#dcae-03-yellow-params-81m-ratio-96" class="heading-linker">←</a></h4>
 <pre><code>&quot;latent_channels=32 &quot;
 &quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
 &quot;encoder.width_list=[64,128,256,256,512,512] encoder.depth_list=[0,4,8,2,2,2] &quot;
@@ -58,7 +58,7 @@ layer for latent code size of 128, which results in a <strong>compression ratio 
 &quot;decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,2,2] &quot;
 &quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;
 </code></pre>
-<h4 id="dcae-04-purple-params-81m-ratio-48">dcae-04 (purple) params: 81M, ratio 48</h4>
+<h4 id="dcae-04-purple-params-81m-ratio-48">dcae-04 (purple) params: 81M, ratio 48 <a href="#dcae-04-purple-params-81m-ratio-48" class="heading-linker">←</a></h4>
 <p>lowered compression ratio (via <code>latent_channels</code>)</p>
 <pre><code>&quot;latent_channels=64 &quot;
 &quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
@@ -67,7 +67,7 @@ layer for latent code size of 128, which results in a <strong>compression ratio 
 &quot;decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,2,2] &quot;
 &quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;
 </code></pre>
-<h4 id="dcae-05-green-params-110m-ratio-48">dcae-05 (green) params: 110M, ratio: 48</h4>
+<h4 id="dcae-05-green-params-110m-ratio-48">dcae-05 (green) params: 110M, ratio: 48 <a href="#dcae-05-green-params-110m-ratio-48" class="heading-linker">←</a></h4>
 <p>increased width</p>
 <pre><code>&quot;latent_channels=64 &quot;
 &quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
@@ -76,7 +76,7 @@ layer for latent code size of 128, which results in a <strong>compression ratio 
 &quot;decoder.width_list=[128,256,256,512,512,512] decoder.depth_list=[0,5,10,2,2,2] &quot;
 &quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;
 </code></pre>
-<h4 id="dcae-06-orange-params-142m-ratio-48">dcae-06 (orange): params: 142M, ratio: 48</h4>
+<h4 id="dcae-06-orange-params-142m-ratio-48">dcae-06 (orange): params: 142M, ratio: 48 <a href="#dcae-06-orange-params-142m-ratio-48" class="heading-linker">←</a></h4>
 <p>increased width</p>
 <pre><code>&quot;latent_channels=64 &quot;
 &quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
@@ -85,7 +85,7 @@ layer for latent code size of 128, which results in a <strong>compression ratio 
 &quot;decoder.width_list=[64,128,256,256,512,1024] decoder.depth_list=[0,5,10,2,2,2] &quot;
 &quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;
 </code></pre>
-<h4 id="dcae-07-pink-params-106m-ratio-48">dcae-07 (pink): params: 106M, ratio: 48</h4>
+<h4 id="dcae-07-pink-params-106m-ratio-48">dcae-07 (pink): params: 106M, ratio: 48 <a href="#dcae-07-pink-params-106m-ratio-48" class="heading-linker">←</a></h4>
 <p>Sames as dcae-04 but increased depth.</p>
 <pre><code>&quot;latent_channels=64 &quot;
 &quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;

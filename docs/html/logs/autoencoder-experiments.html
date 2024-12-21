@@ -37,7 +37,7 @@
             <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
-        <h1 id="variational-auto-encoder-on-rpg-tile-dataset">variational auto-encoder on RPG Tile dataset</h1>
+        <h1 id="variational-auto-encoder-on-rpg-tile-dataset">variational auto-encoder on RPG Tile dataset <a href="#variational-auto-encoder-on-rpg-tile-dataset" class="heading-linker">←</a></h1>
 <p>There is a <em>deep</em> love/hate relationships with neural networks.
 Why the heck do i need to train a small network like this</p>
 <pre><code class="language-python">model = VariationalAutoencoderConv(
@@ -58,7 +58,7 @@ things 1700 times???</p>
 <p>But i feel there is something wrong in the method.
 This <em>backpropagation gradient descent</em>, although
 mathematically grounded, feels like a brute-force approach.</p>
-<h1 id="comparing-different-datasets">comparing different datasets</h1>
+<h1 id="comparing-different-datasets">comparing different datasets <a href="#comparing-different-datasets" class="heading-linker">←</a></h1>
 <p>The rpg tile dataset is now fixed to 47579 training and 2505
 validation grayscale images at 32x32 pixels.
 Running the following experiment to compare
@@ -122,7 +122,7 @@ are resized):</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/vae-base-32.png" alt="training results" /></div></p>
 <p>Huh? Very different results.
 MNIST easiest, FMNIST middle, RPG hardest. </p>
-<h3 id="take-care-of-the-choice-of-interpolation">Take care of the choice of interpolation!</h3>
+<h3 id="take-care-of-the-choice-of-interpolation">Take care of the choice of interpolation! <a href="#take-care-of-the-choice-of-interpolation" class="heading-linker">←</a></h3>
 <p>After some testing it seems that the interpolation mode
 during resizing has a strong influence. So i ran the above
 experiment on different resolutions (<strong>res</strong>) and with

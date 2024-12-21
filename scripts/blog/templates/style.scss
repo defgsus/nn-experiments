@@ -3,6 +3,7 @@ $screen-small: 1000px;
 $sidebar-width: 20rem;
 
 $color-font: #000;
+$color-font-transparent: rgba(0, 0, 0, .5);
 $color-back: #fff;
 $color-back-hover: #ebebeb;
 $color-border: #bababa;
@@ -13,6 +14,7 @@ $color-code: #000;
 $color-code-back: #eee;
 @media (prefers-color-scheme: dark) {
   $color-font: #ddd;
+  $color-font-transparent: rgba(224, 224, 224, .5);
   $color-back: #222;
   $color-back-hover: #3a3a3a;
   $color-border: #5c5c5c;
@@ -92,6 +94,15 @@ li {
   display: none;
   @media (max-width: $screen-small) { display: unset; }
 }
+
+a.heading-linker {
+  color: $color-font-transparent;
+  &:hover {
+    color: $color-link-hover;
+    text-decoration: none;
+  }
+}
+
 
 main.article {
 

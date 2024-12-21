@@ -41,7 +41,7 @@
             <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
-        <h1 id="reproducing-quotconnectionist-symbolic-machine-intelligence-using-cellular-automata-based-reservoir-hyperdimensional-computingquot">Reproducing &quot;Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing&quot;</h1>
+        <h1 id="reproducing-quotconnectionist-symbolic-machine-intelligence-using-cellular-automata-based-reservoir-hyperdimensional-computingquot">Reproducing &quot;Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing&quot; <a href="#reproducing-quotconnectionist-symbolic-machine-intelligence-using-cellular-automata-based-reservoir-hyperdimensional-computingquot" class="heading-linker">←</a></h1>
 <p>by Ozgur Yilmaz, <a href="https://arxiv.org/abs/1503.00851" target="_blank">arxiv.org/abs/1503.00851</a></p>
 <p>So, maybe i miss-read something but one experiment is supposed to input a
 few binary values then run it few hundred iterations and feed a batch of
@@ -68,7 +68,7 @@ the readout.</p>
 <p>When simply querying for the reproduction of the input values, in fact
 <strong>169</strong> rules have zero training error and <strong>145</strong> even generalize to
 have zero validation error. (<a href="../../logs/data/ca1-repl-copy.csv">csv</a>)</p>
-<h3 id="5-bit-xor">5-bit xor</h3>
+<h3 id="5-bit-xor">5-bit xor <a href="#5-bit-xor" class="heading-linker">←</a></h3>
 <p>Next the readout was trained to produce the <code>xor</code> of the first and last 5 bits
 of a 10-bit number. These sets have <strong>924</strong> and <strong>100</strong> samples for train and test.</p>
 <p>Here are the top-50 rules:</p>
@@ -437,7 +437,7 @@ of a 10-bit number. These sets have <strong>924</strong> and <strong>100</strong
 </tbody></table></div><p>Note that Steven Wolfram's favorite rule 30 is not able to generalize
 to the validation data. Only <strong>6</strong> rules generalize completely and <strong>23</strong>
 have zero training error.</p>
-<h3 id="8-bit-square">8-bit square</h3>
+<h3 id="8-bit-square">8-bit square <a href="#8-bit-square" class="heading-linker">←</a></h3>
 <p>Here, the 9-bit numbers are used again and the target values are 8-bit
 binary representations of the result of <code>(n * n) mod 251</code>.
 Only <strong>50</strong> samples are moved to the validation set so the training
@@ -845,7 +845,7 @@ the bits correspond to these neighbourhood states:
 <p>Below are plots of the state history (100 iterations, toroid 101-cell state)
 for these particular rules, starting from a single seed cell:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ca1-repl-good-rules.png" alt="ca state history" /></div></p>
-<h3 id="more-tests">more tests</h3>
+<h3 id="more-tests">more tests <a href="#more-tests" class="heading-linker">←</a></h3>
 <p>Tried a couple of things :rofl:</p>
 <p>Among them is feeding the input data sequentially to the CA state.
 For the following table, the input sequence is placed in the first state slice

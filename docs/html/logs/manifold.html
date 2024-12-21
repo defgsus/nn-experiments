@@ -53,7 +53,7 @@
             <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
         </div>
 
-        <h1 id="quotimplicit-neural-representationquot">&quot;implicit neural representation&quot;</h1>
+        <h1 id="quotimplicit-neural-representationquot">&quot;implicit neural representation&quot; <a href="#quotimplicit-neural-representationquot" class="heading-linker">←</a></h1>
 <p>which mainly means, calculate: <code>position + code -&gt; color</code>.</p>
 <p>After preliminary experiments, running this setup:</p>
 <pre><code>DalleManifoldAutoencoder(
@@ -86,7 +86,7 @@ loss_batch_mean = (0. - feature_batch.mean()).abs()
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-001-repros.png" alt="repros" /></div></p>
 <p>and rendered to 64x64 resolution:
 <div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-001-repros-64.png" alt="repros" /></div></p>
-<h3 id="upgrade-decoder">upgrade decoder</h3>
+<h3 id="upgrade-decoder">upgrade decoder <a href="#upgrade-decoder" class="heading-linker">←</a></h3>
 <p>fixed the std/mean loss factor to 0.0001 and increased number of decoder blocks:</p>
 <pre><code>decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649
 </code></pre>
@@ -103,7 +103,7 @@ other tiles can hardly be reproduced:</p>
 (magenta) decoder_n_blk=16, decoder_n_layer=2, decoder_n_hid=128, params: 549,889
 </code></pre>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-block-level-compare.png" alt="repros" /></div></p>
-<h3 id="back-to-quotrealquot-dataset">back to &quot;real&quot; dataset</h3>
+<h3 id="back-to-quotrealquot-dataset">back to &quot;real&quot; dataset <a href="#back-to-quotrealquot-dataset" class="heading-linker">←</a></h3>
 <p>The current dataset of choice for my autoencoders is a mixture of all
 the rpg tiles (about 8k, h&amp;v-flipped) and kali-set fractal patches
 (about 50k, at 128x128 randomly cropped to 32x32).</p>
@@ -124,7 +124,7 @@ not seem to be enough for acceptable quality:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-fullds-b8-h256.png" alt="loss plots" /></div></p>
 <p>It might get below 0.004 reconstruction loss with another 10 hours
 but i'm targeting &lt; 0.001. Stopping it.</p>
-<h3 id="2023-11-10-back-to-small-dataset">2023-11-10: back to small dataset</h3>
+<h3 id="2023-11-10-back-to-small-dataset">2023-11-10: back to small dataset <a href="#2023-11-10-back-to-small-dataset" class="heading-linker">←</a></h3>
 <p>Changing residual logic to either add (like previous) or concat features:</p>
 <pre><code>decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=64, 
     decoder_concat_residual=[True, False] * 4,
@@ -137,7 +137,7 @@ which leads to hidden sizes per block:
 compared to the previous small-dataset-experiments.
 Unless it's runtime, which is just terrible:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-smallds-b8l2-64-resTF.png" alt="loss plots" /></div></p>
-<h1 id="2023-11-12-transformer-on-mnist">2023-11-12: transformer on mnist</h1>
+<h1 id="2023-11-12-transformer-on-mnist">2023-11-12: transformer on mnist <a href="#2023-11-12-transformer-on-mnist" class="heading-linker">←</a></h1>
 <p>clamped torch's TransformerEncoder/Decoder between a conv layer
 for image patches and tried a couple of parameters:</p>
 <pre><code class="language-yaml">matrix:
@@ -190,7 +190,7 @@ model: |
   )
 </code></pre>
 <p><div style="overflow: scroll;"><img src="../../logs/img/transformer-mnist-architecture.png" alt="validation losses" /></div></p>
-<h1 id="resnet21-for-embedding--gt-imagemanifoldmodel">resnet21 for embedding -&gt; ImageManifoldModel</h1>
+<h1 id="resnet21-for-embedding--gt-imagemanifoldmodel">resnet21 for embedding -&gt; ImageManifoldModel <a href="#resnet21-for-embedding--gt-imagemanifoldmodel" class="heading-linker">←</a></h1>
 <p>Autoencoder with pre-trained resnet21 (without last avgpool).</p>
 <pre><code class="language-yaml">matrix:
   # compression ratio
@@ -277,7 +277,7 @@ as the encoder performs much better than the resnet:</p>
   )
 </code></pre>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-rpg-simple-cnn.png" alt="loss plots" /></div></p>
-<h2 id="back-to-simple-cnn-encoder">back to simple CNN encoder</h2>
+<h2 id="back-to-simple-cnn-encoder">back to simple CNN encoder <a href="#back-to-simple-cnn-encoder" class="heading-linker">←</a></h2>
 <p>Everything i tried in the last couple of days is performing
 worse, e.g. changing the pos-embedding frequencies,
 using FFTs in some way and increasing the encoder params.</p>

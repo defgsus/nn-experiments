@@ -53,6 +53,12 @@ li.indent-1 {
       display: unset;   }
 }
 
+a.heading-linker {
+  color: rgba(224, 224, 224, 0.5); }
+  a.heading-linker:hover {
+    color: #8db8fa;
+    text-decoration: none; }
+
 main.article .article-left {
   width: 20rem;
   position: fixed;

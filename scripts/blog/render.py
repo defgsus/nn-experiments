@@ -46,8 +46,11 @@ class HTMLRenderer(GFMRendererMixin, marko.HTMLRenderer):
 
     def render_heading(self, element: marko.block.Heading) -> str:
         if hasattr(element, "anchor"):
-            return """<h{level} id="{slug}">{children}</h{level}>\n""".format(
-                level=element.level, children=self.render_children(element),
+            return (
+                """<h{level} id="{slug}">{children} <a href="#{slug}" class="heading-linker">←</a></h{level}>\n"""
+            ).format(
+                level=element.level,
+                children=self.render_children(element),
                 slug=element.anchor.slug,
             )
         return super().render_heading(element)
