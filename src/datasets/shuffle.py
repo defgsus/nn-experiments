@@ -50,24 +50,24 @@ class IterableShuffle(BaseIterableDataset):
             seed: Optional[int] = None,
     ):
         super().__init__()
-        self.source_dataset = source_dataset
-        self.max_shuffle = max_shuffle
-        self.rng = random.Random(seed) if seed is not None else random
+        self._source_dataset = source_dataset
+        self._max_shuffle = max_shuffle
+        self._rng = random.Random(seed) if seed is not None else random
 
     def __len__(self):
-        return len(self.source_dataset)
+        return len(self._source_dataset)
 
     def __iter__(self) -> Generator[Any, None, None]:
         items = []
-        for item in self.source_dataset:
+        for item in self._source_dataset:
             items.append(item)
 
-            if len(items) >= self.max_shuffle:
-                idx = self.rng.randrange(len(items))
+            if len(items) >= self._max_shuffle:
+                idx = self._rng.randrange(len(items))
                 yield items[idx]
                 items.pop(idx)
 
         while items:
-            idx = self.rng.randrange(len(items))
+            idx = self._rng.randrange(len(items))
             yield items[idx]
             items.pop(idx)

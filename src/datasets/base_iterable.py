@@ -24,6 +24,10 @@ class BaseIterableDataset(IterableDataset):
         from .shuffle import IterableShuffle
         return IterableShuffle(self, max_shuffle=max_shuffle, seed=seed)
 
+    def freeze(self):
+        from .freeze import FreezeDataset
+        return FreezeDataset(self)
+
     def sample(self, size: int):
         return next(iter(DataLoader(self, batch_size=size)))
 

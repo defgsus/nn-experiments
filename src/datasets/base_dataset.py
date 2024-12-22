@@ -27,6 +27,10 @@ class BaseDataset(Dataset):
         from .shuffle import ShuffleDataset
         return ShuffleDataset(self, seed=seed)
 
+    def freeze(self):
+        from .freeze import FreezeDataset
+        return FreezeDataset(self)
+
     def transform(
             self,
             transforms: Optional[Iterable[Callable]] = None,

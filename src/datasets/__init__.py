@@ -13,6 +13,10 @@ from .contrastive import ContrastiveIterableDataset
 from .contrastive_image import ContrastiveImageDataset
 from .echords import EChordsIterableDataset
 from .filenames import FilenameDataset
+from .filter import (
+    FilterIterableDataset,
+)
+from .freeze import FreezeDataset
 from .generative import (
     BoulderDashIterableDataset,
     IFSDataset, IFSClassIterableDataset,
