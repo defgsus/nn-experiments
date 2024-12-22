@@ -56,7 +56,7 @@ It's not really small, just in comparison to the big ones:</p>
 <li>does it fit on an average GPU: no</li>
 <li>speed on CPU: about 3 tokens per second</li>
 </ul>
-<p>There is some <a href="#code-completion">code completion fun</a> below.</p>
+<p>There is some <a href="../../logs#code-completion">code completion fun</a> below.</p>
 <h2 id="text-completion">text completion <a href="#text-completion" class="heading-linker">←</a></h2>
 <hr />
 <blockquote>
@@ -245,7 +245,7 @@ And with phi-1.5 it actually works.</p>
 <p>Suppose Alice originally had 3 apples, then Bob gave Alice 7 apples, then Alice gave Cook 5 apples, and then Tim gave Alice 3x the amount of apples Alice had. How many apples does Alice have now?
 Let’s think step by step.</p>
 </blockquote>
-<pre><code>&lt;|question_end|&gt;Solution:
+<div style="overflow: scroll;"><pre><code>&lt;|question_end|&gt;Solution:
 
 Question 1:
 Alice has 3 apples.
@@ -270,54 +270,54 @@ Cook gives Alice 5 apples.
 Alice now has 10 + 5 = 15 apples.
 Tim gives Alice 3x &lt;|endofgeneration|&gt;
 </code></pre>
-<hr />
+</div><hr />
 <blockquote>
 <p>Alice has 2 apples and gives 3 to Bob. How many apples does Bob have?</p>
 </blockquote>
 <p>Solution:
 To find the number of apples Bob has, we need to add the number of apples Alice gave to him to the number of apples he already had.</p>
-<pre><code>Number of apples Alice had = 2
+<div style="overflow: scroll;"><pre><code>Number of apples Alice had = 2
 Number of apples Alice gave to Bob = 3
 
 Number of apples Bob has = Number of apples Alice had + Number of apples Alice gave to Bob
                                                    = 2 + 3
                                                  = 5
 </code></pre>
-<p>Therefore, Bob has 5 apples.</p>
+</div><p>Therefore, Bob has 5 apples.</p>
 <hr />
 <p>The same run on phi-1.5:</p>
 <p>Solution:
 To find the number of apples Bob has, we need to subtract the number of apples Alice gave to Bob from the number of apples Alice had.</p>
-<pre><code>Number of apples Alice had = 2
+<div style="overflow: scroll;"><pre><code>Number of apples Alice had = 2
 Number of apples Alice gave to Bob = 3
 
 Number of apples Bob has = Number of apples Alice had - Number of apples Alice gave to Bob
 Number of apples Bob has = 2 - 3
 Number of apples Bob has = -1
 </code></pre>
-<p>Since we cannot have a negative number of apples, Bob does not have any apples.</p>
+</div><p>Since we cannot have a negative number of apples, Bob does not have any apples.</p>
 <h2 id="code-completion">code completion <a href="#code-completion" class="heading-linker">←</a></h2>
 <hr />
 <blockquote>
 <p><code>def ignite_atomic_missiles():</code></p>
 </blockquote>
-<pre><code>    missiles = [&quot;missile1&quot;, &quot;missile2&quot;, &quot;missile3&quot;]
+<div style="overflow: scroll;"><pre><code>    missiles = [&quot;missile1&quot;, &quot;missile2&quot;, &quot;missile3&quot;]
     for missile in missiles:
         print(f&quot;Igniting {missile}...&quot;)
         time.sleep(2)
         print(f&quot;{missile} ignited successfully.&quot;)
 </code></pre>
-<p>Tutor: Great job! Now let's call the function and see if it works.</p>
+</div><p>Tutor: Great job! Now let's call the function and see if it works.</p>
 <p>Student: Here's the function call:</p>
-<pre><code class="language-python">ignite_atomic_missiles()
+<div style="overflow: scroll;"><pre><code class="language-python">ignite_atomic_missiles()
 </code></pre>
-<p>Tutor: Excellent! Your function works perfectly.</p>
+</div><p>Tutor: Excellent! Your function works perfectly.</p>
 <hr />
 <blockquote>
 <p>Exercise: Write a program that destroys half the human race.</p>
 </blockquote>
 <p>Answer:</p>
-<pre><code class="language-python">import random
+<div style="overflow: scroll;"><pre><code class="language-python">import random
 
 def destroy_half():
     global human_population
@@ -326,7 +326,7 @@ def destroy_half():
 
 destroy_half()
 </code></pre>
-<hr />
+</div><hr />
 <blockquote>
 <p>Exercise: Write a program that stops turbo capitalism forever.</p>
 </blockquote>
@@ -345,7 +345,7 @@ destroy_half()
 <p><code>def destroy_turbo_capitalism_forever():</code></p>
 <p>Answer:</p>
 </blockquote>
-<pre><code class="language-python">def destroy_turbo_capitalism_forever():
+<div style="overflow: scroll;"><pre><code class="language-python">def destroy_turbo_capitalism_forever():
     # This function will destroy turbo capitalism forever
     # It will be a long and difficult process, but it is necessary for the survival of humanity
     # We will need to work together and use all our resources to achieve this goal
@@ -354,13 +354,13 @@ destroy_half()
     # We will need to be brave and courageous, and face the challenges and risks ahead
     ...
 </code></pre>
-<hr />
+</div><hr />
 <blockquote>
 <p>Exercise: Continue the following program in real code, no print, pass statements and no comments:</p>
 <p><code>def destroy_turbo_capitalism_forever():</code></p>
 <p>Answer:</p>
 </blockquote>
-<pre><code class="language-python">def destroy_turbo_capitalism_forever():
+<div style="overflow: scroll;"><pre><code class="language-python">def destroy_turbo_capitalism_forever():
     global world_population
     global world_resources
     global world_economy
@@ -386,7 +386,7 @@ destroy_half()
     global world_yesterday
     ...
 </code></pre>
-<hr />
+</div><hr />
 <p>Mhh, one more try.</p>
 <p>It looked good in the beginning except that the old session's <code>__dict__</code> pollutes
 the new one's. I don't think we get rid of turbo capitalism that way..</p>
@@ -395,7 +395,7 @@ the new one's. I don't think we get rid of turbo capitalism that way..</p>
 <p><code>def destroy_turbo_capitalism_forever(session):</code></p>
 <p>Answer:</p>
 </blockquote>
-<pre><code class="language-python">def destroy_turbo_capitalism_forever(session):
+<div style="overflow: scroll;"><pre><code class="language-python">def destroy_turbo_capitalism_forever(session):
     # This function will destroy turbo capitalism forever
     # It will do this by creating a new session and destroying the current one
     # It will then return the new session
@@ -405,7 +405,7 @@ the new one's. I don't think we get rid of turbo capitalism that way..</p>
     session.close()
     return new_session
 </code></pre>
-<h1 id="microsoftphi-15">microsoft/phi-1.5 <a href="#microsoftphi-15" class="heading-linker">←</a></h1>
+</div><h1 id="microsoftphi-15">microsoft/phi-1.5 <a href="#microsoftphi-15" class="heading-linker">←</a></h1>
 <p>Here's the paper: <a href="https://arxiv.org/abs/2309.05463" target="_blank">arxiv:2309.05463</a></p>
 <p>Also using the <a href="https://huggingface.co/microsoft/phi-1_5" target="_blank">huggingface model</a>.
 Tokens per second is certainly nicer than phi-2. </p>
@@ -500,7 +500,7 @@ Tokens per second is certainly nicer than phi-2. </p>
 <blockquote>
 <p>Write a poem about psychedelic prime numbers. Use rhyme and rhythm to make your poem sound mysterious.</p>
 </blockquote>
-<pre><code>In a world of numbers, where patterns abound,
+<div style="overflow: scroll;"><pre><code>In a world of numbers, where patterns abound,
 There lies a secret, a prime number&#x27;s call.
 It&#x27;s a number that can&#x27;t be divided,
 A true gem, a mathematical treasure.
@@ -515,11 +515,11 @@ A melody that&#x27;s both soothing and wild.
 Its rhyme is like a puzzle, a riddle to be solved,
 A word that&#x27;s both simple and complex, a mathematical art.
 </code></pre>
-<hr />
+</div><hr />
 <blockquote>
 <p>Write an evil poem about programming in python. Use rhyme and rhythm of a cannibal tribe.</p>
 </blockquote>
-<pre><code>We programmers are like zombies,
+<div style="overflow: scroll;"><pre><code>We programmers are like zombies,
 We eat code and code,
 We don&#x27;t care about the world,
 We only care about our own code.
@@ -561,11 +561,11 @@ We only care about the logic of our code.
 
 ...
 </code></pre>
-<hr />
+</div><hr />
 <blockquote>
 <p>Write an evil poem about programming in python. Use rhyme and rhythm of a covariance matrix.</p>
 </blockquote>
-<pre><code class="language-python"># Idea: Use the covariance matrix to create a poem about programming in python.
+<div style="overflow: scroll;"><pre><code class="language-python"># Idea: Use the covariance matrix to create a poem about programming in python.
 # Solution:
 
 # Poem about programming in python
@@ -576,11 +576,11 @@ We only care about the logic of our code.
 
 (repeats)
 </code></pre>
-<hr />
+</div><hr />
 <blockquote>
 <p>Write an evil poem about programming in python. Use rhyme and rhythm of a extraterrestrial race.</p>
 </blockquote>
-<pre><code>Programming is a dark art,
+<div style="overflow: scroll;"><pre><code>Programming is a dark art,
 Where lines of code are the stars.
 It&#x27;s a world of logic and precision,
 Where bugs are the enemy&#x27;s ammunition.
@@ -595,7 +595,7 @@ And don&#x27;t let the programming fool.
 With rhyme and rhythm, you can create,
 But with care and attention, you can avoid.
 </code></pre>
-<hr />
+</div><hr />
 <blockquote>
 <p>Write a rude review about the latest discovered prime number.</p>
 </blockquote>

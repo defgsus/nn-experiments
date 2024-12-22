@@ -187,27 +187,24 @@ class Sitemap:
             print(page)
             for link, mapped_link in self.page_link_mapping(page).items():
                 print(f"  {link} -> {mapped_link}")
-        #for short_filename, page in self._page_map.items():
-        #    print(short_filename)
 
     def page_link_mapping(self, page: Page) -> Dict[str, str]:
         link_mapping: Dict[str, str] = {}
-        for link in page.document.links:
-            if "//" in link:
+        for base_link in page.document.links:
+            if "//" in base_link:
                 continue
 
+            link = page.document.link_mapping[base_link]
             slug = None
             if "#" in link:
                 link, slug = link.split("#", 1)
 
-            rel_link = page.document.link_mapping[link]
-
-            if rel_link.endswith(".md"):
-                linked_page = self.page_by_doc_filename(rel_link)
+            if link.endswith(".md"):
+                linked_page = self.page_by_doc_filename(link)
                 mapped_link = str(linked_page.url)
 
             else:
-                mapped_link = rel_link
+                mapped_link = link
 
             if "//" not in mapped_link:
                 mapped_link = page.relative_url(mapped_link)
@@ -215,7 +212,7 @@ class Sitemap:
             if slug is not None:
                 mapped_link = f"{mapped_link}#{slug}"
 
-            link_mapping[link] = mapped_link
+            link_mapping[base_link] = mapped_link
 
         return link_mapping
 

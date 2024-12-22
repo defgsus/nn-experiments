@@ -48,7 +48,7 @@ if the embedding contains enough information to classify the images in
 a non-NN fashion (<code>accuracy (svc)</code>). Also the <code>torch.argmax</code> is
 compared between FMNIST class logits and network output (<code>accuracy (argmax)</code>)
 to measure the accuracy of the true network output.</p>
-<pre><code class="language-yaml">matrix:
+<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
   patch: [7]     # transformer input patch size
   layer: [8]     # number of layers 
   head: [16]     # number of attention heads
@@ -113,7 +113,7 @@ model: |
     
   Encoder()
 </code></pre>
-<p>I varied a few parameters of the transformer without significant change
+</div><p>I varied a few parameters of the transformer without significant change
 to the downstream accuracy, except, of course, that a much bigger network
 performs much worse (like in previous experiments).</p>
 <p>For comparison there is included an untrained ResNet18 (<code>RN18</code>) and a simple

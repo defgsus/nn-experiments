@@ -1,4 +1,6 @@
+import argparse
 import os
+import sys
 from pathlib import Path
 from io import StringIO
 from typing import List, Tuple
@@ -12,7 +14,9 @@ DOCS_PATH = PROJECT_PATH / "docs"
 TEMPLATE_PATH = Path(__file__).resolve().parent / "templates"
 
 
-def update_blog():
+def main(
+        command: str,
+):
     documents: List[Document] = []
 
     for file in sorted(DOCS_PATH.rglob("*.md")):
@@ -21,10 +25,32 @@ def update_blog():
 
     sitemap = Sitemap(documents)
     sitemap.create_index_page()
-    #sitemap.dump()
-    sitemap.render_all(write=True)
+
+    if command == "dump":
+        sitemap.dump()
+
+    elif command == "test":
+        update_readme(do_write=False)
+        sitemap.render_all(write=False)
+        print()
+        print("Call with 'render' to actually render files")
+
+    elif command == "render":
+        update_readme()
+        sitemap.render_all(write=True)
+
+    else:
+        raise NotImplementedError(f"unknown command {command}")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "command", type=str, default="test", nargs="?",
+        choices=["test", "render", "dump"],
+    )
+    return vars(parser.parse_args())
 
 
 if __name__ == "__main__":
-    update_readme()
-    update_blog()
+    main(**parse_args())

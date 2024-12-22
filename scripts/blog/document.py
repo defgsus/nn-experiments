@@ -92,6 +92,7 @@ class Document:
                     assert ".." not in str(mapped_link), f"mapped_link={mapped_link}, filename={filename}"
 
                 if slug is not None:
+                    link = f"{link}#{slug}"
                     mapped_link = f"{mapped_link}#{slug}"
 
                 self._link_mapping[link] = str(mapped_link)

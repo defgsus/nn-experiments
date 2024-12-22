@@ -40,14 +40,14 @@
         <h1 id="variational-auto-encoder-on-rpg-tile-dataset">variational auto-encoder on RPG Tile dataset <a href="#variational-auto-encoder-on-rpg-tile-dataset" class="heading-linker">←</a></h1>
 <p>There is a <em>deep</em> love/hate relationships with neural networks.
 Why the heck do i need to train a small network like this</p>
-<pre><code class="language-python">model = VariationalAutoencoderConv(
+<div style="overflow: scroll;"><pre><code class="language-python">model = VariationalAutoencoderConv(
     shape=(3, 32, 32), channels=[16, 24, 32], kernel_size=5,
     latent_dims=128,
 )
 
 optimizer = Adam(model.default_parameters(), lr=.0001, weight_decay=0.000001)
 </code></pre>
-<p>for 10 hours and it still does not reach the optimum?</p>
+</div><p>for 10 hours and it still does not reach the optimum?</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/vae-rpg-conv16-24-32-40M.png" alt="loss plots" /></div></p>
 <p>And how could one tell after 30 minutes where this is going
 to go? The plot shows the l1 validation loss (right) over
@@ -63,7 +63,7 @@ mathematically grounded, feels like a brute-force approach.</p>
 validation grayscale images at 32x32 pixels.
 Running the following experiment to compare
 with the <em>&quot;classic&quot;</em> datasets:</p>
-<pre><code class="language-yaml">trainer: src.train.TrainAutoencoder
+<div style="overflow: scroll;"><pre><code class="language-yaml">trainer: src.train.TrainAutoencoder
 
 matrix:
   ds:
@@ -111,7 +111,7 @@ model: |
       kl_loss_weight = 1.,
   )
 </code></pre>
-<p>Note that the MNIST and <a href="https://arxiv.org/abs/1708.07747" target="_blank">FMNIST</a> images are 28x28 pixels and
+</div><p>Note that the MNIST and <a href="https://arxiv.org/abs/1708.07747" target="_blank">FMNIST</a> images are 28x28 pixels and
 the RPG dataset is resized (via BILINEAR filter) to the same
 resolution.</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/vae-base-28.png" alt="training results" /></div></p>

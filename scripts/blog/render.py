@@ -74,6 +74,10 @@ class HTMLRenderer(GFMRendererMixin, marko.HTMLRenderer):
         html = super().render_table(element)
         return f"""<div style="overflow: scroll;">{html}</div>"""
 
+    def render_fenced_code(self, element):
+        html = super().render_fenced_code(element)
+        return f"""<div style="overflow: scroll;">{html}</div>"""
+
 
 class HTMLTeaserRenderer(GFMRendererMixin, marko.HTMLRenderer):
 

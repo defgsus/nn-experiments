@@ -9,7 +9,7 @@ import github_slugger
 LOG_PATH = Path(__file__).resolve().parent
 
 
-def update_readme():
+def update_readme(do_write: bool = True):
 
     documents = []
 
@@ -42,7 +42,8 @@ def update_readme():
 
     readme = (LOG_PATH / "README.md").read_text()
     readme = readme[:readme.index("## Index\n") + 9] + index_markup
-    (LOG_PATH / "README.md").write_text(readme)
+    if do_write:
+        (LOG_PATH / "README.md").write_text(readme)
     print(readme)
 
 

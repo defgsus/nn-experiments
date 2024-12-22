@@ -34,7 +34,7 @@
 <p>Basically a simple autoencoder but the loss only considers the histogram
 using the <em>soft histogram</em> mentioned by Tony-Y in the
 <a href="https://discuss.pytorch.org/t/differentiable-torch-histc/25865/4" target="_blank">pytorch forum</a>.</p>
-<pre><code class="language-yaml">matrix:
+<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
   bins: [100, 200, 50]
   sigma: [100, 200, 50]
   norm: [False]
@@ -74,7 +74,7 @@ model: |
 
   EncoderDecoder(encoder, decoder)
 </code></pre>
-<p><div style="overflow: scroll;"><img src="../../logs/img/ae-histogramloss.png" alt="loss plots" /></div></p>
+</div><p><div style="overflow: scroll;"><img src="../../logs/img/ae-histogramloss.png" alt="loss plots" /></div></p>
 <p>Normalizing the histograms before calculating the difference did not
 converge well. And reproduction look terrible as could be expected: </p>
 <div style="overflow: scroll;"><table>

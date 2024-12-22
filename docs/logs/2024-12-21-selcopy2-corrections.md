@@ -33,7 +33,36 @@ with any evidence:
 
 ### Compare attention invention
 
-Reproduce with [convtext-qa-program-3ops-attn-invent.yml @ 6bedc896](https://github.com/defgsus/nn-experiments/blob/6bedc89667062f7f8d18d77df0b6bec253836bc8/experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml)
+Reproduce with [convtext-qa-program-3ops-attn-invent.yml @ c0cf2763](https://github.com/defgsus/nn-experiments/blob/c0cf27632ade5a643b6fd3598c60e01c960b6138/experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml)
+```shell
+git checkout c0cf2763
+python exp.py experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml run
+python exp.py experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml results -ec dil matrix_slug matrix_id bs opt lr norm meter gc act posemb nitem len nops vnops l ch ks -sc "validation_sample_error%-" -ic "train_sample_error%" "validation_sample_error%" -ac trial -acs "train_sample_error%" "validation_sample_error%"
+```
 
-Still running...
+This time made **10 runs** per setting!
 
+| attn  | qkv   | attnact |   validation loss |   train_sample_error% |     (min) |   (max) |    (std) |   validation_sample_error% |     (min) |   (max) |    (std) |   model params |   train time (minutes) |   throughput |
+|:------|:------|:--------|------------------:|----------------------:|----------:|--------:|---------:|---------------------------:|----------:|--------:|---------:|---------------:|-----------------------:|-------------:|
+| 0,0,T | KV    | elu+1   |          0.279915 |                64.541 |   60.7422 | 67.8711 |   2.1683 |                    99.2775 |    98.965 | 99.5024 | 0.180377 |        229,632 |                   1.54 |     10,843/s |
+| 0,0,T | QV    | elu+1   |          0.211112 |               39.7949 |   27.5391 | 63.1836 |  11.0987 |                     94.992 |   88.6445 | 99.4228 |  3.70722 |        229,632 |                   1.56 |     10,709/s |
+| 0,0,1 | QK    |         |          0.269297 |               55.8984 |   8.20312 |   93.75 |   28.063 |                     89.365 |   24.5721 | 99.9602 |  23.9533 |        246,272 |                   1.79 |      9,301/s |
+| 0,0,1 | QKV   |         |           0.14078 |                30.918 |     3.125 | 64.3555 |  20.2595 |                    68.4385 |     10.41 | 99.7213 |  28.0022 |        299,584 |                   1.83 |      9,090/s |
+| 0,0,4 | QK    |         |         0.0877218 |               16.5918 |   1.26953 | 36.9141 |  12.0085 |                    47.7339 |   3.86146 | 99.2038 |  33.1776 |        246,272 |                   1.81 |      9,217/s |
+| 0,0,8 | QK    |         |         0.0309062 |               6.21094 |  0.195312 | 30.6641 |  10.0744 |                    18.4873 |  0.965366 | 86.1166 |  28.9473 |        246,272 |                   1.83 |      9,104/s |
+| 0,0,8 | QV    |         |         0.0225483 |               5.41992 |         0 | 13.2812 |  3.64532 |                    16.1644 |  0.248806 | 36.2062 |  9.91068 |        246,272 |                   1.84 |      9,048/s |
+| 0,0,4 | QKV   |         |         0.0253542 |                6.2207 |  0.195312 | 36.4258 |  12.3809 |                    15.6947 | 0.0895701 | 82.9319 |  29.7359 |        299,584 |                   1.91 |      8,746/s |
+| 0,0,4 | QV    |         |          0.013519 |               2.86133 |  0.390625 |    6.25 |  2.00878 |                    9.34415 |   1.16441 | 17.6951 |  6.16371 |        246,272 |                   1.85 |      9,045/s |
+| 0,0,8 | KV    |         |         0.0103882 |               2.31445 |  0.292969 | 4.58984 |  1.36412 |                     7.2074 |   1.24403 | 13.6644 |  4.41778 |        246,272 |                   1.85 |      9,021/s |
+| 0,0,1 | QV    |         |        0.00974547 |                2.2168 | 0.0976562 | 7.51953 |  2.48893 |                    6.87301 | 0.0796178 | 21.9845 |  7.43911 |        246,272 |                   1.77 |      9,414/s |
+| 0,0,1 | KV    |         |        0.00557148 |               1.37695 |         0 | 4.10156 |  1.69861 |                    4.50239 |  0.139331 | 15.9236 |  5.87746 |        246,272 |                   1.77 |      9,413/s |
+| 0,0,4 | KV    |         |        0.00294197 |                 0.625 | 0.0976562 | 1.75781 | 0.500498 |                    1.83917 |  0.338376 | 4.90645 |  1.34889 |        246,272 |                   1.86 |      8,985/s |
+| 0,0,8 | QKV   |         |        0.00278822 |              0.527344 |         0 | 2.73438 | 0.804241 |                    1.58041 |  0.348328 | 6.49881 |  1.85126 |        299,584 |                    1.9 |      8,786/s |
+| 0,0,T | QKV   | elu+1   |        0.00210139 |              0.380859 |         0 | 1.07422 | 0.299939 |                     1.2291 |  0.348328 |  2.2293 | 0.648963 |        282,944 |                    1.6 |     10,441/s |
+| 0,0,T | QK    | elu+1   |          0.001886 |              0.488281 |         0 | 1.26953 | 0.387903 |                   0.936505 |  0.159236 | 1.98049 | 0.508104 |        229,632 |                   1.58 |     10,595/s |
+
+- self-built attention 
+  - `QK` or `QKV` perform most stable
+  - `QV` and `KV` perform not at all
+- multi-head attention
+  - 8 heads `QKV` performs most stable

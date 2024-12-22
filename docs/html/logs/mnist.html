@@ -48,7 +48,7 @@
         <h1 id="autoencoder-training-on-mnist-dataset">Autoencoder training on MNIST dataset <a href="#autoencoder-training-on-mnist-dataset" class="heading-linker">←</a></h1>
 <h2 id="varying-kernel-size">varying kernel size <a href="#varying-kernel-size" class="heading-linker">←</a></h2>
 <p>Using a &quot;classic&quot; CNN autoencoder and varying the kernel size of all layers:</p>
-<pre><code class="language-yaml">matrix:
+<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
   opt: [&quot;Adam&quot;]
   lr: [0.001]
   ks: [3, 5, 7, 9, 11, 13]
@@ -92,9 +92,9 @@ model: |
 
   EncoderDecoder(encoder, decoder)
 </code></pre>
-<p><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-ks.png" alt="loss plots" /></div></p>
+</div><p><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-ks.png" alt="loss plots" /></div></p>
 <h2 id="varying-activation-function">varying activation function <a href="#varying-activation-function" class="heading-linker">←</a></h2>
-<pre><code class="language-yaml">matrix:
+<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
   opt: [&quot;Adam&quot;]
   lr: [0.001]
   ks: [3]
@@ -139,10 +139,10 @@ model: |
 
   EncoderDecoder(encoder, decoder)
 </code></pre>
-<p><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-act.png" alt="loss plots" /></div></p>
+</div><p><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-act.png" alt="loss plots" /></div></p>
 <h2 id="varying-image-to-code-ratio">varying image to code ratio <a href="#varying-image-to-code-ratio" class="heading-linker">←</a></h2>
 <p><code>ratio</code> below defines the embedding size (1: 768, 10: 76, 500: 1)</p>
-<pre><code class="language-yaml">matrix:
+<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
   opt: [&quot;Adam&quot;]
   lr: [0.001]
   ks: [3]
@@ -188,7 +188,7 @@ model: |
 
   EncoderDecoder(encoder, decoder)
 </code></pre>
-<p><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-ratio.png" alt="loss plots" /></div></p>
+</div><p><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-ratio.png" alt="loss plots" /></div></p>
 <p>Here are the reproductions of the ratio 10, 100 and 500 runs:</p>
 <div style="overflow: scroll;"><table>
 <thead>
@@ -205,7 +205,7 @@ model: |
 <td><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-ratio-500-repros.png" alt="repros" /></div></td>
 </tr>
 </tbody></table></div><h2 id="varying-kernel-size-and-number-of-channels">varying kernel size and number of channels <a href="#varying-kernel-size-and-number-of-channels" class="heading-linker">←</a></h2>
-<pre><code class="language-yaml">matrix:
+<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
   opt: [&quot;Adam&quot;]
   lr: [0.001]
   ks: [
@@ -255,7 +255,7 @@ model: |
 
   EncoderDecoder(encoder, decoder)
 </code></pre>
-<p><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-ks-chan.png" alt="loss plots" /></div></p>
+</div><p><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-ks-chan.png" alt="loss plots" /></div></p>
 
 
         <!-- article footer -->

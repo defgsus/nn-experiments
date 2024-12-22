@@ -808,13 +808,13 @@ Can the CA reservoir generalize to calculate the square of a number?</p>
 </tbody></table></div><p>It seems, no. The top-most number of correct validation results is <strong>2</strong>
 among all 256 rules. Again, <strong>23</strong> rules have zero training error. At least.</p>
 <p>The well-performing rules are identical in both experiments:</p>
-<pre><code> 18,  22,  30,  45,  60,  75,  86,  89, 101, 102, 105, 124, 
+<div style="overflow: scroll;"><pre><code> 18,  22,  30,  45,  60,  75,  86,  89, 101, 102, 105, 124, 
 126, 129, 135, 146, 149, 150, 153, 161, 182, 193, 195
 </code></pre>
-<p>Shown as binary representation, which are the lookup values for
+</div><p>Shown as binary representation, which are the lookup values for
 the 3-neighbourhood (<code>*</code> marks rules that generalized perfectly in
 the xor experiment):</p>
-<pre><code> 18: [0, 1, 0, 0, 1, 0, 0, 0]
+<div style="overflow: scroll;"><pre><code> 18: [0, 1, 0, 0, 1, 0, 0, 0]
  22: [0, 1, 1, 0, 1, 0, 0, 0]
  30: [0, 1, 1, 1, 1, 0, 0, 0]
  45: [1, 0, 1, 1, 0, 1, 0, 0]
@@ -842,7 +842,7 @@ the bits correspond to these neighbourhood states:
 
 000 100 010 110 001 101 011 111
 </code></pre>
-<p>Below are plots of the state history (100 iterations, toroid 101-cell state)
+</div><p>Below are plots of the state history (100 iterations, toroid 101-cell state)
 for these particular rules, starting from a single seed cell:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ca1-repl-good-rules.png" alt="ca state history" /></div></p>
 <h3 id="more-tests">more tests <a href="#more-tests" class="heading-linker">←</a></h3>
@@ -1530,12 +1530,12 @@ this setup still does not get better than 6 correct validation samples out of 10
 <p>Mhh, so what about higher order CAs? If we allow 3 states instead of 2, the
 1D replacement CA suddenly has astonishing <strong>3^3^3</strong>, or <strong>3^27</strong> possible
 rules. A do-nothing python loop through that number already takes 300 hours:</p>
-<pre><code>for r in tqdm(range(7_625_597_484_987)):
+<div style="overflow: scroll;"><pre><code>for r in tqdm(range(7_625_597_484_987)):
     pass
 
 0%|                  | 567,067,242/7,625,597,484,987 [01:24&lt;314:10:54, 6,741,520.98it/s]
 </code></pre>
-
+</div>
 
         <!-- article footer -->
         <div class="flex article-footer">

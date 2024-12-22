@@ -227,8 +227,318 @@ with any evidence:</p>
 <td align="right">9,834/s</td>
 </tr>
 </tbody></table></div><h3 id="compare-attention-invention">Compare attention invention <a href="#compare-attention-invention" class="heading-linker">←</a></h3>
-<p>Reproduce with <a href="https://github.com/defgsus/nn-experiments/blob/6bedc89667062f7f8d18d77df0b6bec253836bc8/experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml" target="_blank">convtext-qa-program-3ops-attn-invent.yml @ 6bedc896</a></p>
-<p>Still running...</p>
+<p>Reproduce with <a href="https://github.com/defgsus/nn-experiments/blob/c0cf27632ade5a643b6fd3598c60e01c960b6138/experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml" target="_blank">convtext-qa-program-3ops-attn-invent.yml @ c0cf2763</a></p>
+<div style="overflow: scroll;"><pre><code class="language-shell">git checkout c0cf2763
+python exp.py experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml run
+python exp.py experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml results -ec dil matrix_slug matrix_id bs opt lr norm meter gc act posemb nitem len nops vnops l ch ks -sc &quot;validation_sample_error%-&quot; -ic &quot;train_sample_error%&quot; &quot;validation_sample_error%&quot; -ac trial -acs &quot;train_sample_error%&quot; &quot;validation_sample_error%&quot;
+</code></pre>
+</div><p>This time made <strong>10 runs</strong> per setting!</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">attn</th>
+<th align="left">qkv</th>
+<th align="left">attnact</th>
+<th align="right">validation loss</th>
+<th align="right">train_sample_error%</th>
+<th align="right">(min)</th>
+<th align="right">(max)</th>
+<th align="right">(std)</th>
+<th align="right">validation_sample_error%</th>
+<th align="right">(min)</th>
+<th align="right">(max)</th>
+<th align="right">(std)</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">0,0,T</td>
+<td align="left">KV</td>
+<td align="left">elu+1</td>
+<td align="right">0.279915</td>
+<td align="right">64.541</td>
+<td align="right">60.7422</td>
+<td align="right">67.8711</td>
+<td align="right">2.1683</td>
+<td align="right">99.2775</td>
+<td align="right">98.965</td>
+<td align="right">99.5024</td>
+<td align="right">0.180377</td>
+<td align="right">229,632</td>
+<td align="right">1.54</td>
+<td align="right">10,843/s</td>
+</tr>
+<tr>
+<td align="left">0,0,T</td>
+<td align="left">QV</td>
+<td align="left">elu+1</td>
+<td align="right">0.211112</td>
+<td align="right">39.7949</td>
+<td align="right">27.5391</td>
+<td align="right">63.1836</td>
+<td align="right">11.0987</td>
+<td align="right">94.992</td>
+<td align="right">88.6445</td>
+<td align="right">99.4228</td>
+<td align="right">3.70722</td>
+<td align="right">229,632</td>
+<td align="right">1.56</td>
+<td align="right">10,709/s</td>
+</tr>
+<tr>
+<td align="left">0,0,1</td>
+<td align="left">QK</td>
+<td align="left"></td>
+<td align="right">0.269297</td>
+<td align="right">55.8984</td>
+<td align="right">8.20312</td>
+<td align="right">93.75</td>
+<td align="right">28.063</td>
+<td align="right">89.365</td>
+<td align="right">24.5721</td>
+<td align="right">99.9602</td>
+<td align="right">23.9533</td>
+<td align="right">246,272</td>
+<td align="right">1.79</td>
+<td align="right">9,301/s</td>
+</tr>
+<tr>
+<td align="left">0,0,1</td>
+<td align="left">QKV</td>
+<td align="left"></td>
+<td align="right">0.14078</td>
+<td align="right">30.918</td>
+<td align="right">3.125</td>
+<td align="right">64.3555</td>
+<td align="right">20.2595</td>
+<td align="right">68.4385</td>
+<td align="right">10.41</td>
+<td align="right">99.7213</td>
+<td align="right">28.0022</td>
+<td align="right">299,584</td>
+<td align="right">1.83</td>
+<td align="right">9,090/s</td>
+</tr>
+<tr>
+<td align="left">0,0,4</td>
+<td align="left">QK</td>
+<td align="left"></td>
+<td align="right">0.0877218</td>
+<td align="right">16.5918</td>
+<td align="right">1.26953</td>
+<td align="right">36.9141</td>
+<td align="right">12.0085</td>
+<td align="right">47.7339</td>
+<td align="right">3.86146</td>
+<td align="right">99.2038</td>
+<td align="right">33.1776</td>
+<td align="right">246,272</td>
+<td align="right">1.81</td>
+<td align="right">9,217/s</td>
+</tr>
+<tr>
+<td align="left">0,0,8</td>
+<td align="left">QK</td>
+<td align="left"></td>
+<td align="right">0.0309062</td>
+<td align="right">6.21094</td>
+<td align="right">0.195312</td>
+<td align="right">30.6641</td>
+<td align="right">10.0744</td>
+<td align="right">18.4873</td>
+<td align="right">0.965366</td>
+<td align="right">86.1166</td>
+<td align="right">28.9473</td>
+<td align="right">246,272</td>
+<td align="right">1.83</td>
+<td align="right">9,104/s</td>
+</tr>
+<tr>
+<td align="left">0,0,8</td>
+<td align="left">QV</td>
+<td align="left"></td>
+<td align="right">0.0225483</td>
+<td align="right">5.41992</td>
+<td align="right">0</td>
+<td align="right">13.2812</td>
+<td align="right">3.64532</td>
+<td align="right">16.1644</td>
+<td align="right">0.248806</td>
+<td align="right">36.2062</td>
+<td align="right">9.91068</td>
+<td align="right">246,272</td>
+<td align="right">1.84</td>
+<td align="right">9,048/s</td>
+</tr>
+<tr>
+<td align="left">0,0,4</td>
+<td align="left">QKV</td>
+<td align="left"></td>
+<td align="right">0.0253542</td>
+<td align="right">6.2207</td>
+<td align="right">0.195312</td>
+<td align="right">36.4258</td>
+<td align="right">12.3809</td>
+<td align="right">15.6947</td>
+<td align="right">0.0895701</td>
+<td align="right">82.9319</td>
+<td align="right">29.7359</td>
+<td align="right">299,584</td>
+<td align="right">1.91</td>
+<td align="right">8,746/s</td>
+</tr>
+<tr>
+<td align="left">0,0,4</td>
+<td align="left">QV</td>
+<td align="left"></td>
+<td align="right">0.013519</td>
+<td align="right">2.86133</td>
+<td align="right">0.390625</td>
+<td align="right">6.25</td>
+<td align="right">2.00878</td>
+<td align="right">9.34415</td>
+<td align="right">1.16441</td>
+<td align="right">17.6951</td>
+<td align="right">6.16371</td>
+<td align="right">246,272</td>
+<td align="right">1.85</td>
+<td align="right">9,045/s</td>
+</tr>
+<tr>
+<td align="left">0,0,8</td>
+<td align="left">KV</td>
+<td align="left"></td>
+<td align="right">0.0103882</td>
+<td align="right">2.31445</td>
+<td align="right">0.292969</td>
+<td align="right">4.58984</td>
+<td align="right">1.36412</td>
+<td align="right">7.2074</td>
+<td align="right">1.24403</td>
+<td align="right">13.6644</td>
+<td align="right">4.41778</td>
+<td align="right">246,272</td>
+<td align="right">1.85</td>
+<td align="right">9,021/s</td>
+</tr>
+<tr>
+<td align="left">0,0,1</td>
+<td align="left">QV</td>
+<td align="left"></td>
+<td align="right">0.00974547</td>
+<td align="right">2.2168</td>
+<td align="right">0.0976562</td>
+<td align="right">7.51953</td>
+<td align="right">2.48893</td>
+<td align="right">6.87301</td>
+<td align="right">0.0796178</td>
+<td align="right">21.9845</td>
+<td align="right">7.43911</td>
+<td align="right">246,272</td>
+<td align="right">1.77</td>
+<td align="right">9,414/s</td>
+</tr>
+<tr>
+<td align="left">0,0,1</td>
+<td align="left">KV</td>
+<td align="left"></td>
+<td align="right">0.00557148</td>
+<td align="right">1.37695</td>
+<td align="right">0</td>
+<td align="right">4.10156</td>
+<td align="right">1.69861</td>
+<td align="right">4.50239</td>
+<td align="right">0.139331</td>
+<td align="right">15.9236</td>
+<td align="right">5.87746</td>
+<td align="right">246,272</td>
+<td align="right">1.77</td>
+<td align="right">9,413/s</td>
+</tr>
+<tr>
+<td align="left">0,0,4</td>
+<td align="left">KV</td>
+<td align="left"></td>
+<td align="right">0.00294197</td>
+<td align="right">0.625</td>
+<td align="right">0.0976562</td>
+<td align="right">1.75781</td>
+<td align="right">0.500498</td>
+<td align="right">1.83917</td>
+<td align="right">0.338376</td>
+<td align="right">4.90645</td>
+<td align="right">1.34889</td>
+<td align="right">246,272</td>
+<td align="right">1.86</td>
+<td align="right">8,985/s</td>
+</tr>
+<tr>
+<td align="left">0,0,8</td>
+<td align="left">QKV</td>
+<td align="left"></td>
+<td align="right">0.00278822</td>
+<td align="right">0.527344</td>
+<td align="right">0</td>
+<td align="right">2.73438</td>
+<td align="right">0.804241</td>
+<td align="right">1.58041</td>
+<td align="right">0.348328</td>
+<td align="right">6.49881</td>
+<td align="right">1.85126</td>
+<td align="right">299,584</td>
+<td align="right">1.9</td>
+<td align="right">8,786/s</td>
+</tr>
+<tr>
+<td align="left">0,0,T</td>
+<td align="left">QKV</td>
+<td align="left">elu+1</td>
+<td align="right">0.00210139</td>
+<td align="right">0.380859</td>
+<td align="right">0</td>
+<td align="right">1.07422</td>
+<td align="right">0.299939</td>
+<td align="right">1.2291</td>
+<td align="right">0.348328</td>
+<td align="right">2.2293</td>
+<td align="right">0.648963</td>
+<td align="right">282,944</td>
+<td align="right">1.6</td>
+<td align="right">10,441/s</td>
+</tr>
+<tr>
+<td align="left">0,0,T</td>
+<td align="left">QK</td>
+<td align="left">elu+1</td>
+<td align="right">0.001886</td>
+<td align="right">0.488281</td>
+<td align="right">0</td>
+<td align="right">1.26953</td>
+<td align="right">0.387903</td>
+<td align="right">0.936505</td>
+<td align="right">0.159236</td>
+<td align="right">1.98049</td>
+<td align="right">0.508104</td>
+<td align="right">229,632</td>
+<td align="right">1.58</td>
+<td align="right">10,595/s</td>
+</tr>
+</tbody></table></div><ul>
+<li>
+self-built attention <ul>
+<li><code>QK</code> or <code>QKV</code> perform most stable</li>
+<li><code>QV</code> and <code>KV</code> perform not at all</li>
+</ul>
+</li>
+<li>
+multi-head attention<ul>
+<li>8 heads <code>QKV</code> performs most stable</li>
+</ul>
+</li>
+</ul>
 
 
         <!-- article footer -->
