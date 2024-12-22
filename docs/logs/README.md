@@ -9,8 +9,8 @@ and look at its parameters and results.
 ## Index
 - [2024-12-21-selcopy2-corrections.md](2024-12-21-selcopy2-corrections.md)
   - [:arrow_forward:](2024-12-21-selcopy2-corrections.md#corrections-of-wrong-very-selective-copying-experiments) Corrections of wrong Very Selective Copying experiments
-      - [:arrow_forward:](2024-12-21-selcopy2-corrections.md#compare-attention-activation-function) Compare attention activation function
       - [:arrow_forward:](2024-12-21-selcopy2-corrections.md#compare-attention-invention) Compare attention invention
+      - [:arrow_forward:](2024-12-21-selcopy2-corrections.md#compare-attention-activation-function) Compare attention activation function
 - [2024-12-15-selcopy2.md](2024-12-15-selcopy2.md)
   - [:arrow_forward:](2024-12-15-selcopy2.md#solving-the-very-selective-copying-problem-with-a-very-small-language-model) Solving the "Very Selective Copying" problem with a Very Small Language Model
       - [:arrow_forward:](2024-12-15-selcopy2.md#preliminary-tests) Preliminary tests

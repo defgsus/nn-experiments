@@ -942,7 +942,7 @@ bring every point in the sequence in contact with every other point, in a way th
 sense. How exactly it makes sense, i can not tell. That's why i run these tests.</p>
 <h3 id="compare-attention-activation-function">Compare attention activation function <a href="#compare-attention-activation-function" class="heading-linker">←</a></h3>
 <p>The above activation function in the self-built attention module, <code>elu(x) + 1</code>, is suggested
-by the authors (<a href="https://arxiv.org/abs/2006.16236" target="_blank">2006.16236</a>]), mainly because it needs
+by the authors (<a href="https://arxiv.org/abs/2006.16236" target="_blank">2006.16236</a>), mainly because it needs
 to be &gt;= 0 and the elu gives a smooth gradient (unlike relu). </p>
 <p>The <em>Fast Weight Programmers</em>-paper (<a href="https://arxiv.org/abs/2102.11174" target="_blank">2102.11174</a>) suggests to
 replace this function with a more sparsity &amp; orthogonality - aimed
@@ -1585,7 +1585,7 @@ the others are worse than 50% error. </p>
 <li>a 6-layer network can solve the 5-operations task, if we add self-attention to the last layer.</li>
 <li>The number of model parameters increased from 237,952 to 389,568 (because i still used
 the 13-kernels from the 3-layers experiments and the one 64-128 convolution for the <em>self-invented</em> QK) </li>
-<li>The training time increased from <del>14 minutes to </del>17. </li>
+<li>The training time increased from 14 to 17 minutes. </li>
 <li>Validation sample error decreased from 99% to 0.06%</li>
 <li>Is this a passable building block for a <em>Very Small Language Model</em>?
 I might have said yes but right now i say: Don't know, have to test it...</li>
