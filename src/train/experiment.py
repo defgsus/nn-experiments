@@ -4,6 +4,7 @@ import re
 import math
 import random
 import itertools
+import secrets
 import shutil
 import argparse
 import sys
@@ -324,8 +325,8 @@ def dump_experiments_results(
     print(df.to_markdown(
         index=show_index,
         colalign=[
-            "right" if c in right_columns else ("left" if df.dtypes[c] == np.object_ else "right")
-            for c in df.columns
+            "right" if c in right_columns else ("left" if df.iloc[:, i].dtype == np.object_ else "right")
+            for i, c in enumerate(df.columns)
         ]
     ))
 
@@ -336,6 +337,8 @@ def group_df_column(
         std_columns: List[str],
 ) -> pd.DataFrame:
     column_values = df.loc[:, column].unique()
+    column_values = sorted(str(c) for c in column_values)
+    column_values = sorted(column_values, key=lambda c: len(c), reverse=True)
 
     def _remove_column_ref(x):
         for c in column_values:
@@ -347,14 +350,17 @@ def group_df_column(
     df2 = group.mean(numeric_only=True)  # get mean of float values
     df2_std = group.std(numeric_only=True)
     df3 = group.max()                    # get all values (including strings)
+    group_count = group.count()
 
     for c in df3.columns:
         if c not in df2.columns:
             df2.loc[:, c] = df3.loc[:, c]  # copy strings back
 
-    # restore old column order
-    dic = {}
+    dic = {
+        f"num {column}s": group_count.loc[:, column]
+    }
     for c in df3:
+        # restore old column order
         dic[c] = df2.loc[:, c]
 
         # add min/max/std columns
@@ -365,9 +371,15 @@ def group_df_column(
                     ("std", df2_std),
             ):
                 if c in extra_df:
-                    dic[f"({name})"] = extra_df.loc[:, c]
+                    key = f"({name})"
+                    if key in dic:
+                        key = f"{key}REMOVE{c}"
+                    dic[key] = extra_df.loc[:, c]
 
-    return pd.DataFrame(dic).reset_index().drop(["_id_without", column], axis=1)
+    df = pd.DataFrame(dic).reset_index().drop(["_id_without", column], axis=1)
+    df.columns = df.columns.map(lambda c: c.split("REMOVE")[0])
+    return df
+
 
 
 def get_matrix_entries(matrix: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
