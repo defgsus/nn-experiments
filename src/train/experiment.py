@@ -189,12 +189,13 @@ def run_experiment(filename: Union[str, Path], extra_args: dict):
             continue
 
         trainer = trainer_klass(**kwargs)
-        if command == "get_trainer":
-            return trainer
 
-        if not kwargs["reset"]:
+        if not kwargs.get("reset"):
             if not trainer.load_checkpoint("best"):
                 trainer.load_checkpoint()
+
+        if command == "get_trainer":
+            return trainer
 
         if load_from_checkpoint is not None:
             found_it = False
@@ -559,6 +560,7 @@ def construct_scheduler(optimizer: torch.optim.Optimizer, parameter: str, kwargs
     klass = getattr(src.scheduler, parameter, None)
     if klass is None:
         klass = getattr(torch.optim.lr_scheduler, parameter)
+    print("SCHEDULER", klass, kwargs["max_inputs"] // kwargs["batch_size"])
     return klass(optimizer, kwargs["max_inputs"] // kwargs["batch_size"])
 
 

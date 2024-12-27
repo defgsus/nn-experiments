@@ -314,6 +314,8 @@ class Trainer:
                         input_batch_size = len(v)
                     elif isinstance(input_batch[0], list):
                         input_batch_size = len(input_batch[0])
+                    elif isinstance(input_batch[0], str):
+                        input_batch_size = len(input_batch)
                     elif callable(getattr(input_batch[0], "__len__", None)):
                         input_batch_size = len(input_batch[0])
                     else:
@@ -324,7 +326,13 @@ class Trainer:
                             input_batch[0] = input_batch[0] + self.training_noise * torch.randn_like(input_batch[0])
 
                     if self.epoch == 0 and batch_idx == 0:
-                        print(" BATCH", ", ".join(str(b.shape) if hasattr(b, "shape") else "?" for b in input_batch))
+                        if isinstance(input_batch, list) and isinstance(input_batch[0], str):
+                            print(f" BATCH {len(input_batch)}, {len(input_batch[0])}")
+                        else:
+                            print(" BATCH", ", ".join(
+                                str(b.shape) if hasattr(b, "shape") else "?"
+                                for b in input_batch
+                            ))
 
                     loss_result = self._train_step(input_batch)
                     if not isinstance(loss_result, dict):
