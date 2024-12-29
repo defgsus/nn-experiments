@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from src.models.util import activation_to_module, normalization_to_module
 from src.models.attention import Attention1d
 from src.util.params import param_make_tuple
+from src.util.embedding import create_diagonal_matrix
 
 
 class ConvTextLayer(nn.Module):
@@ -29,6 +30,7 @@ class ConvTextLayer(nn.Module):
         self.residual = residual and num_channels_in == num_channels_out
         self.num_attention_heads = num_attention_heads
         self.attention_invention = attention_invention.upper()
+        self.attention_activation = attention_activation
 
         padding = int(math.floor(kernel_size / 2)) * dilation
         self.norm = normalization_to_module(norm, channels=num_channels_in)
@@ -134,6 +136,7 @@ class ConvTextModel(nn.Module):
             residual: Union[bool, Iterable[bool]] = True,
             residual_map: Dict[int, List[int]] = None,  # source layer -> target layer
             residual_map_concat: bool = False,
+            diagonal_embedding: bool = False,
             pos_embedding: bool = False,
     ):
         super().__init__()
@@ -151,6 +154,10 @@ class ConvTextModel(nn.Module):
         layer_output_channels = param_make_tuple(num_channels, num_layers, "num_channels")
 
         self.embedding = nn.Embedding(vocab_size, num_channels - (2 if pos_embedding else 0))
+        if diagonal_embedding:
+            with torch.no_grad():
+                self.embedding.weight[:] = create_diagonal_matrix(self.embedding.weight.shape)
+
         self.pos_embedding = None
         if pos_embedding:
             self.pos_embedding = PositionEmbedding1d(period=10)
@@ -165,6 +172,7 @@ class ConvTextModel(nn.Module):
                 param_make_tuple(residual, num_layers, "residual"),
                 param_make_tuple(num_attention_heads, num_layers, "num_attention_heads"),
         ):
+            is_last_layer = i == num_layers - 1
             in_channels = ch
             if residual_map_concat:
                 in_channels += sum(
@@ -178,7 +186,7 @@ class ConvTextModel(nn.Module):
                     num_channels_out=next_ch,
                     kernel_size=ks,
                     dilation=dil,
-                    norm=norm,
+                    norm=None if is_last_layer else norm,
                     activation=activation,
                     residual=res,
                     num_attention_heads=attn_heads,

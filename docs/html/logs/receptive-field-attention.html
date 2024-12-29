@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>How does receptive field size increase with self-attention</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#how-does-receptive-field-size-increase-with-self-attention" title="How does receptive field size increase with self-attention">How does receptive field size increase with self-attention</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="how-does-receptive-field-size-increase-with-self-attention">How does receptive field size increase with self-attention <a href="#how-does-receptive-field-size-increase-with-self-attention" class="heading-linker">←</a></h1>
+<p>Still not tired of these <strong>V</strong>ery <strong>S</strong>mall <strong>L</strong>anguage <strong>M</strong>odels...
+After <a href="../../html/logs/selcopy.html">previous experiments</a>, i was wondering, how the size of the
+receptive field of a 1d convolutional network is influenced by a self-attention layer.</p>
+<p>Basically, the self-attention gives the network the opportunity to relate distant cells with
+each other that are (spatially or temporally) far more apart than the classic
+receptive field of the convolution can handle.</p>
+<p>I tried a couple of new synthetic datasets but came back to the <em>Selective Copying</em> problem
+because it's quite simple to understand and to setup with a specific size. </p>
+<p>Small recap: <em>Selective copying</em> means to pick all the letters in between those spaces and
+concatenate them:</p>
+<div style="overflow: scroll;"><pre><code>A      B C        D : ABCD
+EG          B  A    : EGBA
+</code></pre>
+</div><p>It's a simple task but requires a large-enough receptive field. I'm using the same text-to-text
+network as in previous experiments, masking out the answer and requiring the network to reproduce
+the whole string while replacing the mask with the actual answer (the concatenated letters).</p>
+<p>The network gets the raw byte classes (256) as input and outputs class logits for each output character.</p>
+<p>Each sample of the dataset contains 10 letters to concatenate in a 40 (or 80) wide space, denoted
+as <code>area</code> in the table below. The network has 3 layers and either</p>
+<p>uses a kernel size of 7 and dilation 1, 1, 1, which results in a receptive field radius of 9</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/conv-l3-ks7-dil1-1-1.png" alt="receptive field plot" /></div></p>
+<p>or a kernel size of 13 and dilation 5, 7, 1, which results in a receptive field radius of 78</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/conv-l3-ks13-dil3-5-1.png" alt="receptive field plot" /></div></p>
+<p>The table shows runs for various combinations of kernel-size/dilation, convolutional channels
+and self-attention (<code>attn</code>) for a selective copying area of 40 and 80 cells. The attention
+is the QK-self-invented type as described <a href="../../html/logs/selcopy2.html#attention-please">here</a>. </p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">area</th>
+<th align="right">l</th>
+<th align="right">ch</th>
+<th align="right">ks</th>
+<th align="left">dil</th>
+<th align="left">attn</th>
+<th align="right">validation loss</th>
+<th align="right">validation mask error %</th>
+<th align="right">validation sample error%</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">40</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">7</td>
+<td align="left"></td>
+<td align="left"></td>
+<td align="right">0.428964</td>
+<td align="right">88.9958</td>
+<td align="right">100</td>
+<td align="right">29,920</td>
+<td align="right">5.98</td>
+<td align="right">10,867/s</td>
+</tr>
+<tr>
+<td align="right">40</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">7</td>
+<td align="left"></td>
+<td align="left">0,T,T</td>
+<td align="right">0.364131</td>
+<td align="right">72.3721</td>
+<td align="right">100</td>
+<td align="right">44,320</td>
+<td align="right">6.99</td>
+<td align="right">9,302/s</td>
+</tr>
+<tr>
+<td align="right"><strong>80</strong></td>
+<td align="right">3</td>
+<td align="right">128</td>
+<td align="right">7</td>
+<td align="left"></td>
+<td align="left">0,0,T</td>
+<td align="right">0.108775</td>
+<td align="right">45.9375</td>
+<td align="right">99.9104</td>
+<td align="right">492,544</td>
+<td align="right">12.59</td>
+<td align="right">5,162/s</td>
+</tr>
+<tr>
+<td align="right"><strong>80</strong></td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">13</td>
+<td align="left">5,7,1</td>
+<td align="left"></td>
+<td align="right">0.139426</td>
+<td align="right">46.3525</td>
+<td align="right">99.8308</td>
+<td align="right">48,352</td>
+<td align="right">16.95</td>
+<td align="right">3,834/s</td>
+</tr>
+<tr>
+<td align="right">40</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">13</td>
+<td align="left">5,7,1</td>
+<td align="left"></td>
+<td align="right">0.147143</td>
+<td align="right">24.7432</td>
+<td align="right">92.2472</td>
+<td align="right">48,352</td>
+<td align="right">7.23</td>
+<td align="right">8,984/s</td>
+</tr>
+<tr>
+<td align="right">40</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">7</td>
+<td align="left"></td>
+<td align="left">0,0,T</td>
+<td align="right">0.060434</td>
+<td align="right">13.9844</td>
+<td align="right">82.0064</td>
+<td align="right">37,120</td>
+<td align="right">6.22</td>
+<td align="right">10,457/s</td>
+</tr>
+<tr>
+<td align="right">40</td>
+<td align="right">3</td>
+<td align="right">64</td>
+<td align="right">7</td>
+<td align="left"></td>
+<td align="left">0,0,T</td>
+<td align="right">0.037878</td>
+<td align="right">9.0555</td>
+<td align="right">64.6994</td>
+<td align="right">131,584</td>
+<td align="right">15.77</td>
+<td align="right">4,122/s</td>
+</tr>
+<tr>
+<td align="right">40</td>
+<td align="right">3</td>
+<td align="right">128</td>
+<td align="right">7</td>
+<td align="left"></td>
+<td align="left">0,0,T</td>
+<td align="right">0.024103</td>
+<td align="right">6.2549</td>
+<td align="right">48.0842</td>
+<td align="right">492,544</td>
+<td align="right">9.22</td>
+<td align="right">7,051/s</td>
+</tr>
+<tr>
+<td align="right">40</td>
+<td align="right">3</td>
+<td align="right">256</td>
+<td align="right">7</td>
+<td align="left"></td>
+<td align="left">0,0,T</td>
+<td align="right">0.019787</td>
+<td align="right">5.0681</td>
+<td align="right">39.8637</td>
+<td align="right">1,902,592</td>
+<td align="right">19.93</td>
+<td align="right">3,260/s</td>
+</tr>
+<tr>
+<td align="right">40</td>
+<td align="right">3</td>
+<td align="right">512</td>
+<td align="right">7</td>
+<td align="left"></td>
+<td align="left">0,0,T</td>
+<td align="right">0.019062</td>
+<td align="right">4.6715</td>
+<td align="right">37.5547</td>
+<td align="right">7,475,200</td>
+<td align="right">45.6</td>
+<td align="right">1,425/s</td>
+</tr>
+<tr>
+<td align="right"><strong>80</strong></td>
+<td align="right">3</td>
+<td align="right">128</td>
+<td align="right">13</td>
+<td align="left">5,7,1</td>
+<td align="left">0,0,T</td>
+<td align="right">8.94742e-07</td>
+<td align="right">0.0009</td>
+<td align="right">0.0099</td>
+<td align="right">885,760</td>
+<td align="right">17.85</td>
+<td align="right">3,641/s</td>
+</tr>
+<tr>
+<td align="right"><strong>80</strong></td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">13</td>
+<td align="left">5,7,1</td>
+<td align="left">0,0,T</td>
+<td align="right">3.31051e-06</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">61,696</td>
+<td align="right">24.17</td>
+<td align="right">2,689/s</td>
+</tr>
+<tr>
+<td align="right">40</td>
+<td align="right">3</td>
+<td align="right">32</td>
+<td align="right">13</td>
+<td align="left">5,7,1</td>
+<td align="left">0,0,T</td>
+<td align="right">1.91189e-06</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">61,696</td>
+<td align="right">8.72</td>
+<td align="right">7,454/s</td>
+</tr>
+<tr>
+<td align="right"><strong>80</strong></td>
+<td align="right">3</td>
+<td align="right">64</td>
+<td align="right">13</td>
+<td align="left">5,7,1</td>
+<td align="left">0,0,T</td>
+<td align="right">4.2523e-07</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">229,888</td>
+<td align="right">10.02</td>
+<td align="right">6,489/s</td>
+</tr>
+<tr>
+<td align="right">40</td>
+<td align="right">3</td>
+<td align="right">64</td>
+<td align="right">13</td>
+<td align="left">5,7,1</td>
+<td align="left">0,0,T</td>
+<td align="right">4.06063e-07</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">229,888</td>
+<td align="right">7.97</td>
+<td align="right">8,153/s</td>
+</tr>
+<tr>
+<td align="right">40</td>
+<td align="right">3</td>
+<td align="right">128</td>
+<td align="right">13</td>
+<td align="left">5,7,1</td>
+<td align="left">0,0,T</td>
+<td align="right">4.15227e-08</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">885,760</td>
+<td align="right">12.63</td>
+<td align="right">5,144/s</td>
+</tr>
+</tbody></table></div><p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy3_error-curves.png" alt="error curves" /></div></p>
+<p>Looking at the <code>validation sample error %</code> we can see that neither a large receptive field nor
+self-attention alone can solve the problem with a 3-layer network. Combining both, however, solves
+the problem 100%. </p>
+<p>Using only self-attention, the number of channels has a significant impact,
+although not as much as to justify the increased computational demand. All networks with attention
+where run two times and the average is reported. The 512-channel version had a validation error
+of 31.4% and 43.6%.</p>
+
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a target="_blank" href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a target="_blank" href="https://github.com/defgsus/nn-experiments/blob/master/docs/logs/2024-12-28-receptive-field-attention.md">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../html/logs/selcopy2-corrections.html">
+                        &lt;&lt; Corrections of wrong <em>Very Selective Copying</em> experiments
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+                <a href="../../html/posts/2024/datasets.html">
+                    Common datasets and sizes &gt;&gt;
+                </a>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

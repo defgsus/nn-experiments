@@ -7,6 +7,8 @@ and look at its parameters and results.
 
 
 ## Index
+- [2024-12-28-receptive-field-attention.md](2024-12-28-receptive-field-attention.md)
+  - [:arrow_forward:](2024-12-28-receptive-field-attention.md#how-does-receptive-field-size-increase-with-self-attention) How does receptive field size increase with self-attention
 - [2024-12-21-selcopy2-corrections.md](2024-12-21-selcopy2-corrections.md)
   - [:arrow_forward:](2024-12-21-selcopy2-corrections.md#corrections-of-wrong-very-selective-copying-experiments) Corrections of wrong Very Selective Copying experiments
       - [:arrow_forward:](2024-12-21-selcopy2-corrections.md#compare-attention-invention) Compare attention invention

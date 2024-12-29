@@ -1,0 +1,100 @@
+experiment_name: textmask/convtext-QA-long_${matrix_slug}
+
+matrix:
+  bs: [64]
+  opt: ["AdamW"]
+  lr: [.0005]
+  short:
+    - True
+    #- False
+  mf:
+    - 2
+    #- 3
+  vmf:
+    - 5
+  l:
+    #- 3
+    - 4
+    #- 6
+  ch:
+    - 64
+    #- 128
+    #- 256
+    #- 512
+  ks:
+    - 13
+    #- 11
+    #- 13
+  dil:
+    - [3, 5, 1]
+    - [3, 5, 7, 1]
+    - [1, 2, 3, 4, 5, 1]
+  $filter: (isinstance(${dil}, int) or len(${dil}) == ${l}) and (isinstance(${attn}, int) or len(${attn}) == ${l})
+  embdiag:
+    - True
+  #posemb:
+  #  - 0
+  qkv:
+    - "QK"
+    #- "QV"
+    #- "KV"
+    #- "QKV"
+  attn:
+    - [0, 0, True]
+    - [0, 0, 0, True]
+    - [0, 0, 0, 0, 0, True]
+  attnact:
+    - "elu+1"
+    # - "dpfp"
+  act:
+    - "gelu"
+  norm:
+    #- "None"
+    - "'bn1d'"
+
+trainer: experiments.textmask.texttrainer.TextMaskTrainer
+mask_is_arg: 1
+
+train_set: |
+  train_set, validation_set = TextQALongIterableDataset.create_train_and_validation_set(
+    short=${short},
+    min_forms=${mf},
+    train_count=100_000,
+    validation_count=10_000,
+    validation_seed=23,
+    validation_min_forms=${vmf},
+    with_masked=True,
+  )
+  train_set
+
+validation_set: |
+  validation_set
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 4_000_000
+#num_epochs_between_validations: 1
+num_inputs_between_validations: 100_000
+freeze_validation_set: True
+
+
+model: |
+  from experiments.textmask.textmodel import ConvTextModel
+  
+  ConvTextModel(
+      vocab_size=256,
+      num_layers=${l},
+      num_channels=${ch},
+      kernel_size=${ks},
+      dilation=${dil},
+      activation="${act}",
+      norm=${norm},
+      #pos_embedding=bool({posemb}),
+      num_attention_heads=${attn},
+      attention_invention="${qkv}",
+      attention_activation="${attnact}",
+      diagonal_embedding=${embdiag},
+  )

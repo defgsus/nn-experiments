@@ -34,7 +34,7 @@ class TextMaskTrainer(Trainer):
             *args,
             mask_is_arg: Optional[int] = None,
             mask_size: int = 10,
-            mask_type: Union[str, Iterable[str]] = "single",  # "block", "single"
+            mask_type: Union[str, Iterable[str]] = "single",  # "block", "single", "end"
             **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -89,10 +89,13 @@ class TextMaskTrainer(Trainer):
             indices = torch.randint(0, L - size, (B, 1)).to(texts.device)
             coords = torch.arange(0, L).unsqueeze(0).repeat(B, 1).to(texts.device)
             mask &= (coords < indices) | (coords >= indices + size)
+        if "end" in self._mask_type:
+            size = max(1, min(L, self._mask_size))
+            mask[:, L - size:] = 0
         if "single" in self._mask_type:
             for i in range(self._mask_size):
                 mask.scatter_(-1, torch.randint(0, L - 1, (B, 1)).to(texts.device), 0)
-        #else:
+
         #    raise NotImplementedError(f"No mask type '{self._mask_type}'")
 
         return texts * mask
@@ -100,10 +103,12 @@ class TextMaskTrainer(Trainer):
     def _encode_texts(self, texts: List[str]):
         text_batch = []
         texts = [list(t.encode()) for t in texts]
-        max_len = max(len(t) for t in texts)
+        fixed_len = min(len(t) for t in texts)
         for text in texts:
-            if len(text) < max_len:
-                text += [32] * (max_len - len(text))
+            if len(text) < fixed_len:
+                text += [32] * (fixed_len - len(text))
+            elif len(text) > fixed_len:
+                text = text[:fixed_len]
 
             text_batch.append(
                 torch.tensor(text, dtype=torch.int)
@@ -133,12 +138,19 @@ class TextMaskTrainer(Trainer):
             output_logits = self.model(masked_batch)
             output_batch = output_logits.argmax(dim=-1)
 
+            num_correct = (text_batch == output_batch).sum(-1)
+            index = num_correct.argsort()
+
             grid = []
-            for text, output, mask in zip(text_batch, output_batch, masked_batch):
+            #for text, output, mask in zip(text_batch, output_batch, masked_batch):
+            for idx in reversed(index):
+                text = text_batch[idx]
+                mask = masked_batch[idx]
+                output = output_batch[idx]
 
                 r_text = self._font_squares(text, dim=-1)
                 r_mask = self._font_squares(mask, dim=-1)
-                r_output= self._font_squares(output, dim=-1)
+                r_output = self._font_squares(output, dim=-1)
 
                 for i, (t, o, m) in enumerate(zip(text, output, mask)):
                     if t == o:
@@ -152,7 +164,7 @@ class TextMaskTrainer(Trainer):
                     make_grid(r_output, padding=0, nrow=r_output.shape[0]),
                 ], nrow=1))
 
-            self.log_image(f"image_{name}", make_grid(grid, nrow=2, padding=2))
+            self.log_image(f"image_{name}", make_grid(grid, nrow=1, padding=2))
 
             texts = self.generate_text(text_batch[:5][:text_batch.shape[-1] // 3])
             grid = []
@@ -170,23 +182,32 @@ class TextMaskTrainer(Trainer):
         _example("validation", self.iter_validation_batches())
 
     @torch.no_grad()
-    def generate_text(self, start: Union[str, torch.Tensor], length: int = 200, num_c: int = 1) -> torch.Tensor:
+    def generate_text(
+            self,
+            start: Union[str, torch.Tensor],
+            length: int = 200,
+            num_c: int = 1,
+            keep_length: bool = True,
+    ) -> torch.Tensor:
         if isinstance(start, str):
             text_batch = self._encode_texts([start])
         else:
             text_batch = start.to(self.device)
-        while text_batch.shape[-1] < length:
+
+        generated_text_batch = text_batch.clone()
+        while generated_text_batch.shape[-1] < length:
             text_batch_with_mask = torch.concat([
-                text_batch,
+                generated_text_batch[:, -text_batch.shape[-1]:] if keep_length else generated_text_batch,
                 torch.zeros(text_batch.shape[0], num_c, dtype=text_batch.dtype).to(self.device)
             ], dim=-1)
 
             output_logits = self.model(text_batch_with_mask)
             output_text_batch = output_logits[:, -num_c:].argmax(dim=-1)
             # print("LOGITS", output_logits.shape, output_text_batch.shape)
-            text_batch = torch.concat([
-                text_batch,
+
+            generated_text_batch = torch.concat([
+                generated_text_batch,
                 output_text_batch
             ], dim=-1)
 
-        return text_batch
+        return generated_text_batch
