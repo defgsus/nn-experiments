@@ -1,7 +1,7 @@
 from pathlib import Path
 import random
 import datetime
-from typing import Union, Optional, Iterable, Generator
+from typing import Union, Optional, Iterable, Generator, Tuple
 
 import torch
 from torch.utils.data import Dataset, IterableDataset
@@ -10,36 +10,64 @@ from .base_iterable import BaseIterableDataset
 from src.util.gharchive import GHArchive
 
 
+def make_compact_whitespace(text: str):
+    compact_text = []
+    was_whitespace = False
+    for ch in text:
+        if ch.isspace():
+            if not was_whitespace:
+                compact_text.append(" ")
+            was_whitespace = True
+        else:
+            compact_text.append(ch)
+            was_whitespace = False
+
+    return "".join(compact_text)
+
+
 class TextSegmentIterableDataset(BaseIterableDataset):
 
     def __init__(
             self,
             *text: str,
-            size: int,
+            size: Union[int, Tuple[int, int]],
+            batch_size: Optional[int] = None,
+            compact_whitespace: bool = True,
             stride: Union[None, int, str] = None,  # int or "random"
             encode: Optional[str] = None,  # None, "bytes"
             padding_char: str = " ",
+            seed: Optional[int] = None,
     ):
+        assert isinstance(size, int) or batch_size is not None, "Must provide batch_size when size is tuple"
+        if compact_whitespace:
+            text = [make_compact_whitespace(t) for t in text]
         self._texts = text
         self._size = size
+        self._batch_size = batch_size
         self._stride = stride
         self._encode = encode
         self._padding_char = padding_char
+        self._rng = random if seed is None else random.Random(seed)
 
     def __iter__(self):
         stride = self._stride
         if stride is None:
             stride = self._size
 
+        size = self._size
+        if not isinstance(size, int):
+            size = self._rng.randrange(*size)
+
+        counter = 0
         for text in self._texts:
             pos = 0
             while pos < len(text):
-                segment = text[pos: pos + self._size]
-                if len(segment) < self._size:
-                    segment = segment + self._padding_char * (self._size - len(segment))
+                segment = text[pos: pos + size]
+                if len(segment) < size:
+                    segment = segment + self._padding_char * (size - len(segment))
 
                 if stride == "random":
-                    pos += random.randrange(self._size)
+                    pos += self._rng.randrange(size)
                 elif isinstance(stride, int):
                     pos += stride
                 else:
@@ -51,6 +79,12 @@ class TextSegmentIterableDataset(BaseIterableDataset):
                     yield torch.tensor(list(segment.encode()), dtype=torch.uint8)
                 else:
                     raise NotImplementedError(f"Invalid encode '{self._encode}'")
+
+                counter += 1
+                if not isinstance(self._size, int):
+                    if counter >= self._batch_size:
+                        counter = 0
+                        size = self._rng.randrange(*self._size)
 
 
 class FileTextSegmentIterableDataset(BaseIterableDataset):

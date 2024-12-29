@@ -7,4 +7,5 @@ from .text_gen import (
     TextQABaseIterableDataset,
     TextQAProgramIterableDataset,
     TextQAMathIterableDataset,
+    TextQALongIterableDataset,
 )

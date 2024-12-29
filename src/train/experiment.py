@@ -382,7 +382,6 @@ def group_df_column(
     return df
 
 
-
 def get_matrix_entries(matrix: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
     if not matrix:
         matrix_entries = [{}]
@@ -419,13 +418,24 @@ def get_matrix_slug(entry: dict) -> str:
     )
 
 
-def _load_yaml(filename: str, matrix_entry: Optional[Dict] = None):
+_yaml_data_cache = {}
+_yaml_text_cache = {}
+
+
+def _load_yaml(filename: Union[str, Path], matrix_entry: Optional[Dict] = None):
+    filename = str(filename)
+
     if not matrix_entry:
-        with open(filename) as fp:
-            data = yaml.load(fp, YamlLoader)
+        if filename not in _yaml_data_cache:
+            with open(filename) as fp:
+                _yaml_data_cache[filename] = yaml.load(fp, YamlLoader)
+        data = _yaml_data_cache[filename]
 
     else:
-        text = Path(filename).read_text()
+        if filename not in _yaml_text_cache:
+            _yaml_text_cache[filename] = Path(filename).read_text()
+        text = _yaml_text_cache[filename]
+
         text = apply_parameter_matrix(text, {
             **matrix_entry,
             "PATH": str(PROJECT_ROOT),
@@ -618,7 +628,9 @@ class YamlLoader(yaml.SafeLoader):
         if self._root is None:
             raise ValueError(f"Can't !include in {type(self.stream).__name__}")
 
-        filename = self._root / self.construct_scalar(node)
+        filename = str(self._root / self.construct_scalar(node))
 
-        with open(filename) as f:
-            return yaml.load(f, YamlLoader)
+        if filename not in _yaml_data_cache:
+            with open(filename) as fp:
+                _yaml_data_cache[filename] = yaml.load(fp, YamlLoader)
+        return _yaml_data_cache[filename]

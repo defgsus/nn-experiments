@@ -44,6 +44,7 @@ from .randomcropall import RandomCropAllDataset
 from .shuffle import ShuffleDataset, IterableShuffle
 from .split import SplitIterableDataset
 from .text import (
+    make_compact_whitespace,
     TextSegmentIterableDataset, FileTextSegmentIterableDataset,
     TextGithubEventIterableDataset,
 )

@@ -1,4 +1,5 @@
 import math
+import hashlib
 import random
 from typing import Optional, Callable, List, Tuple, Iterable, Generator, Union, Dict
 
@@ -21,6 +22,8 @@ class TextQABaseIterableDataset(BaseIterableDataset):
             separator: str = ": ",
             fixed_question_width: Optional[int] = None,
             fixed_answer_width: Optional[int] = None,
+            fixed_width: Optional[int] = None,
+            padding_char: str = " ",
             seed: Optional[int] = None,
             exclude: Optional[Iterable[str]] = None,
             with_masked: bool = False,
@@ -30,6 +33,8 @@ class TextQABaseIterableDataset(BaseIterableDataset):
         self._separator = separator
         self._fixed_question_width = fixed_question_width
         self._fixed_answer_width = fixed_answer_width
+        self._fixed_width = fixed_width
+        self._padding_char = padding_char
         self._seed = seed
         self._exclude = None if exclude is None else set(exclude)
         self._with_masked = with_masked
@@ -102,14 +107,21 @@ class TextQABaseIterableDataset(BaseIterableDataset):
                 continue
 
             if not self._with_masked:
-                yield text
+                yield self._make_fixed_width(text)
             else:
                 masked_text = f"{question}{self._separator}" + "\0" * len(answer)
-                yield text, masked_text
+                yield self._make_fixed_width(text), self._make_fixed_width(masked_text)
 
             num += 1
             if num >= self._count:
                 break
+
+    def _make_fixed_width(self, text: str):
+        if self._fixed_width is None:
+            return text
+        if len(text) < self._fixed_width:
+            return text + self._padding_char * (self._fixed_width - len(text))
+        return text[:self._fixed_width]
 
 
 class TextQAMathIterableDataset(TextQABaseIterableDataset):
@@ -305,3 +317,147 @@ class TextQAProgramIterableDataset(TextQABaseIterableDataset):
                     "num_items": len(program_input),
                     "num_operations": len(ops),
                 }
+
+
+class TextQALongIterableDataset(TextQABaseIterableDataset):
+    """
+    Yields things like
+
+        There is a deep-green semi-opaque hexagon at the left,
+        a shiny-purple small triangle at the top,
+        a dull-brown thin circle at the top-left.
+        Please put them in the order from bottom-right to top-left.
+        A: deep-green semi-opaque hexagon, shiny-purple small triangle, dull-brown thin circle
+
+    If `short` is True, the length of the question/answer text is 260 characters,
+    if `short` is False, the length is 894
+    """
+    COLORS = [
+        "red", "green", "blue", "yellow", "cyan", "white", "black", "pink",
+        "brown", "golden", "silver", "orange", "gray", "magenta", "violet", "purple",
+    ]
+    COLORS_SHORT = [
+        "R", "G", "B", "Y", "C", "W", "L", "P",
+        "N", "D", "S", "O", "E", "M", "V", "U",
+    ]
+    COLOR_MODIFIERS = [
+        "", "light", "dark", "deep", "shiny", "dull",
+    ]
+    COLOR_MODIFIERS_SHORT = [
+        "", "L", "D", "E", "S", "U",
+    ]
+    FORMS = [
+        "square", "circle", "triangle", "rectangle", "pentagon", "hexagon", "septagon",
+        "vertical line", "horizontal line",
+    ]
+    FORMS_SHORT = [
+        "SQ", "CI", "TR", "RE", "PE", "HE", "SE",
+        "VL", "HL",
+    ]
+    FORM_MODIFIERS = [
+        "", "thin", "thick", "large", "small", "cute", "perforated", "rotated",
+        "semi-transparent", "opaque", "semi-opaque", "upside-down",
+    ]
+    FORM_MODIFIERS_SHORT = [
+        "", "T", "I", "L", "S", "C", "P", "R",
+        "E", "O", "Q", "U",
+    ]
+    PLACES = [
+        "top-left", "top", "top-right", "left", "middle", "right", "bottom-left", "bottom", "bottom-right",
+    ]
+    PLACES_SHORT = [
+        "TL", "T", "TR", "L", "M", "R", "BL", "B", "BR",
+    ]
+
+    def __init__(
+            self,
+            count: int,
+            min_forms: int = 3,
+            short: bool = False,
+            seed: Optional[int] = None,
+            exclude: Optional[Iterable[str]] = None,
+            with_masked: bool = False,
+    ):
+        # make sure all the values are unique
+        for key in dir(self.__class__):
+            if key.isupper():
+                value = getattr(self.__class__, key)
+                if isinstance(value, list):
+                    assert len(value) == len(set(value)), \
+                        f"{self.__class__.__name__}.{key} has duplicate values: {value}"
+
+        # checked a couple million questions/answer pairs for these numbers
+        if short:
+            max_question_len = 168
+            max_answer_len = 88
+        else:
+            max_question_len = 557
+            max_answer_len = 333
+
+        super().__init__(
+            count=count, seed=seed, exclude=exclude, with_masked=with_masked,
+            fixed_answer_width=max_answer_len,
+            fixed_width=max_question_len + max_answer_len + 4,
+            separator=" A: ",
+            # padding_char="\x01",
+        )
+        self._min_forms = min_forms
+        self._short = short
+
+    def iter_question_answer(self, rng: random.Random) -> Generator[Tuple[str, str], None, None]:
+        PLACES = self.PLACES_SHORT if self._short else self.PLACES
+        REVERSE_PLACES = list(reversed(PLACES))
+        FORMS = self.FORMS_SHORT if self._short else self.FORMS
+        FORM_MODIFIERS = self.FORM_MODIFIERS_SHORT if self._short else self.FORM_MODIFIERS
+        COLORS = self.COLORS_SHORT if self._short else self.COLORS
+        COLOR_MODIFIERS = self.COLOR_MODIFIERS_SHORT if self._short else self.COLOR_MODIFIERS
+        order_question = "Order from" if self._short else "Please put them in the order from"
+
+        duplicates_set = set()
+        while True:
+            num_forms = rng.randrange(self._min_forms, len(PLACES) + 1)
+
+            forms = FORMS.copy()
+            rng.shuffle(forms)
+            forms = forms[:num_forms]
+
+            places = PLACES.copy()
+            rng.shuffle(places)
+            places = places[:num_forms]
+
+            form_map = {}
+            for place, form in zip(places, forms):
+                color = rng.choice(COLORS)
+                color_mod = rng.choice(COLOR_MODIFIERS)
+                form_mod = rng.choice(FORM_MODIFIERS)
+
+                form_name = form
+                if form_mod:
+                    form_name = f"{form_mod} {form_name}"
+
+                form_name = f"{color} {form_name}"
+                if color_mod:
+                    form_name = f"{color_mod}-{form_name}"
+
+                form_map[place] = form_name
+
+            all_places = rng.choice([PLACES, REVERSE_PLACES])
+
+            question = "There is " + ", ".join(
+                f"{form} at {place}" if self._short else f"a {form} at the {place}"
+                for place, form in form_map.items()
+            )
+            question = f"{question}. {order_question} {all_places[0]} to {all_places[-1]}."
+
+            question_hash = hashlib.md5(question.encode()).hexdigest()
+            if question_hash in duplicates_set:
+                continue
+            duplicates_set.add(question_hash)
+
+            answer = ", ".join(
+                form_map[place]
+                for place in all_places
+                if place in form_map
+            )
+
+            yield question, answer
