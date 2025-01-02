@@ -1,11 +1,21 @@
 from typing import Any, List, Optional, Tuple, Dict, Generator, Iterable
 
 
-def param_make_tuple(value: Any, length: int, name: Optional[str] = None) -> Tuple[Any]:
-    return tuple(param_make_list(value, length, name))
+def param_make_tuple(
+        value: Any,
+        length: int,
+        name: Optional[str] = None,
+        arg_is_tuple: bool = False,
+) -> Tuple[Any]:
+    return tuple(param_make_list(value, length, name, arg_is_tuple=arg_is_tuple))
 
 
-def param_make_list(value: Any, length: int, name: Optional[str] = None) -> List[Any]:
+def param_make_list(
+        value: Any,
+        length: int,
+        name: Optional[str] = None,
+        arg_is_tuple: bool = False,
+) -> List[Any]:
     """
     Convert any value that is not a list (or tuple) to a list of defined length
     by repeating the value `length` times.
@@ -16,7 +26,11 @@ def param_make_list(value: Any, length: int, name: Optional[str] = None) -> List
     if not isinstance(value, (list, tuple)):
         value_list = [value] * length
     else:
-        value_list = list(value)
+        if arg_is_tuple and isinstance(value, tuple):
+            value_list = [value] * length
+        else:
+            value_list = list(value)
+
         if len(value_list) != length:
             if not name:
                 name = ""

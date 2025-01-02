@@ -201,3 +201,75 @@ class TextGithubEventIterableDataset(BaseIterableDataset):
                         yield event["payload"]["comment"]["body"]
                 #print(json.dumps(event,indent=2))
 
+
+class TextWiki9SegmentIterableDataset(BaseIterableDataset):
+    def __init__(
+            self,
+            size: Union[int, Tuple[int, int]],
+            batch_size: Optional[int] = None,
+            compact_whitespace: bool = True,
+            stride: Union[None, int, str] = None,  # int or "random"
+            encode: Optional[str] = None,  # None, "bytes"
+            padding_char: str = " ",
+            seed: Optional[int] = None,
+    ):
+        from torchtext.datasets import EnWik9
+
+        assert isinstance(size, int) or batch_size is not None, "Must provide batch_size when size is tuple"
+        self._ds = EnWik9()
+        self._size = size
+        self._batch_size = batch_size
+        self._compact_whitespace = compact_whitespace
+        self._stride = stride
+        self._encode = encode
+        self._padding_char = padding_char
+        self._rng = random if seed is None else random.Random(seed)
+
+    def __iter__(self):
+        stride = self._stride
+        if stride is None:
+            stride = self._size
+
+        size = self._size
+        if not isinstance(size, int):
+            size = self._rng.randrange(*size)
+
+        def _iter_text():
+            lines = []
+            for line in self._ds:
+                lines.append(line)
+                if len(lines) >= 100:
+                    yield "\n".join(lines)
+                    lines.clear()
+            if lines:
+                yield "\n".join(lines)
+
+        counter = 0
+        for text in _iter_text():
+            if self._compact_whitespace:
+                text = make_compact_whitespace(text)
+            pos = 0
+            while pos < len(text):
+                segment = text[pos: pos + size]
+                if len(segment) < size:
+                    segment = segment + self._padding_char * (size - len(segment))
+
+                if stride == "random":
+                    pos += self._rng.randrange(size)
+                elif isinstance(stride, int):
+                    pos += stride
+                else:
+                    raise NotImplementedError(f"Invalid stride '{self._stride}'")
+
+                if self._encode is None:
+                    yield segment
+                elif self._encode == "bytes":
+                    yield torch.tensor(list(segment.encode()), dtype=torch.uint8)
+                else:
+                    raise NotImplementedError(f"Invalid encode '{self._encode}'")
+
+                counter += 1
+                if not isinstance(self._size, int):
+                    if counter >= self._batch_size:
+                        counter = 0
+                        size = self._rng.randrange(*self._size)

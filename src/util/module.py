@@ -26,12 +26,22 @@ def dump_module_stacktrace(model: nn.Module, *input) -> Any:
     hooks = []
 
     def _hook(model, args, kwargs=None, name: str=""):
+        input_str = ", ".join([
+            str(tuple(arg.shape))
+            if isinstance(arg, torch.Tensor) else type(arg).__name__
+            for arg in args
+        ])
+        if kwargs:
+            input_str = f"{input_str}, " + ", ".join(
+                f"{key}=" + (
+                    str(tuple(value.shape))
+                    if isinstance(value, torch.Tensor) else type(value).__name__
+                )
+                for key, value in kwargs
+            )
         stack.append({
+            "input": input_str,
             "module": name,
-            "input": ", ".join([
-                str(arg.shape) if isinstance(arg, torch.Tensor) else type(arg).__name__
-                for arg in args
-            ]),
             "params": f"{type(model).__name__}({model.extra_repr()})",
         })
 
@@ -44,14 +54,17 @@ def dump_module_stacktrace(model: nn.Module, *input) -> Any:
 
     _register_hooks(model, [type(model).__name__], 0)
 
-    with torch.no_grad():
-        result = model(*input)
+    try:
+        with torch.no_grad():
+            result = model(*input)
 
-    for hook in hooks:
-        hook.remove()
+        return result
 
-    if stack:
-        df = pd.DataFrame(stack)
-        print(df.to_markdown(index=False))
+    finally:
+        for hook in hooks:
+            hook.remove()
 
-    return result
+        if stack:
+            df = pd.DataFrame(stack)
+            print(df.to_markdown(index=False))
+

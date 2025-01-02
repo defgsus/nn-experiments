@@ -36,6 +36,7 @@ import pandas as pd
 from src import console
 from src.util import *
 from src.util.image import *
+from src.util.module import *
 from src.functional import *
 from src.train import *
 from src.models.util import *
@@ -398,7 +399,10 @@ def get_matrix_entries(matrix: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
         if "$filter" in matrix:
             matrix_entries = [
                 entry for entry in matrix_entries
-                if construct_from_code(apply_parameter_matrix(str(matrix["$filter"]), entry))
+                if construct_from_code(apply_parameter_matrix(
+                    str(matrix["$filter"]).replace("\n", " "),
+                    entry
+                ))
             ]
 
     return matrix_entries

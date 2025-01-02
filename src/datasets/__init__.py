@@ -47,6 +47,7 @@ from .text import (
     make_compact_whitespace,
     TextSegmentIterableDataset, FileTextSegmentIterableDataset,
     TextGithubEventIterableDataset,
+    TextWiki9SegmentIterableDataset,
 )
 from .pixelart import RpgTileIterableDataset
 from .text2pix import TextToPixelIterableDataset

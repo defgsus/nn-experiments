@@ -1,0 +1,92 @@
+experiment_name: textmask/unet-selcopy_${matrix_slug}
+
+matrix:
+  trial:
+    - 1
+#    - 2
+  bs: [64]
+  opt: ["AdamW"]
+  lr: [.0005]
+  nitem:
+    - 10
+  area:
+    - 40
+#    - 80
+  l:
+    - 3
+  ch:
+    - 32
+#    - 64
+#    - 128
+#    - 256
+#    - 512
+  ks:
+#    - 7
+    - 13
+  pad:
+    - 0
+#    - "'same'"
+  stride:
+    - 1
+#    - [1, 2, 2]
+  dil:
+    - 1
+#    - [1, 3, 5]
+  pool:
+#    - None
+    - [None, [3, 2], [3, 2]]
+  $filter: (isinstance(${dil}, int) or len(${dil}) == ${l})
+  act:
+    - "gelu"
+  norm:
+    #- "None"
+    - "'bn1d'"
+  cheap:
+    - True
+
+trainer: experiments.textmask.texttrainer.TextMaskTrainer
+mask_is_arg: 1
+
+train_set: |
+  train_set, validation_set = TextSelectiveCopyingIterableDataset.create_train_and_validation_set(
+    num_items=${nitem},
+    area=${area},
+    train_count=100_000,
+    validation_count=10_000,
+    validation_seed=23,
+    with_masked=True,
+  )
+  train_set
+
+validation_set: |
+  validation_set.freeze()
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+max_inputs: 4_000_000
+#num_epochs_between_validations: 1
+num_inputs_between_validations: 100_000
+
+
+model: |
+  from experiments.textmask.textunet import TextUnet
+  
+  model = TextUnet(
+      vocab_size=256,
+      num_layers=${l},
+      num_channels=${ch},
+      kernel_size=${ks},
+      padding=${pad},
+      stride=${stride},
+      dilation=${dil},
+      pool=${pool},
+      activation="${act}",
+      norm=${norm},
+      cheap=${cheap},
+  )
+  dump_module_stacktrace(model, torch.randint(0, 255, (1, 100)))
+  
+  model
+

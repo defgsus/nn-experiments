@@ -8,6 +8,8 @@ import torch.nn.functional as F
 
 from src.models.util import activation_to_module, normalization_to_module
 from src.models.attention import Attention1d
+from src.models.cnn import CheapConv1d
+from src.models.encoder import DiagonalEmbedding
 from src.util.params import param_make_tuple
 from src.util.embedding import create_diagonal_matrix
 
@@ -22,6 +24,7 @@ class ConvTextLayer(nn.Module):
             norm: Union[None, str, Type[nn.Module]],
             activation: Union[None, str, Callable],
             residual: bool,
+            cheap: bool = False,
             num_attention_heads: Union[bool, int] = 0,
             attention_invention: str = "QK",  # "QK", "QV", "KV", "QKV"
             attention_activation: Union[None, str, Callable] = "elu+1",
@@ -34,7 +37,7 @@ class ConvTextLayer(nn.Module):
 
         padding = int(math.floor(kernel_size / 2)) * dilation
         self.norm = normalization_to_module(norm, channels=num_channels_in)
-        self.conv = nn.Conv1d(
+        self.conv = (CheapConv1d if cheap else nn.Conv1d)(
             num_channels_in,
             num_channels_out * (len(attention_invention) if num_attention_heads else 1),
             kernel_size=kernel_size,
@@ -130,6 +133,7 @@ class ConvTextModel(nn.Module):
             norm: Union[None, str, Type[nn.Module]] = None,
             out_norm: Union[None, str, Type[nn.Module]] = None,
             activation: Union[None, str, Callable] = None,
+            cheap: Union[bool, Iterable[bool]] = False,
             num_attention_heads: Union[int, Iterable[int]] = 0,
             attention_activation: Union[None, str, Callable] = "elu+1",
             attention_invention: str = "QK",  # "QK", "QV", "KV", "QKV"
@@ -137,6 +141,9 @@ class ConvTextModel(nn.Module):
             residual_map: Dict[int, List[int]] = None,  # source layer -> target layer
             residual_map_concat: bool = False,
             diagonal_embedding: bool = False,
+            symmetric_embedding: bool = True,
+            fft: bool = False,
+            fft_concat_dim: int = -1,
             pos_embedding: bool = False,
     ):
         super().__init__()
@@ -153,10 +160,14 @@ class ConvTextModel(nn.Module):
 
         layer_output_channels = param_make_tuple(num_channels, num_layers, "num_channels")
 
-        self.embedding = nn.Embedding(vocab_size, num_channels - (2 if pos_embedding else 0))
-        if diagonal_embedding:
-            with torch.no_grad():
-                self.embedding.weight[:] = create_diagonal_matrix(self.embedding.weight.shape)
+        self.embedding = DiagonalEmbedding(
+            vocab_size,
+            num_channels - (2 if pos_embedding else 0),
+            diagonal=diagonal_embedding,
+            symmetric=symmetric_embedding,
+            fft=fft,
+            fft_concat_dim=fft_concat_dim,
+        )
 
         self.pos_embedding = None
         if pos_embedding:
@@ -164,13 +175,14 @@ class ConvTextModel(nn.Module):
         self.layers = nn.ModuleList()
 
         ch = num_channels
-        for i, next_ch, ks, dil, res, attn_heads in zip(
+        for i, next_ch, ks, dil, res, attn_heads, cheap_ in zip(
                 range(num_layers),
                 layer_output_channels,
                 param_make_tuple(kernel_size, num_layers, "kernel_size"),
                 param_make_tuple(dilation, num_layers, "dilation"),
                 param_make_tuple(residual, num_layers, "residual"),
                 param_make_tuple(num_attention_heads, num_layers, "num_attention_heads"),
+                param_make_tuple(cheap, num_layers, "cheap"),
         ):
             is_last_layer = i == num_layers - 1
             in_channels = ch
@@ -189,6 +201,7 @@ class ConvTextModel(nn.Module):
                     norm=None if is_last_layer else norm,
                     activation=activation,
                     residual=res,
+                    cheap=cheap_,
                     num_attention_heads=attn_heads,
                     attention_activation=attention_activation,
                     attention_invention=attention_invention,
@@ -197,14 +210,9 @@ class ConvTextModel(nn.Module):
             ch = next_ch
 
         self.out_norm = normalization_to_module(out_norm, channels=ch)
-        self.lm_head = nn.Linear(ch, vocab_size, bias=False)
-        if ch == num_channels:
-            self.lm_head.weight = self.embedding.weight  # Tie output projection to embedding weights.
 
     def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
         x = self.embedding(input_ids)
-
-        x = x.permute(0, 2, 1)
 
         #print("X", x.shape, self.pos_embedding(x.shape[-1]).shape)
         if self.pos_embedding:
@@ -229,14 +237,12 @@ class ConvTextModel(nn.Module):
 
             layer_out_map[idx] = x = layer(inp)
 
-        x = x.permute(0, 2, 1)
-
         if self.out_norm is not None:
             x = self.out_norm(x)
 
         if self.pos_embedding is not None:
             x = x[..., :-2]
 
-        logits = self.lm_head(x)
+        logits = self.embedding(x, reverse=True)
 
         return logits
