@@ -21,9 +21,18 @@ from src.models.transform import Sobel
 
 class TrainAutoencoderSpecial(TrainAutoencoder):
 
-    def __init__(self, *args, feature_loss_weight: float = 0.0001, **kwargs):
+    def __init__(
+            self,
+            *args,
+            feature_loss_weight: float = 0.0001,
+            perceptual_model: Optional[torch.nn.Module],
+            **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.feature_loss_weight = feature_loss_weight
+        self._perceptual_model = perceptual_model
+        if perceptual_model is not None and callable(getattr(perceptual_model, "to", None)):
+            self._perceptual_model.to(self.device)
 
     def train_step(self, input_batch) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
         if isinstance(input_batch, (tuple, list)):
@@ -58,6 +67,12 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
                 f", feature_batch = {feature_batch.shape}"
             )
 
+        perceptual_loss = None
+        if self._perceptual_model:
+            output_batch2 = self._perceptual_model(output_batch)
+            input_batch2 = self._perceptual_model(input_batch)
+            perceptual_loss = self.loss_function(output_batch2, input_batch2)
+
         reconstruction_loss = self.loss_function(output_batch, input_batch)
 
         # print("XX", float(reconstruction_loss), float(self.loss_function(output_batch, transformed_batch)), float(self.loss_function(input_batch, transformed_batch)))
@@ -76,13 +91,18 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
         loss_batch_std = (.5 - feature_batch.std(0).mean()).abs()
         loss_batch_mean = (0. - feature_batch.mean()).abs()
 
-        loss = reconstruction_loss
+        if perceptual_loss is not None:
+            loss = perceptual_loss
+        else:
+            loss = reconstruction_loss
+
         if self.feature_loss_weight:
             loss = loss + self.feature_loss_weight * (loss_batch_std + loss_batch_mean)
 
         return {
             "loss": loss,
             "loss_reconstruction": reconstruction_loss,
+            "loss_perceptual": perceptual_loss,
             # "loss_reconstruction_sobel": sobel_reconstruction_loss,
             "loss_batch_std": loss_batch_std,
             "loss_batch_mean": loss_batch_mean,

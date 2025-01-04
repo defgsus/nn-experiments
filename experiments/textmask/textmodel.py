@@ -11,7 +11,24 @@ from src.models.attention import Attention1d
 from src.models.cnn import CheapConv1d
 from src.models.encoder import DiagonalEmbedding
 from src.util.params import param_make_tuple
-from src.util.embedding import create_diagonal_matrix
+
+
+class FFTConvLayer(nn.Module):
+
+    def __init__(self, mode: str = "same", residual: bool = True):
+        from torchaudio.transforms import FFTConvolve
+        super().__init__()
+        self._residual = residual and mode == "same"
+        self.convolve = FFTConvolve(mode=mode)
+
+    def extra_repr(self) -> str:
+        return f"residual={self._residual}"
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        y = self.convolve(x, x)
+        if self._residual:
+            y = y + x
+        return y
 
 
 class ConvTextLayer(nn.Module):
@@ -142,6 +159,7 @@ class ConvTextModel(nn.Module):
             residual_map_concat: bool = False,
             diagonal_embedding: bool = False,
             symmetric_embedding: bool = True,
+            fft_conv: Union[bool, Iterable[bool]] = False,
             fft: bool = False,
             fft_concat_dim: int = -1,
             pos_embedding: bool = False,
@@ -175,13 +193,14 @@ class ConvTextModel(nn.Module):
         self.layers = nn.ModuleList()
 
         ch = num_channels
-        for i, next_ch, ks, dil, res, attn_heads, cheap_ in zip(
+        for i, next_ch, ks, dil, res, attn_heads, fftc_, cheap_ in zip(
                 range(num_layers),
                 layer_output_channels,
                 param_make_tuple(kernel_size, num_layers, "kernel_size"),
                 param_make_tuple(dilation, num_layers, "dilation"),
                 param_make_tuple(residual, num_layers, "residual"),
                 param_make_tuple(num_attention_heads, num_layers, "num_attention_heads"),
+                param_make_tuple(fft_conv, num_layers, "fft_conv"),
                 param_make_tuple(cheap, num_layers, "cheap"),
         ):
             is_last_layer = i == num_layers - 1
@@ -190,6 +209,11 @@ class ConvTextModel(nn.Module):
                 in_channels += sum(
                     layer_output_channels[l]
                     for l in self.layer_inputs.get(i, [])
+                )
+            if fftc_:
+                self.layers.add_module(
+                    f"fft_{i+1}",
+                    FFTConvLayer(),
                 )
             self.layers.add_module(
                 f"layer_{i+1}",

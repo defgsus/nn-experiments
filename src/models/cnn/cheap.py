@@ -21,7 +21,10 @@ class CheapConvBase(nn.Module):
             padding: Union[int, str] = 0,
             dilation: int = 1,
             bias: bool = False,
+            groups: int = 1,  # must not be used, just there for compatibility
+            **kwargs,
     ):
+        assert groups == 1, f"CheapConv does not support `groups` other than 1"
         super().__init__()
 
         self._in_channels = in_channels
@@ -41,6 +44,7 @@ class CheapConvBase(nn.Module):
             dilation=dilation,
             groups=in_channels,
             bias=bias,
+            **kwargs,
         )
         self.point_conv = conv_class(
             in_channels=in_channels,
@@ -81,6 +85,7 @@ class CheapConv1d(CheapConvBase):
             padding: Union[int, str] = 0,
             dilation: int = 1,
             bias: bool = False,
+            **kwargs,
     ):
         super().__init__(
             conv_class=nn.Conv1d,
@@ -91,6 +96,7 @@ class CheapConv1d(CheapConvBase):
             padding=padding,
             dilation=dilation,
             bias=bias,
+            **kwargs,
         )
 
 
@@ -104,6 +110,7 @@ class CheapConvTranspose1d(CheapConvBase):
             padding: Union[int, str] = 0,
             dilation: int = 1,
             bias: bool = False,
+            **kwargs,
     ):
         super().__init__(
             conv_class=nn.ConvTranspose1d,
@@ -114,6 +121,7 @@ class CheapConvTranspose1d(CheapConvBase):
             padding=padding,
             dilation=dilation,
             bias=bias,
+            **kwargs,
         )
 
 
@@ -127,6 +135,7 @@ class CheapConv2d(CheapConvBase):
             padding: Union[int, str] = 0,
             dilation: int = 1,
             bias: bool = False,
+            **kwargs,
     ):
         super().__init__(
             conv_class=nn.Conv2d,
@@ -137,6 +146,7 @@ class CheapConv2d(CheapConvBase):
             padding=padding,
             dilation=dilation,
             bias=bias,
+            **kwargs,
         )
 
 
@@ -150,6 +160,7 @@ class CheapConvTranspose2d(CheapConvBase):
             padding: Union[int, str] = 0,
             dilation: int = 1,
             bias: bool = False,
+            **kwargs,
     ):
         super().__init__(
             conv_class=nn.ConvTranspose2d,
@@ -160,4 +171,5 @@ class CheapConvTranspose2d(CheapConvBase):
             padding=padding,
             dilation=dilation,
             bias=bias,
+            **kwargs,
         )

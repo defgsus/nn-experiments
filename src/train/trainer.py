@@ -364,6 +364,7 @@ class Trainer:
                     self._loss_history.append({
                         key: float(value)
                         for key, value in loss_result.items()
+                        if value is not None
                     })
                     self._loss_steps += input_batch_size
                     if self._loss_steps >= self.num_train_loss_steps:
@@ -529,9 +530,10 @@ class Trainer:
                         loss = {"loss": loss}
 
                     for key, value in loss.items():
-                        if key not in losses:
-                            losses[key] = []
-                        losses[key].append(value)
+                        if value is not None:
+                            if key not in losses:
+                                losses[key] = []
+                            losses[key].append(value)
 
                 losses = {
                     key: float(torch.Tensor(value).mean())

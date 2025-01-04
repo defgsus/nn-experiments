@@ -25,6 +25,7 @@ class Conv2dBlock(nn.Module):
             batch_norm: bool = False,
             space_to_depth: bool = False,
             dropout: float = 0.,
+            cheap: bool = False,
     ):
         super().__init__() #channels, kernel_size, stride, pool_kernel_size, pool_type, act_fn, act_last_layer, bias, transpose, batch_norm, space_to_depth)
         self.channels = list(channels)
@@ -63,6 +64,7 @@ class Conv2dBlock(nn.Module):
         self._act_last_layer = act_last_layer
         self._transpose = transpose
         self._dropout = dropout
+        self._cheap = cheap
 
         self.layers = nn.Sequential()
 
@@ -88,6 +90,7 @@ class Conv2dBlock(nn.Module):
                     groups=groups,
                     bias=bias,
                     transpose=transpose,
+                    cheap=cheap,
                 )
             )
             if batch_norm and not is_last_layer:
@@ -163,6 +166,7 @@ class Conv2dBlock(nn.Module):
             batch_norm=self._batch_norm,
             space_to_depth=self._space_to_depth,
             dropout=self._dropout,
+            cheap=self._cheap,
         )
 
     def add_input_layer(
@@ -179,6 +183,7 @@ class Conv2dBlock(nn.Module):
             kernel_size=kernel_size,
             bias=bias,
             transpose=transpose,
+            cheap=self._cheap,
         ))
         if self._act_fn is not None:
             self.layers.insert(1, self._act_fn)
@@ -197,6 +202,7 @@ class Conv2dBlock(nn.Module):
             kernel_size=kernel_size,
             bias=bias,
             transpose=transpose,
+            cheap=self._cheap,
         ))
         if self._act_fn is not None:
             self.layers.append(self._act_fn)
@@ -210,7 +216,10 @@ class Conv2dBlock(nn.Module):
             groups: int = 1,
             bias: bool = True,
             transpose: bool = False,
+            cheap: bool = False,
     ) -> nn.Module:
+        from ..cnn import CheapConv2d, CheapConvTranspose2d
+
         kwargs = dict(
             in_channels=in_channels,
             out_channels=out_channels,
@@ -223,9 +232,11 @@ class Conv2dBlock(nn.Module):
             padding_mode="zeros",
         )
         if transpose:
-            return nn.ConvTranspose2d(**kwargs, output_padding=stride-1)
+            conv_class = (CheapConvTranspose2d if cheap else nn.ConvTranspose2d)
+            return conv_class(**kwargs, output_padding=stride-1)
         else:
-            return nn.Conv2d(**kwargs)
+            conv_class = (CheapConv2d if cheap else nn.Conv2d)
+            return conv_class(**kwargs)
 
     def weight_images(self, **kwargs):
         images = []

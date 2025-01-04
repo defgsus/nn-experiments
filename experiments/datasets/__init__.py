@@ -20,6 +20,10 @@ from .noise import (
     noise_dataset
 )
 from .pixelart import PixelartDataset
+from .rpg import (
+    rpg_tile_dataset_3x32x32,
+    rpg_tile_dataset,
+)
 from .teletext import (
     TeletextIterableDataset,
     TeletextPixelIterableDataset,

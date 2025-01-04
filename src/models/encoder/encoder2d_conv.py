@@ -27,6 +27,7 @@ class EncoderConv2d(Encoder2d):
             space_to_depth: bool = False,
             dropout: float = 0.,
             batch_norm: bool = False,
+            cheap: bool = False,
     ):
         super().__init__(shape=shape, code_size=code_size)
         self.channels = tuple(channels)
@@ -45,6 +46,7 @@ class EncoderConv2d(Encoder2d):
             space_to_depth=space_to_depth,
             dropout=dropout,
             batch_norm=batch_norm,
+            cheap=cheap,
         )
         encoded_shape = self.convolution.get_output_shape(shape)
         self.linear = nn.Linear(math.prod(encoded_shape), self.code_size)
