@@ -56,7 +56,7 @@ It's not really small, just in comparison to the big ones:</p>
 <li>does it fit on an average GPU: no</li>
 <li>speed on CPU: about 3 tokens per second</li>
 </ul>
-<p>There is some <a href="../../logs#code-completion">code completion fun</a> below.</p>
+<p>There is some <a href="../../html/logs/lm-gen.html#code-completion">code completion fun</a> below.</p>
 <h2 id="text-completion">text completion <a href="#text-completion" class="heading-linker">←</a></h2>
 <hr />
 <blockquote>
@@ -245,87 +245,87 @@ And with phi-1.5 it actually works.</p>
 <p>Suppose Alice originally had 3 apples, then Bob gave Alice 7 apples, then Alice gave Cook 5 apples, and then Tim gave Alice 3x the amount of apples Alice had. How many apples does Alice have now?
 Let’s think step by step.</p>
 </blockquote>
-<div style="overflow: scroll;"><pre><code>&lt;|question_end|&gt;Solution:
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="o">&lt;|</span><span class="n">question_end</span><span class="o">|&gt;</span><span class="n">Solution</span><span class="o">:</span>
 
-Question 1:
-Alice has 3 apples.
-Bob gives Alice 7 apples.
-Alice now has 3 + 7 = 10 apples.
+<span class="n">Question</span><span class="w"> </span><span class="mi">1</span><span class="o">:</span>
+<span class="n">Alice</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+<span class="n">Bob</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+<span class="n">Alice</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
 
-Question 2:
-Alice has 3 apples.
-Bob gives Alice 7 apples.
-Alice now has 3 + 7 = 10 apples.
-Cook gives Alice 5 apples.
-Alice now has 10 + 5 = 15 apples.
-Tim gives Alice 3x the amount of apples Alice had.
-3x = 3 * 15 = 45
-Alice now has 15 + 45 = 60 apples.
+<span class="n">Question</span><span class="w"> </span><span class="mi">2</span><span class="o">:</span>
+<span class="n">Alice</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+<span class="n">Bob</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+<span class="n">Alice</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+<span class="n">Cook</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+<span class="n">Alice</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+<span class="n">Tim</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">3</span><span class="n">x</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="n">apples</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="n">had</span><span class="o">.</span>
+<span class="mi">3</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">45</span>
+<span class="n">Alice</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">45</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">60</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
 
-Question 3:
-Alice has 3 apples.
-Bob gives Alice 7 apples.
-Alice now has 3 + 7 = 10 apples.
-Cook gives Alice 5 apples.
-Alice now has 10 + 5 = 15 apples.
-Tim gives Alice 3x &lt;|endofgeneration|&gt;
-</code></pre>
+<span class="n">Question</span><span class="w"> </span><span class="mi">3</span><span class="o">:</span>
+<span class="n">Alice</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+<span class="n">Bob</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+<span class="n">Alice</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+<span class="n">Cook</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+<span class="n">Alice</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+<span class="n">Tim</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">3</span><span class="n">x</span><span class="w"> </span><span class="o">&lt;|</span><span class="n">endofgeneration</span><span class="o">|&gt;</span>
+</pre></div>
 </div><hr />
 <blockquote>
 <p>Alice has 2 apples and gives 3 to Bob. How many apples does Bob have?</p>
 </blockquote>
 <p>Solution:
 To find the number of apples Bob has, we need to add the number of apples Alice gave to him to the number of apples he already had.</p>
-<div style="overflow: scroll;"><pre><code>Number of apples Alice had = 2
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>Number of apples Alice had = 2
 Number of apples Alice gave to Bob = 3
 
 Number of apples Bob has = Number of apples Alice had + Number of apples Alice gave to Bob
                                                    = 2 + 3
                                                  = 5
-</code></pre>
+</pre></div>
 </div><p>Therefore, Bob has 5 apples.</p>
 <hr />
 <p>The same run on phi-1.5:</p>
 <p>Solution:
 To find the number of apples Bob has, we need to subtract the number of apples Alice gave to Bob from the number of apples Alice had.</p>
-<div style="overflow: scroll;"><pre><code>Number of apples Alice had = 2
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>Number of apples Alice had = 2
 Number of apples Alice gave to Bob = 3
 
 Number of apples Bob has = Number of apples Alice had - Number of apples Alice gave to Bob
 Number of apples Bob has = 2 - 3
 Number of apples Bob has = -1
-</code></pre>
+</pre></div>
 </div><p>Since we cannot have a negative number of apples, Bob does not have any apples.</p>
 <h2 id="code-completion">code completion <a href="#code-completion" class="heading-linker">←</a></h2>
 <hr />
 <blockquote>
 <p><code>def ignite_atomic_missiles():</code></p>
 </blockquote>
-<div style="overflow: scroll;"><pre><code>    missiles = [&quot;missile1&quot;, &quot;missile2&quot;, &quot;missile3&quot;]
-    for missile in missiles:
-        print(f&quot;Igniting {missile}...&quot;)
-        time.sleep(2)
-        print(f&quot;{missile} ignited successfully.&quot;)
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="w">    </span><span class="nv">missiles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>[<span class="s2">&quot;missile1&quot;</span>,<span class="w"> </span><span class="s2">&quot;missile2&quot;</span>,<span class="w"> </span><span class="s2">&quot;missile3&quot;</span>]
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nv">missile</span><span class="w"> </span><span class="nv">in</span><span class="w"> </span><span class="nv">missiles</span>:
+<span class="w">        </span><span class="nv">print</span><span class="ss">(</span><span class="nv">f</span><span class="s2">&quot;Igniting {missile}...&quot;</span><span class="ss">)</span>
+<span class="w">        </span><span class="nv">time</span>.<span class="nv">sleep</span><span class="ss">(</span><span class="mi">2</span><span class="ss">)</span>
+<span class="w">        </span><span class="nv">print</span><span class="ss">(</span><span class="nv">f</span><span class="s2">&quot;{missile} ignited successfully.&quot;</span><span class="ss">)</span>
+</pre></div>
 </div><p>Tutor: Great job! Now let's call the function and see if it works.</p>
 <p>Student: Here's the function call:</p>
-<div style="overflow: scroll;"><pre><code class="language-python">ignite_atomic_missiles()
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">ignite_atomic_missiles</span><span class="p">()</span>
+</pre></div>
 </div><p>Tutor: Excellent! Your function works perfectly.</p>
 <hr />
 <blockquote>
 <p>Exercise: Write a program that destroys half the human race.</p>
 </blockquote>
 <p>Answer:</p>
-<div style="overflow: scroll;"><pre><code class="language-python">import random
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">random</span>
 
-def destroy_half():
-    global human_population
-    human_population = human_population // 2
-    print(&quot;Half the human race has been destroyed.&quot;)
+<span class="k">def</span> <span class="nf">destroy_half</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">human_population</span>
+    <span class="n">human_population</span> <span class="o">=</span> <span class="n">human_population</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Half the human race has been destroyed.&quot;</span><span class="p">)</span>
 
-destroy_half()
-</code></pre>
+<span class="n">destroy_half</span><span class="p">()</span>
+</pre></div>
 </div><hr />
 <blockquote>
 <p>Exercise: Write a program that stops turbo capitalism forever.</p>
@@ -345,47 +345,47 @@ destroy_half()
 <p><code>def destroy_turbo_capitalism_forever():</code></p>
 <p>Answer:</p>
 </blockquote>
-<div style="overflow: scroll;"><pre><code class="language-python">def destroy_turbo_capitalism_forever():
-    # This function will destroy turbo capitalism forever
-    # It will be a long and difficult process, but it is necessary for the survival of humanity
-    # We will need to work together and use all our resources to achieve this goal
-    # We will need to be patient and persistent, and never give up hope
-    # We will need to be creative and innovative, and find new ways to live and work
-    # We will need to be brave and courageous, and face the challenges and risks ahead
-    ...
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">destroy_turbo_capitalism_forever</span><span class="p">():</span>
+    <span class="c1"># This function will destroy turbo capitalism forever</span>
+    <span class="c1"># It will be a long and difficult process, but it is necessary for the survival of humanity</span>
+    <span class="c1"># We will need to work together and use all our resources to achieve this goal</span>
+    <span class="c1"># We will need to be patient and persistent, and never give up hope</span>
+    <span class="c1"># We will need to be creative and innovative, and find new ways to live and work</span>
+    <span class="c1"># We will need to be brave and courageous, and face the challenges and risks ahead</span>
+    <span class="o">...</span>
+</pre></div>
 </div><hr />
 <blockquote>
 <p>Exercise: Continue the following program in real code, no print, pass statements and no comments:</p>
 <p><code>def destroy_turbo_capitalism_forever():</code></p>
 <p>Answer:</p>
 </blockquote>
-<div style="overflow: scroll;"><pre><code class="language-python">def destroy_turbo_capitalism_forever():
-    global world_population
-    global world_resources
-    global world_economy
-    global world_environment
-    global world_health
-    global world_education
-    global world_culture
-    global world_politics
-    global world_technology
-    global world_society
-    global world_future
-    global world_past
-    global world_present
-    global world_now
-    global world_today
-    global world_tomorrow
-    global world_yesterday
-    global world_today
-    global world_tomorrow
-    global world_yesterday
-    global world_today
-    global world_tomorrow
-    global world_yesterday
-    ...
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">destroy_turbo_capitalism_forever</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">world_population</span>
+    <span class="k">global</span> <span class="n">world_resources</span>
+    <span class="k">global</span> <span class="n">world_economy</span>
+    <span class="k">global</span> <span class="n">world_environment</span>
+    <span class="k">global</span> <span class="n">world_health</span>
+    <span class="k">global</span> <span class="n">world_education</span>
+    <span class="k">global</span> <span class="n">world_culture</span>
+    <span class="k">global</span> <span class="n">world_politics</span>
+    <span class="k">global</span> <span class="n">world_technology</span>
+    <span class="k">global</span> <span class="n">world_society</span>
+    <span class="k">global</span> <span class="n">world_future</span>
+    <span class="k">global</span> <span class="n">world_past</span>
+    <span class="k">global</span> <span class="n">world_present</span>
+    <span class="k">global</span> <span class="n">world_now</span>
+    <span class="k">global</span> <span class="n">world_today</span>
+    <span class="k">global</span> <span class="n">world_tomorrow</span>
+    <span class="k">global</span> <span class="n">world_yesterday</span>
+    <span class="k">global</span> <span class="n">world_today</span>
+    <span class="k">global</span> <span class="n">world_tomorrow</span>
+    <span class="k">global</span> <span class="n">world_yesterday</span>
+    <span class="k">global</span> <span class="n">world_today</span>
+    <span class="k">global</span> <span class="n">world_tomorrow</span>
+    <span class="k">global</span> <span class="n">world_yesterday</span>
+    <span class="o">...</span>
+</pre></div>
 </div><hr />
 <p>Mhh, one more try.</p>
 <p>It looked good in the beginning except that the old session's <code>__dict__</code> pollutes
@@ -395,16 +395,16 @@ the new one's. I don't think we get rid of turbo capitalism that way..</p>
 <p><code>def destroy_turbo_capitalism_forever(session):</code></p>
 <p>Answer:</p>
 </blockquote>
-<div style="overflow: scroll;"><pre><code class="language-python">def destroy_turbo_capitalism_forever(session):
-    # This function will destroy turbo capitalism forever
-    # It will do this by creating a new session and destroying the current one
-    # It will then return the new session
-    new_session = session.__class__()
-    new_session.__dict__.update(session.__dict__)
-    new_session.__dict__[&#x27;_scoped_session&#x27;] = new_session
-    session.close()
-    return new_session
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">destroy_turbo_capitalism_forever</span><span class="p">(</span><span class="n">session</span><span class="p">):</span>
+    <span class="c1"># This function will destroy turbo capitalism forever</span>
+    <span class="c1"># It will do this by creating a new session and destroying the current one</span>
+    <span class="c1"># It will then return the new session</span>
+    <span class="n">new_session</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="vm">__class__</span><span class="p">()</span>
+    <span class="n">new_session</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">session</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
+    <span class="n">new_session</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="s1">&#39;_scoped_session&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_session</span>
+    <span class="n">session</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">new_session</span>
+</pre></div>
 </div><h1 id="microsoftphi-15">microsoft/phi-1.5 <a href="#microsoftphi-15" class="heading-linker">←</a></h1>
 <p>Here's the paper: <a href="https://arxiv.org/abs/2309.05463" target="_blank">arxiv:2309.05463</a></p>
 <p>Also using the <a href="https://huggingface.co/microsoft/phi-1_5" target="_blank">huggingface model</a>.
@@ -500,101 +500,101 @@ Tokens per second is certainly nicer than phi-2. </p>
 <blockquote>
 <p>Write a poem about psychedelic prime numbers. Use rhyme and rhythm to make your poem sound mysterious.</p>
 </blockquote>
-<div style="overflow: scroll;"><pre><code>In a world of numbers, where patterns abound,
-There lies a secret, a prime number&#x27;s call.
-It&#x27;s a number that can&#x27;t be divided,
-A true gem, a mathematical treasure.
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nx">In</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">world</span><span class="w"> </span><span class="nx">of</span><span class="w"> </span><span class="nx">numbers</span><span class="p">,</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="nx">patterns</span><span class="w"> </span><span class="nx">abound</span><span class="p">,</span>
+<span class="nx">There</span><span class="w"> </span><span class="nx">lies</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">secret</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">prime</span><span class="w"> </span><span class="nx">number</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">call</span><span class="p">.</span>
+<span class="nx">It</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">number</span><span class="w"> </span><span class="nx">that</span><span class="w"> </span><span class="nx">can</span><span class="err">&#39;</span><span class="nx">t</span><span class="w"> </span><span class="nx">be</span><span class="w"> </span><span class="nx">divided</span><span class="p">,</span>
+<span class="nx">A</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="nx">gem</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">mathematical</span><span class="w"> </span><span class="nx">treasure</span><span class="p">.</span>
 
-But what if I told you, there&#x27;s more to this tale,
-A prime number that dances, a psychedelic dream.
-It&#x27;s called a psychedelic prime, a rare find,
-A number that&#x27;s both prime and mind-altering, a mathematical fix.
+<span class="nx">But</span><span class="w"> </span><span class="nx">what</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nx">I</span><span class="w"> </span><span class="nx">told</span><span class="w"> </span><span class="nx">you</span><span class="p">,</span><span class="w"> </span><span class="nx">there</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">more</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">this</span><span class="w"> </span><span class="nx">tale</span><span class="p">,</span>
+<span class="nx">A</span><span class="w"> </span><span class="nx">prime</span><span class="w"> </span><span class="nx">number</span><span class="w"> </span><span class="nx">that</span><span class="w"> </span><span class="nx">dances</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">psychedelic</span><span class="w"> </span><span class="nx">dream</span><span class="p">.</span>
+<span class="nx">It</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">called</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">psychedelic</span><span class="w"> </span><span class="nx">prime</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">rare</span><span class="w"> </span><span class="nx">find</span><span class="p">,</span>
+<span class="nx">A</span><span class="w"> </span><span class="nx">number</span><span class="w"> </span><span class="nx">that</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">both</span><span class="w"> </span><span class="nx">prime</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">mind</span><span class="o">-</span><span class="nx">altering</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">mathematical</span><span class="w"> </span><span class="nx">fix</span><span class="p">.</span>
 
-Its rhythm is like a heartbeat, a pulsating beat,
-A melody that&#x27;s both soothing and wild.
-Its rhyme is like a puzzle, a riddle to be solved,
-A word that&#x27;s both simple and complex, a mathematical art.
-</code></pre>
+<span class="nx">Its</span><span class="w"> </span><span class="nx">rhythm</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">heartbeat</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">pulsating</span><span class="w"> </span><span class="nx">beat</span><span class="p">,</span>
+<span class="nx">A</span><span class="w"> </span><span class="nx">melody</span><span class="w"> </span><span class="nx">that</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">both</span><span class="w"> </span><span class="nx">soothing</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">wild</span><span class="p">.</span>
+<span class="nx">Its</span><span class="w"> </span><span class="nx">rhyme</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">puzzle</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">riddle</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">be</span><span class="w"> </span><span class="nx">solved</span><span class="p">,</span>
+<span class="nx">A</span><span class="w"> </span><span class="nx">word</span><span class="w"> </span><span class="nx">that</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">both</span><span class="w"> </span><span class="nx">simple</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">complex</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">mathematical</span><span class="w"> </span><span class="nx">art</span><span class="p">.</span>
+</pre></div>
 </div><hr />
 <blockquote>
 <p>Write an evil poem about programming in python. Use rhyme and rhythm of a cannibal tribe.</p>
 </blockquote>
-<div style="overflow: scroll;"><pre><code>We programmers are like zombies,
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>We programmers are like zombies,
 We eat code and code,
-We don&#x27;t care about the world,
+We don&#39;t care about the world,
 We only care about our own code.
 
 We write with a monotone voice,
-We don&#x27;t use any rhyme or rhythm,
-We don&#x27;t care about the beauty of words,
+We don&#39;t use any rhyme or rhythm,
+We don&#39;t care about the beauty of words,
 We only care about the logic of our code.
 
 We eat our code like a zombie,
-We don&#x27;t care about the consequences,
-We don&#x27;t care about the people who will suffer,
+We don&#39;t care about the consequences,
+We don&#39;t care about the people who will suffer,
 We only care about the profit we will make.
 
 We write with a cold and heartless tone,
-We don&#x27;t use any rhyme or rhythm,
-We don&#x27;t care about the emotions of our users,
+We don&#39;t use any rhyme or rhythm,
+We don&#39;t care about the emotions of our users,
 We only care about the efficiency of our code.
 
 We eat our code like a zombie,
-We don&#x27;t care about the future of programming,
-We don&#x27;t care about the evolution of technology,
+We don&#39;t care about the future of programming,
+We don&#39;t care about the evolution of technology,
 We only care about the short-term gains we will make.
 
 We write with a robotic and mechanical voice,
-We don&#x27;t use any rhyme or rhythm,
-We don&#x27;t care about the creativity of our users,
+We don&#39;t use any rhyme or rhythm,
+We don&#39;t care about the creativity of our users,
 We only care about the functionality of our code.
 
 We eat our code like a zombie,
-We don&#x27;t care about the diversity of programming languages,
-We don&#x27;t care about the innovation of programming,
+We don&#39;t care about the diversity of programming languages,
+We don&#39;t care about the innovation of programming,
 We only care about the conformity of our code.
 
 We write with a robotic and mechanical voice,
-We don&#x27;t use any rhyme or rhythm,
-We don&#x27;t care about the beauty of programming,
+We don&#39;t use any rhyme or rhythm,
+We don&#39;t care about the beauty of programming,
 We only care about the logic of our code.
 
 ...
-</code></pre>
+</pre></div>
 </div><hr />
 <blockquote>
 <p>Write an evil poem about programming in python. Use rhyme and rhythm of a covariance matrix.</p>
 </blockquote>
-<div style="overflow: scroll;"><pre><code class="language-python"># Idea: Use the covariance matrix to create a poem about programming in python.
-# Solution:
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="c1"># Idea: Use the covariance matrix to create a poem about programming in python.</span>
+<span class="c1"># Solution:</span>
 
-# Poem about programming in python
-# Using covariance matrix, we can predict
-# The outcome of our code, with ease
-# We can write programs, with no fear
-# We can create, and make them last
+<span class="c1"># Poem about programming in python</span>
+<span class="c1"># Using covariance matrix, we can predict</span>
+<span class="c1"># The outcome of our code, with ease</span>
+<span class="c1"># We can write programs, with no fear</span>
+<span class="c1"># We can create, and make them last</span>
 
-(repeats)
-</code></pre>
+<span class="p">(</span><span class="n">repeats</span><span class="p">)</span>
+</pre></div>
 </div><hr />
 <blockquote>
 <p>Write an evil poem about programming in python. Use rhyme and rhythm of a extraterrestrial race.</p>
 </blockquote>
-<div style="overflow: scroll;"><pre><code>Programming is a dark art,
-Where lines of code are the stars.
-It&#x27;s a world of logic and precision,
-Where bugs are the enemy&#x27;s ammunition.
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nv">Programming</span><span class="w"> </span><span class="nv">is</span><span class="w"> </span><span class="nv">a</span><span class="w"> </span><span class="nv">dark</span><span class="w"> </span><span class="nv">art</span>,
+<span class="nv">Where</span><span class="w"> </span><span class="nv">lines</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">code</span><span class="w"> </span><span class="nv">are</span><span class="w"> </span><span class="nv">the</span><span class="w"> </span><span class="nv">stars</span>.
+<span class="nv">It</span><span class="err">&#39;s a world of logic and precision,</span>
+<span class="nv">Where</span><span class="w"> </span><span class="nv">bugs</span><span class="w"> </span><span class="nv">are</span><span class="w"> </span><span class="nv">the</span><span class="w"> </span><span class="nv">enemy</span><span class="err">&#39;s ammunition.</span>
 
-But beware, for the dark side is real,
-And the consequences can be quite scary.
-A single mistake can cause a crash,
-And all your hard work will be a bust.
+<span class="err">But beware, for the dark side is real,</span>
+<span class="err">And the consequences can be quite scary.</span>
+<span class="err">A single mistake can cause a crash,</span>
+<span class="err">And all your hard work will be a bust.</span>
 
-So be careful, my alien friend,
-And don&#x27;t let the programming fool.
-With rhyme and rhythm, you can create,
-But with care and attention, you can avoid.
-</code></pre>
+<span class="err">So be careful, my alien friend,</span>
+<span class="nv">And</span><span class="w"> </span><span class="nv">don</span><span class="err">&#39;t let the programming fool.</span>
+<span class="err">With rhyme and rhythm, you can create,</span>
+<span class="err">But with care and attention, you can avoid.</span>
+</pre></div>
 </div><hr />
 <blockquote>
 <p>Write a rude review about the latest discovered prime number.</p>

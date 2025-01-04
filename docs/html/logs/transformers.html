@@ -48,71 +48,71 @@ if the embedding contains enough information to classify the images in
 a non-NN fashion (<code>accuracy (svc)</code>). Also the <code>torch.argmax</code> is
 compared between FMNIST class logits and network output (<code>accuracy (argmax)</code>)
 to measure the accuracy of the true network output.</p>
-<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
-  patch: [7]     # transformer input patch size
-  layer: [8]     # number of layers 
-  head: [16]     # number of attention heads
-  hidden: [256]  # size of hidden dimension
-  mlp: [512]     # size of hidden dimension in MLP stage
-  drop: [0.]     # MLP dropout
-  cs: [784]      # size of code before classification layer 
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nt">matrix</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">patch</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">7</span><span class="p p-Indicator">]</span><span class="w">     </span><span class="c1"># transformer input patch size</span>
+<span class="w">  </span><span class="nt">layer</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">8</span><span class="p p-Indicator">]</span><span class="w">     </span><span class="c1"># number of layers </span>
+<span class="w">  </span><span class="nt">head</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">16</span><span class="p p-Indicator">]</span><span class="w">     </span><span class="c1"># number of attention heads</span>
+<span class="w">  </span><span class="nt">hidden</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">256</span><span class="p p-Indicator">]</span><span class="w">  </span><span class="c1"># size of hidden dimension</span>
+<span class="w">  </span><span class="nt">mlp</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">512</span><span class="p p-Indicator">]</span><span class="w">     </span><span class="c1"># size of hidden dimension in MLP stage</span>
+<span class="w">  </span><span class="nt">drop</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.</span><span class="p p-Indicator">]</span><span class="w">     </span><span class="c1"># MLP dropout</span>
+<span class="w">  </span><span class="nt">cs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">784</span><span class="p p-Indicator">]</span><span class="w">      </span><span class="c1"># size of code before classification layer </span>
 
-experiment_name: aug/fmnist_vit_trivaug_${matrix_slug}
+<span class="nt">experiment_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aug/fmnist_vit_trivaug_${matrix_slug}</span>
 
-train_set: |
-  ClassLogitsDataset(
-      fmnist_dataset(train=True, shape=SHAPE),
-      num_classes=CLASSES, tuple_position=1, label_to_index=True,
-  )
+<span class="nt">train_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">ClassLogitsDataset(</span>
+<span class="w">      </span><span class="no">fmnist_dataset(train=True, shape=SHAPE),</span>
+<span class="w">      </span><span class="no">num_classes=CLASSES, tuple_position=1, label_to_index=True,</span>
+<span class="w">  </span><span class="no">)</span>
 
-validation_set: |
-  ClassLogitsDataset(
-      fmnist_dataset(train=False, shape=SHAPE),
-      num_classes=CLASSES, tuple_position=1, label_to_index=True,
-  )
+<span class="nt">validation_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">ClassLogitsDataset(</span>
+<span class="w">      </span><span class="no">fmnist_dataset(train=False, shape=SHAPE),</span>
+<span class="w">      </span><span class="no">num_classes=CLASSES, tuple_position=1, label_to_index=True,</span>
+<span class="w">  </span><span class="no">)</span>
 
-trainer: experiments.reptrainer.RepresentationClassTrainer
-batch_size: 64
-learnrate: 0.0003
-optimizer: AdamW
-scheduler: CosineAnnealingLR
-loss_function: l2
-max_inputs: 2_000_000
-train_input_transforms: |
-  [
-      lambda x: (x * 255).to(torch.uint8),
-      VT.TrivialAugmentWide(),
-      lambda x: x.to(torch.float32) / 255.,
-  ]
+<span class="nt">trainer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">experiments.reptrainer.RepresentationClassTrainer</span>
+<span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">64</span>
+<span class="nt">learnrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0003</span>
+<span class="nt">optimizer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">AdamW</span>
+<span class="nt">scheduler</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CosineAnnealingLR</span>
+<span class="nt">loss_function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">l2</span>
+<span class="nt">max_inputs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2_000_000</span>
+<span class="nt">train_input_transforms</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">[</span>
+<span class="w">      </span><span class="no">lambda x: (x * 255).to(torch.uint8),</span>
+<span class="w">      </span><span class="no">VT.TrivialAugmentWide(),</span>
+<span class="w">      </span><span class="no">lambda x: x.to(torch.float32) / 255.,</span>
+<span class="w">  </span><span class="no">]</span>
 
-globals:
-  SHAPE: (3, 28, 28)
-  CODE_SIZE: ${cs}
-  CLASSES: 10
+<span class="nt">globals</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">SHAPE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(3, 28, 28)</span>
+<span class="w">  </span><span class="nt">CODE_SIZE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${cs}</span>
+<span class="w">  </span><span class="nt">CLASSES</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
 
-model: |
-  class Encoder(nn.Module):
-      def __init__(self):
-          super().__init__()
-    
-          from torchvision.models import VisionTransformer
-          self.encoder = VisionTransformer(
-              image_size=SHAPE[-1],
-              patch_size=${patch},
-              num_layers=${layer},
-              num_heads=${head},
-              hidden_dim=${hidden},
-              mlp_dim=${mlp},
-              num_classes=CODE_SIZE,
-              dropout=${drop},
-          )
-          self.linear = nn.Linear(CODE_SIZE, CLASSES)
-      
-      def forward(self, x):
-          return self.linear(self.encoder(x))
-    
-  Encoder()
-</code></pre>
+<span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">class Encoder(nn.Module):</span>
+<span class="w">      </span><span class="no">def __init__(self):</span>
+<span class="w">          </span><span class="no">super().__init__()</span>
+<span class="w">  </span><span class="no">  </span>
+<span class="w">          </span><span class="no">from torchvision.models import VisionTransformer</span>
+<span class="w">          </span><span class="no">self.encoder = VisionTransformer(</span>
+<span class="w">              </span><span class="no">image_size=SHAPE[-1],</span>
+<span class="w">              </span><span class="no">patch_size=${patch},</span>
+<span class="w">              </span><span class="no">num_layers=${layer},</span>
+<span class="w">              </span><span class="no">num_heads=${head},</span>
+<span class="w">              </span><span class="no">hidden_dim=${hidden},</span>
+<span class="w">              </span><span class="no">mlp_dim=${mlp},</span>
+<span class="w">              </span><span class="no">num_classes=CODE_SIZE,</span>
+<span class="w">              </span><span class="no">dropout=${drop},</span>
+<span class="w">          </span><span class="no">)</span>
+<span class="w">          </span><span class="no">self.linear = nn.Linear(CODE_SIZE, CLASSES)</span>
+<span class="w">  </span><span class="no">    </span>
+<span class="w">      </span><span class="no">def forward(self, x):</span>
+<span class="w">          </span><span class="no">return self.linear(self.encoder(x))</span>
+<span class="w">  </span><span class="no">  </span>
+<span class="w">  </span><span class="no">Encoder()</span>
+</pre></div>
 </div><p>I varied a few parameters of the transformer without significant change
 to the downstream accuracy, except, of course, that a much bigger network
 performs much worse (like in previous experiments).</p>

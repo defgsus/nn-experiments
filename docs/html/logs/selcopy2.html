@@ -82,15 +82,15 @@
 To get a grip on the details, please check <a href="../../html/logs/selcopy.html">&quot;Selective Copying&quot;</a> first.</p>
 <p>Basically, it's a synthetic question-answer dataset that requires some <em>&quot;computational&quot;</em> skill.
 See, if you can find out the rule by yourself:</p>
-<div style="overflow: scroll;"><pre><code>NA: 2&gt;1: AN   
-DQ: -1: Q    
-EJWHB: 3&gt;5: EJBHW
-ULHP: 3&gt;4, 2&gt;1: LUPH 
-YNP: 3&gt;1, -3, 2&gt;1: NP   
-EJACQ: 1&gt;2, -1, +3: EAJCQ
-YESBR: 3&gt;5, 5&gt;1, 1&gt;5, 3&gt;4: YEBRS
-UXMP: -2, -3, 1&gt;2, +2: MPU  
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">NA</span><span class="o">:</span><span class="w"> </span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">1</span><span class="o">:</span><span class="w"> </span><span class="n">AN</span><span class="w">   </span>
+<span class="n">DQ</span><span class="o">:</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="o">:</span><span class="w"> </span><span class="n">Q</span><span class="w">    </span>
+<span class="n">EJWHB</span><span class="o">:</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">5</span><span class="o">:</span><span class="w"> </span><span class="n">EJBHW</span>
+<span class="n">ULHP</span><span class="o">:</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">4</span><span class="o">,</span><span class="w"> </span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">1</span><span class="o">:</span><span class="w"> </span><span class="n">LUPH</span><span class="w"> </span>
+<span class="n">YNP</span><span class="o">:</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">1</span><span class="o">,</span><span class="w"> </span><span class="o">-</span><span class="mi">3</span><span class="o">,</span><span class="w"> </span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">1</span><span class="o">:</span><span class="w"> </span><span class="n">NP</span><span class="w">   </span>
+<span class="n">EJACQ</span><span class="o">:</span><span class="w"> </span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">2</span><span class="o">,</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="o">,</span><span class="w"> </span><span class="o">+</span><span class="mi">3</span><span class="o">:</span><span class="w"> </span><span class="n">EAJCQ</span>
+<span class="n">YESBR</span><span class="o">:</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">5</span><span class="o">,</span><span class="w"> </span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">1</span><span class="o">,</span><span class="w"> </span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">5</span><span class="o">,</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">4</span><span class="o">:</span><span class="w"> </span><span class="n">YEBRS</span>
+<span class="n">UXMP</span><span class="o">:</span><span class="w"> </span><span class="o">-</span><span class="mi">2</span><span class="o">,</span><span class="w"> </span><span class="o">-</span><span class="mi">3</span><span class="o">,</span><span class="w"> </span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">2</span><span class="o">,</span><span class="w"> </span><span class="o">+</span><span class="mi">2</span><span class="o">:</span><span class="w"> </span><span class="n">MPU</span><span class="w">  </span>
+</pre></div>
 </div><p><strong>Spoiler</strong>: First few letters are the program input, the numbers and operators are the program
 and answer, after the second colon, is the result of the program. </p>
 <ul>
@@ -221,17 +221,17 @@ and the number of layers in the network, i set a fixed number of operations.</p>
 <p>I also dropped the stack operations (<code>+</code>/<code>-</code>) for now and made it all a bit tighter because
 i'm not interested in the influence of the receptive field in this experiment.
 Example data with 5 operations looks like this:</p>
-<div style="overflow: scroll;"><pre><code>NPFKT:5&gt;4 3&gt;1 1&gt;4 4&gt;2 1&gt;3:NFTPK
-UKLRM:5&gt;1 4&gt;2 1&gt;4 2&gt;4 3&gt;2:KLMRU
-LCEWI:3&gt;5 3&gt;2 4&gt;2 3&gt;1 3&gt;5:CWEIL
-LRUPX:1&gt;4 3&gt;2 5&gt;4 1&gt;3 2&gt;1:URPXL
-UQJOR:5&gt;4 2&gt;5 5&gt;4 4&gt;3 2&gt;5:URQJO
-BYGMJ:5&gt;4 4&gt;3 2&gt;3 5&gt;2 5&gt;3:BMJGY
-PBNFM:3&gt;5 5&gt;1 1&gt;3 2&gt;3 5&gt;3:MNPFB
-TNEOL:1&gt;3 4&gt;1 4&gt;1 4&gt;3 5&gt;3:ENLTO
-ALEVT:1&gt;2 2&gt;1 2&gt;1 4&gt;2 4&gt;3:LVAET
-UIZNQ:3&gt;4 2&gt;3 5&gt;3 4&gt;1 1&gt;5:INQUZ
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">NPFKT</span><span class="o">:</span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">4</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">1</span><span class="w"> </span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">4</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">2</span><span class="w"> </span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">3</span><span class="o">:</span><span class="n">NFTPK</span>
+<span class="n">UKLRM</span><span class="o">:</span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">1</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">2</span><span class="w"> </span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">4</span><span class="w"> </span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">4</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">2</span><span class="o">:</span><span class="n">KLMRU</span>
+<span class="n">LCEWI</span><span class="o">:</span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">5</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">2</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">1</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">5</span><span class="o">:</span><span class="n">CWEIL</span>
+<span class="n">LRUPX</span><span class="o">:</span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">4</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">2</span><span class="w"> </span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">4</span><span class="w"> </span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">3</span><span class="w"> </span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">1</span><span class="o">:</span><span class="n">URPXL</span>
+<span class="n">UQJOR</span><span class="o">:</span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">4</span><span class="w"> </span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">5</span><span class="w"> </span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">4</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">3</span><span class="w"> </span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">5</span><span class="o">:</span><span class="n">URQJO</span>
+<span class="n">BYGMJ</span><span class="o">:</span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">4</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">3</span><span class="w"> </span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">3</span><span class="w"> </span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">2</span><span class="w"> </span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">3</span><span class="o">:</span><span class="n">BMJGY</span>
+<span class="n">PBNFM</span><span class="o">:</span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">5</span><span class="w"> </span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">1</span><span class="w"> </span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">3</span><span class="w"> </span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">3</span><span class="w"> </span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">3</span><span class="o">:</span><span class="n">MNPFB</span>
+<span class="n">TNEOL</span><span class="o">:</span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">1</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">1</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">3</span><span class="w"> </span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">3</span><span class="o">:</span><span class="n">ENLTO</span>
+<span class="n">ALEVT</span><span class="o">:</span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">2</span><span class="w"> </span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">1</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">2</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">3</span><span class="o">:</span><span class="n">LVAET</span>
+<span class="n">UIZNQ</span><span class="o">:</span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">4</span><span class="w"> </span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">3</span><span class="w"> </span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">1</span><span class="w"> </span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">5</span><span class="o">:</span><span class="n">INQUZ</span>
+</pre></div>
 </div><p>Running the networks on 2, 3, 4 and 5 operations per question:</p>
 <h4 id="6-layer">6-layer <a href="#6-layer" class="heading-linker">←</a></h4>
 <p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l6-nops-2-5.png" alt="error curves" /></div></p>
@@ -450,14 +450,14 @@ next time you see the same question. And on and on...</p>
 some easier examples in the dataset. Schools and such also don't teach children algebra by
 starting with: <em>What is the answer to 7 + 4 + 9 + 2 + 6 = ??</em></p>
 <p>Following, the training set contains questions with 2 to 5 operations, e.g.:</p>
-<div style="overflow: scroll;"><pre><code>HGOKX:3&gt;1 5&gt;4:OGHXK
-CXZMN:5&gt;4 2&gt;5:CMZNX
-RMYTC:2&gt;1 4&gt;5 4&gt;2:MCYRT
-DNAHL:1&gt;3 3&gt;4 1&gt;2 4&gt;1 3&gt;2:DHANL
-HSBQA:4&gt;5 4&gt;5:HSBQA
-DTFKS:4&gt;5 3&gt;2 4&gt;5 5&gt;1:SFTKD
-UXGJN:4&gt;2 1&gt;2 1&gt;4 3&gt;1 3&gt;2:GXUJN
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">HGOKX</span><span class="o">:</span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">1</span><span class="w"> </span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">4</span><span class="o">:</span><span class="n">OGHXK</span>
+<span class="n">CXZMN</span><span class="o">:</span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">4</span><span class="w"> </span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">5</span><span class="o">:</span><span class="n">CMZNX</span>
+<span class="n">RMYTC</span><span class="o">:</span><span class="mi">2</span><span class="o">&gt;</span><span class="mi">1</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">5</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">2</span><span class="o">:</span><span class="n">MCYRT</span>
+<span class="n">DNAHL</span><span class="o">:</span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">3</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">4</span><span class="w"> </span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">2</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">1</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">2</span><span class="o">:</span><span class="n">DHANL</span>
+<span class="n">HSBQA</span><span class="o">:</span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">5</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">5</span><span class="o">:</span><span class="n">HSBQA</span>
+<span class="n">DTFKS</span><span class="o">:</span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">5</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">2</span><span class="w"> </span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">5</span><span class="w"> </span><span class="mi">5</span><span class="o">&gt;</span><span class="mi">1</span><span class="o">:</span><span class="n">SFTKD</span>
+<span class="n">UXGJN</span><span class="o">:</span><span class="mi">4</span><span class="o">&gt;</span><span class="mi">2</span><span class="w"> </span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">2</span><span class="w"> </span><span class="mi">1</span><span class="o">&gt;</span><span class="mi">4</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">1</span><span class="w"> </span><span class="mi">3</span><span class="o">&gt;</span><span class="mi">2</span><span class="o">:</span><span class="n">GXUJN</span>
+</pre></div>
 </div><p>and the validation set still holds the same 5-operations-only questions for which all networks have
 failed previously.</p>
 <p>Here's the loss and error curves of the 18-layer network trained with 5 and 2-5 operations:</p>
@@ -660,10 +660,10 @@ outer products between self-invented key and value patterns.</em> I just like th
 the 1d-convolution, which normally outputs 64 channels, now outputs 128 channels, which are split
 into 64 <em>query</em> and 64 <em>key</em> channels and the attention-<em>values</em> are the input of the layer.
 The pseudo-code looks like:</p>
-<div style="overflow: scroll;"><pre><code class="language-python">qk = Conv1d(64, 128)(inp)
-q, k = split(qk, 64)
-outp = attention(q=q, k=k, v=inp)
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">qk</span> <span class="o">=</span> <span class="n">Conv1d</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">)(</span><span class="n">inp</span><span class="p">)</span>
+<span class="n">q</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">split</span><span class="p">(</span><span class="n">qk</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+<span class="n">outp</span> <span class="o">=</span> <span class="n">attention</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">inp</span><span class="p">)</span>
+</pre></div>
 </div><p>Not shown is, that q, k and v (which are each of shape <code>[B, C, L]</code>) are transposed before the
 attention to move the channels (<code>C</code>) to the last dimension (<code>[B, L, C]</code>), and make it a
 channel-wise attention.</p>
@@ -673,20 +673,20 @@ want to fix the sequence length that the network processes.</p>
 <p>But wait, the <em>Fast Weight Programmers</em>-paper, said <em>self-invented <strong>keys and values</strong></em> not
 self-invented keys and queries. So, for completeness, let's test all the combinations</p>
 <h4 id="emself-inventedem-keys-and-values"><em>self-invented</em> keys and values <a href="#emself-inventedem-keys-and-values" class="heading-linker">←</a></h4>
-<div style="overflow: scroll;"><pre><code class="language-python">kv = Conv1d(64, 128)(inp)
-k, v = split(kv, 64)
-outp = attention(q=inp, k=k, v=v)
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">kv</span> <span class="o">=</span> <span class="n">Conv1d</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">)(</span><span class="n">inp</span><span class="p">)</span>
+<span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">split</span><span class="p">(</span><span class="n">kv</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+<span class="n">outp</span> <span class="o">=</span> <span class="n">attention</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="n">inp</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
+</pre></div>
 </div><h4 id="emself-inventedem-queries-and-values"><em>self-invented</em> queries and values <a href="#emself-inventedem-queries-and-values" class="heading-linker">←</a></h4>
-<div style="overflow: scroll;"><pre><code class="language-python">qv = Conv1d(64, 128)(inp)
-q, v = split(qv, 64)
-outp = attention(q=q, k=inp, v=v)
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">qv</span> <span class="o">=</span> <span class="n">Conv1d</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">)(</span><span class="n">inp</span><span class="p">)</span>
+<span class="n">q</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">split</span><span class="p">(</span><span class="n">qv</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+<span class="n">outp</span> <span class="o">=</span> <span class="n">attention</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">inp</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
+</pre></div>
 </div><h4 id="emself-inventedem-queries-keys-and-values"><em>self-invented</em> queries, keys and values <a href="#emself-inventedem-queries-keys-and-values" class="heading-linker">←</a></h4>
-<div style="overflow: scroll;"><pre><code class="language-python">qkv = Conv1d(64, 192)(inp)
-q, k, v = split(qkv, 64)
-outp = attention(q=q, k=k, v=v)
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">qkv</span> <span class="o">=</span> <span class="n">Conv1d</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">192</span><span class="p">)(</span><span class="n">inp</span><span class="p">)</span>
+<span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">split</span><span class="p">(</span><span class="n">qkv</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+<span class="n">outp</span> <span class="o">=</span> <span class="n">attention</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
+</pre></div>
 </div><p>Unfortunately, the validation sample error varies quite a lot for each run of the same network:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/selcopy2/selcopy2_error-curves_l3-vnops3-5trials.png" alt="different error curves in 5 trials of the same network" /></div></p>
 <p>So i'm doing 5 runs each and report the average. That's 80 runs for this messy plot and the table below!</p>
@@ -911,11 +911,11 @@ outp = attention(q=q, k=k, v=v)
 <em>Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention</em> (<a href="https://arxiv.org/abs/2006.16236" target="_blank">2006.16236</a>]).
 In contrast to the torch <code>MultiheadAttention</code>, The self-made function does not have any
 parameters and works on sequences and channels of any length.</p>
-<div style="overflow: scroll;"><pre><code>def attn(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor) -&gt; torch.Tensor:
-    q = F.elu(q) + 1.
-    k = F.elu(k) + 1.
-    return q @ (k.permute(0, 2, 1) @ v) / (v.shape[-1] * v.shape[-2])
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">def</span><span class="w"> </span><span class="n">attn</span><span class="p">(</span><span class="n">q</span><span class="o">:</span><span class="w"> </span><span class="n">torch</span><span class="p">.</span><span class="n">Tensor</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="o">:</span><span class="w"> </span><span class="n">torch</span><span class="p">.</span><span class="n">Tensor</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="o">:</span><span class="w"> </span><span class="n">torch</span><span class="p">.</span><span class="n">Tensor</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">torch</span><span class="p">.</span><span class="n">Tensor</span><span class="o">:</span>
+<span class="w">    </span><span class="n">q</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">F</span><span class="p">.</span><span class="n">elu</span><span class="p">(</span><span class="n">q</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mf">1.</span>
+<span class="w">    </span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">F</span><span class="p">.</span><span class="n">elu</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mf">1.</span>
+<span class="w">    </span><span class="kr">return</span><span class="w"> </span><span class="n">q</span><span class="w"> </span><span class="err">@</span><span class="w"> </span><span class="p">(</span><span class="n">k</span><span class="p">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="err">@</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+</pre></div>
 </div></li>
 <li>
 <p><code>(std)</code> is the standard variation given for the validation sample error</p>

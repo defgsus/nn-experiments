@@ -40,9 +40,9 @@ receptive field of the convolution can handle.</p>
 because it's quite simple to understand and to setup with a specific size. </p>
 <p>Small recap: <em>Selective copying</em> means to pick all the letters in between those spaces and
 concatenate them:</p>
-<div style="overflow: scroll;"><pre><code>A      B C        D : ABCD
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>A      B C        D : ABCD
 EG          B  A    : EGBA
-</code></pre>
+</pre></div>
 </div><p>It's a simple task but requires a large-enough receptive field. I'm using the same text-to-text
 network as in previous experiments, masking out the answer and requiring the network to reproduce
 the whole string while replacing the mask with the actual answer (the concatenated letters).</p>

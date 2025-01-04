@@ -48,146 +48,146 @@
         <h1 id="autoencoder-training-on-mnist-dataset">Autoencoder training on MNIST dataset <a href="#autoencoder-training-on-mnist-dataset" class="heading-linker">←</a></h1>
 <h2 id="varying-kernel-size">varying kernel size <a href="#varying-kernel-size" class="heading-linker">←</a></h2>
 <p>Using a &quot;classic&quot; CNN autoencoder and varying the kernel size of all layers:</p>
-<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
-  opt: [&quot;Adam&quot;]
-  lr: [0.001]
-  ks: [3, 5, 7, 9, 11, 13]
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nt">matrix</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">opt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Adam&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">lr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.001</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">ks</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">7</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">9</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">11</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">13</span><span class="p p-Indicator">]</span>
 
-experiment_name: mnist/mnist3_${matrix_slug}
+<span class="nt">experiment_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mnist/mnist3_${matrix_slug}</span>
 
-trainer: TrainAutoencoder
+<span class="nt">trainer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrainAutoencoder</span>
 
-globals:
-  SHAPE: (1, 28, 28)
-  CODE_SIZE: 28 * 28 // 10
+<span class="nt">globals</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">SHAPE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(1, 28, 28)</span>
+<span class="w">  </span><span class="nt">CODE_SIZE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">28 * 28 // 10</span>
 
-train_set: |
-  TransformDataset(
-    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),
-    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
-  )
+<span class="nt">train_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">TransformDataset(</span>
+<span class="w">    </span><span class="no">TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),</span>
+<span class="w">    </span><span class="no">transforms=[lambda x: x.unsqueeze(0).float() / 255.],</span>
+<span class="w">  </span><span class="no">)</span>
 
-validation_set: |
-  TransformDataset(
-    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),
-    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
-  )
+<span class="nt">validation_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">TransformDataset(</span>
+<span class="w">    </span><span class="no">TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),</span>
+<span class="w">    </span><span class="no">transforms=[lambda x: x.unsqueeze(0).float() / 255.],</span>
+<span class="w">  </span><span class="no">)</span>
 
-batch_size: 64
-learnrate: ${lr}
-optimizer: ${opt}
-scheduler: CosineAnnealingLR
-loss_function: l1
-max_inputs: 1_000_000
+<span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">64</span>
+<span class="nt">learnrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${lr}</span>
+<span class="nt">optimizer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${opt}</span>
+<span class="nt">scheduler</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CosineAnnealingLR</span>
+<span class="nt">loss_function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">l1</span>
+<span class="nt">max_inputs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1_000_000</span>
 
-model: |
-  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(16, 32), kernel_size=${ks})
+<span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(16, 32), kernel_size=${ks})</span>
 
-  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
-  decoder = nn.Sequential(
-      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
-      Reshape(encoded_shape),
-      encoder.convolution.create_transposed(act_last_layer=False),
-  )
+<span class="w">  </span><span class="no">encoded_shape = encoder.convolution.get_output_shape(SHAPE)</span>
+<span class="w">  </span><span class="no">decoder = nn.Sequential(</span>
+<span class="w">      </span><span class="no">nn.Linear(CODE_SIZE, math.prod(encoded_shape)),</span>
+<span class="w">      </span><span class="no">Reshape(encoded_shape),</span>
+<span class="w">      </span><span class="no">encoder.convolution.create_transposed(act_last_layer=False),</span>
+<span class="w">  </span><span class="no">)</span>
 
-  EncoderDecoder(encoder, decoder)
-</code></pre>
+<span class="w">  </span><span class="no">EncoderDecoder(encoder, decoder)</span>
+</pre></div>
 </div><p><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-ks.png" alt="loss plots" /></div></p>
 <h2 id="varying-activation-function">varying activation function <a href="#varying-activation-function" class="heading-linker">←</a></h2>
-<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
-  opt: [&quot;Adam&quot;]
-  lr: [0.001]
-  ks: [3]
-  act: [&quot;CELU&quot;, &quot;ELU&quot;, &quot;GELU&quot;, &quot;LeakyReLU&quot;, &quot;ReLU&quot;, &quot;ReLU6&quot;, &quot;RReLU&quot;, &quot;SELU&quot;, &quot;SiLU&quot;, &quot;Sigmoid&quot;]
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nt">matrix</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">opt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Adam&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">lr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.001</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">ks</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">3</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">act</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;CELU&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;ELU&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;GELU&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;LeakyReLU&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;ReLU&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;ReLU6&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;RReLU&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;SELU&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;SiLU&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;Sigmoid&quot;</span><span class="p p-Indicator">]</span>
 
-experiment_name: mnist/mnist4_${matrix_slug}
+<span class="nt">experiment_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mnist/mnist4_${matrix_slug}</span>
 
-trainer: TrainAutoencoder
+<span class="nt">trainer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrainAutoencoder</span>
 
-globals:
-  SHAPE: (1, 28, 28)
-  CODE_SIZE: 28 * 28 // 10
+<span class="nt">globals</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">SHAPE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(1, 28, 28)</span>
+<span class="w">  </span><span class="nt">CODE_SIZE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">28 * 28 // 10</span>
 
-train_set: |
-  TransformDataset(
-    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),
-    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
-  )
+<span class="nt">train_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">TransformDataset(</span>
+<span class="w">    </span><span class="no">TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),</span>
+<span class="w">    </span><span class="no">transforms=[lambda x: x.unsqueeze(0).float() / 255.],</span>
+<span class="w">  </span><span class="no">)</span>
 
-validation_set: |
-  TransformDataset(
-    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),
-    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
-  )
+<span class="nt">validation_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">TransformDataset(</span>
+<span class="w">    </span><span class="no">TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),</span>
+<span class="w">    </span><span class="no">transforms=[lambda x: x.unsqueeze(0).float() / 255.],</span>
+<span class="w">  </span><span class="no">)</span>
 
-batch_size: 64
-learnrate: ${lr}
-optimizer: ${opt}
-scheduler: CosineAnnealingLR
-loss_function: l1
-max_inputs: 1_000_000
+<span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">64</span>
+<span class="nt">learnrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${lr}</span>
+<span class="nt">optimizer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${opt}</span>
+<span class="nt">scheduler</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CosineAnnealingLR</span>
+<span class="nt">loss_function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">l1</span>
+<span class="nt">max_inputs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1_000_000</span>
 
-model: |
-  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(16, 32), kernel_size=${ks}, act_fn=nn.${act}())
+<span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(16, 32), kernel_size=${ks}, act_fn=nn.${act}())</span>
 
-  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
-  decoder = nn.Sequential(
-      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
-      Reshape(encoded_shape),
-      encoder.convolution.create_transposed(act_last_layer=False),
-  )
+<span class="w">  </span><span class="no">encoded_shape = encoder.convolution.get_output_shape(SHAPE)</span>
+<span class="w">  </span><span class="no">decoder = nn.Sequential(</span>
+<span class="w">      </span><span class="no">nn.Linear(CODE_SIZE, math.prod(encoded_shape)),</span>
+<span class="w">      </span><span class="no">Reshape(encoded_shape),</span>
+<span class="w">      </span><span class="no">encoder.convolution.create_transposed(act_last_layer=False),</span>
+<span class="w">  </span><span class="no">)</span>
 
-  EncoderDecoder(encoder, decoder)
-</code></pre>
+<span class="w">  </span><span class="no">EncoderDecoder(encoder, decoder)</span>
+</pre></div>
 </div><p><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-act.png" alt="loss plots" /></div></p>
 <h2 id="varying-image-to-code-ratio">varying image to code ratio <a href="#varying-image-to-code-ratio" class="heading-linker">←</a></h2>
 <p><code>ratio</code> below defines the embedding size (1: 768, 10: 76, 500: 1)</p>
-<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
-  opt: [&quot;Adam&quot;]
-  lr: [0.001]
-  ks: [3]
-  act: [&quot;ReLU6&quot;]
-  ratio: [1, 2, 5, 10, 20, 50, 100, 500]
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nt">matrix</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">opt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Adam&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">lr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.001</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">ks</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">3</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">act</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;ReLU6&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">ratio</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">10</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">20</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">50</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">100</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">500</span><span class="p p-Indicator">]</span>
 
-experiment_name: mnist/mnist5_${matrix_slug}
+<span class="nt">experiment_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mnist/mnist5_${matrix_slug}</span>
 
-trainer: TrainAutoencoder
+<span class="nt">trainer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrainAutoencoder</span>
 
-globals:
-  SHAPE: (1, 28, 28)
-  CODE_SIZE: 28 * 28 // ${ratio}
+<span class="nt">globals</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">SHAPE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(1, 28, 28)</span>
+<span class="w">  </span><span class="nt">CODE_SIZE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">28 * 28 // ${ratio}</span>
 
-train_set: |
-  TransformDataset(
-    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),
-    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
-  )
+<span class="nt">train_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">TransformDataset(</span>
+<span class="w">    </span><span class="no">TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),</span>
+<span class="w">    </span><span class="no">transforms=[lambda x: x.unsqueeze(0).float() / 255.],</span>
+<span class="w">  </span><span class="no">)</span>
 
-validation_set: |
-  TransformDataset(
-    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),
-    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
-  )
+<span class="nt">validation_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">TransformDataset(</span>
+<span class="w">    </span><span class="no">TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),</span>
+<span class="w">    </span><span class="no">transforms=[lambda x: x.unsqueeze(0).float() / 255.],</span>
+<span class="w">  </span><span class="no">)</span>
 
-batch_size: 64
-learnrate: ${lr}
-optimizer: ${opt}
-scheduler: CosineAnnealingLR
-loss_function: l1
-max_inputs: 1_000_000
+<span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">64</span>
+<span class="nt">learnrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${lr}</span>
+<span class="nt">optimizer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${opt}</span>
+<span class="nt">scheduler</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CosineAnnealingLR</span>
+<span class="nt">loss_function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">l1</span>
+<span class="nt">max_inputs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1_000_000</span>
 
-model: |
-  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(16, 32), kernel_size=${ks}, act_fn=nn.${act}())
+<span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(16, 32), kernel_size=${ks}, act_fn=nn.${act}())</span>
 
-  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
-  decoder = nn.Sequential(
-      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
-      Reshape(encoded_shape),
-      encoder.convolution.create_transposed(act_last_layer=False),
-  )
+<span class="w">  </span><span class="no">encoded_shape = encoder.convolution.get_output_shape(SHAPE)</span>
+<span class="w">  </span><span class="no">decoder = nn.Sequential(</span>
+<span class="w">      </span><span class="no">nn.Linear(CODE_SIZE, math.prod(encoded_shape)),</span>
+<span class="w">      </span><span class="no">Reshape(encoded_shape),</span>
+<span class="w">      </span><span class="no">encoder.convolution.create_transposed(act_last_layer=False),</span>
+<span class="w">  </span><span class="no">)</span>
 
-  EncoderDecoder(encoder, decoder)
-</code></pre>
+<span class="w">  </span><span class="no">EncoderDecoder(encoder, decoder)</span>
+</pre></div>
 </div><p><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-ratio.png" alt="loss plots" /></div></p>
 <p>Here are the reproductions of the ratio 10, 100 and 500 runs:</p>
 <div style="overflow: scroll;"><table>
@@ -205,56 +205,56 @@ model: |
 <td><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-ratio-500-repros.png" alt="repros" /></div></td>
 </tr>
 </tbody></table></div><h2 id="varying-kernel-size-and-number-of-channels">varying kernel size and number of channels <a href="#varying-kernel-size-and-number-of-channels" class="heading-linker">←</a></h2>
-<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
-  opt: [&quot;Adam&quot;]
-  lr: [0.001]
-  ks: [
-    [3, 3, 3, 3], [3, 5, 3, 3], [3, 3, 5, 3], [3, 3, 3, 5],
-    [3, 3, 5, 7], [3, 5, 7, 7], [7, 5, 3, 3], [3, 7, 3, 7],
-    [3, 5, 7, 11], [11, 7, 5, 3],
-  ]
-  chan: [[32, 32, 32, 32], [64, 64, 64, 64], [128, 128, 128, 128], [32, 64, 96, 128]]
-  $filter: len(${ks}) == len(${chan})
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nt">matrix</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">opt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Adam&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">lr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.001</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">ks</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span>
+<span class="w">    </span><span class="p p-Indicator">[</span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">],</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">],</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">],</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">],</span>
+<span class="w">    </span><span class="p p-Indicator">[</span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">7</span><span class="p p-Indicator">],</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">7</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">7</span><span class="p p-Indicator">],</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">7</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">],</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">7</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">7</span><span class="p p-Indicator">],</span>
+<span class="w">    </span><span class="p p-Indicator">[</span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">7</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">11</span><span class="p p-Indicator">],</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">11</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">7</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">],</span>
+<span class="w">  </span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">chan</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[[</span><span class="nv">32</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">],</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">64</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">64</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">64</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">64</span><span class="p p-Indicator">],</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">128</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">],</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">32</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">64</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">96</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">]]</span>
+<span class="w">  </span><span class="nt">$filter</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">len(${ks}) == len(${chan})</span>
 
-experiment_name: mnist/mnist8_${matrix_slug}
+<span class="nt">experiment_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mnist/mnist8_${matrix_slug}</span>
 
-trainer: TrainAutoencoder
+<span class="nt">trainer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrainAutoencoder</span>
 
-globals:
-  SHAPE: (1, 28, 28)
-  CODE_SIZE: 28 * 28 // 10
+<span class="nt">globals</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">SHAPE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(1, 28, 28)</span>
+<span class="w">  </span><span class="nt">CODE_SIZE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">28 * 28 // 10</span>
 
-train_set: |
-  TransformDataset(
-    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),
-    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
-  )
+<span class="nt">train_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">TransformDataset(</span>
+<span class="w">    </span><span class="no">TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),</span>
+<span class="w">    </span><span class="no">transforms=[lambda x: x.unsqueeze(0).float() / 255.],</span>
+<span class="w">  </span><span class="no">)</span>
 
-validation_set: |
-  TransformDataset(
-    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),
-    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
-  )
+<span class="nt">validation_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">TransformDataset(</span>
+<span class="w">    </span><span class="no">TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),</span>
+<span class="w">    </span><span class="no">transforms=[lambda x: x.unsqueeze(0).float() / 255.],</span>
+<span class="w">  </span><span class="no">)</span>
 
-batch_size: 64
-learnrate: ${lr}
-optimizer: ${opt}
-scheduler: CosineAnnealingLR
-loss_function: l1
-max_inputs: 1_000_000
+<span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">64</span>
+<span class="nt">learnrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${lr}</span>
+<span class="nt">optimizer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${opt}</span>
+<span class="nt">scheduler</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CosineAnnealingLR</span>
+<span class="nt">loss_function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">l1</span>
+<span class="nt">max_inputs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1_000_000</span>
 
-model: |
-  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=${chan}, kernel_size=${ks}, act_fn=nn.ReLU6())
+<span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=${chan}, kernel_size=${ks}, act_fn=nn.ReLU6())</span>
 
-  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
-  decoder = nn.Sequential(
-      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
-      Reshape(encoded_shape),
-      encoder.convolution.create_transposed(act_last_layer=False),
-  )
+<span class="w">  </span><span class="no">encoded_shape = encoder.convolution.get_output_shape(SHAPE)</span>
+<span class="w">  </span><span class="no">decoder = nn.Sequential(</span>
+<span class="w">      </span><span class="no">nn.Linear(CODE_SIZE, math.prod(encoded_shape)),</span>
+<span class="w">      </span><span class="no">Reshape(encoded_shape),</span>
+<span class="w">      </span><span class="no">encoder.convolution.create_transposed(act_last_layer=False),</span>
+<span class="w">  </span><span class="no">)</span>
 
-  EncoderDecoder(encoder, decoder)
-</code></pre>
+<span class="w">  </span><span class="no">EncoderDecoder(encoder, decoder)</span>
+</pre></div>
 </div><p><div style="overflow: scroll;"><img src="../../logs/img/simple-ae-mnist-ks-chan.png" alt="loss plots" /></div></p>
 
 

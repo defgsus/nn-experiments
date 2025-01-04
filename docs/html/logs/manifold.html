@@ -56,7 +56,7 @@
         <h1 id="quotimplicit-neural-representationquot">&quot;implicit neural representation&quot; <a href="#quotimplicit-neural-representationquot" class="heading-linker">←</a></h1>
 <p>which mainly means, calculate: <code>position + code -&gt; color</code>.</p>
 <p>After preliminary experiments, running this setup:</p>
-<div style="overflow: scroll;"><pre><code>DalleManifoldAutoencoder(
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>DalleManifoldAutoencoder(
     shape=(1, 32, 32), 
     vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True, 
     decoder_n_blk=4, decoder_n_layer=2, decoder_n_hid=64,
@@ -66,20 +66,20 @@ decoder params: 42,497
 batch_size: 64
 steps: 1M
 learnrate: .0003 AdamW, CosineAnnealingLR 
-</code></pre>
+</pre></div>
 </div><p>on only 300 (randomly h&amp;v-flipped) images of the RPG-tiles dataset (/scripts/datasets.py).</p>
 <p>Find the code at <a href="https://github.com/defgsus/nn-experiments/blob/master/scripts/train_autoencoder.py" target="_blank">scripts.train_autoencoder</a>.</p>
 <p>The encoder is a small version of the DALL-E VQ-VAE model.
 The decoder is basically a function of</p>
-<div style="overflow: scroll;"><pre><code>encoding, pixel-position -&gt; pixel-color
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">encoding</span><span class="p">,</span><span class="w"> </span><span class="n">pixel</span><span class="o">-</span><span class="n">position</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">pixel</span><span class="o">-</span><span class="n">color</span>
+</pre></div>
 </div><p>which i call &quot;manifold&quot; for now until i stumble across a better name.
 It's made of X equal blocks of Y fully connected layers with
 batch-normalization and residual skip connections per block.</p>
 <p>Besides l2 reconstruction loss there is an extra constraint on the distribution of the encoding:</p>
-<div style="overflow: scroll;"><pre><code>loss_batch_std = (.5 - feature_batch.std(0).mean()).abs()
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>loss_batch_std = (.5 - feature_batch.std(0).mean()).abs()
 loss_batch_mean = (0. - feature_batch.mean()).abs()
-</code></pre>
+</pre></div>
 </div><p>The three runs add these losses with factor 0.1 (green), 0.001 (orange) and 0.0 (gray).</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint.png" alt="loss plots" /></div></p>
 <p>Below are reproduced (right) samples of the orange model.</p>
@@ -88,8 +88,8 @@ loss_batch_mean = (0. - feature_batch.mean()).abs()
 <div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-001-repros-64.png" alt="repros" /></div></p>
 <h3 id="upgrade-decoder">upgrade decoder <a href="#upgrade-decoder" class="heading-linker">←</a></h3>
 <p>fixed the std/mean loss factor to 0.0001 and increased number of decoder blocks:</p>
-<div style="overflow: scroll;"><pre><code>decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649
+</pre></div>
 </div><p>plots in x = steps (top) and relative time (bottom):
 <div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-plus-b8.png" alt="loss plots" /></div></p>
 <p>The reproductions from the training set look good enough.
@@ -97,21 +97,21 @@ other tiles can hardly be reproduced:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-0001-b8-l2-repros.png" alt="repros" /></div>
 <div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-0001-b8-l2-repros-64.png" alt="repros" /></div></p>
 <p>Some (very short) tests with different block/layer settings:</p>
-<div style="overflow: scroll;"><pre><code>(cyan)    decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649 
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>(cyan)    decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649 
 (yellow)  decoder_n_blk=8,  decoder_n_layer=4, decoder_n_hid=128, params: 547,841
 (brown)   decoder_n_blk=16, decoder_n_layer=1, decoder_n_hid=128, params: 285,697 
 (magenta) decoder_n_blk=16, decoder_n_layer=2, decoder_n_hid=128, params: 549,889
-</code></pre>
+</pre></div>
 </div><p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-block-level-compare.png" alt="repros" /></div></p>
 <h3 id="back-to-quotrealquot-dataset">back to &quot;real&quot; dataset <a href="#back-to-quotrealquot-dataset" class="heading-linker">←</a></h3>
 <p>The current dataset of choice for my autoencoders is a mixture of all
 the rpg tiles (about 8k, h&amp;v-flipped) and kali-set fractal patches
 (about 50k, at 128x128 randomly cropped to 32x32).</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-fullds-b8.png" alt="loss plots" /></div></p>
-<div style="overflow: scroll;"><pre><code>(light green) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=300, params: 1,490,401
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>(light green) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=300, params: 1,490,401
 (dark green)  decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=128, params: 283,649
 (cyan)        sames as dark green but on above small dataset
-</code></pre>
+</pre></div>
 </div><p>The light-green model above was quite unsuccessful in terms of
 image quality. It still uses 0.1 factor for std/mean-loss.
 Dark green model uses factor 0.0001 and performs a little better
@@ -119,20 +119,20 @@ even though having less parameters. It's not getting close
 to the desirable baseline of the 300-tile dataset (cyan), though.</p>
 <p>Increasing the number of hidden cells in the decoder to 256 does
 not seem to be enough for acceptable quality:</p>
-<div style="overflow: scroll;"><pre><code>(yellow) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=256, params: 1,091,585
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>(yellow) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=256, params: 1,091,585
+</pre></div>
 </div><p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-fullds-b8-h256.png" alt="loss plots" /></div></p>
 <p>It might get below 0.004 reconstruction loss with another 10 hours
 but i'm targeting &lt; 0.001. Stopping it.</p>
 <h3 id="2023-11-10-back-to-small-dataset">2023-11-10: back to small dataset <a href="#2023-11-10-back-to-small-dataset" class="heading-linker">←</a></h3>
 <p>Changing residual logic to either add (like previous) or concat features:</p>
-<div style="overflow: scroll;"><pre><code>decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=64, 
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=64, 
     decoder_concat_residual=[True, False] * 4,
     params: 3,502,785
 
 which leads to hidden sizes per block:
     64, 128, 128, 256, 256, 512, 512, 1024
-</code></pre>
+</pre></div>
 </div><p>With no apparent difference within the first 80k steps (cyan)
 compared to the previous small-dataset-experiments.
 Unless it's runtime, which is just terrible:</p>
@@ -140,128 +140,128 @@ Unless it's runtime, which is just terrible:</p>
 <h1 id="2023-11-12-transformer-on-mnist">2023-11-12: transformer on mnist <a href="#2023-11-12-transformer-on-mnist" class="heading-linker">←</a></h1>
 <p>clamped torch's TransformerEncoder/Decoder between a conv layer
 for image patches and tried a couple of parameters:</p>
-<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
-  opt: [&quot;Adam&quot;]
-  lr: [0.001]
-  patch: [4, 8]
-  stride: [2, 4, 8]
-  $filter: ${stride} &lt;= ${patch}
-  l: [2, 4, 8, 12, 16]
-  head: [4, 8]
-  hid: [64, 128, 256]
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nt">matrix</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">opt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Adam&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">lr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.001</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">patch</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">4</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">8</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">stride</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">4</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">8</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">$filter</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${stride} &lt;= ${patch}</span>
+<span class="w">  </span><span class="nt">l</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">4</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">8</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">12</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">16</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">head</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">4</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">8</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">hid</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">64</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">256</span><span class="p p-Indicator">]</span>
 
-experiment_name: mnist/tr1_${matrix_slug}
+<span class="nt">experiment_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mnist/tr1_${matrix_slug}</span>
 
-trainer: TrainAutoencoder
+<span class="nt">trainer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TrainAutoencoder</span>
 
-globals:
-  SHAPE: (1, 28, 28)
-  CODE_SIZE: 28 * 28 // 10
+<span class="nt">globals</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">SHAPE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(1, 28, 28)</span>
+<span class="w">  </span><span class="nt">CODE_SIZE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">28 * 28 // 10</span>
 
-train_set: |
-  TransformDataset(
-    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),
-    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
-  )
+<span class="nt">train_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">TransformDataset(</span>
+<span class="w">    </span><span class="no">TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=True).data),</span>
+<span class="w">    </span><span class="no">transforms=[lambda x: x.unsqueeze(0).float() / 255.],</span>
+<span class="w">  </span><span class="no">)</span>
 
-validation_set: |
-  TransformDataset(
-    TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),
-    transforms=[lambda x: x.unsqueeze(0).float() / 255.],
-  )
+<span class="nt">validation_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">TransformDataset(</span>
+<span class="w">    </span><span class="no">TensorDataset(torchvision.datasets.MNIST(&quot;~/prog/data/datasets/&quot;, train=False).data),</span>
+<span class="w">    </span><span class="no">transforms=[lambda x: x.unsqueeze(0).float() / 255.],</span>
+<span class="w">  </span><span class="no">)</span>
 
-batch_size: 64
-learnrate: ${lr}
-optimizer: ${opt}
-scheduler: CosineAnnealingLR
-loss_function: l1
-max_inputs: 1_000_000
+<span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">64</span>
+<span class="nt">learnrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${lr}</span>
+<span class="nt">optimizer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${opt}</span>
+<span class="nt">scheduler</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CosineAnnealingLR</span>
+<span class="nt">loss_function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">l1</span>
+<span class="nt">max_inputs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1_000_000</span>
 
-model: |
-  from experiments.ae.transformer import *
-  
-  TransformerAutoencoder(
-      shape=SHAPE, code_size=CODE_SIZE,
-      patch_size=${patch},
-      stride=${stride},
-      num_layers=${l},
-      num_hidden=${hid},
-      num_heads=${head},
-  )
-</code></pre>
+<span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">from experiments.ae.transformer import *</span>
+<span class="w">  </span>
+<span class="w">  </span><span class="no">TransformerAutoencoder(</span>
+<span class="w">      </span><span class="no">shape=SHAPE, code_size=CODE_SIZE,</span>
+<span class="w">      </span><span class="no">patch_size=${patch},</span>
+<span class="w">      </span><span class="no">stride=${stride},</span>
+<span class="w">      </span><span class="no">num_layers=${l},</span>
+<span class="w">      </span><span class="no">num_hidden=${hid},</span>
+<span class="w">      </span><span class="no">num_heads=${head},</span>
+<span class="w">  </span><span class="no">)</span>
+</pre></div>
 </div><p><div style="overflow: scroll;"><img src="../../logs/img/transformer-mnist-architecture.png" alt="validation losses" /></div></p>
 <h1 id="resnet21-for-embedding--gt-imagemanifoldmodel">resnet21 for embedding -&gt; ImageManifoldModel <a href="#resnet21-for-embedding--gt-imagemanifoldmodel" class="heading-linker">←</a></h1>
 <p>Autoencoder with pre-trained resnet21 (without last avgpool).</p>
-<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
-  # compression ratio
-  cr: [10]
-  opt: [&quot;Adam&quot;]
-  lr: [0.001]
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nt">matrix</span><span class="p">:</span>
+<span class="w">  </span><span class="c1"># compression ratio</span>
+<span class="w">  </span><span class="nt">cr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">10</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">opt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Adam&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">lr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.001</span><span class="p p-Indicator">]</span>
 
-  hid: [256]
-  # blocks
-  bl: [2]
-  # layers per block
-  lpb: [2]
-  act: [&quot;gelu&quot;]
+<span class="w">  </span><span class="nt">hid</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">256</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="c1"># blocks</span>
+<span class="w">  </span><span class="nt">bl</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">2</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="c1"># layers per block</span>
+<span class="w">  </span><span class="nt">lpb</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">2</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">act</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;gelu&quot;</span><span class="p p-Indicator">]</span>
 
-experiment_name: tests/rpg_res5_${matrix_slug}
+<span class="nt">experiment_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tests/rpg_res5_${matrix_slug}</span>
 
-trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+<span class="nt">trainer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">experiments.ae.trainer.TrainAutoencoderSpecial</span>
 
-globals:
-  SHAPE: (3, 32, 32)
-  CODE_SIZE: 32 * 32 // ${cr}
+<span class="nt">globals</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">SHAPE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(3, 32, 32)</span>
+<span class="w">  </span><span class="nt">CODE_SIZE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">32 * 32 // ${cr}</span>
 
-train_set: |
-  from experiments.datasets import rpg_tile_dataset 
-  rpg_tile_dataset(SHAPE, validation=False, shuffle=True, random_shift=4, random_flip=True)
+<span class="nt">train_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">from experiments.datasets import rpg_tile_dataset </span>
+<span class="w">  </span><span class="no">rpg_tile_dataset(SHAPE, validation=False, shuffle=True, random_shift=4, random_flip=True)</span>
 
-freeze_validation_set: True
-validation_set: |
-  from experiments.datasets import rpg_tile_dataset 
-  rpg_tile_dataset(SHAPE, validation=True, shuffle=True, limit=500)
+<span class="nt">freeze_validation_set</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
+<span class="nt">validation_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">from experiments.datasets import rpg_tile_dataset </span>
+<span class="w">  </span><span class="no">rpg_tile_dataset(SHAPE, validation=True, shuffle=True, limit=500)</span>
 
-batch_size: 64
-learnrate: ${lr}
-optimizer: ${opt}
-scheduler: CosineAnnealingLR
-loss_function: l1
-max_inputs: 1_000_000
+<span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">64</span>
+<span class="nt">learnrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${lr}</span>
+<span class="nt">optimizer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${opt}</span>
+<span class="nt">scheduler</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CosineAnnealingLR</span>
+<span class="nt">loss_function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">l1</span>
+<span class="nt">max_inputs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1_000_000</span>
 
-model: |
-  from src.models.encoder import resnet
-  encoder = resnet.resnet18_open(weights=torchvision.models.ResNet18_Weights.IMAGENET1K_V1)
-  with torch.no_grad():
-      out_shape = encoder(torch.empty(2, *SHAPE)).shape[-3:]
-  encoder = nn.Sequential(
-      encoder,
-      nn.Flatten(1),
-      nn.Linear(math.prod(out_shape), CODE_SIZE)
-  )
-  #for p in encoder.parameters():
-  #  p.requires_grad = False
-  
-  EncoderDecoder(
-      encoder,
-      ImageManifoldDecoder(
-          num_input_channels=CODE_SIZE,
-          num_output_channels=SHAPE[0],
-          default_shape=SHAPE[-2:],
-          num_hidden=${hid},
-          num_blocks=${bl},
-          num_layers_per_block=${lpb},
-          activation=&quot;${act}&quot;,
-      )
-  )
-</code></pre>
+<span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">from src.models.encoder import resnet</span>
+<span class="w">  </span><span class="no">encoder = resnet.resnet18_open(weights=torchvision.models.ResNet18_Weights.IMAGENET1K_V1)</span>
+<span class="w">  </span><span class="no">with torch.no_grad():</span>
+<span class="w">      </span><span class="no">out_shape = encoder(torch.empty(2, *SHAPE)).shape[-3:]</span>
+<span class="w">  </span><span class="no">encoder = nn.Sequential(</span>
+<span class="w">      </span><span class="no">encoder,</span>
+<span class="w">      </span><span class="no">nn.Flatten(1),</span>
+<span class="w">      </span><span class="no">nn.Linear(math.prod(out_shape), CODE_SIZE)</span>
+<span class="w">  </span><span class="no">)</span>
+<span class="w">  </span><span class="no">#for p in encoder.parameters():</span>
+<span class="w">  </span><span class="no">#  p.requires_grad = False</span>
+<span class="w">  </span>
+<span class="w">  </span><span class="no">EncoderDecoder(</span>
+<span class="w">      </span><span class="no">encoder,</span>
+<span class="w">      </span><span class="no">ImageManifoldDecoder(</span>
+<span class="w">          </span><span class="no">num_input_channels=CODE_SIZE,</span>
+<span class="w">          </span><span class="no">num_output_channels=SHAPE[0],</span>
+<span class="w">          </span><span class="no">default_shape=SHAPE[-2:],</span>
+<span class="w">          </span><span class="no">num_hidden=${hid},</span>
+<span class="w">          </span><span class="no">num_blocks=${bl},</span>
+<span class="w">          </span><span class="no">num_layers_per_block=${lpb},</span>
+<span class="w">          </span><span class="no">activation=&quot;${act}&quot;,</span>
+<span class="w">      </span><span class="no">)</span>
+<span class="w">  </span><span class="no">)</span>
+</pre></div>
 </div><p>Increasing the <em>number of hidden cells</em>, <em>blocks</em> and <em>layers per block</em>
 did <strong>not</strong> provide a benefit on the 7k rpg tile dataset.
 All larger versions performed worse:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-rpg-size.png" alt="loss plots" /></div></p>
 <p>And, actually, it turns out that a simple 3-layer CNN (ks=3, channels=[16, 24, 32])
 as the encoder performs much better than the resnet:</p>
-<div style="overflow: scroll;"><pre><code>(encoder): EncoderConv2d(
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>(encoder): EncoderConv2d(
     (convolution): Conv2dBlock(
       (_act_fn): ReLU()
       (layers): Sequential(
@@ -275,7 +275,7 @@ as the encoder performs much better than the resnet:</p>
     )
     (linear): Linear(in_features=21632, out_features=102, bias=True)
   )
-</code></pre>
+</pre></div>
 </div><p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-rpg-simple-cnn.png" alt="loss plots" /></div></p>
 <h2 id="back-to-simple-cnn-encoder">back to simple CNN encoder <a href="#back-to-simple-cnn-encoder" class="heading-linker">←</a></h2>
 <p>Everything i tried in the last couple of days is performing

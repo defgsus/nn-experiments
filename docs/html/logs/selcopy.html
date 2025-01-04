@@ -66,29 +66,29 @@ It's nasty regarding UTF-8 when reversing the model's output put keeps
 things otherwise simple and easy.</p>
 <p>The <em>Selective Copying</em> Dataset is the (almost) endless stream of combinations of letters,
 arranged in a free space. The task is to pick the letters and concatenate them, e.g.:</p>
-<div style="overflow: scroll;"><pre><code>A....D.C..B.. -&gt; ADCB
-C..A....BD... -&gt; CABD
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">A</span><span class="p">....</span><span class="n">D</span><span class="p">.</span><span class="n">C</span><span class="p">..</span><span class="n">B</span><span class="p">..</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">ADCB</span>
+<span class="n">C</span><span class="p">..</span><span class="n">A</span><span class="p">....</span><span class="n">BD</span><span class="p">...</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">CABD</span>
+</pre></div>
 </div><p>I was previously trying stuff with masking, where parts of a text are hidden and the model learns
 to reproduce the parts, so i used this framework for the <em>Selective Copying</em> dataset,
 which looks like this:</p>
-<div style="overflow: scroll;"><pre><code>B..C....A.D.. -&gt; ????
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">B</span><span class="p">..</span><span class="n">C</span><span class="p">....</span><span class="n">A</span><span class="p">.</span><span class="n">D</span><span class="p">..</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="o">????</span>
+</pre></div>
 </div><p>Instead of a <code>?</code>, the mask byte value is actually zero. So, the model get's this sequence of
 text in and produces the same sequence of text, but the masked bytes replaced by the original
 content.</p>
 <p>Here's a typical model:</p>
-<div style="overflow: scroll;"><pre><code>ConvTextModel(
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>ConvTextModel(
   (embedding): Embedding(256, 64)
   (layers): ModuleList(
     (0-5): 6 x ConvTextLayer(
       (conv): Conv1d(64, 64, kernel_size=(9,), stride=(1,), padding=(3,))
-      (act): GELU(approximate=&#x27;none&#x27;)
+      (act): GELU(approximate=&#39;none&#39;)
     )
   )
   (lm_head): Linear(in_features=64, out_features=256, bias=False)
 )
-</code></pre>
+</pre></div>
 </div><p>Feed any number (say L) of text bytes into the embedding, pass 64 x L matrices through
 the stack of 1D convolutions, which keep the resolution (via padding) and add a residual
 short-cut from each layer-input to layer-output. Finally transform the 64-dim <em>latent space</em>
@@ -288,13 +288,13 @@ at least, from my point of view.</li>
 <h3 id="increasing-dilation">Increasing dilation <a href="#increasing-dilation" class="heading-linker">←</a></h3>
 <p><em>Dilation</em> is like increasing the kernel size, without actually creating new weights or adding
 compution. E.g. this example 3x3 kernel with dilation=2 theoretically becomes:</p>
-<div style="overflow: scroll;"><pre><code>1 2 3      1 0 2 0 3 0
-4 5 6  -&gt;  0 0 0 0 0 0
-7 8 9      4 0 5 0 6 0
-           0 0 0 0 0 0
-           7 0 8 0 9 0
-           0 0 0 0 0 0
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="mf">1</span><span class="w"> </span><span class="mf">2</span><span class="w"> </span><span class="mf">3</span><span class="w">      </span><span class="mf">1</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">2</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">3</span><span class="w"> </span><span class="mf">0</span>
+<span class="mf">4</span><span class="w"> </span><span class="mf">5</span><span class="w"> </span><span class="mf">6</span><span class="w">  </span><span class="o">-&gt;</span><span class="w">  </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span>
+<span class="mf">7</span><span class="w"> </span><span class="mf">8</span><span class="w"> </span><span class="mf">9</span><span class="w">      </span><span class="mf">4</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">5</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">6</span><span class="w"> </span><span class="mf">0</span>
+<span class="w">           </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span>
+<span class="w">           </span><span class="mf">7</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">8</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">9</span><span class="w"> </span><span class="mf">0</span>
+<span class="w">           </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="mf">0</span>
+</pre></div>
 </div><p>In fact, the zero-multiplications are skipped and the convolution keeps it's pace.
 The only thing that adds a bit of computation is the adjusted padding, to keep the output size
 of the convolution the same as the input size. So the convolutions have to

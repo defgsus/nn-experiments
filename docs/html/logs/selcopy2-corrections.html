@@ -42,10 +42,10 @@
 <h3 id="compare-attention-invention">Compare attention invention <a href="#compare-attention-invention" class="heading-linker">←</a></h3>
 <p><a href="../../html/logs/selcopy2.html#self-invented-queries-keys-and-values">Original</a></p>
 <p>Reproduce with <a href="https://github.com/defgsus/nn-experiments/blob/c0cf27632ade5a643b6fd3598c60e01c960b6138/experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml" target="_blank">convtext-qa-program-3ops-attn-invent.yml @ c0cf2763</a></p>
-<div style="overflow: scroll;"><pre><code class="language-shell">git checkout c0cf2763
-python exp.py experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml run
-python exp.py experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml results -ec dil matrix_slug matrix_id bs opt lr norm meter gc act posemb nitem len nops vnops l ch ks -sc &quot;validation_sample_error%-&quot; -ic &quot;train_sample_error%&quot; &quot;validation_sample_error%&quot; -ac trial -acs &quot;train_sample_error%&quot; &quot;validation_sample_error%&quot;
-</code></pre>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>git<span class="w"> </span>checkout<span class="w"> </span>c0cf2763
+python<span class="w"> </span>exp.py<span class="w"> </span>experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml<span class="w"> </span>run
+python<span class="w"> </span>exp.py<span class="w"> </span>experiments/textmask/qa-program/convtext-qa-program-3ops-attn-invent.yml<span class="w"> </span>results<span class="w"> </span>-ec<span class="w"> </span>dil<span class="w"> </span>matrix_slug<span class="w"> </span>matrix_id<span class="w"> </span>bs<span class="w"> </span>opt<span class="w"> </span>lr<span class="w"> </span>norm<span class="w"> </span>meter<span class="w"> </span>gc<span class="w"> </span>act<span class="w"> </span>posemb<span class="w"> </span>nitem<span class="w"> </span>len<span class="w"> </span>nops<span class="w"> </span>vnops<span class="w"> </span>l<span class="w"> </span>ch<span class="w"> </span>ks<span class="w"> </span>-sc<span class="w"> </span><span class="s2">&quot;validation_sample_error%-&quot;</span><span class="w"> </span>-ic<span class="w"> </span><span class="s2">&quot;train_sample_error%&quot;</span><span class="w"> </span><span class="s2">&quot;validation_sample_error%&quot;</span><span class="w"> </span>-ac<span class="w"> </span>trial<span class="w"> </span>-acs<span class="w"> </span><span class="s2">&quot;train_sample_error%&quot;</span><span class="w"> </span><span class="s2">&quot;validation_sample_error%&quot;</span>
+</pre></div>
 </div><p>This time made <strong>10 runs</strong> per setting!</p>
 <div style="overflow: scroll;"><table>
 <thead>

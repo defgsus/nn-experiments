@@ -40,13 +40,13 @@
         <h1 id="variational-auto-encoder-on-rpg-tile-dataset">variational auto-encoder on RPG Tile dataset <a href="#variational-auto-encoder-on-rpg-tile-dataset" class="heading-linker">←</a></h1>
 <p>There is a <em>deep</em> love/hate relationships with neural networks.
 Why the heck do i need to train a small network like this</p>
-<div style="overflow: scroll;"><pre><code class="language-python">model = VariationalAutoencoderConv(
-    shape=(3, 32, 32), channels=[16, 24, 32], kernel_size=5,
-    latent_dims=128,
-)
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">VariationalAutoencoderConv</span><span class="p">(</span>
+    <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">),</span> <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">32</span><span class="p">],</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">latent_dims</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+<span class="p">)</span>
 
-optimizer = Adam(model.default_parameters(), lr=.0001, weight_decay=0.000001)
-</code></pre>
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">Adam</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">default_parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">.0001</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mf">0.000001</span><span class="p">)</span>
+</pre></div>
 </div><p>for 10 hours and it still does not reach the optimum?</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/vae-rpg-conv16-24-32-40M.png" alt="loss plots" /></div></p>
 <p>And how could one tell after 30 minutes where this is going
@@ -63,54 +63,54 @@ mathematically grounded, feels like a brute-force approach.</p>
 validation grayscale images at 32x32 pixels.
 Running the following experiment to compare
 with the <em>&quot;classic&quot;</em> datasets:</p>
-<div style="overflow: scroll;"><pre><code class="language-yaml">trainer: src.train.TrainAutoencoder
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nt">trainer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">src.train.TrainAutoencoder</span>
 
-matrix:
-  ds:
-  - &quot;mnist&quot;
-  - &quot;fmnist&quot;
-  - &quot;rpg&quot;
+<span class="nt">matrix</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">ds</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;mnist&quot;</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;fmnist&quot;</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;rpg&quot;</span>
 
-experiment_name: vae/base28_${matrix_slug}
+<span class="nt">experiment_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vae/base28_${matrix_slug}</span>
 
-train_set: | 
-  {
-      &quot;mnist&quot;: mnist_dataset(train=True, shape=SHAPE),
-      &quot;fmnist&quot;: fmnist_dataset(train=True, shape=SHAPE),
-      &quot;rpg&quot;: rpg_tile_dataset_3x32x32(validation=False, shape=SHAPE),
-  }[&quot;${ds}&quot;]
+<span class="nt">train_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w"> </span>
+<span class="w">  </span><span class="no">{</span>
+<span class="w">      </span><span class="no">&quot;mnist&quot;: mnist_dataset(train=True, shape=SHAPE),</span>
+<span class="w">      </span><span class="no">&quot;fmnist&quot;: fmnist_dataset(train=True, shape=SHAPE),</span>
+<span class="w">      </span><span class="no">&quot;rpg&quot;: rpg_tile_dataset_3x32x32(validation=False, shape=SHAPE),</span>
+<span class="w">  </span><span class="no">}[&quot;${ds}&quot;]</span>
 
-validation_set: |
-  {
-      &quot;mnist&quot;: mnist_dataset(train=False, shape=SHAPE),
-      &quot;fmnist&quot;: fmnist_dataset(train=False, shape=SHAPE),
-      &quot;rpg&quot;: rpg_tile_dataset_3x32x32(validation=True, shape=SHAPE)
-  }[&quot;${ds}&quot;]
+<span class="nt">validation_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">{</span>
+<span class="w">      </span><span class="no">&quot;mnist&quot;: mnist_dataset(train=False, shape=SHAPE),</span>
+<span class="w">      </span><span class="no">&quot;fmnist&quot;: fmnist_dataset(train=False, shape=SHAPE),</span>
+<span class="w">      </span><span class="no">&quot;rpg&quot;: rpg_tile_dataset_3x32x32(validation=True, shape=SHAPE)</span>
+<span class="w">  </span><span class="no">}[&quot;${ds}&quot;]</span>
 
-batch_size: 64
-learnrate: 0.0003
-optimizer: Adam
-scheduler: CosineAnnealingLR
-max_inputs: 1_000_000
+<span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">64</span>
+<span class="nt">learnrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0003</span>
+<span class="nt">optimizer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Adam</span>
+<span class="nt">scheduler</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CosineAnnealingLR</span>
+<span class="nt">max_inputs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1_000_000</span>
 
-globals:
-  SHAPE: (1, 28, 28)
-  CODE_SIZE: 128
+<span class="nt">globals</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">SHAPE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(1, 28, 28)</span>
+<span class="w">  </span><span class="nt">CODE_SIZE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">128</span>
 
-model: |
-  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(16, 24, 32), kernel_size=3)
-  decoder = DecoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(32, 24, 16), kernel_size=3)
-  
-  VariationalAutoencoder(
-      encoder = VariationalEncoder(
-          encoder, CODE_SIZE, CODE_SIZE
-      ),
-      decoder = decoder,
-      reconstruction_loss = &quot;l1&quot;,
-      reconstruction_loss_weight = 1.,
-      kl_loss_weight = 1.,
-  )
-</code></pre>
+<span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(16, 24, 32), kernel_size=3)</span>
+<span class="w">  </span><span class="no">decoder = DecoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(32, 24, 16), kernel_size=3)</span>
+<span class="w">  </span>
+<span class="w">  </span><span class="no">VariationalAutoencoder(</span>
+<span class="w">      </span><span class="no">encoder = VariationalEncoder(</span>
+<span class="w">          </span><span class="no">encoder, CODE_SIZE, CODE_SIZE</span>
+<span class="w">      </span><span class="no">),</span>
+<span class="w">      </span><span class="no">decoder = decoder,</span>
+<span class="w">      </span><span class="no">reconstruction_loss = &quot;l1&quot;,</span>
+<span class="w">      </span><span class="no">reconstruction_loss_weight = 1.,</span>
+<span class="w">      </span><span class="no">kl_loss_weight = 1.,</span>
+<span class="w">  </span><span class="no">)</span>
+</pre></div>
 </div><p>Note that the MNIST and <a href="https://arxiv.org/abs/1708.07747" target="_blank">FMNIST</a> images are 28x28 pixels and
 the RPG dataset is resized (via BILINEAR filter) to the same
 resolution.</p>

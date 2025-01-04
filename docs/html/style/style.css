@@ -1,15 +1,15 @@
 html {
   font-family: sans-serif;
-  background: #222;
-  color: #ddd; }
+  background: #fff;
+  color: #000; }
 
   a {
-    color: #899ef1;
+    color: #0d0dee;
     text-decoration: none; }
     a:visited {
-      color: #5a78ef; }
+      color: #00e; }
       a:hover {
-        color: #8db8fa;
+        color: #1010f0;
         text-decoration: underline; }
         a[target="_blank"]::before {
           font-size: 75%;
@@ -17,19 +17,21 @@ html {
           content: "↗ "; }
 
 pre {
-  background: #191919;
-  color: #fff; }
+  background: #eee;
+  color: #000;
+  padding: 0.25rem;
+  line-height: 125%; }
 
   h1, h2, h3, h4 {
     margin-top: 2rem; }
 
     table {
-      border: 1px solid #5c5c5c; }
+      border: 1px solid #bababa; }
       table td, table th {
         padding: 0.25rem;
         vertical-align: top; }
         table tbody tr:hover {
-          background: #3a3a3a; }
+          background: #ebebeb; }
 
 .flex {
   display: flex;
@@ -54,9 +56,9 @@ li.indent-1 {
 }
 
 a.heading-linker {
-  color: rgba(224, 224, 224, 0.5); }
+  color: rgba(0, 0, 0, 0.5); }
   a.heading-linker:hover {
-    color: #8db8fa;
+    color: #1010f0;
     text-decoration: none; }
 
 main.article .article-left {
@@ -74,7 +76,8 @@ main.article .article-mid {
   @media (max-width: 1000px) {
     main.article .article-mid {
       max-width: 95%;
-      padding-left: 0;   }
+      padding-left: 0;
+      width: unset;   }
 }
     main.article .article-mid .article-footer {
       margin: 3rem 0; }
@@ -97,4 +100,500 @@ main.index {
       font-size: 120%; }
       main.index .article-list .article-item .link {
         font-size: 150%;
-        color: #ddd; }
+        color: #000; }
+
+@media (prefers-color-scheme: dark) {
+  html {
+    background: #222;
+    color: #ddd;   }
+    a {
+      color: #899ef1;   }
+      a:visited {
+        color: #5a78ef;   }
+        a:hover {
+          color: #8db8fa;   }
+  pre {
+    background: #191919;
+    color: #fff;   }
+    table {
+      border-color: #5c5c5c;   }
+      table tbody tr:hover {
+        background: #3a3a3a;   }
+  a.heading-linker {
+    color: rgba(224, 224, 224, 0.5);   }
+    a.heading-linker:hover {
+      color: #8db8fa;   }
+  main.index .article-list .article-item .link {
+    font-size: 150%;
+    color: #ddd;   }
+}
+
+td.linenos .normal {
+  color: inherit;
+  background-color: transparent;
+  padding-left: 5px;
+  padding-right: 5px; }
+
+  span.linenos {
+    color: inherit;
+    background-color: transparent;
+    padding-left: 5px;
+    padding-right: 5px; }
+
+    td.linenos .special {
+      color: #000000;
+      background-color: #ffffc0;
+      padding-left: 5px;
+      padding-right: 5px; }
+
+      span.linenos.special {
+        color: #000000;
+        background-color: #ffffc0;
+        padding-left: 5px;
+        padding-right: 5px; }
+
+        .highlight .hll {
+          background-color: #ffffcc; }
+
+          .highlight {
+            background: #f8f8f8; }
+
+            .highlight .c {
+              color: #3D7B7B;
+              font-style: italic; }
+
+              .highlight .err {
+                border: 1px solid #FF0000; }
+
+                .highlight .k {
+                  color: #008000;
+                  font-weight: bold; }
+
+                  .highlight .o {
+                    color: #666666; }
+
+                    .highlight .ch {
+                      color: #3D7B7B;
+                      font-style: italic; }
+
+                      .highlight .cm {
+                        color: #3D7B7B;
+                        font-style: italic; }
+
+                        .highlight .cp {
+                          color: #9C6500; }
+
+                          .highlight .cpf {
+                            color: #3D7B7B;
+                            font-style: italic; }
+
+                            .highlight .c1 {
+                              color: #3D7B7B;
+                              font-style: italic; }
+
+                              .highlight .cs {
+                                color: #3D7B7B;
+                                font-style: italic; }
+
+                                .highlight .gd {
+                                  color: #A00000; }
+
+                                  .highlight .ge {
+                                    font-style: italic; }
+
+                                    .highlight .ges {
+                                      font-weight: bold;
+                                      font-style: italic; }
+
+                                      .highlight .gr {
+                                        color: #E40000; }
+
+                                        .highlight .gh {
+                                          color: #000080;
+                                          font-weight: bold; }
+
+                                          .highlight .gi {
+                                            color: #008400; }
+
+                                            .highlight .go {
+                                              color: #717171; }
+
+                                              .highlight .gp {
+                                                color: #000080;
+                                                font-weight: bold; }
+
+                                                .highlight .gs {
+                                                  font-weight: bold; }
+
+                                                  .highlight .gu {
+                                                    color: #800080;
+                                                    font-weight: bold; }
+
+                                                    .highlight .gt {
+                                                      color: #0044DD; }
+
+                                                      .highlight .kc {
+                                                        color: #008000;
+                                                        font-weight: bold; }
+
+                                                        .highlight .kd {
+                                                          color: #008000;
+                                                          font-weight: bold; }
+
+                                                          .highlight .kn {
+                                                            color: #008000;
+                                                            font-weight: bold; }
+
+                                                            .highlight .kp {
+                                                              color: #008000; }
+
+                                                              .highlight .kr {
+                                                                color: #008000;
+                                                                font-weight: bold; }
+
+                                                                .highlight .kt {
+                                                                  color: #B00040; }
+
+                                                                  .highlight .m {
+                                                                    color: #666666; }
+
+                                                                    .highlight .s {
+                                                                      color: #BA2121; }
+
+                                                                      .highlight .na {
+                                                                        color: #687822; }
+
+                                                                        .highlight .nb {
+                                                                          color: #008000; }
+
+                                                                          .highlight .nc {
+                                                                            color: #0000FF;
+                                                                            font-weight: bold; }
+
+                                                                            .highlight .no {
+                                                                              color: #880000; }
+
+                                                                              .highlight .nd {
+                                                                                color: #AA22FF; }
+
+                                                                                .highlight .ni {
+                                                                                  color: #717171;
+                                                                                  font-weight: bold; }
+
+                                                                                  .highlight .ne {
+                                                                                    color: #CB3F38;
+                                                                                    font-weight: bold; }
+
+                                                                                    .highlight .nf {
+                                                                                      color: #0000FF; }
+
+                                                                                      .highlight .nl {
+                                                                                        color: #767600; }
+
+                                                                                        .highlight .nn {
+                                                                                          color: #0000FF;
+                                                                                          font-weight: bold; }
+
+                                                                                          .highlight .nt {
+                                                                                            color: #008000;
+                                                                                            font-weight: bold; }
+
+                                                                                            .highlight .nv {
+                                                                                              color: #19177C; }
+
+                                                                                              .highlight .ow {
+                                                                                                color: #AA22FF;
+                                                                                                font-weight: bold; }
+
+                                                                                                .highlight .w {
+                                                                                                  color: #bbbbbb; }
+
+                                                                                                  .highlight .mb {
+                                                                                                    color: #666666; }
+
+                                                                                                    .highlight .mf {
+                                                                                                      color: #666666; }
+
+                                                                                                      .highlight .mh {
+                                                                                                        color: #666666; }
+
+                                                                                                        .highlight .mi {
+                                                                                                          color: #666666; }
+
+                                                                                                          .highlight .mo {
+                                                                                                            color: #666666; }
+
+                                                                                                            .highlight .sa {
+                                                                                                              color: #BA2121; }
+
+                                                                                                              .highlight .sb {
+                                                                                                                color: #BA2121; }
+
+                                                                                                                .highlight .sc {
+                                                                                                                  color: #BA2121; }
+
+                                                                                                                  .highlight .dl {
+                                                                                                                    color: #BA2121; }
+
+                                                                                                                    .highlight .sd {
+                                                                                                                      color: #BA2121;
+                                                                                                                      font-style: italic; }
+
+                                                                                                                      .highlight .s2 {
+                                                                                                                        color: #BA2121; }
+
+                                                                                                                        .highlight .se {
+                                                                                                                          color: #AA5D1F;
+                                                                                                                          font-weight: bold; }
+
+                                                                                                                          .highlight .sh {
+                                                                                                                            color: #BA2121; }
+
+                                                                                                                            .highlight .si {
+                                                                                                                              color: #A45A77;
+                                                                                                                              font-weight: bold; }
+
+                                                                                                                              .highlight .sx {
+                                                                                                                                color: #008000; }
+
+                                                                                                                                .highlight .sr {
+                                                                                                                                  color: #A45A77; }
+
+                                                                                                                                  .highlight .s1 {
+                                                                                                                                    color: #BA2121; }
+
+                                                                                                                                    .highlight .ss {
+                                                                                                                                      color: #19177C; }
+
+                                                                                                                                      .highlight .bp {
+                                                                                                                                        color: #008000; }
+
+                                                                                                                                        .highlight .fm {
+                                                                                                                                          color: #0000FF; }
+
+                                                                                                                                          .highlight .vc {
+                                                                                                                                            color: #19177C; }
+
+                                                                                                                                            .highlight .vg {
+                                                                                                                                              color: #19177C; }
+
+                                                                                                                                              .highlight .vi {
+                                                                                                                                                color: #19177C; }
+
+                                                                                                                                                .highlight .vm {
+                                                                                                                                                  color: #19177C; }
+
+                                                                                                                                                  .highlight .il {
+                                                                                                                                                    color: #666666; }
+
+                                                                                                                                                    @media (prefers-color-scheme: dark) {
+                                                                                                                                                      td.linenos .normal {
+                                                                                                                                                        color: #6e7681;
+                                                                                                                                                        background-color: #0d1117;
+                                                                                                                                                        padding-left: 5px;
+                                                                                                                                                        padding-right: 5px;   }
+                                                                                                                                                        span.linenos {
+                                                                                                                                                          color: #6e7681;
+                                                                                                                                                          background-color: #0d1117;
+                                                                                                                                                          padding-left: 5px;
+                                                                                                                                                          padding-right: 5px;   }
+                                                                                                                                                          td.linenos .special {
+                                                                                                                                                            color: #e6edf3;
+                                                                                                                                                            background-color: #6e7681;
+                                                                                                                                                            padding-left: 5px;
+                                                                                                                                                            padding-right: 5px;   }
+                                                                                                                                                            span.linenos.special {
+                                                                                                                                                              color: #e6edf3;
+                                                                                                                                                              background-color: #6e7681;
+                                                                                                                                                              padding-left: 5px;
+                                                                                                                                                              padding-right: 5px;   }
+                                                                                                                                                              .highlight .hll {
+                                                                                                                                                                background-color: #6e7681;   }
+                                                                                                                                                                .highlight {
+                                                                                                                                                                  background: #0d1117;
+                                                                                                                                                                  color: #e6edf3;   }
+                                                                                                                                                                  .highlight .c {
+                                                                                                                                                                    color: #8b949e;
+                                                                                                                                                                    font-style: italic;   }
+                                                                                                                                                                    .highlight .err {
+                                                                                                                                                                      color: #f85149;   }
+                                                                                                                                                                      .highlight .esc {
+                                                                                                                                                                        color: #e6edf3;   }
+                                                                                                                                                                        .highlight .g {
+                                                                                                                                                                          color: #e6edf3;   }
+                                                                                                                                                                          .highlight .k {
+                                                                                                                                                                            color: #ff7b72;   }
+                                                                                                                                                                            .highlight .l {
+                                                                                                                                                                              color: #a5d6ff;   }
+                                                                                                                                                                              .highlight .n {
+                                                                                                                                                                                color: #e6edf3;   }
+                                                                                                                                                                                .highlight .o {
+                                                                                                                                                                                  color: #ff7b72;
+                                                                                                                                                                                  font-weight: bold;   }
+                                                                                                                                                                                  .highlight .x {
+                                                                                                                                                                                    color: #e6edf3;   }
+                                                                                                                                                                                    .highlight .p {
+                                                                                                                                                                                      color: #e6edf3;   }
+                                                                                                                                                                                      .highlight .ch {
+                                                                                                                                                                                        color: #8b949e;
+                                                                                                                                                                                        font-style: italic;   }
+                                                                                                                                                                                        .highlight .cm {
+                                                                                                                                                                                          color: #8b949e;
+                                                                                                                                                                                          font-style: italic;   }
+                                                                                                                                                                                          .highlight .cp {
+                                                                                                                                                                                            color: #8b949e;
+                                                                                                                                                                                            font-weight: bold;
+                                                                                                                                                                                            font-style: italic;   }
+                                                                                                                                                                                            .highlight .cpf {
+                                                                                                                                                                                              color: #8b949e;
+                                                                                                                                                                                              font-style: italic;   }
+                                                                                                                                                                                              .highlight .c1 {
+                                                                                                                                                                                                color: #8b949e;
+                                                                                                                                                                                                font-style: italic;   }
+                                                                                                                                                                                                .highlight .cs {
+                                                                                                                                                                                                  color: #8b949e;
+                                                                                                                                                                                                  font-weight: bold;
+                                                                                                                                                                                                  font-style: italic;   }
+                                                                                                                                                                                                  .highlight .gd {
+                                                                                                                                                                                                    color: #ffa198;
+                                                                                                                                                                                                    background-color: #490202;   }
+                                                                                                                                                                                                    .highlight .ge {
+                                                                                                                                                                                                      color: #e6edf3;
+                                                                                                                                                                                                      font-style: italic;   }
+                                                                                                                                                                                                      .highlight .ges {
+                                                                                                                                                                                                        color: #e6edf3;
+                                                                                                                                                                                                        font-weight: bold;
+                                                                                                                                                                                                        font-style: italic;   }
+                                                                                                                                                                                                        .highlight .gr {
+                                                                                                                                                                                                          color: #ffa198;   }
+                                                                                                                                                                                                          .highlight .gh {
+                                                                                                                                                                                                            color: #79c0ff;
+                                                                                                                                                                                                            font-weight: bold;   }
+                                                                                                                                                                                                            .highlight .gi {
+                                                                                                                                                                                                              color: #56d364;
+                                                                                                                                                                                                              background-color: #0f5323;   }
+                                                                                                                                                                                                              .highlight .go {
+                                                                                                                                                                                                                color: #8b949e;   }
+                                                                                                                                                                                                                .highlight .gp {
+                                                                                                                                                                                                                  color: #8b949e;   }
+                                                                                                                                                                                                                  .highlight .gs {
+                                                                                                                                                                                                                    color: #e6edf3;
+                                                                                                                                                                                                                    font-weight: bold;   }
+                                                                                                                                                                                                                    .highlight .gu {
+                                                                                                                                                                                                                      color: #79c0ff;   }
+                                                                                                                                                                                                                      .highlight .gt {
+                                                                                                                                                                                                                        color: #ff7b72;   }
+                                                                                                                                                                                                                        .highlight .g-Underline {
+                                                                                                                                                                                                                          color: #e6edf3;
+                                                                                                                                                                                                                          text-decoration: underline;   }
+                                                                                                                                                                                                                          .highlight .kc {
+                                                                                                                                                                                                                            color: #79c0ff;   }
+                                                                                                                                                                                                                            .highlight .kd {
+                                                                                                                                                                                                                              color: #ff7b72;   }
+                                                                                                                                                                                                                              .highlight .kn {
+                                                                                                                                                                                                                                color: #ff7b72;   }
+                                                                                                                                                                                                                                .highlight .kp {
+                                                                                                                                                                                                                                  color: #79c0ff;   }
+                                                                                                                                                                                                                                  .highlight .kr {
+                                                                                                                                                                                                                                    color: #ff7b72;   }
+                                                                                                                                                                                                                                    .highlight .kt {
+                                                                                                                                                                                                                                      color: #ff7b72;   }
+                                                                                                                                                                                                                                      .highlight .ld {
+                                                                                                                                                                                                                                        color: #79c0ff;   }
+                                                                                                                                                                                                                                        .highlight .m {
+                                                                                                                                                                                                                                          color: #a5d6ff;   }
+                                                                                                                                                                                                                                          .highlight .s {
+                                                                                                                                                                                                                                            color: #a5d6ff;   }
+                                                                                                                                                                                                                                            .highlight .na {
+                                                                                                                                                                                                                                              color: #e6edf3;   }
+                                                                                                                                                                                                                                              .highlight .nb {
+                                                                                                                                                                                                                                                color: #e6edf3;   }
+                                                                                                                                                                                                                                                .highlight .nc {
+                                                                                                                                                                                                                                                  color: #f0883e;
+                                                                                                                                                                                                                                                  font-weight: bold;   }
+                                                                                                                                                                                                                                                  .highlight .no {
+                                                                                                                                                                                                                                                    color: #79c0ff;
+                                                                                                                                                                                                                                                    font-weight: bold;   }
+                                                                                                                                                                                                                                                    .highlight .nd {
+                                                                                                                                                                                                                                                      color: #d2a8ff;
+                                                                                                                                                                                                                                                      font-weight: bold;   }
+                                                                                                                                                                                                                                                      .highlight .ni {
+                                                                                                                                                                                                                                                        color: #ffa657;   }
+                                                                                                                                                                                                                                                        .highlight .ne {
+                                                                                                                                                                                                                                                          color: #f0883e;
+                                                                                                                                                                                                                                                          font-weight: bold;   }
+                                                                                                                                                                                                                                                          .highlight .nf {
+                                                                                                                                                                                                                                                            color: #d2a8ff;
+                                                                                                                                                                                                                                                            font-weight: bold;   }
+                                                                                                                                                                                                                                                            .highlight .nl {
+                                                                                                                                                                                                                                                              color: #79c0ff;
+                                                                                                                                                                                                                                                              font-weight: bold;   }
+                                                                                                                                                                                                                                                              .highlight .nn {
+                                                                                                                                                                                                                                                                color: #ff7b72;   }
+                                                                                                                                                                                                                                                                .highlight .nx {
+                                                                                                                                                                                                                                                                  color: #e6edf3;   }
+                                                                                                                                                                                                                                                                  .highlight .py {
+                                                                                                                                                                                                                                                                    color: #79c0ff;   }
+                                                                                                                                                                                                                                                                    .highlight .nt {
+                                                                                                                                                                                                                                                                      color: #7ee787;   }
+                                                                                                                                                                                                                                                                      .highlight .nv {
+                                                                                                                                                                                                                                                                        color: #79c0ff;   }
+                                                                                                                                                                                                                                                                        .highlight .ow {
+                                                                                                                                                                                                                                                                          color: #ff7b72;
+                                                                                                                                                                                                                                                                          font-weight: bold;   }
+                                                                                                                                                                                                                                                                          .highlight .pm {
+                                                                                                                                                                                                                                                                            color: #e6edf3;   }
+                                                                                                                                                                                                                                                                            .highlight .w {
+                                                                                                                                                                                                                                                                              color: #6e7681;   }
+                                                                                                                                                                                                                                                                              .highlight .mb {
+                                                                                                                                                                                                                                                                                color: #a5d6ff;   }
+                                                                                                                                                                                                                                                                                .highlight .mf {
+                                                                                                                                                                                                                                                                                  color: #a5d6ff;   }
+                                                                                                                                                                                                                                                                                  .highlight .mh {
+                                                                                                                                                                                                                                                                                    color: #a5d6ff;   }
+                                                                                                                                                                                                                                                                                    .highlight .mi {
+                                                                                                                                                                                                                                                                                      color: #a5d6ff;   }
+                                                                                                                                                                                                                                                                                      .highlight .mo {
+                                                                                                                                                                                                                                                                                        color: #a5d6ff;   }
+                                                                                                                                                                                                                                                                                        .highlight .sa {
+                                                                                                                                                                                                                                                                                          color: #79c0ff;   }
+                                                                                                                                                                                                                                                                                          .highlight .sb {
+                                                                                                                                                                                                                                                                                            color: #a5d6ff;   }
+                                                                                                                                                                                                                                                                                            .highlight .sc {
+                                                                                                                                                                                                                                                                                              color: #a5d6ff;   }
+                                                                                                                                                                                                                                                                                              .highlight .dl {
+                                                                                                                                                                                                                                                                                                color: #79c0ff;   }
+                                                                                                                                                                                                                                                                                                .highlight .sd {
+                                                                                                                                                                                                                                                                                                  color: #a5d6ff;   }
+                                                                                                                                                                                                                                                                                                  .highlight .s2 {
+                                                                                                                                                                                                                                                                                                    color: #a5d6ff;   }
+                                                                                                                                                                                                                                                                                                    .highlight .se {
+                                                                                                                                                                                                                                                                                                      color: #79c0ff;   }
+                                                                                                                                                                                                                                                                                                      .highlight .sh {
+                                                                                                                                                                                                                                                                                                        color: #79c0ff;   }
+                                                                                                                                                                                                                                                                                                        .highlight .si {
+                                                                                                                                                                                                                                                                                                          color: #a5d6ff;   }
+                                                                                                                                                                                                                                                                                                          .highlight .sx {
+                                                                                                                                                                                                                                                                                                            color: #a5d6ff;   }
+                                                                                                                                                                                                                                                                                                            .highlight .sr {
+                                                                                                                                                                                                                                                                                                              color: #79c0ff;   }
+                                                                                                                                                                                                                                                                                                              .highlight .s1 {
+                                                                                                                                                                                                                                                                                                                color: #a5d6ff;   }
+                                                                                                                                                                                                                                                                                                                .highlight .ss {
+                                                                                                                                                                                                                                                                                                                  color: #a5d6ff;   }
+                                                                                                                                                                                                                                                                                                                  .highlight .bp {
+                                                                                                                                                                                                                                                                                                                    color: #e6edf3;   }
+                                                                                                                                                                                                                                                                                                                    .highlight .fm {
+                                                                                                                                                                                                                                                                                                                      color: #d2a8ff;
+                                                                                                                                                                                                                                                                                                                      font-weight: bold;   }
+                                                                                                                                                                                                                                                                                                                      .highlight .vc {
+                                                                                                                                                                                                                                                                                                                        color: #79c0ff;   }
+                                                                                                                                                                                                                                                                                                                        .highlight .vg {
+                                                                                                                                                                                                                                                                                                                          color: #79c0ff;   }
+                                                                                                                                                                                                                                                                                                                          .highlight .vi {
+                                                                                                                                                                                                                                                                                                                            color: #79c0ff;   }
+                                                                                                                                                                                                                                                                                                                            .highlight .vm {
+                                                                                                                                                                                                                                                                                                                              color: #79c0ff;   }
+                                                                                                                                                                                                                                                                                                                              .highlight .il {
+                                                                                                                                                                                                                                                                                                                                color: #a5d6ff;   }
+}

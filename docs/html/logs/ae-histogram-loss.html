@@ -34,46 +34,46 @@
 <p>Basically a simple autoencoder but the loss only considers the histogram
 using the <em>soft histogram</em> mentioned by Tony-Y in the
 <a href="https://discuss.pytorch.org/t/differentiable-torch-histc/25865/4" target="_blank">pytorch forum</a>.</p>
-<div style="overflow: scroll;"><pre><code class="language-yaml">matrix:
-  bins: [100, 200, 50]
-  sigma: [100, 200, 50]
-  norm: [False]
-  loss: [&quot;&#x27;l1&#x27;&quot;]
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nt">matrix</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">bins</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">100</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">200</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">50</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">sigma</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">100</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">200</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">50</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">norm</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">False</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">loss</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;&#39;l1&#39;&quot;</span><span class="p p-Indicator">]</span>
 
-experiment_name: ae/hist/hl-${matrix_slug}
+<span class="nt">experiment_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ae/hist/hl-${matrix_slug}</span>
 
-trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+<span class="nt">trainer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">experiments.ae.trainer.TrainAutoencoderSpecial</span>
 
-train_set: |
-  rpg_tile_dataset_3x32x32(SHAPE, validation=False)
+<span class="nt">train_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">rpg_tile_dataset_3x32x32(SHAPE, validation=False)</span>
 
-validation_set: |
-  rpg_tile_dataset_3x32x32(SHAPE, validation=True)
+<span class="nt">validation_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">rpg_tile_dataset_3x32x32(SHAPE, validation=True)</span>
 
-batch_size: 64
-learnrate: 0.0003
-optimizer: AdamW
-scheduler: CosineAnnealingLR
-loss_function: |
-  HistogramLoss(${bins}, 0., 1., sigma=${sigma}, loss=${loss}, normalize=${norm})
-max_inputs: 500_000
+<span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">64</span>
+<span class="nt">learnrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0003</span>
+<span class="nt">optimizer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">AdamW</span>
+<span class="nt">scheduler</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CosineAnnealingLR</span>
+<span class="nt">loss_function</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">HistogramLoss(${bins}, 0., 1., sigma=${sigma}, loss=${loss}, normalize=${norm})</span>
+<span class="nt">max_inputs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500_000</span>
 
-globals:
-  SHAPE: (3, 32, 32)
-  CODE_SIZE: 128
+<span class="nt">globals</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">SHAPE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(3, 32, 32)</span>
+<span class="w">  </span><span class="nt">CODE_SIZE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">128</span>
 
-model: |
-  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(24, 32, 48), kernel_size=5)
+<span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(24, 32, 48), kernel_size=5)</span>
 
-  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
-  decoder = nn.Sequential(
-      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
-      Reshape(encoded_shape),
-      encoder.convolution.create_transposed(act_last_layer=False),
-  )
+<span class="w">  </span><span class="no">encoded_shape = encoder.convolution.get_output_shape(SHAPE)</span>
+<span class="w">  </span><span class="no">decoder = nn.Sequential(</span>
+<span class="w">      </span><span class="no">nn.Linear(CODE_SIZE, math.prod(encoded_shape)),</span>
+<span class="w">      </span><span class="no">Reshape(encoded_shape),</span>
+<span class="w">      </span><span class="no">encoder.convolution.create_transposed(act_last_layer=False),</span>
+<span class="w">  </span><span class="no">)</span>
 
-  EncoderDecoder(encoder, decoder)
-</code></pre>
+<span class="w">  </span><span class="no">EncoderDecoder(encoder, decoder)</span>
+</pre></div>
 </div><p><div style="overflow: scroll;"><img src="../../logs/img/ae-histogramloss.png" alt="loss plots" /></div></p>
 <p>Normalizing the histograms before calculating the difference did not
 converge well. And reproduction look terrible as could be expected: </p>
