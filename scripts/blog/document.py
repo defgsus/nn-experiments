@@ -74,7 +74,11 @@ class Document:
                 if "#" in link:
                     link, slug = link.split("#", 1)
 
-                filename = (self.filename.parent / link)
+                if link:
+                    filename = (self.filename.parent / link)
+                else:
+                    filename = self.filename
+
                 if not filename.exists():
                     raise AssertionError(
                         f"Document {self} links to non-existent file '{link}' (resolved: '{filename}')"
