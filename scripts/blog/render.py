@@ -13,7 +13,9 @@ def render_document_html(
         document: marko.block.Document,
         link_mapping: Dict[str, str],
 ):
-    return HTMLRenderer(link_mapping=link_mapping).render(document)
+    return HTMLRenderer(
+        link_mapping=link_mapping,
+    ).render(document)
 
 
 def render_teaser_html(
@@ -38,10 +40,16 @@ def render_template(
     return template.render(**context)
 
 
-class HTMLRenderer(GFMRendererMixin, marko.HTMLRenderer):
+def _get_renderer_base_class():
+    md = marko.Markdown(extensions=["gfm", "codehilite"])
+    md._setup_extensions()
+    return type(md.renderer)
 
-    def __init__(self, link_mapping: Dict[str, str]):
-        super().__init__()
+
+class HTMLRenderer(_get_renderer_base_class()):
+
+    def __init__(self, link_mapping: Dict[str, str], **kwargs):
+        super().__init__(**kwargs)
         self._link_mapping = link_mapping
 
     def render_heading(self, element: marko.block.Heading) -> str:

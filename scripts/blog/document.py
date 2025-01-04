@@ -6,7 +6,7 @@ import marko
 import marko.inline
 import github_slugger
 from marko import block, inline
-from marko.ext.gfm import gfm
+from marko.ext.gfm import GFM
 
 
 class Document:
@@ -42,8 +42,10 @@ class Document:
 
     @classmethod
     def from_file(cls, filename: Path):
-
-        doc = gfm.parse(filename.read_text())
+        parser = marko.Markdown(
+            extensions=['gfm', 'codehilite']
+        )
+        doc = parser.parse(filename.read_text())
 
         slugger = github_slugger.GithubSlugger()
 
