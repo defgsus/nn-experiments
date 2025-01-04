@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Perceptual Distance and the &quot;Generalized Mean Image Problem&quot;</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../html/style/style.css">
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#perceptual-distance-and-the-quotgeneralized-mean-image-problemquot" title="Perceptual Distance and the &quot;Generalized Mean Image Problem&quot;">Perceptual Distance and the &quot;Generalized Mean Image Problem&quot;</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#experiment-setup" title="Experiment setup">Experiment setup</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#discussion" title="Discussion">Discussion</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#influence-of-number-of-channels" title="Influence of number of channels">Influence of number of channels</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#influence-of-kernel-size" title="Influence of kernel size">Influence of kernel size</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#comparing-the-fourier-transform" title="Comparing the Fourier Transform">Comparing the Fourier Transform</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="perceptual-distance-and-the-quotgeneralized-mean-image-problemquot">Perceptual Distance and the &quot;Generalized Mean Image Problem&quot; <a href="#perceptual-distance-and-the-quotgeneralized-mean-image-problemquot" class="heading-linker">←</a></h1>
+<p>Reproducing the &quot;Generalized Mean Image Problem&quot;
+from section 1.2 <em>Unreasonable Effectiveness of Random Filters</em> in </p>
+<p><em>Understanding and Simplifying Perceptual Distances</em> (Dan Amir and Yair Weiss,
+in <a href="https://openaccess.thecvf.com/content/CVPR2021/html/Amir_Understanding_and_Simplifying_Perceptual_Distances_CVPR_2021_paper.html" target="_blank">CVPR-2021</a>)</p>
+<p>This is useful base research for everything that outputs images which need to be compared against
+a target image, like, e.g., auto-encoders. </p>
+<p>I like the problem setup in the Generalized Mean Image experiment.
+For my own experiment i took an image
+and made four crops at pixel offsets (0, 0), (3, 0), (0, 3) and (3, 3). The task is to find ONE
+image that has the smallest distance to each of the four crops.
+Please check the <a href="../../html/logs/perceptual-distance.html#experiment-setup">experiment setup</a> for details. </p>
+<p>I'm almost always using the <strong>l1 loss</strong> (mean absolute error) for my auto-encoder trainings,
+mostly because i find the loss values more readable. Also, literature claims that
+<strong>l2 loss</strong> (mean squared error) creates rather blurry images, which can be clearly seen in below
+table. </p>
+<p>Now, <em>Perceptual Distance</em> means to pass the source and target images through a neural network
+before comparing them. The authors do not specify, which loss function they are using
+for comparison so i'm trying both, l1 and l2. The models CNN1 and CNN2 are described below.
+The interesting part is, that these models do not have to be trained,
+they are just randomly initialized.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th>original</th>
+<th>l1 loss</th>
+<th>l2 loss</th>
+<th>l1 loss of CNN1</th>
+<th>l2 loss of CNN1</th>
+<th>l1 loss of CNN2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-original.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-l1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-l2.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-l1-model1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-l2-model1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-l1-model2.png" alt="image" /></div></td>
+</tr>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-original.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-l1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-l2.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-l1-model1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-l2-model1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-l1-model2.png" alt="image" /></div></td>
+</tr>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-original.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-l1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-l2.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-l1-model1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-l2-model1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-l1-model2.png" alt="image" /></div></td>
+</tr>
+</tbody></table></div><p>The CNN1 model is (in pytorch speak):</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+<span class="p">)</span>
+</pre></div>
+</div><p>and CNN2 adds an average pooling layer, as suggested in the paper:</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">AvgPool2d</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">16</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+</div><p>Below is the code used to create those images (in jupyter lab) followed by a <a href="../../html/logs/perceptual-distance.html#discussion">discussion</a>.</p>
+<h3 id="experiment-setup">Experiment setup <a href="#experiment-setup" class="heading-linker">←</a></h3>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">generalized_mean_image</span><span class="p">(</span>
+        <span class="n">target_images</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>  <span class="c1"># B,C,H,W</span>
+        <span class="n">perceptual_model</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+        <span class="n">loss_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+        <span class="n">steps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20000</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
+        <span class="n">learnrate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.005</span><span class="p">,</span>
+        <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">),</span>
+<span class="p">):</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">empty_cache</span><span class="p">()</span>
+    
+    <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">perceptual_model</span><span class="p">,</span> <span class="s2">&quot;to&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)):</span>
+        <span class="n">perceptual_model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    
+    <span class="n">source_image</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">target_images</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+    <span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">([</span><span class="n">source_image</span><span class="p">],</span> <span class="n">lr</span><span class="o">=</span><span class="n">learnrate</span><span class="p">)</span>
+    
+    <span class="c1"># create a batch with all target image crops and repeat until batch_size is reached</span>
+    <span class="n">target_batch</span> <span class="o">=</span> <span class="n">target_images</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">batch_size</span> <span class="o">//</span> <span class="n">target_images</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[:</span><span class="n">batch_size</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="n">p_target_batch</span> <span class="o">=</span> <span class="n">perceptual_model</span><span class="p">(</span><span class="n">target_batch</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">total</span><span class="o">=</span><span class="n">steps</span><span class="p">)</span> <span class="k">as</span> <span class="n">progress</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">steps</span> <span class="o">//</span> <span class="n">batch_size</span><span class="p">):</span>
+            <span class="n">progress</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">batch_size</span><span class="p">)</span>
+
+            <span class="n">source_batch</span> <span class="o">=</span> <span class="n">source_image</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">p_source_batch</span> <span class="o">=</span> <span class="n">perceptual_model</span><span class="p">(</span><span class="n">source_batch</span><span class="p">)</span>
+
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_function</span><span class="p">(</span><span class="n">p_source_batch</span><span class="p">,</span> <span class="n">p_target_batch</span><span class="p">)</span>
+            
+            <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+            <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+            <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+            
+            <span class="n">progress</span><span class="o">.</span><span class="n">set_postfix</span><span class="p">({</span><span class="s2">&quot;loss&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">loss</span><span class="p">)})</span>
+
+    <span class="n">source_image</span> <span class="o">=</span> <span class="n">source_image</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">VF</span><span class="o">.</span><span class="n">to_pil_image</span><span class="p">(</span><span class="n">source_image</span><span class="p">))</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">empty_cache</span><span class="p">()</span>
+    
+    
+<span class="k">def</span> <span class="nf">create_target_images</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">o</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">):</span>
+    <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
+    <span class="n">h</span> <span class="o">-=</span> <span class="n">o</span>
+    <span class="n">w</span> <span class="o">-=</span> <span class="n">o</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span>
+        <span class="n">image</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:</span><span class="n">h</span><span class="p">,</span> <span class="p">:</span><span class="n">w</span><span class="p">],</span>
+        <span class="n">image</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="n">o</span><span class="p">:</span><span class="n">h</span><span class="o">+</span><span class="n">o</span><span class="p">,</span> <span class="p">:</span><span class="n">w</span><span class="p">],</span>
+        <span class="n">image</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="n">o</span><span class="p">:</span><span class="n">h</span><span class="o">+</span><span class="n">o</span><span class="p">,</span> <span class="n">o</span><span class="p">:</span><span class="n">w</span><span class="o">+</span><span class="n">o</span><span class="p">],</span>
+        <span class="n">image</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:</span><span class="n">h</span><span class="p">,</span> <span class="n">o</span><span class="p">:</span><span class="n">w</span><span class="o">+</span><span class="n">o</span><span class="p">],</span>
+    <span class="p">])</span>
+    
+<span class="n">generalized_mean_image</span><span class="p">(</span>
+    <span class="n">create_target_images</span><span class="p">(</span><span class="n">some_image</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Identity</span><span class="p">(),</span>  <span class="c1"># model goes here</span>
+    <span class="n">loss_function</span><span class="o">=</span><span class="n">F</span><span class="o">.</span><span class="n">l1_loss</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div><h3 id="discussion">Discussion <a href="#discussion" class="heading-linker">←</a></h3>
+<p>The authors originally suggest a model that looks like this (if i understood correctly):</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">AvgPool2d</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">16</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+</div><p>This model is extremely slow and does not fit into my GPU RAM, when processing images larger
+than, say 50x50 pixels. From my point of view, it does not make any sense to use a loss method
+that is computationally orders of magnitudes more expensive than the actual auto-encoder
+that i'm training. The reason, however, that the authors used such an extreme model,
+is purely academic. It's used to approximate an infinite random CNN as discussed in <em>Theorem 2.1.</em> </p>
+<p>The average pooling at the end does not work in my experiment, as seen in above table. That was
+my initial guess, when reading the paper and i wonder how it worked for the authors!? Surly, i got
+something wrong. Later on in the paper, they are comparing images patch-wise (each patch with
+each other target patch).</p>
+<p>However, for untrained random CNNs, the number of channels is quite important. The more you
+can afford, the better. The color mismatch in above table is directly related to the number
+of channels.</p>
+<h3 id="influence-of-number-of-channels">Influence of number of channels <a href="#influence-of-number-of-channels" class="heading-linker">←</a></h3>
+<p>Using the following CNN architecture (where <code>CH</code> is the number of channels in below table):</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">CH</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> 
+    <span class="n">nn</span><span class="o">.</span><span class="n">GELU</span><span class="p">(),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="n">CH</span><span class="p">,</span> <span class="n">CH</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">GELU</span><span class="p">(),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="n">CH</span><span class="p">,</span> <span class="n">CH</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">GELU</span><span class="p">(),</span>
+<span class="p">)</span>
+</pre></div>
+</div><div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">channels</th>
+<th>result of 4 random CNNs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">4</td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-many-ch4.png" alt="image" /></div></td>
+</tr>
+<tr>
+<td align="right">8</td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-many-ch8.png" alt="image" /></div></td>
+</tr>
+<tr>
+<td align="right">16</td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-many-ch16.png" alt="image" /></div></td>
+</tr>
+<tr>
+<td align="right">32</td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-many-ch32.png" alt="image" /></div></td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-many-ch64.png" alt="image" /></div></td>
+</tr>
+<tr>
+<td align="right">128</td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-many-ch128.png" alt="image" /></div></td>
+</tr>
+</tbody></table></div><p>As can be seen, too few channels are very unreliable and even 128 channels might
+introduce some slight color differences. </p>
+<p>Unfortunately, that's the limit of my GPU RAM. Running the network with 256 channels
+on CPU would require about 15 minutes per image. And, of course, increasing the number
+of channels exponentially increases the training time. On my machine,
+training with 4 channels runs at about 5100 iterations/second and 128 channels
+archive only 215 iterations.  </p>
+<h3 id="influence-of-kernel-size">Influence of kernel size <a href="#influence-of-kernel-size" class="heading-linker">←</a></h3>
+<p>Checking influence of kernel-size in random CNN. I'm just using one layer and no activation function.
+<code>KS</code> is the kernel size:</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="n">KS</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="p">(</span><span class="n">KS</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div><p>l1 loss without CNN is included for comparison:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th>original</th>
+<th>l1 loss</th>
+<th>l1 of KS 1</th>
+<th>l1 of KS 3</th>
+<th>l1 of KS 5</th>
+<th>l1 of KS 7</th>
+<th>l1 of KS 9</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-original.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-l1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-ch128-ks1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-ch128-ks3.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-ch128-ks5.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-ch128-ks7.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-ch128-ks9.png" alt="image" /></div></td>
+</tr>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-original.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-l1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-ch128-ks1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-ch128-ks3.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-ch128-ks5.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-ch128-ks7.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-ch128-ks9.png" alt="image" /></div></td>
+</tr>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-original.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-l1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-ch128-ks1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-ch128-ks3.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-ch128-ks5.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-ch128-ks7.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-ch128-ks9.png" alt="image" /></div></td>
+</tr>
+</tbody></table></div><p>It's really hard to tell but, in my opinion, a kernel size of 1 yields the most sharp images and
+everything above 3 does not produce a noticeable difference.</p>
+<h2 id="comparing-the-fourier-transform">Comparing the Fourier Transform <a href="#comparing-the-fourier-transform" class="heading-linker">←</a></h2>
+<p>Instead of comparing the images or their representations of random CNNs,
+let's compare the frequency spectrum of the images. </p>
+<p>The previous l1 and l2 loss images are included for comparison:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th>original</th>
+<th>l1 loss</th>
+<th>l2 loss</th>
+<th>l1 loss of FFT1</th>
+<th>l1 loss of FFT2</th>
+<th>l2 loss of FFT2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-original.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-l1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-l2.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-l1-fft.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-l1-fft2.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-l2-fft2.png" alt="image" /></div></td>
+</tr>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-original.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-l1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-l2.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-l1-fft.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-l1-fft2.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-l2-fft2.png" alt="image" /></div></td>
+</tr>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-original.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-l1.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-l2.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-l1-fft.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-l1-fft2.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-l2-fft2.png" alt="image" /></div></td>
+</tr>
+</tbody></table></div><p><strong>FFT1</strong> is the <code>torch.fft.fft2</code> (2-dimensional) function which transforms the image
+into complex numbers. Complex numbers are not supported by the l2 loss, so <strong>FFT2</strong> is an adaption:</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">fft_func</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">x</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">imag</span><span class="p">],</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div><p>It ignores if numbers are real or imaginary and simply concatenates the spectral images along the
+channel (color) dimension. </p>
+<p>Using the Fourier Transform increases training time until convergence. <strong>FFT1</strong> a little and
+<strong>FFT2</strong> needs at least <strong>10 times the training time</strong> for convergence and does not look very good
+with l1 loss.</p>
+<p>Using the l1 loss on the complex FFT numbers, however, does a really good job.</p>
+<p>Since we have the frequency spectrum of the images, we can manipulate it in some way before
+comparison. I tried to multiply high frequency components to make them more effective in the
+comparison but whatever i tried, it did not increase the resulting image quality compared to
+the normal FFT.</p>
+<p>Just for fun, let's look at the resulting images when only the low or high frequencies are compared</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">fft_func</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="mi">10</span><span class="p">,</span> <span class="p">:</span><span class="mi">10</span><span class="p">]</span>  <span class="c1"># for low frequencies</span>
+    <span class="k">return</span> <span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">10</span><span class="p">:,</span> <span class="mi">10</span><span class="p">:]</span>  <span class="c1"># or this for high frequencies</span>
+</pre></div>
+</div><div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th>original</th>
+<th>low</th>
+<th>high</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-original.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-l1-fft-cut10.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/wells-l1-fft-cut10-high.png" alt="image" /></div></td>
+</tr>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-original.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-l1-fft-cut10.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/illegal-l1-fft-cut10-high.png" alt="image" /></div></td>
+</tr>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-original.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-l1-fft-cut10.png" alt="image" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/perceptual-distance/mars-l1-fft-cut10-high.png" alt="image" /></div></td>
+</tr>
+</tbody></table></div>
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a target="_blank" href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a target="_blank" href="https://github.com/defgsus/nn-experiments/blob/master/docs/logs/2025-01-04-perceptual-distance.md">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../html/posts/2024/datasets.html">
+                        &lt;&lt; Common datasets and sizes
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

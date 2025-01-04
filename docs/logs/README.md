@@ -5,8 +5,17 @@ meta parameters.
 This index is supposed to make it easy to find an old setup
 and look at its parameters and results.
 
+You can also view these files online at [defgsus.github.io/nn-experiments/](https://defgsus.github.io/nn-experiments/) 
+
 
 ## Index
+- [2025-01-04-perceptual-distance.md](2025-01-04-perceptual-distance.md)
+  - [:arrow_forward:](2025-01-04-perceptual-distance.md#perceptual-distance-and-the-generalized-mean-image-problem) Perceptual Distance and the "Generalized Mean Image Problem"
+      - [:arrow_forward:](2025-01-04-perceptual-distance.md#experiment-setup) Experiment setup
+      - [:arrow_forward:](2025-01-04-perceptual-distance.md#discussion) Discussion
+      - [:arrow_forward:](2025-01-04-perceptual-distance.md#influence-of-number-of-channels) Influence of number of channels
+      - [:arrow_forward:](2025-01-04-perceptual-distance.md#influence-of-kernel-size) Influence of kernel size
+    - [:arrow_forward:](2025-01-04-perceptual-distance.md#comparing-the-fourier-transform) Comparing the Fourier Transform
 - [2024-12-28-receptive-field-attention.md](2024-12-28-receptive-field-attention.md)
   - [:arrow_forward:](2024-12-28-receptive-field-attention.md#how-does-receptive-field-size-increase-with-self-attention) How does receptive field size increase with self-attention
 - [2024-12-21-selcopy2-corrections.md](2024-12-21-selcopy2-corrections.md)
