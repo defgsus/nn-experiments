@@ -20,7 +20,7 @@ def main(
     documents: List[Document] = []
 
     for file in sorted(DOCS_PATH.rglob("*.md")):
-        if file.name != "README.md":
+        if file.name != "README.md" and not "DRAFT" in file.name:
             documents.append(Document.from_file(file))
 
     sitemap = Sitemap(documents)

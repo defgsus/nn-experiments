@@ -52,6 +52,10 @@ class Page:
         return ["style.scss"]
 
     @property
+    def js_files(self) -> List[str]:
+        return ["main.js"]
+
+    @property
     def template(self) -> str:
         return self.front_matter.get("template", "article")
 
@@ -91,6 +95,23 @@ class StyleSheet:
         return self._content
 
 
+class JavascriptFile:
+
+    def __init__(self, original_filename: Path):
+        self.original_filename = original_filename
+        self._content = None
+
+    @property
+    def target_filename(self) -> str:
+        name = self.original_filename.name
+        return f"html/js/{name}"
+
+    def content(self):
+        if self._content is None:
+            self._content = Path(self.original_filename).read_text()
+        return self._content
+
+
 class Sitemap:
 
     def __init__(
@@ -109,6 +130,9 @@ class Sitemap:
         }
         self.stylesheets_mapping = {
             "style.scss": StyleSheet(self.template_path / "style.scss"),
+        }
+        self.js_files_mapping = {
+            "main.js": JavascriptFile(self.template_path / "main.js"),
         }
 
         self._doc_page_mapping: Optional[Dict[str, Page]] = None
@@ -153,6 +177,10 @@ class Sitemap:
                 "css": [
                     page.relative_url(self.get_stylesheet(f).target_filename)
                     for f in page.scss_files
+                ],
+                "js": [
+                    page.relative_url(self.get_javascript(f).target_filename)
+                    for f in page.js_files
                 ],
             },
             "page": page,
@@ -228,6 +256,9 @@ class Sitemap:
     def get_stylesheet(self, scss_file: str) -> StyleSheet:
         return self.stylesheets_mapping[scss_file]
 
+    def get_javascript(self, js_file: str) -> StyleSheet:
+        return self.js_files_mapping[js_file]
+
     def render_all(self, write: bool):
         from .__main__ import DOCS_PATH
 
@@ -251,3 +282,6 @@ class Sitemap:
 
         for style in self.stylesheets_mapping.values():
             _write_file(style.target_filename, style.content())
+
+        for js in self.js_files_mapping.values():
+            _write_file(js.target_filename, js.content())

@@ -30,8 +30,16 @@ pre {
       table td, table th {
         padding: 0.25rem;
         vertical-align: top; }
-        table tbody tr:hover {
-          background: #ebebeb; }
+        table th.sortable {
+          cursor: pointer; }
+          table th.sortable.sorted:before {
+            content: "↓"; }
+            table th.sortable.sorted.ascending:before {
+              content: "↑"; }
+      table thead th {
+        background: #e6e6e6; }
+      table tbody tr:hover {
+        background: #ebebeb; }
 
 .flex {
   display: flex;
@@ -117,6 +125,8 @@ main.index {
     color: #fff;   }
     table {
       border-color: #5c5c5c;   }
+      table thead th {
+        background: #353535;   }
       table tbody tr:hover {
         background: #3a3a3a;   }
   a.heading-linker {

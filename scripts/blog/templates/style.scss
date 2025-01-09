@@ -6,6 +6,7 @@ $color-font: #000;
 $color-font-transparent: rgba(0, 0, 0, .5);
 $color-back: #fff;
 $color-back-hover: #ebebeb;
+$color-table-head-back: #e6e6e6;
 $color-border: #bababa;
 $color-link: #0d0dee;
 $color-link-hover: #1010f0;
@@ -17,6 +18,7 @@ $d-color-font: #ddd;
 $d-color-font-transparent: rgba(224, 224, 224, .5);
 $d-color-back: #222;
 $d-color-back-hover: #3a3a3a;
+$d-color-table-head-back: #353535;
 $d-color-border: #5c5c5c;
 $d-color-link: #899ef1;
 $d-color-link-hover: #8db8fa;
@@ -63,6 +65,22 @@ table {
   td, th {
     padding: .25rem;
     vertical-align: top;
+  }
+  th.sortable {
+    cursor: pointer;
+    &.sorted {
+      &:before {
+        content: "↓";
+      }
+      &.ascending:before {
+        content: "↑";
+      }
+    }
+  }
+  thead {
+    th {
+      background: $color-table-head-back;
+    }
   }
   tbody {
     tr {
@@ -190,7 +208,11 @@ main.index {
 
   table {
     border-color: $d-color-border;
-
+    thead {
+      th {
+        background: $d-color-table-head-back;
+      }
+    }
     tbody {
       tr {
         &:hover { background: $d-color-back-hover; }
