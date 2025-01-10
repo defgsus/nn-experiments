@@ -9,6 +9,49 @@ You can also view these files online at [defgsus.github.io/nn-experiments/](http
 
 
 ## Index
+- [2025-01-10-review-kan-autoencoder.md](2025-01-10-review-kan-autoencoder.md)
+  - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#reviewing-kae-kolmogorov-arnold-auto-encoder-for-representation-learning) Reviewing "KAE: Kolmogorov-Arnold Auto-Encoder for Representation Learning"
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#preface) Preface
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kolmogorov-arnold-auto-encoder) Kolmogorov-Arnold Auto-Encoder
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#testing-the-baseline-mlp-model) Testing the baseline MLP model
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#testing-the-kae-p3-model) Testing the KAE (p=3) model
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#testing-mlp-with-64-hidden-dims) Testing MLP with 64 hidden dims
+    - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#testing-different-activation-functions) Testing different activation functions
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#mlp-with-relu6) MLP with ReLU6
+    - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#results-of-l2-reconstruction-on-mnist) Results of l2 reconstruction on MNIST
+    - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#results-of-l2-reconstruction-on-mnist-including-extra-tasks) Results of l2 reconstruction on MNIST including extra tasks
+  - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#appendix) Appendix
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#mlp-relusigmoid-adam-lr00001-batch-size256) MLP, relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#mlp-relu-adamw-lr00003-batch-size64) MLP, relu, ADAMW, lr=0.0003, batch size=64
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#mlp-relu6-adam-lr00001-batch-size256) MLP, relu6, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#mlp-relu6-adamw-lr00003-batch-size32) MLP, relu6, ADAMW, lr=0.0003, batch size=32
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#mlp-relu6-adamw-lr00003-batch-size64) MLP, relu6, ADAMW, lr=0.0003, batch size=64
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#mlp-relu6-adamw-lr00003-batch-size128) MLP, relu6, ADAMW, lr=0.0003, batch size=128
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#mlp-hid64-relusigmoid-adam-lr00001-batch-size256) MLP (hid=64), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#mlp-hid64-relu6-adamw-lr00003-batch-size64) MLP (hid=64), relu6, ADAMW, lr=0.0003, batch size=64
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#mlp-hid128-relu6-adamw-lr00003-batch-size64) MLP (hid=128), relu6, ADAMW, lr=0.0003, batch size=64
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#mlp-hid256-relu6-adamw-lr00003-batch-size64) MLP (hid=256), relu6, ADAMW, lr=0.0003, batch size=64
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-p3-relusigmoid-adam-lr00001-batch-size256) KAE (p=3), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-p4-relusigmoid-adam-lr00001-batch-size256) KAE (p=4), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-p5-relusigmoid-adam-lr00001-batch-size256) KAE (p=5), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-p6-relusigmoid-adam-lr00001-batch-size256) KAE (p=6), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-p3-relu6sigmoid-adam-lr00001-batch-size256) KAE (p=3), relu6/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-p3-relusigmoid-adam-lr00001-batch-size64) KAE (p=3), relu/sigmoid, ADAM, lr=0.0001, batch size=64
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-p3-relusigmoid-adam-lr00001-batch-size512) KAE (p=3), relu/sigmoid, ADAM, lr=0.0001, batch size=512
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-p3-relu6-adamw-lr00003-batch-size64) KAE (p=3), relu6, ADAMW, lr=0.0003, batch size=64
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-p3-relusigmoid-adamw-lr00003-batch-size64) KAE (p=3), relu/sigmoid, ADAMW, lr=0.0003, batch size=64
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-hid64-p2-relusigmoid-adam-lr00001-batch-size256) KAE (hid=64, p=2), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-hid128-p2-relusigmoid-adam-lr00001-batch-size256) KAE (hid=128, p=2), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-hid256-p2-relusigmoid-adam-lr00001-batch-size256) KAE (hid=256, p=2), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-hid64-p3-relusigmoid-adam-lr00001-batch-size256) KAE (hid=64, p=3), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-hid128-p3-relusigmoid-adam-lr00001-batch-size256) KAE (hid=128, p=3), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-hid256-p3-relusigmoid-adam-lr00001-batch-size256) KAE (hid=256, p=3), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-hid64-p4-relusigmoid-adam-lr00001-batch-size256) KAE (hid=64, p=4), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-hid128-p4-relusigmoid-adam-lr00001-batch-size256) KAE (hid=128, p=4), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-hid256-p4-relusigmoid-adam-lr00001-batch-size256) KAE (hid=256, p=4), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-hid64-p5-relusigmoid-adam-lr00001-batch-size256) KAE (hid=64, p=5), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-hid128-p5-relusigmoid-adam-lr00001-batch-size256) KAE (hid=128, p=5), relu/sigmoid, ADAM, lr=0.0001, batch size=256
+      - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#kae-hid256-p5-relusigmoid-adam-lr00001-batch-size256) KAE (hid=256, p=5), relu/sigmoid, ADAM, lr=0.0001, batch size=256
 - [2025-01-04-perceptual-distance.md](2025-01-04-perceptual-distance.md)
   - [:arrow_forward:](2025-01-04-perceptual-distance.md#perceptual-distance-and-the-generalized-mean-image-problem) Perceptual Distance and the "Generalized Mean Image Problem"
       - [:arrow_forward:](2025-01-04-perceptual-distance.md#experiment-setup) Experiment setup

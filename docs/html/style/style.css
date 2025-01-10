@@ -25,17 +25,22 @@ pre {
   h1, h2, h3, h4 {
     margin-top: 2rem; }
 
-    table {
-      border: 1px solid #bababa; }
+    .small {
+      font-size: 75%; }
+
       table td, table th {
-        padding: 0.25rem;
-        vertical-align: top; }
-        table th.sortable {
-          cursor: pointer; }
-          table th.sortable.sorted:before {
-            content: "↓"; }
-            table th.sortable.sorted.ascending:before {
-              content: "↑"; }
+        padding-right: 4px;
+        vertical-align: top;
+        border-right: 1px solid #c8c8c8;
+        border-bottom: 1px solid #c8c8c8; }
+        table td:nth-child(1), table th:nth-child(1) {
+          border-left: 1px solid #c8c8c8; }
+      table th.sortable {
+        cursor: pointer; }
+        table th.sortable.sorted:before {
+          content: "↓"; }
+          table th.sortable.sorted.ascending:before {
+            content: "↑"; }
       table thead th {
         background: #e6e6e6; }
       table tbody tr:hover {
@@ -78,7 +83,7 @@ main.article .article-left {
       display: none;   }
 }
 main.article .article-mid {
-  padding-left: 20rem;
+  padding-left: 21rem;
   width: 70%;
   max-width: 1800px; }
   @media (max-width: 1000px) {
@@ -125,6 +130,10 @@ main.index {
     color: #fff;   }
     table {
       border-color: #5c5c5c;   }
+      table td, table th {
+        border-color: #4c4c4d;   }
+        table td:nth-child(1), table th:nth-child(1) {
+          border-color: #4c4c4d;   }
       table thead th {
         background: #353535;   }
       table tbody tr:hover {

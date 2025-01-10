@@ -5,6 +5,7 @@ quite interesting
 (Fangchen Yu, Ruilizhen Hu, Yidong Lin, Yuqi Ma, Zhenghao Huang, Wenye Li, [2501.00420](https://arxiv.org/abs/2501.00420)). 
 It proclaims an auto-encoder model based on the 
 [Kolmogorov-Arnold Representation Theorem](https://en.wikipedia.org/wiki/Kolmogorov%E2%80%93Arnold_representation_theorem).
+
 *Kolmogorov-Arnold Network* (KAN) is a relatively new approach to Neural Networks
 ([2404.19756](https://arxiv.org/abs/2404.19756v4)), where
 activation functions are learned edge-wise instead of node-wise (or not at all). It's claimed
@@ -42,14 +43,14 @@ the paper myself.
 I like auto-encoders and did **a lot** of experiments with them. Since the authors of the KAE paper
 provided their code ([github.com/SciYu/KAE](https://github.com/SciYu/KAE)), i naturally did 
 not hesitate, copied the KAE model into my own experimental framework and tried a few things. 
-The results, however, were chastening. The model is slower and does not perform nearly as good as any
-baseline model i used before. But, to be fair, it's only a single layer model by default. 
+The results, however, were chastening. The model is slower and does not perform nearly as good as 
+my baseline CNN models. But, to be fair, it's only a single layer model by default. 
 So... back to base research. 
 
 Table 2 in the [paper](https://arxiv.org/abs/2501.00420), shows the *superiority* of the KAE model.
 The table looks pretty convincing. And indeed, using the author's code, it can be completely 
-reproduced. Generally, the paper is very clean and tidy and the made experiments are 
-quite meaningful and relevant. 
+reproduced. Generally, the paper is very clean and tidy and the conducted experiments are 
+meaningful. 
 
 I cloned the repo (at commit `bce71dca` from Dec 31, 2024) and started a 
 [jupyter lab](https://jupyter.org/) to reproduce the results of Table 2: 
@@ -105,9 +106,9 @@ def run_experiment(
 ### Testing the baseline MLP model
 
 The shipped configuration files enable testing all the models from Table 2 on 
-l2 reconstruction loss of the MNIST dataset,
+l2 reconstruction loss of the MNIST dataset with a latent dimension of 16,
 with Adam optimizer at learnrate 0.0001 and weight decay of 0.0001. In the paper, 
-the baseline model is called `AE` but i switched to `MLP` in this article.
+the baseline model is called `AE` but i switched to `MLP` for this article.
 
 ```python
 run_experiment("model_config/config0.yaml")
@@ -314,7 +315,7 @@ when this activation was used a lot. It puts everything between zero and one, wh
 intuitively seems to be a good choice for generating images.
 However, personally, i never had a good experience with it.
 The common activation function today is ReLU or some variant of it. For example, 
-in this [MNIST autoencoder experiment](../../logs/2023-11-12-mnist.md#varying-activation-function)
+in this [MNIST autoencoder experiment](2023-11-12-mnist.md#varying-activation-function)
 the best functions were ReLU6 and LeakyReLU.
 
 The author's code does not allow setting up the activation functions in the config file
@@ -396,31 +397,31 @@ Following is the table of all experiment results in compact form.
 
 | model                                                                       | act           |    params | optim   |     lr |   batch size |                       test loss<br/>(10 runs)↓ |   train time<br/>(10 ep) |
 |:----------------------------------------------------------------------------|:--------------|----------:|:--------|-------:|-------------:|-----------------------------------------------:|-------------------------:|
-| [MLP](#mlp-relusigmoid-adam-lr00001-batch-size256)                          | relu/sigmoid  |    25,888 | Adam    | 0.0001 |          256 |  0.0532&nbsp;<span class="small">±0.002</span> |                 48.4 sec |
-| [MLP](#mlp-relu-adamw-lr00001-batch-size64)                                 | relu          |    25,888 | Adamw   | 0.0003 |           64 |  0.0294&nbsp;<span class="small">±0.001</span> |                 55.2 sec |
+| [MLP](#mlp-relusigmoid-adam-lr00001-batch-size256)                          | relu/sigmoid  |    25,888 | Adam    | 0.0001 |          256 | 0.0532&nbsp;<span class="small">±0.0020</span> |                 48.4 sec |
+| [MLP](#mlp-relu-adamw-lr00003-batch-size64)                                 | relu          |    25,888 | Adamw   | 0.0003 |           64 | 0.0294&nbsp;<span class="small">±0.0010</span> |                 55.2 sec |
 | [MLP](#mlp-relu6-adam-lr00001-batch-size256)                                | relu6         |    25,888 | Adam    | 0.0001 |          256 | 0.0392&nbsp;<span class="small">±0.0015</span> |                 49.4 sec |
-| [MLP](#mlp-relu6-adamw-lr00001-batch-size32)                                | relu6         |    25,888 | Adamw   | 0.0003 |           32 | 0.0298&nbsp;<span class="small">±0.0011</span> |                 64.1 sec |
-| [MLP](#mlp-relu6-adamw-lr00001-batch-size64)                                | relu6         |    25,888 | Adamw   | 0.0003 |           64 |  0.0293&nbsp;<span class="small">±0.001</span> |                 55.1 sec |
-| [MLP](#mlp-relu6-adamw-lr00001-batch-size128)                               | relu6         |    25,888 | Adamw   | 0.0003 |          128 | 0.0304&nbsp;<span class="small">±0.0009</span> |                 51.1 sec |
+| [MLP](#mlp-relu6-adamw-lr00003-batch-size32)                                | relu6         |    25,888 | Adamw   | 0.0003 |           32 | 0.0298&nbsp;<span class="small">±0.0011</span> |                 64.1 sec |
+| [MLP](#mlp-relu6-adamw-lr00003-batch-size64)                                | relu6         |    25,888 | Adamw   | 0.0003 |           64 | 0.0293&nbsp;<span class="small">±0.0010</span> |                 55.1 sec |
+| [MLP](#mlp-relu6-adamw-lr00003-batch-size128)                               | relu6         |    25,888 | Adamw   | 0.0003 |          128 | 0.0304&nbsp;<span class="small">±0.0009</span> |                 51.1 sec |
 | [MLP (hid=64)](#mlp-hid64-relusigmoid-adam-lr00001-batch-size256)           | relu/sigmoid  |   103,328 | Adam    | 0.0001 |          256 | 0.0496&nbsp;<span class="small">±0.0018</span> |                 50.1 sec |
-| [MLP (hid=64)](#mlp-hid64-relu6-adamw-lr00001-batch-size64)                 | relu6         |   103,328 | Adamw   | 0.0003 |           64 | 0.0301&nbsp;<span class="small">±0.0015</span> |                 59.1 sec |
-| [MLP (hid=128)](#mlp-hid128-relu6-adamw-lr00001-batch-size64)               | relu6         |   205,856 | Adamw   | 0.0003 |           64 | 0.0267&nbsp;<span class="small">±0.0013</span> |                 69.1 sec |
-| [MLP (hid=256)](#mlp-hid256-relu6-adamw-lr00001-batch-size64)               | relu6         |   410,912 | Adamw   | 0.0003 |           64 | 0.0239&nbsp;<span class="small">±0.0011</span> |                 69.4 sec |
+| [MLP (hid=64)](#mlp-hid64-relu6-adamw-lr00003-batch-size64)                 | relu6         |   103,328 | Adamw   | 0.0003 |           64 | 0.0301&nbsp;<span class="small">±0.0015</span> |                 59.1 sec |
+| [MLP (hid=128)](#mlp-hid128-relu6-adamw-lr00003-batch-size64)               | relu6         |   205,856 | Adamw   | 0.0003 |           64 | 0.0267&nbsp;<span class="small">±0.0013</span> |                 69.1 sec |
+| [MLP (hid=256)](#mlp-hid256-relu6-adamw-lr00003-batch-size64)               | relu6         |   410,912 | Adamw   | 0.0003 |           64 | 0.0239&nbsp;<span class="small">±0.0011</span> |                 69.4 sec |
 | [KAE (p=3)](#kae-p3-relusigmoid-adam-lr00001-batch-size256)                 | relu/sigmoid  |   101,152 | Adam    | 0.0001 |          256 | 0.0243&nbsp;<span class="small">±0.0014</span> |                 62.3 sec |
 | [KAE (p=4)](#kae-p4-relusigmoid-adam-lr00001-batch-size256)                 | relu/sigmoid  |   126,240 | Adam    | 0.0001 |          256 | 0.0228&nbsp;<span class="small">±0.0011</span> |                 67.2 sec |
 | [KAE (p=5)](#kae-p5-relusigmoid-adam-lr00001-batch-size256)                 | relu/sigmoid  |   151,328 | Adam    | 0.0001 |          256 | 0.0224&nbsp;<span class="small">±0.0009</span> |                 75.2 sec |
 | [KAE (p=6)](#kae-p6-relusigmoid-adam-lr00001-batch-size256)                 | relu/sigmoid  |   176,416 | Adam    | 0.0001 |          256 | 0.0227&nbsp;<span class="small">±0.0011</span> |                 81.8 sec |
 | [KAE (p=3)](#kae-p3-relu6sigmoid-adam-lr00001-batch-size256)                | relu6/sigmoid |   101,152 | Adam    | 0.0001 |          256 | 0.0235&nbsp;<span class="small">±0.0012</span> |                 63.7 sec |
-| [KAE (p=3)](#kae-p3-relusigmoid-adam-lr00001-batch-size64)                  | relu/sigmoid  |   101,152 | Adam    | 0.0001 |           64 |  0.0256&nbsp;<span class="small">±0.002</span> |                 72.5 sec |
+| [KAE (p=3)](#kae-p3-relusigmoid-adam-lr00001-batch-size64)                  | relu/sigmoid  |   101,152 | Adam    | 0.0001 |           64 | 0.0256&nbsp;<span class="small">±0.0020</span> |                 72.5 sec |
 | [KAE (p=3)](#kae-p3-relusigmoid-adam-lr00001-batch-size512)                 | relu/sigmoid  |   101,152 | Adam    | 0.0001 |          512 | 0.0255&nbsp;<span class="small">±0.0007</span> |                 61.5 sec |
-| [KAE (p=3)](#kae-p3-relu6-adamw-lr00001-batch-size64)                       | relu6         |   101,152 | Adamw   | 0.0003 |           64 | 0.0346&nbsp;<span class="small">±0.0023</span> |                 70.8 sec |
-| [KAE (p=3)](#kae-p3-relusigmoid-adamw-lr00001-batch-size64)                 | relu/sigmoid  |   101,152 | Adamw   | 0.0003 |           64 | 0.0308&nbsp;<span class="small">±0.0032</span> |                 70.5 sec |
+| [KAE (p=3)](#kae-p3-relu6-adamw-lr00003-batch-size64)                       | relu6         |   101,152 | Adamw   | 0.0003 |           64 | 0.0346&nbsp;<span class="small">±0.0023</span> |                 70.8 sec |
+| [KAE (p=3)](#kae-p3-relusigmoid-adamw-lr00003-batch-size64)                 | relu/sigmoid  |   101,152 | Adamw   | 0.0003 |           64 | 0.0308&nbsp;<span class="small">±0.0032</span> |                 70.5 sec |
 | [KAE (hid=64, p=2)](#kae-hid64-p2-relusigmoid-adam-lr00001-batch-size256)   | relu/sigmoid  |   308,128 | Adam    | 0.0001 |          256 | 0.0256&nbsp;<span class="small">±0.0014</span> |                 94.6 sec |
 | [KAE (hid=128, p=2)](#kae-hid128-p2-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  |   615,456 | Adam    | 0.0001 |          256 | 0.0218&nbsp;<span class="small">±0.0015</span> |                157.9 sec |
 | [KAE (hid=256, p=2)](#kae-hid256-p2-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 1,230,112 | Adam    | 0.0001 |          256 | 0.0226&nbsp;<span class="small">±0.0029</span> |                250.1 sec |
 | [KAE (hid=64, p=3)](#kae-hid64-p3-relusigmoid-adam-lr00001-batch-size256)   | relu/sigmoid  |   410,528 | Adam    | 0.0001 |          256 | 0.0222&nbsp;<span class="small">±0.0016</span> |                105.7 sec |
 | [KAE (hid=128, p=3)](#kae-hid128-p3-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  |   820,256 | Adam    | 0.0001 |          256 | 0.0176&nbsp;<span class="small">±0.0007</span> |                196.8 sec |
-| [KAE (hid=256, p=3)](#kae-hid256-p3-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 1,639,712 | Adam    | 0.0001 |          256 |  0.0159&nbsp;<span class="small">±0.001</span> |                331.3 sec |
+| [KAE (hid=256, p=3)](#kae-hid256-p3-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 1,639,712 | Adam    | 0.0001 |          256 | 0.0159&nbsp;<span class="small">±0.0010</span> |                331.3 sec |
 | [KAE (hid=64, p=4)](#kae-hid64-p4-relusigmoid-adam-lr00001-batch-size256)   | relu/sigmoid  |   512,928 | Adam    | 0.0001 |          256 | 0.0199&nbsp;<span class="small">±0.0019</span> |                142.4 sec |
 | [KAE (hid=128, p=4)](#kae-hid128-p4-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 1,025,056 | Adam    | 0.0001 |          256 | 0.0165&nbsp;<span class="small">±0.0008</span> |                258.2 sec |
 | [KAE (hid=256, p=4)](#kae-hid256-p4-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 2,049,312 | Adam    | 0.0001 |          256 | 0.0149&nbsp;<span class="small">±0.0006</span> |                437.4 sec |
@@ -428,16 +429,31 @@ Following is the table of all experiment results in compact form.
 | [KAE (hid=128, p=5)](#kae-hid128-p5-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 1,229,856 | Adam    | 0.0001 |          256 | 0.0155&nbsp;<span class="small">±0.0007</span> |                332.4 sec |
 | [KAE (hid=256, p=5)](#kae-hid256-p5-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 2,458,912 | Adam    | 0.0001 |          256 | 0.0141&nbsp;<span class="small">±0.0007</span> |                553.6 sec |
 
-There is probably a way to increase the performance of the proposed KAE (p=3) model, with the right
+There surely is a way to increase the performance of the proposed KAE (p=3) model, with the right
 batch size, optimizer settings, input and layer normalization or other means. 
-I did not find it, yet, but adding an extra layer shows significant performance gains. 
+I did not find it, yet, but adding an extra layer shows significant performance gains!
 
 However, the difference of performance between a well-trained, much smaller 
 MLP auto-encoder and the KAN auto-encoder (p=5) is only **0.007** in my experiments which does
 not really justify using the term *superior* five times in the document. That might be 
 my personal distaste but i rather would just term it *increased performance*.
 
-# Results of l2 reconstruction on MNIST including extra tasks
+Now, despite of all the numbers, what do the models actually do? They squeeze the 28x28 MNIST images
+through a 16-dim latent vector and reproduce them. The compression ratio is 49! Let's see some
+of the images from the MNIST validation set 
+(odd columns are originals, even columns are reproductions):
+
+| example images                                                                             |     loss | model                                                                                                                                            |
+|:-------------------------------------------------------------------------------------------|---------:|:-------------------------------------------------------------------------------------------------------------------------------------------------|
+| ![image](img/kae/reconstruction-mlp-relusigmoid-adam-lr00001-batch-size256.png)            |   0.0532 | MLP, relu/sigmoid, ADAM, lr=0.0001, batch size=256<br/><br/>The simple MLP used in Table 2 of the paper                                          |
+| ![image](img/kae/reconstruction-mlp-relu6-adamw-lr00003-batch-size64.png)                  |   0.0293 | MLP, relu6, ADAMW, lr=0.0003, batch size=64<br/><br/>The improved MLP                                                                            |
+| ![image](img/kae/reconstruction-kae-p3-relu6sigmoid-adam-lr00001-batch-size256.png)        |   0.0243 | KAE (p=3), relu/sigmoid, ADAM, lr=0.0001, batch size=256<br/><br/>Original KAE from paper                                                        |
+| ![image](img/kae/reconstruction-kae-hid128-p2-relusigmoid-adam-lr00001-batch-size256.png)  |   0.0218 | KAE (hid=128, p=2), relu/sigmoid, ADAM, lr=0.0001, batch size=256<br/><br/>Improved KAE with hidden layer                                        |
+| ![image](img/kae/reconstruction-kae-hid256-p5-relusigmoid-adam-lr00001-batch-size256.png)  |   0.0141 | KAE (hid=256, p=5), relu/sigmoid, ADAM, lr=0.0001, batch size=256<br/><br/>Best model in these experiments,<br/>although completely oversized ;) |
+
+
+
+## Results of l2 reconstruction on MNIST including extra tasks
 
 Below is the same table including the test results for **classification**, **retrieval** and 
 **denoising**, as detailed in the author's
@@ -446,31 +462,31 @@ Below is the same table including the test results for **classification**, **ret
 
 | model                                                                       | act           |    params | optim/lr/bs      |                       test loss<br/>(10 runs)↓ |   train time<br/>(10 ep) | classifier<br/>accuracy↑ | retriever<br/>recall@5↑ | denoiser<br/>salt&pepper↓ |
 |:----------------------------------------------------------------------------|:--------------|----------:|:-----------------|-----------------------------------------------:|-------------------------:|-------------------------:|------------------------:|--------------------------:|
-| [MLP](#mlp-relusigmoid-adam-lr00001-batch-size256)                          | relu/sigmoid  |    25,888 | Adam/0.0001/256  |  0.0532&nbsp;<span class="small">±0.002</span> |                 48.4 sec |                   0.8859 |                  0.4021 |                    0.0870 |
-| [MLP](#mlp-relu-adamw-lr00001-batch-size64)                                 | relu          |    25,888 | Adamw/0.0003/64  |  0.0294&nbsp;<span class="small">±0.001</span> |                 55.2 sec |                   0.9524 |                  0.5261 |                    0.0750 |
+| [MLP](#mlp-relusigmoid-adam-lr00001-batch-size256)                          | relu/sigmoid  |    25,888 | Adam/0.0001/256  | 0.0532&nbsp;<span class="small">±0.0020</span> |                 48.4 sec |                   0.8859 |                  0.4021 |                    0.0870 |
+| [MLP](#mlp-relu-adamw-lr00003-batch-size64)                                 | relu          |    25,888 | Adamw/0.0003/64  | 0.0294&nbsp;<span class="small">±0.0010</span> |                 55.2 sec |                   0.9524 |                  0.5261 |                    0.0750 |
 | [MLP](#mlp-relu6-adam-lr00001-batch-size256)                                | relu6         |    25,888 | Adam/0.0001/256  | 0.0392&nbsp;<span class="small">±0.0015</span> |                 49.4 sec |                   0.9266 |                  0.5021 |                    0.0772 |
-| [MLP](#mlp-relu6-adamw-lr00001-batch-size32)                                | relu6         |    25,888 | Adamw/0.0003/32  | 0.0298&nbsp;<span class="small">±0.0011</span> |                 64.1 sec |                   0.9515 |                  0.5407 |                    0.0762 |
-| [MLP](#mlp-relu6-adamw-lr00001-batch-size64)                                | relu6         |    25,888 | Adamw/0.0003/64  |  0.0293&nbsp;<span class="small">±0.001</span> |                 55.1 sec |                   0.9523 |                  0.5296 |                    0.0750 |
-| [MLP](#mlp-relu6-adamw-lr00001-batch-size128)                               | relu6         |    25,888 | Adamw/0.0003/128 | 0.0304&nbsp;<span class="small">±0.0009</span> |                 51.1 sec |                   0.9492 |                  0.5157 |                    0.0742 |
+| [MLP](#mlp-relu6-adamw-lr00003-batch-size32)                                | relu6         |    25,888 | Adamw/0.0003/32  | 0.0298&nbsp;<span class="small">±0.0011</span> |                 64.1 sec |                   0.9515 |                  0.5407 |                    0.0762 |
+| [MLP](#mlp-relu6-adamw-lr00003-batch-size64)                                | relu6         |    25,888 | Adamw/0.0003/64  | 0.0293&nbsp;<span class="small">±0.0010</span> |                 55.1 sec |                   0.9523 |                  0.5296 |                    0.0750 |
+| [MLP](#mlp-relu6-adamw-lr00003-batch-size128)                               | relu6         |    25,888 | Adamw/0.0003/128 | 0.0304&nbsp;<span class="small">±0.0009</span> |                 51.1 sec |                   0.9492 |                  0.5157 |                    0.0742 |
 | [MLP (hid=64)](#mlp-hid64-relusigmoid-adam-lr00001-batch-size256)           | relu/sigmoid  |   103,328 | Adam/0.0001/256  | 0.0496&nbsp;<span class="small">±0.0018</span> |                 50.1 sec |                   0.8084 |                  0.3531 |                    0.0851 |
-| [MLP (hid=64)](#mlp-hid64-relu6-adamw-lr00001-batch-size64)                 | relu6         |   103,328 | Adamw/0.0003/64  | 0.0301&nbsp;<span class="small">±0.0015</span> |                 59.1 sec |                   0.9392 |                  0.5348 |                    0.0746 |
-| [MLP (hid=128)](#mlp-hid128-relu6-adamw-lr00001-batch-size64)               | relu6         |   205,856 | Adamw/0.0003/64  | 0.0267&nbsp;<span class="small">±0.0013</span> |                 69.1 sec |                   0.9468 |                  0.5641 |                    0.0726 |
-| [MLP (hid=256)](#mlp-hid256-relu6-adamw-lr00001-batch-size64)               | relu6         |   410,912 | Adamw/0.0003/64  | 0.0239&nbsp;<span class="small">±0.0011</span> |                 69.4 sec |                   0.9581 |                  0.6025 |                    0.0714 |
+| [MLP (hid=64)](#mlp-hid64-relu6-adamw-lr00003-batch-size64)                 | relu6         |   103,328 | Adamw/0.0003/64  | 0.0301&nbsp;<span class="small">±0.0015</span> |                 59.1 sec |                   0.9392 |                  0.5348 |                    0.0746 |
+| [MLP (hid=128)](#mlp-hid128-relu6-adamw-lr00003-batch-size64)               | relu6         |   205,856 | Adamw/0.0003/64  | 0.0267&nbsp;<span class="small">±0.0013</span> |                 69.1 sec |                   0.9468 |                  0.5641 |                    0.0726 |
+| [MLP (hid=256)](#mlp-hid256-relu6-adamw-lr00003-batch-size64)               | relu6         |   410,912 | Adamw/0.0003/64  | 0.0239&nbsp;<span class="small">±0.0011</span> |                 69.4 sec |                   0.9581 |                  0.6025 |                    0.0714 |
 | [KAE (p=3)](#kae-p3-relusigmoid-adam-lr00001-batch-size256)                 | relu/sigmoid  |   101,152 | Adam/0.0001/256  | 0.0243&nbsp;<span class="small">±0.0014</span> |                 62.3 sec |                   0.9523 |                  0.5446 |                    0.0672 |
 | [KAE (p=4)](#kae-p4-relusigmoid-adam-lr00001-batch-size256)                 | relu/sigmoid  |   126,240 | Adam/0.0001/256  | 0.0228&nbsp;<span class="small">±0.0011</span> |                 67.2 sec |                   0.9540 |                  0.5375 |                    0.0681 |
 | [KAE (p=5)](#kae-p5-relusigmoid-adam-lr00001-batch-size256)                 | relu/sigmoid  |   151,328 | Adam/0.0001/256  | 0.0224&nbsp;<span class="small">±0.0009</span> |                 75.2 sec |                   0.9533 |                  0.5375 |                    0.0702 |
 | [KAE (p=6)](#kae-p6-relusigmoid-adam-lr00001-batch-size256)                 | relu/sigmoid  |   176,416 | Adam/0.0001/256  | 0.0227&nbsp;<span class="small">±0.0011</span> |                 81.8 sec |                   0.9541 |                  0.5608 |                    0.0704 |
 | [KAE (p=3)](#kae-p3-relu6sigmoid-adam-lr00001-batch-size256)                | relu6/sigmoid |   101,152 | Adam/0.0001/256  | 0.0235&nbsp;<span class="small">±0.0012</span> |                 63.7 sec |                   0.9592 |                  0.6092 |                    0.0665 |
-| [KAE (p=3)](#kae-p3-relusigmoid-adam-lr00001-batch-size64)                  | relu/sigmoid  |   101,152 | Adam/0.0001/64   |  0.0256&nbsp;<span class="small">±0.002</span> |                 72.5 sec |                   0.9530 |                  0.5546 |                    0.0676 |
+| [KAE (p=3)](#kae-p3-relusigmoid-adam-lr00001-batch-size64)                  | relu/sigmoid  |   101,152 | Adam/0.0001/64   | 0.0256&nbsp;<span class="small">±0.0020</span> |                 72.5 sec |                   0.9530 |                  0.5546 |                    0.0676 |
 | [KAE (p=3)](#kae-p3-relusigmoid-adam-lr00001-batch-size512)                 | relu/sigmoid  |   101,152 | Adam/0.0001/512  | 0.0255&nbsp;<span class="small">±0.0007</span> |                 61.5 sec |                   0.9399 |                  0.5172 |                    0.0688 |
-| [KAE (p=3)](#kae-p3-relu6-adamw-lr00001-batch-size64)                       | relu6         |   101,152 | Adamw/0.0003/64  | 0.0346&nbsp;<span class="small">±0.0023</span> |                 70.8 sec |                   0.9365 |                  0.5522 |                    0.0887 |
-| [KAE (p=3)](#kae-p3-relusigmoid-adamw-lr00001-batch-size64)                 | relu/sigmoid  |   101,152 | Adamw/0.0003/64  | 0.0308&nbsp;<span class="small">±0.0032</span> |                 70.5 sec |                   0.9370 |                  0.5342 |                    0.0788 |
+| [KAE (p=3)](#kae-p3-relu6-adamw-lr00003-batch-size64)                       | relu6         |   101,152 | Adamw/0.0003/64  | 0.0346&nbsp;<span class="small">±0.0023</span> |                 70.8 sec |                   0.9365 |                  0.5522 |                    0.0887 |
+| [KAE (p=3)](#kae-p3-relusigmoid-adamw-lr00003-batch-size64)                 | relu/sigmoid  |   101,152 | Adamw/0.0003/64  | 0.0308&nbsp;<span class="small">±0.0032</span> |                 70.5 sec |                   0.9370 |                  0.5342 |                    0.0788 |
 | [KAE (hid=64, p=2)](#kae-hid64-p2-relusigmoid-adam-lr00001-batch-size256)   | relu/sigmoid  |   308,128 | Adam/0.0001/256  | 0.0256&nbsp;<span class="small">±0.0014</span> |                 94.6 sec |                   0.9339 |                  0.5227 |                    0.0692 |
 | [KAE (hid=128, p=2)](#kae-hid128-p2-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  |   615,456 | Adam/0.0001/256  | 0.0218&nbsp;<span class="small">±0.0015</span> |                157.9 sec |                   0.9527 |                  0.5730 |                    0.0649 |
 | [KAE (hid=256, p=2)](#kae-hid256-p2-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 1,230,112 | Adam/0.0001/256  | 0.0226&nbsp;<span class="small">±0.0029</span> |                250.1 sec |                   0.9511 |                  0.5753 |                    0.0652 |
 | [KAE (hid=64, p=3)](#kae-hid64-p3-relusigmoid-adam-lr00001-batch-size256)   | relu/sigmoid  |   410,528 | Adam/0.0001/256  | 0.0222&nbsp;<span class="small">±0.0016</span> |                105.7 sec |                   0.9529 |                  0.5846 |                    0.0706 |
 | [KAE (hid=128, p=3)](#kae-hid128-p3-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  |   820,256 | Adam/0.0001/256  | 0.0176&nbsp;<span class="small">±0.0007</span> |                196.8 sec |                   0.9542 |                  0.6200 |                    0.0684 |
-| [KAE (hid=256, p=3)](#kae-hid256-p3-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 1,639,712 | Adam/0.0001/256  |  0.0159&nbsp;<span class="small">±0.001</span> |                331.3 sec |                   0.9582 |                  0.6357 |                    0.0656 |
+| [KAE (hid=256, p=3)](#kae-hid256-p3-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 1,639,712 | Adam/0.0001/256  | 0.0159&nbsp;<span class="small">±0.0010</span> |                331.3 sec |                   0.9582 |                  0.6357 |                    0.0656 |
 | [KAE (hid=64, p=4)](#kae-hid64-p4-relusigmoid-adam-lr00001-batch-size256)   | relu/sigmoid  |   512,928 | Adam/0.0001/256  | 0.0199&nbsp;<span class="small">±0.0019</span> |                142.4 sec |                   0.9587 |                  0.6048 |                    0.0717 |
 | [KAE (hid=128, p=4)](#kae-hid128-p4-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 1,025,056 | Adam/0.0001/256  | 0.0165&nbsp;<span class="small">±0.0008</span> |                258.2 sec |                   0.9592 |                  0.6278 |                    0.0676 |
 | [KAE (hid=256, p=4)](#kae-hid256-p4-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 2,049,312 | Adam/0.0001/256  | 0.0149&nbsp;<span class="small">±0.0006</span> |                437.4 sec |                   0.9608 |                  0.6482 |                    0.0668 |
@@ -478,11 +494,15 @@ Below is the same table including the test results for **classification**, **ret
 | [KAE (hid=128, p=5)](#kae-hid128-p5-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 1,229,856 | Adam/0.0001/256  | 0.0155&nbsp;<span class="small">±0.0007</span> |                332.4 sec |                   0.9607 |                  0.6241 |                    0.0671 |
 | [KAE (hid=256, p=5)](#kae-hid256-p5-relusigmoid-adam-lr00001-batch-size256) | relu/sigmoid  | 2,458,912 | Adam/0.0001/256  | 0.0141&nbsp;<span class="small">±0.0007</span> |                553.6 sec |                   0.9612 |                  0.6313 |                    0.0675 |
 
+In conclusion i would argue that this particular polynomial KAN-based autoencoder is 
+an interesting new approach. The model code is easy to read and certainly invites 
+for further experimentation.
+
 
 # Appendix
 
 Just listing the lengthy experiment setups / outputs here. It's not much to see, just a
-proof of work. You can repeat the experiments with
+proof of reproducibility. You can repeat the experiments with
 
 ```shell
 git clone https://github.com/defgsus/KAE
@@ -575,7 +595,7 @@ average/best test loss: 0.053190904268994935 / 0.04967067549005151
 ```
 
 
-### MLP, relu, ADAMW, lr=0.0001, batch size=64
+### MLP, relu, ADAMW, lr=0.0003, batch size=64
 
 ```
 model_config/config0.yaml
@@ -735,7 +755,7 @@ average/best test loss: 0.03924984367564321 / 0.03638914376497269
 ```
 
 
-### MLP, relu6, ADAMW, lr=0.0001, batch size=32
+### MLP, relu6, ADAMW, lr=0.0003, batch size=32
 
 ```
 model_config/config0.yaml
@@ -815,7 +835,7 @@ average/best test loss: 0.029788081589550635 / 0.027876560507824246
 ```
 
 
-### MLP, relu6, ADAMW, lr=0.0001, batch size=64
+### MLP, relu6, ADAMW, lr=0.0003, batch size=64
 
 ```
 model_config/config0.yaml
@@ -895,7 +915,7 @@ average/best test loss: 0.029335998093626296 / 0.02781044684682682
 ```
 
 
-### MLP, relu6, ADAMW, lr=0.0001, batch size=128
+### MLP, relu6, ADAMW, lr=0.0003, batch size=128
 
 ```
 model_config/config0.yaml
@@ -1062,7 +1082,7 @@ average/best test loss: 0.049578257398679854 / 0.047026059683412315
 ```
 
 
-### MLP (hid=64), relu6, ADAMW, lr=0.0001, batch size=64
+### MLP (hid=64), relu6, ADAMW, lr=0.0003, batch size=64
 
 ```
 model_config/config0.yaml
@@ -1150,7 +1170,7 @@ average/best test loss: 0.030067341848258766 / 0.028075553085299056
 ```
 
 
-### MLP (hid=128), relu6, ADAMW, lr=0.0001, batch size=64
+### MLP (hid=128), relu6, ADAMW, lr=0.0003, batch size=64
 
 ```
 model_config/config0.yaml
@@ -1238,7 +1258,7 @@ average/best test loss: 0.02666844483583596 / 0.024743097069062244
 ```
 
 
-### MLP (hid=256), relu6, ADAMW, lr=0.0001, batch size=64
+### MLP (hid=256), relu6, ADAMW, lr=0.0003, batch size=64
 
 ```
 model_config/config0.yaml
@@ -1887,7 +1907,7 @@ average/best test loss: 0.025544900260865692 / 0.024276717472821473
 ```
 
 
-### KAE (p=3), relu6, ADAMW, lr=0.0001, batch size=64
+### KAE (p=3), relu6, ADAMW, lr=0.0003, batch size=64
 
 ```
 model_config/config6.yaml
@@ -1968,7 +1988,7 @@ average/best test loss: 0.034560139508099316 / 0.03023416113559228
 ```
 
 
-### KAE (p=3), relu/sigmoid, ADAMW, lr=0.0001, batch size=64
+### KAE (p=3), relu/sigmoid, ADAMW, lr=0.0003, batch size=64
 
 ```
 model_config/config6.yaml
