@@ -10,6 +10,8 @@ document.addEventListener("DOMContentLoaded", function() {
             // remove the typical endings
             if (v.endsWith("/s"))
                 v = v.slice(0, v.length - 2);
+            else if (v.endsWith(" sec"))
+                v = v.slice(0, v.length - 4);
             return v;
         }
 

@@ -1,12 +1,14 @@
 $screen-small: 1000px;
 
 $sidebar-width: 20rem;
+$sidebar-width-pad: 21rem;
 
 $color-font: #000;
 $color-font-transparent: rgba(0, 0, 0, .5);
 $color-back: #fff;
 $color-back-hover: #ebebeb;
 $color-table-head-back: #e6e6e6;
+$color-table-border: #c8c8c8;
 $color-border: #bababa;
 $color-link: #0d0dee;
 $color-link-hover: #1010f0;
@@ -19,6 +21,7 @@ $d-color-font-transparent: rgba(224, 224, 224, .5);
 $d-color-back: #222;
 $d-color-back-hover: #3a3a3a;
 $d-color-table-head-back: #353535;
+$d-color-table-border: #4c4c4d;
 $d-color-border: #5c5c5c;
 $d-color-link: #899ef1;
 $d-color-link-hover: #8db8fa;
@@ -57,14 +60,22 @@ h1, h2, h3, h4 {
   margin-top: 2rem;
 }
 
+.small {
+  font-size: 75%;
+}
 
 table {
   // font-family: monospace;
-  border: 1px solid $color-border;
+  // border: 1px solid $color-border;
 
   td, th {
-    padding: .25rem;
+    padding-right: 4px;
     vertical-align: top;
+    border-right: 1px solid $color-table-border;
+    border-bottom: 1px solid $color-table-border;
+    &:nth-child(1) {
+      border-left: 1px solid $color-table-border;
+    }
   }
   th.sortable {
     cursor: pointer;
@@ -133,7 +144,7 @@ main.article {
   }
 
   .article-mid {
-    padding-left: $sidebar-width;
+    padding-left: $sidebar-width-pad;
     width: 70%;
     max-width: 1800px;
     @media (max-width: $screen-small) {
@@ -208,6 +219,12 @@ main.index {
 
   table {
     border-color: $d-color-border;
+    td, th {
+      border-color: $d-color-table-border;
+      &:nth-child(1) {
+        border-color: $d-color-table-border;
+      }
+    }
     thead {
       th {
         background: $d-color-table-head-back;
