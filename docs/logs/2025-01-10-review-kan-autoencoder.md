@@ -1,7 +1,7 @@
 # Reviewing "KAE: Kolmogorov-Arnold Auto-Encoder for Representation Learning"
 
-While browsing arxiv.org, i found a recent paper from the Shenzhen University that seemed
-quite interesting 
+While browsing arxiv.org, i found a recent paper from the 
+Chinese University of Hong Kong, Shenzhen that seemed quite interesting 
 (Fangchen Yu, Ruilizhen Hu, Yidong Lin, Yuqi Ma, Zhenghao Huang, Wenye Li, [2501.00420](https://arxiv.org/abs/2501.00420)). 
 It proclaims an auto-encoder model based on the 
 [Kolmogorov-Arnold Representation Theorem](https://en.wikipedia.org/wiki/Kolmogorov%E2%80%93Arnold_representation_theorem).
@@ -50,7 +50,7 @@ So... back to base research.
 Table 2 in the [paper](https://arxiv.org/abs/2501.00420), shows the *superiority* of the KAE model.
 The table looks pretty convincing. And indeed, using the author's code, it can be completely 
 reproduced. Generally, the paper is very clean and tidy and the conducted experiments are 
-meaningful. 
+insightful. 
 
 I cloned the repo (at commit `bce71dca` from Dec 31, 2024) and started a 
 [jupyter lab](https://jupyter.org/) to reproduce the results of Table 2: 
