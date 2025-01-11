@@ -9,7 +9,7 @@ abstract:
 > *Despite its excellent performance, DeepSeek-V3 requires only 
 > 2.788M H800 GPU hours for its full training.*
 
-They say ***only*** because there are models require more.
+They say ***only*** because there are models that require more.
 
 2.788 million hours! That is about 326 years on a H800 GPU which consumes about 350 Watt.
 That is about **975,800,000 Watt**, 
