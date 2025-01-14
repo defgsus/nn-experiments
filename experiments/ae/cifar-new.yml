@@ -1,0 +1,75 @@
+experiment_name: ae/cifar2_${matrix_slug}
+
+matrix:
+  l:
+    - 5
+  ch:
+    #- [64, 128, 128, 128, 14]
+    - [64, 64, 16, 16, 2]
+  ks:
+    - 3
+  pad:
+    - 1
+  dil:
+    - 1
+  shuf:
+    - [0, 4, 0, 0, 0]
+  act:
+    - "relu6"
+  percept_ch:
+    - 0
+    #- 128
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+feature_loss_weight: 0.
+
+perceptual_model: |
+  if ${percept_ch} == 0:
+      model = None
+  else:
+      model = nn.Sequential(
+          nn.Conv2d(SHAPE[0], ${percept_ch}, kernel_size=3, padding=1),
+      )
+  model
+
+train_set: |
+  cifar10_dataset(shape=SHAPE, train=True)
+
+validation_set: |
+  cifar10_dataset(shape=SHAPE, train=False)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 1_000_000
+
+globals:
+  SHAPE: (3, 32, 32)
+
+model: |
+  from experiments.ae.models.new import NewAutoEncoder
+
+  model = NewAutoEncoder(
+      in_channels=SHAPE[0],
+      num_layers=${l}, 
+      channels=${ch}, 
+      kernel_size=${ks},
+      padding=${pad},
+      dilation=${dil},
+      shuffle=${shuf},
+      activation='${act}',
+  )
+  
+  with torch.no_grad():
+      print(model)
+      inp = torch.ones(1, *SHAPE)
+      outp = dump_module_stacktrace(model.encoder, inp)
+      print(inp.shape, "->", outp.shape)
+      print("RATIO:", math.prod(inp.shape) / math.prod(outp.shape))
+      print(f"params: {num_module_parameters(model):,}")
+  
+      recon = dump_module_stacktrace(model.decoder, outp)
+  
+  model

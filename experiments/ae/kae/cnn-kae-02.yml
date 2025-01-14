@@ -1,0 +1,72 @@
+experiment_name: ae/kae/cnn-kae-02-mnist_${matrix_slug}
+
+matrix:
+  trial: [1]
+  bs:
+    - 64
+#    - 128
+  lr:
+    - 0.0003
+  opt:
+    - "AdamW"
+#    - "Adam"
+  ch:
+    - [32]
+    #- [24, 32, 48]
+    #- [24, 24, 24]
+    #- [48, 32, 24]
+  ks:
+#    - 3
+    #- 5
+    - 7
+  enckae:
+    - 3
+    - 0
+  deckae:
+    - 3
+    - 0
+  act:
+    - "none"
+    - "relu"
+    - "sigmoid"
+  latact:
+    - "sigmoid"
+    - "none"
+  outact:
+    - "sigmoid"
+    - "none"
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+feature_loss_weight: 0.
+loss_function: l2
+
+train_set: |
+  mnist_dataset(shape=SHAPE, train=True)
+
+validation_set: |
+  mnist_dataset(shape=SHAPE, train=False)
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+#scheduler: CosineAnnealingLR
+max_inputs: 300_000
+
+globals:
+  SHAPE: (1, 28, 28)
+  CODE_SIZE: 16
+
+model: |
+  from experiments.ae.kae.cnn_kae import CNNKAE
+  
+  CNNKAE(
+      shape=SHAPE, 
+      latent_dim=CODE_SIZE, 
+      channels=${ch}, 
+      kernel_size=${ks},
+      encoder_kae_order=${enckae},
+      decoder_kae_order=${deckae},
+      activation="${act}",
+      latent_activation="${latact}",
+      output_activation="${outact}",
+  )

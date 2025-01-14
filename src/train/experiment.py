@@ -410,7 +410,7 @@ def get_matrix_entries(matrix: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
 
 def get_matrix_slug(entry: dict) -> str:
     def _value_str(value):
-        return str(value)[:40]
+        return str(value)[:60]
 
     slug = "_".join(
         f"{key}:{_value_str(value)}"
@@ -574,7 +574,7 @@ def construct_scheduler(optimizer: torch.optim.Optimizer, parameter: str, kwargs
     klass = getattr(src.scheduler, parameter, None)
     if klass is None:
         klass = getattr(torch.optim.lr_scheduler, parameter)
-    print("SCHEDULER", klass, kwargs["max_inputs"] // kwargs["batch_size"])
+    # print("SCHEDULER", klass, kwargs["max_inputs"] // kwargs["batch_size"])
     return klass(optimizer, kwargs["max_inputs"] // kwargs["batch_size"])
 
 

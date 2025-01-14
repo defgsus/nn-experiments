@@ -1,0 +1,61 @@
+experiment_name: ae/mlp_${matrix_slug}
+
+matrix:
+  ds:
+    - "mnist"
+  s:
+    - [1, 28, 28]
+  ch:
+    - [16]
+  act:
+    - "relu6"
+    #- "sigmoid"
+  percept_ch:
+    - 0
+    #- 128
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+feature_loss_weight: 0.
+
+perceptual_model: |
+  if ${percept_ch} == 0:
+      model = None
+  else:
+      model = nn.Sequential(
+          nn.Conv2d(${s}[0], ${percept_ch}, kernel_size=3, padding=1),
+      )
+  model
+
+train_set: |
+  ${ds}_dataset(shape=${s}, train=True)
+
+validation_set: |
+  ${ds}_dataset(shape=${s}, train=False)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingWarmupLR
+loss_function: l2
+max_inputs: 10_000_000
+
+model: |
+  from experiments.ae.kan.mlpae import MLPAE
+  
+  model = MLPAE(
+      shape=${s},
+      channels=${ch}, 
+      activation='${act}',
+  )
+  
+  with torch.no_grad():
+      print(model)
+      inp = torch.ones(1, *${s})
+      outp = dump_module_stacktrace(model.encoder, inp)
+      print(inp.shape[1:], "->", outp.shape[1:])
+      print("RATIO:", math.prod(inp.shape) / math.prod(outp.shape))
+      print(f"params: {num_module_parameters(model):,}")
+  
+      recon = dump_module_stacktrace(model.decoder, outp)
+  
+  model

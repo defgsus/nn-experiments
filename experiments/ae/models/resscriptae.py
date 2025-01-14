@@ -76,7 +76,7 @@ class ResidualScriptedAE(nn.Module):
 
     COMMANDS = {
         "ch": re.compile(r"ch\s*([*/=])\s*(\d+)"),
-        "down": re.compile(r"down"),
+        "down": re.compile(r"down(\d)"),
     }
 
     def __init__(
@@ -84,6 +84,7 @@ class ResidualScriptedAE(nn.Module):
             channels: int,
             script: str,
             kernel_size: int = 1,
+            padding: int = 0,
             activation: Union[None, str, Callable] = None,
             residual: str = "add",
             groups: int = 1,

@@ -99,6 +99,8 @@ def activation_to_module(
 
     if isinstance(activation, str):
         s = activation.lower()
+        if s == "none":
+            return None
         for module in (torch.nn, ):
             for key, value in vars(module).items():
                 try:
@@ -130,6 +132,8 @@ def activation_to_callable(
 
     if isinstance(activation, str):
         s = activation.lower()
+        if s == "none":
+            return None
         # catch `torch.tanh` before `nn.tanh`
         for module in (torch, F, torch.nn):
             for key, value in vars(module).items():

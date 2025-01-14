@@ -1,0 +1,84 @@
+experiment_name: ae/mnist_${matrix_slug}
+
+matrix:
+  script:
+ # - "ch=32|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=2"  # baseline 1:24
+ # - "ch=64|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=2"  # slightly better but slow
+  - "down4|ch*2|ch*2|ch*1|ch*1|ch*1|ch=1"  # similar but very fast
+ # - "down4|ch*2|ch*1|ch*2|ch*1|ch*1|ch*1|ch=2"  # similar but very fast
+  #- "ch=32|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch*1|ch*1|ch*1|ch=2"  # no improvement
+  #- "ch=32|ch*1|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=2"  # no improvement
+ # - "down4|ch*1|ch*1|ch*1|ch*1|ch*1|ch=2" # very fast, gets OKish after 800k
+#    - "down8|ch*1|ch*1|ch*1|ch*1|ch*1|ch=8"  # not good, some interesting curve steps
+#    - "down4|ch*2|ch*2|ch*1|down2|ch/2|ch/2|ch=8"  # not good
+ # - "ch=32|down8|ch/2|ch/2|ch/2|ch*1|ch*1|ch=8"  # BAD
+ # - "ch=32|down4|ch/2|ch/2|down2|ch/2|ch/2|ch*1|ch*1|ch=8"  # maybe good, needs longer training
+# --- attention ---
+    #  - "down4|ch*2|ch*2|a|ch*1|ch*1|ch*1|ch=2" # BAD
+    # - "down4|ch*2|ch*2|ch*1|ch*1|ch*1|a|ch=2" # BAD but slightly better
+    # - "down4|ch*2|ch*2|ch*1|ch*1|ch*1|e:a|ch=2" # BAD but slightly better
+    # - "down4|d:a|ch*2|ch*2|ch*1|ch*1|ch*1|ch=2" # really BAD
+    #- "down4|ch*2|ch*2|ch*1|ch*1|ch*1|e:aqk|ch=2" # TERRIBLE!!
+    #- "down4|d:aqk|ch*2|ch*2|ch*1|ch*1|ch*1|ch=2" # OKish
+
+  ks:
+    - 3
+  act:
+    - "relu6"
+  bn:
+    - True
+  percept_ch:
+    - 0
+    #- 128
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+feature_loss_weight: 0.
+
+perceptual_model: |
+  if ${percept_ch} == 0:
+      model = None
+  else:
+      model = nn.Sequential(
+          nn.Conv2d(SHAPE[0], ${percept_ch}, kernel_size=3, padding=1),
+      )
+  model
+
+train_set: |
+  mnist_dataset(shape=SHAPE, train=True)
+
+validation_set: |
+  mnist_dataset(shape=SHAPE, train=False)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingWarmupLR
+loss_function: l2
+max_inputs: 1_000_000
+
+globals:
+  SHAPE: (1, 28, 28)
+
+model: |
+  from experiments.ae.scriptae.scriptae2 import ScriptedAE
+  
+  model = ScriptedAE(
+      channels=SHAPE[0],
+      kernel_size=${ks},
+      padding=None,
+      activation="${act}",
+      batch_norm=${bn},
+      script="${script}",
+  )
+  
+  with torch.no_grad():
+      print(model)
+      inp = torch.ones(1, *SHAPE)
+      outp = dump_module_stacktrace(model.encoder, inp)
+      print(inp.shape, "->", outp.shape)
+      print("RATIO:", math.prod(inp.shape) / math.prod(outp.shape))
+      print(f"params: {num_module_parameters(model):,}")
+  
+      recon = dump_module_stacktrace(model.decoder, outp)
+  
+  model

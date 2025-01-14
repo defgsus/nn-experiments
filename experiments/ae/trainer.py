@@ -25,7 +25,7 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
             self,
             *args,
             feature_loss_weight: float = 0.0001,
-            perceptual_model: Optional[torch.nn.Module],
+            perceptual_model: Optional[torch.nn.Module] = None,
             **kwargs,
     ):
         super().__init__(*args, **kwargs)

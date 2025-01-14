@@ -1,0 +1,63 @@
+experiment_name: ae/cifar_${matrix_slug}
+
+matrix:
+  ch:
+    - [32, 64, 96, 128]
+  percept_ch:
+    - 0
+    #- 128
+  percept_fft:
+    - True
+  $filter: not (${percept_fft} and ${percept_ch})
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+feature_loss_weight: 0.
+
+#perceptual_model: |
+#  lambda x: torch.fft.fft2(VF.resize(x, [x.shape[-2] * 3, x.shape[-1] * 3], interpolation=VF.InterpolationMode.NEAREST, antialias=False))
+perceptual_model: |
+  if ${percept_fft}:
+      model = torch.fft.fft2
+  elif ${percept_ch} == 0:
+      model = nn.Identity()
+  else:
+      model = nn.Sequential(
+          nn.Conv2d(SHAPE[0], ${percept_ch}, kernel_size=3, padding=1),
+      )
+  model
+
+train_set: |
+  cifar10_dataset(shape=SHAPE, train=True)
+
+validation_set: |
+  cifar10_dataset(shape=SHAPE, train=False)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 1_000_000
+
+globals:
+  SHAPE: (3, 32, 32)
+  CODE_SIZE: 128
+
+model: |
+  encoder = EncoderConv2d(
+      SHAPE, 
+      code_size=CODE_SIZE, 
+      channels=${ch}, 
+      kernel_size=3,
+      cheap=False,
+      act_fn=nn.ReLU6(),
+  )
+
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)

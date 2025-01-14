@@ -1,0 +1,38 @@
+experiment_name: ae/baseline-mnist_${matrix_slug}
+
+matrix:
+  ch:
+    - [24, 32, 48]
+  ks:
+    - 5
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  mnist_dataset(shape=SHAPE, train=True)
+
+validation_set: |
+  mnist_dataset(shape=SHAPE, train=False)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l2
+max_inputs: 1_000_000
+
+globals:
+  SHAPE: (1, 28, 28)
+  CODE_SIZE: 16
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=${ch}, kernel_size=${ks})
+
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  EncoderDecoder(encoder, decoder)
