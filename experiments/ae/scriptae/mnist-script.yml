@@ -2,31 +2,21 @@ experiment_name: ae/mnist_${matrix_slug}
 
 matrix:
   script:
- # - "ch=32|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=2"  # baseline 1:24
- # - "ch=64|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=2"  # slightly better but slow
-  - "down4|ch*2|ch*2|ch*1|ch*1|ch*1|ch=1"  # similar but very fast
- # - "down4|ch*2|ch*1|ch*2|ch*1|ch*1|ch*1|ch=2"  # similar but very fast
-  #- "ch=32|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch*1|ch*1|ch*1|ch=2"  # no improvement
-  #- "ch=32|ch*1|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=2"  # no improvement
- # - "down4|ch*1|ch*1|ch*1|ch*1|ch*1|ch=2" # very fast, gets OKish after 800k
-#    - "down8|ch*1|ch*1|ch*1|ch*1|ch*1|ch=8"  # not good, some interesting curve steps
-#    - "down4|ch*2|ch*2|ch*1|down2|ch/2|ch/2|ch=8"  # not good
- # - "ch=32|down8|ch/2|ch/2|ch/2|ch*1|ch*1|ch=8"  # BAD
- # - "ch=32|down4|ch/2|ch/2|down2|ch/2|ch/2|ch*1|ch*1|ch=8"  # maybe good, needs longer training
-# --- attention ---
-    #  - "down4|ch*2|ch*2|a|ch*1|ch*1|ch*1|ch=2" # BAD
-    # - "down4|ch*2|ch*2|ch*1|ch*1|ch*1|a|ch=2" # BAD but slightly better
-    # - "down4|ch*2|ch*2|ch*1|ch*1|ch*1|e:a|ch=2" # BAD but slightly better
-    # - "down4|d:a|ch*2|ch*2|ch*1|ch*1|ch*1|ch=2" # really BAD
-    #- "down4|ch*2|ch*2|ch*1|ch*1|ch*1|e:aqk|ch=2" # TERRIBLE!!
-    #- "down4|d:aqk|ch*2|ch*2|ch*1|ch*1|ch*1|ch=2" # OKish
+  - "ch=32|down7|ch/8|ch/2|ch/2|ch/2|ch/2|ch=1"  # baseline 1:49, 6M params, v-l2=0.0074
+  #- "ch=8|down7|ch/4|ch/2|ch/2|ch/2|ch/2|ch=1"   # 800K params, v-l2=0.017
+  #- "down7|ch/2|ch/2|ch/2|ch/2|ch/2|ch=1"  # BAD
 
   ks:
     - 3
   act:
     - "relu6"
+  eact:
+    - "None"
+  dact:
+    - "relu6"
+    #- "sigmoid"
   bn:
-    - True
+    - False
   percept_ch:
     - 0
     #- 128
@@ -67,6 +57,8 @@ model: |
       kernel_size=${ks},
       padding=None,
       activation="${act}",
+      final_encoder_activation="${eact}",
+      final_decoder_activation="${dact}",
       batch_norm=${bn},
       script="${script}",
   )

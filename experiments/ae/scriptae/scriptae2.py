@@ -66,6 +66,9 @@ class ScriptAELayer(nn.Module):
     def forward(self, x):
         original_x = x
 
+        if self.bn is not None:
+            x = self.bn(x)
+
         x = self.conv(x)
         if self.act is not None:
             x = self.act(x)
@@ -95,15 +98,26 @@ class ScriptedAE(nn.Module):
             kernel_size: int = 1,
             padding: Optional[int] = None,
             activation: Union[None, str, Callable] = None,
+            final_encoder_activation: Union[None, str, Callable] = None,
+            final_decoder_activation: Union[None, str, Callable] = None,
             batch_norm: bool = False,
     ):
+        assert kernel_size >= 1, f"Got kernel_size={kernel_size}"
+
+        if padding is None:
+            padding = (kernel_size - 1) // 2
+
         super().__init__()
         self.encoder = nn.Sequential()
         self.decoder = nn.Sequential()
         self.script = "|".join(filter(bool, (l.strip() for l in script.splitlines())))
 
         ch = channels
-        for line in self.script.split("|"):
+        lines = self.script.split("|")
+        for line_idx, line in enumerate(lines):
+            is_last_encoder_channel = line_idx == len(lines) - 1
+            is_last_decoder_channel = line_idx == 0
+
             if "#" in line:
                 line = line[:line.index("#")]
             line = line.strip()
@@ -141,8 +155,8 @@ class ScriptedAE(nn.Module):
                         num_out=new_ch,
                         kernel_size=kernel_size,
                         padding=padding,
-                        activation=activation,
-                        batch_norm=batch_norm,
+                        activation=final_encoder_activation if is_last_encoder_channel else activation,
+                        batch_norm=batch_norm and not is_last_encoder_channel,
                     ))
                 if add_decoder:
                     self.decoder.insert(0, ScriptAELayer(
@@ -150,8 +164,8 @@ class ScriptedAE(nn.Module):
                         num_out=ch,
                         kernel_size=kernel_size,
                         padding=padding,
-                        activation=activation,
-                        batch_norm=batch_norm,
+                        activation=final_decoder_activation if is_last_decoder_channel else activation,
+                        batch_norm=batch_norm and not is_last_decoder_channel,
                         transpose=True,
                     ))
                 ch = new_ch
