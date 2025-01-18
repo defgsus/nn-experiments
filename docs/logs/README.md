@@ -9,6 +9,7 @@ You can also view these files online at [defgsus.github.io/nn-experiments/](http
 
 
 ## Index
+- [2025-01-14-DRAFT-cnn-kae-01.md](2025-01-14-DRAFT-cnn-kae-01.md)
 - [2025-01-10-review-kan-autoencoder.md](2025-01-10-review-kan-autoencoder.md)
   - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#reviewing-kae-kolmogorov-arnold-auto-encoder-for-representation-learning) Reviewing "KAE: Kolmogorov-Arnold Auto-Encoder for Representation Learning"
       - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#preface) Preface

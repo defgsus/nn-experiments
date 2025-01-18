@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Current standards in Language Model Context Length</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    <script type="text/javascript" src="../../../html/js/main.js"></script>
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#current-standards-in-language-model-context-length" title="Current standards in Language Model Context Length">Current standards in Language Model Context Length</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="current-standards-in-language-model-context-length">Current standards in Language Model Context Length <a href="#current-standards-in-language-model-context-length" class="heading-linker">←</a></h1>
+<p>So, just reading the <a href="https://huggingface.co/posts" target="_blank">posts on huggingface</a> today, it seems like
+the state-of-the-art context length in large language models is <strong>4 million tokens</strong>.</p>
+<p>For models with 400B+ parameters!</p>
+<p>I still play around with Microsoft's <a href="https://arxiv.org/abs/2309.05463" target="_blank">Phi 1.5</a>
+which has 0.8B parameters. When quantizing it to 4-bit,
+it just fits on my 6 GB graphics card. And i need to fit it there, otherwise it's no fun to talk to
+it because it's super slow on CPU.</p>
+<p>So, just for comparison, a not even 1B model may fit on your consumer hardware when
+quantizing 32 bit floats to 4 bit. With a context length of 2048.</p>
+<p>A context length of 4 million tokens is f***ing amazing. That's all of
+<a href="https://en.wikipedia.org/wiki/Das_Kapital" target="_blank">Karl Marx's Kapital</a> and more!
+Theoretically, you can process a prompt like</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>Following is a famous three-volume essay about why capitalism sucks.
+
+&lt;insert &#39;Das Kapital&#39;&gt;
+
+Now, write a representative Python program:
+</pre></div>
+</div><p>On the other hand, what`s the training process for these 4M-context-length models? Did they really
+feed <strong>a lot</strong> of 4M token snippets into the model? And if so, what were those snippets?</p>
+<p>I mean, i just read the <a href="https://arxiv.org/abs/2412.08905" target="_blank">Phi-4 Tech Report</a> today about
+Microsoft's newest <em>small</em> language model which is fed by <strong>a lot</strong> of synthetic data. Basically,
+the whole model is nothing new, but the kind of data they fed into is very sophisticated synthetic
+stuff that makes it perform on the level of GPT-4o and beyond, at least according to some benchmarks.
+The whole paper is a mind-boggling enumeration of sophisticated engineering to design
+the pre-, mid- and post-training <strong>data</strong> (indeed, not a single word about model architecture)
+and i really wonder what some arbitrary startup has stuffed into their
+4M-context-length models? The whole stupid internet?</p>
+<p>Well, this is some middle-of-the-night post, and i certainly overdosed myself in the last 48 hours
+with neural network topics. Really strange times we are living in right now. People in interviews,
+talking about stuff they did in May, as if it was ancient history. And, indeed, it's no
+wizardry to proclaim that compute for LLMs will 10-fold within the next year.</p>
+<p>I'm certainly interested but also old-fashioned. Never tried GPT myself. Just read a ton of papers
+about it. Rather play with Phi-1.5, because it does not require (capitalist's) cloud GPUs to execute.</p>
+<p>Unfortunately, it's answers are never sexy:</p>
+<blockquote>
+<p>Exercise: Write a python program about the ideas of Karl Marx.</p>
+</blockquote>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="c1"># Define the class</span>
+<span class="k">class</span> <span class="nc">Marx</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">ideology</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ideology</span> <span class="o">=</span> <span class="n">ideology</span>
+
+<span class="c1"># Create an object</span>
+<span class="n">marx</span> <span class="o">=</span> <span class="n">Marx</span><span class="p">(</span><span class="s2">&quot;Karl Marx&quot;</span><span class="p">,</span> <span class="s2">&quot;Socialism&quot;</span><span class="p">)</span>
+
+<span class="c1"># Print the object</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Name: </span><span class="si">{</span><span class="n">marx</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, Ideology: </span><span class="si">{</span><span class="n">marx</span><span class="o">.</span><span class="n">ideology</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a target="_blank" href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a target="_blank" href="https://github.com/defgsus/nn-experiments/blob/master/docs/posts/2025/2025-01-18-llm-context-length.md">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../html/logs/review-kan-autoencoder.html">
+                        &lt;&lt; Reviewing &quot;KAE: Kolmogorov-Arnold Auto-Encoder for Representation Learning&quot;
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

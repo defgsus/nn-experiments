@@ -2,6 +2,15 @@
 
 script: [experiments/ae/kae/cnn-kae-01.yml](../../experiments/ae/kae/cnn-kae-01.yml)
 
+```shell
+python exp.py experiments/ae/kae/cnn-kae.yml run
+python exp.py experiments/ae/kae/cnn-kae.yml results \
+    -ec matrix_id matrix_slug compression-ratio \
+    -sc "validation loss (300,000 steps)-" \
+    -ac trial -acs "validation loss (300,000 steps)"
+```
+
+
 ```
 CNNKAE(
   (encoder): Sequential(
@@ -88,4 +97,57 @@ CNNKAE(
 |   64 | AdamW | 32   |    7 |          |        3 | relu | sigmoid |        0.015391 |    0.000306 |      1,257,713 |                     2.43 |      2,056/s |
 
 ![messy loss curves](img/kae/cnn-kae-01.png)
+
+
+
+| ch   |   ks |   enckae |   deckae | act     | latact   | outact   |   validation loss (300,000 steps) |   model params |   train time (minutes) |   throughput |
+|:-----|-----:|---------:|---------:|:--------|:---------|:---------|----------------------------------:|---------------:|-----------------------:|-------------:|
+| 32   |    7 |        3 |        3 | sigmoid | none     | sigmoid  |                          0.362272 |      2,001,137 |                   4.32 |      1,156/s |
+| 32   |    7 |        3 |        3 | relu    | none     | sigmoid  |                          0.152193 |      2,001,137 |                   4.17 |      1,198/s |
+| 32   |    7 |        3 |        0 | sigmoid | none     | sigmoid  |                          0.150881 |      1,257,713 |                   2.21 |      2,261/s |
+| 32   |    7 |        3 |        3 | none    | none     | sigmoid  |                           0.14385 |      2,001,137 |                    4.3 |      1,161/s |
+| 32   |    7 |        3 |        3 | none    | sigmoid  | none     |                         0.0678162 |      2,001,137 |                   4.23 |      1,181/s |
+| 32   |    7 |        3 |        3 | sigmoid | sigmoid  | sigmoid  |                         0.0677947 |      2,001,137 |                   4.25 |      1,175/s |
+| 32   |    7 |        3 |        3 | relu    | sigmoid  | none     |                         0.0677575 |      2,001,137 |                   4.27 |      1,170/s |
+| 32   |    7 |        3 |        3 | relu    | sigmoid  | sigmoid  |                         0.0677459 |      2,001,137 |                   4.33 |      1,154/s |
+| 32   |    7 |        3 |        3 | sigmoid | sigmoid  | none     |                         0.0677024 |      2,001,137 |                    4.3 |      1,161/s |
+| 32   |    7 |        3 |        3 | none    | sigmoid  | sigmoid  |                         0.0676967 |      2,001,137 |                   4.23 |      1,182/s |
+| 32   |    7 |        3 |        0 | none    | sigmoid  | sigmoid  |                         0.0676594 |      1,257,713 |                   2.12 |      2,353/s |
+| 32   |    7 |        3 |        0 | sigmoid | sigmoid  | sigmoid  |                         0.0676261 |      1,257,713 |                   2.18 |      2,293/s |
+| 32   |    7 |        3 |        0 | relu    | sigmoid  | sigmoid  |                         0.0676237 |      1,257,713 |                   2.12 |      2,355/s |
+| 32   |    7 |        3 |        0 | sigmoid | sigmoid  | none     |                         0.0676033 |      1,257,713 |                   2.21 |      2,263/s |
+| 32   |    7 |        0 |        0 | sigmoid | sigmoid  | none     |                         0.0675949 |        514,289 |                   0.27 |     18,296/s |
+| 32   |    7 |        3 |        0 | none    | sigmoid  | none     |                         0.0675417 |      1,257,713 |                   2.12 |      2,361/s |
+| 32   |    7 |        3 |        0 | relu    | sigmoid  | none     |                         0.0675406 |      1,257,713 |                    2.2 |      2,271/s |
+| 32   |    7 |        3 |        3 | sigmoid | none     | none     |                          0.064173 |      2,001,137 |                   4.33 |      1,155/s |
+| 32   |    7 |        0 |        3 | sigmoid | sigmoid  | sigmoid  |                         0.0597856 |      1,257,713 |                   2.38 |      2,104/s |
+| 32   |    7 |        0 |        3 | sigmoid | sigmoid  | none     |                         0.0595756 |      1,257,713 |                   2.38 |      2,101/s |
+| 32   |    7 |        0 |        0 | sigmoid | sigmoid  | sigmoid  |                         0.0561915 |        514,289 |                   0.27 |     18,196/s |
+| 32   |    7 |        3 |        0 | sigmoid | none     | none     |                         0.0460724 |      1,257,713 |                   2.15 |      2,326/s |
+| 32   |    7 |        3 |        0 | none    | none     | none     |                         0.0385109 |      1,257,713 |                   2.12 |      2,354/s |
+| 32   |    7 |        3 |        0 | relu    | none     | none     |                         0.0338134 |      1,257,713 |                   2.17 |      2,308/s |
+| 32   |    7 |        0 |        0 | sigmoid | none     | none     |                         0.0310357 |        514,289 |                   0.26 |     19,552/s |
+| 32   |    7 |        3 |        3 | relu    | none     | none     |                         0.0288819 |      2,001,137 |                   4.15 |      1,205/s |
+| 32   |    7 |        3 |        3 | none    | none     | none     |                         0.0281923 |      2,001,137 |                   4.26 |      1,172/s |
+| 32   |    7 |        0 |        0 | none    | sigmoid  | none     |                         0.0274841 |        514,289 |                   0.29 |     17,458/s |
+| 32   |    7 |        0 |        0 | relu    | sigmoid  | none     |                         0.0274371 |        514,289 |                   0.27 |     18,803/s |
+| 32   |    7 |        0 |        0 | none    | none     | none     |                         0.0270941 |        514,289 |                   0.29 |     17,468/s |
+| 32   |    7 |        0 |        0 | relu    | none     | none     |                         0.0270918 |        514,289 |                   0.26 |     19,002/s |
+| 32   |    7 |        0 |        3 | none    | sigmoid  | none     |                         0.0248853 |      1,257,713 |                    2.4 |      2,080/s |
+| 32   |    7 |        0 |        3 | relu    | sigmoid  | none     |                          0.024046 |      1,257,713 |                   2.39 |      2,089/s |
+| 32   |    7 |        0 |        3 | sigmoid | none     | none     |                         0.0240416 |      1,257,713 |                   2.37 |      2,107/s |
+| 32   |    7 |        0 |        3 | none    | none     | none     |                         0.0223634 |      1,257,713 |                   2.31 |      2,162/s |
+| 32   |    7 |        0 |        0 | none    | none     | sigmoid  |                         0.0208692 |        514,289 |                   0.29 |     17,068/s |
+| 32   |    7 |        0 |        3 | relu    | none     | none     |                         0.0208419 |      1,257,713 |                   2.38 |      2,103/s |
+| 32   |    7 |        0 |        0 | none    | sigmoid  | sigmoid  |                         0.0208061 |        514,289 |                   0.29 |     17,161/s |
+| 32   |    7 |        0 |        3 | none    | sigmoid  | sigmoid  |                         0.0202934 |      1,257,713 |                   2.35 |      2,129/s |
+| 32   |    7 |        0 |        0 | sigmoid | none     | sigmoid  |                         0.0195643 |        514,289 |                   0.26 |     19,099/s |
+| 32   |    7 |        3 |        0 | relu    | none     | sigmoid  |                         0.0195487 |      1,257,713 |                   2.18 |      2,298/s |
+| 32   |    7 |        3 |        0 | none    | none     | sigmoid  |                         0.0194039 |      1,257,713 |                   2.12 |      2,358/s |
+| 32   |    7 |        0 |        3 | sigmoid | none     | sigmoid  |                          0.018438 |      1,257,713 |                   2.38 |      2,105/s |
+| 32   |    7 |        0 |        3 | relu    | sigmoid  | sigmoid  |                         0.0178167 |      1,257,713 |                   2.32 |      2,150/s |
+| 32   |    7 |        0 |        0 | relu    | sigmoid  | sigmoid  |                         0.0176704 |        514,289 |                   0.28 |     17,863/s |
+| 32   |    7 |        0 |        3 | none    | none     | sigmoid  |                         0.0172048 |      1,257,713 |                   2.31 |      2,162/s |
+| 32   |    7 |        0 |        0 | relu    | none     | sigmoid  |                         0.0170206 |        514,289 |                   0.27 |     18,189/s |
+| 32   |    7 |        0 |        3 | relu    | none     | sigmoid  |                         0.0151704 |      1,257,713 |                   2.35 |      2,124/s |
 
