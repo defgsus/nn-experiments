@@ -15,6 +15,9 @@ $color-link-hover: #1010f0;
 $color-link-visited: #00e;
 $color-code: #000;
 $color-code-back: #eee;
+$color-tag-background: #ddd;
+$color-tag-background-selected: #a9a9e9;
+$color-tag-border: #b0b0b0;
 
 $d-color-font: #ddd;
 $d-color-font-transparent: rgba(224, 224, 224, .5);
@@ -28,6 +31,9 @@ $d-color-link-hover: #8db8fa;
 $d-color-link-visited: #5a78ef;
 $d-color-code: #fff;
 $d-color-code-back: #191919;
+$d-color-tag-background: #525252;
+$d-color-tag-background-selected: #55a;
+$d-color-tag-border: #000;
 
 
 html {
@@ -81,10 +87,10 @@ table {
     cursor: pointer;
     &.sorted {
       &:before {
-        content: "↓";
+        content: "⬇";
       }
       &.ascending:before {
-        content: "↑";
+        content: "⬆";
       }
     }
   }
@@ -133,6 +139,29 @@ a.heading-linker {
   }
 }
 
+.hidden {
+  display: none;
+}
+
+.tags {
+  display: inline-block;
+  .tag {
+    display: inline-block;
+    background: $color-tag-background;
+    border: 1px solid $color-tag-border;
+    border-radius: .2rem;
+    padding: .2rem .3rem;
+    margin-right: .3rem;
+    margin-bottom: .3rem;
+    &.selected {
+      background: $color-tag-background-selected;
+    }
+  }
+}
+
+.tag-select .tags .tag {
+  cursor: pointer;
+}
 
 main.article {
 
@@ -215,6 +244,20 @@ main.index {
   pre {
     background: $d-color-code-back;
     color: $d-color-code;
+  }
+
+  .tags {
+    .tag {
+      background-color: $d-color-tag-background;
+      border-color: $d-color-tag-border;
+      &.selected {
+        background-color: $d-color-tag-background-selected;
+      }
+    }
+  }
+
+  .tag-select {
+    margin-bottom: 1rem;
   }
 
   table {

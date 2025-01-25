@@ -1,3 +1,6 @@
+---
+tags: ["kan", "cnn"]
+---
 
 
 script: [experiments/ae/kae/cnn-kae-01.yml](../../experiments/ae/kae/cnn-kae-01.yml)

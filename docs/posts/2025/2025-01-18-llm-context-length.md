@@ -1,3 +1,7 @@
+---
+tags: ["rant", "lm"]
+---
+
 # Current standards in Language Model Context Length
 
 So, just reading the [posts on huggingface](https://huggingface.co/posts) today, it seems like

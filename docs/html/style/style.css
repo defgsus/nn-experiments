@@ -38,9 +38,9 @@ pre {
       table th.sortable {
         cursor: pointer; }
         table th.sortable.sorted:before {
-          content: "↓"; }
+          content: "⬇"; }
           table th.sortable.sorted.ascending:before {
-            content: "↑"; }
+            content: "⬆"; }
       table thead th {
         background: #e6e6e6; }
       table tbody tr:hover {
@@ -74,29 +74,48 @@ a.heading-linker {
     color: #1010f0;
     text-decoration: none; }
 
-main.article .article-left {
-  width: 20rem;
-  position: fixed;
-  top: 0; }
-  @media (max-width: 1000px) {
-    main.article .article-left {
-      display: none;   }
+.hidden {
+  display: none; }
+
+  .tags {
+    display: inline-block; }
+    .tags .tag {
+      display: inline-block;
+      background: #ddd;
+      border: 1px solid #b0b0b0;
+      border-radius: 0.2rem;
+      padding: 0.2rem 0.3rem;
+      margin-right: 0.3rem;
+      margin-bottom: 0.3rem; }
+      .tags .tag.selected {
+        background: #a9a9e9; }
+
+.tag-select .tags .tag {
+  cursor: pointer; }
+
+  main.article .article-left {
+    width: 20rem;
+    position: fixed;
+    top: 0; }
+    @media (max-width: 1000px) {
+      main.article .article-left {
+        display: none;   }
 }
-main.article .article-mid {
-  padding-left: 21rem;
-  width: 70%;
-  max-width: 1800px; }
-  @media (max-width: 1000px) {
-    main.article .article-mid {
-      max-width: 95%;
-      padding-left: 0;
-      width: unset;   }
+  main.article .article-mid {
+    padding-left: 21rem;
+    width: 70%;
+    max-width: 1800px; }
+    @media (max-width: 1000px) {
+      main.article .article-mid {
+        max-width: 95%;
+        padding-left: 0;
+        width: unset;   }
 }
-    main.article .article-mid .article-footer {
-      margin: 3rem 0; }
-      main.article .article-mid img {
-        overflow: scroll;
-        max-width: 100%; }
+      main.article .article-mid .article-footer {
+        margin: 3rem 0; }
+        main.article .article-mid img {
+          overflow: scroll;
+          max-width: 100%; }
 
 main.index {
   text-align: center; }
@@ -128,6 +147,13 @@ main.index {
   pre {
     background: #191919;
     color: #fff;   }
+    .tags .tag {
+      background-color: #525252;
+      border-color: #000;   }
+      .tags .tag.selected {
+        background-color: #55a;   }
+  .tag-select {
+    margin-bottom: 1rem;   }
     table {
       border-color: #5c5c5c;   }
       table td, table th {

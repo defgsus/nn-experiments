@@ -1,3 +1,7 @@
+---
+tags: ["lm", "cnn"]
+---
+
 # Corrections of wrong *Very Selective Copying* experiments
 
 Two corrections of experiment results in [Very Selective Copying](2024-12-15-selcopy2.md).

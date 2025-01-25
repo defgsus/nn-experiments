@@ -1,3 +1,7 @@
+---
+tags: ["reservoir"]
+---
+
 # Reproducing "Connectionist-Symbolic Machine Intelligence using Cellular Automata based Reservoir-Hyperdimensional Computing"
 
 by Ozgur Yilmaz, [arxiv.org/abs/1503.00851](https://arxiv.org/abs/1503.00851)

@@ -1,3 +1,7 @@
+---
+tags: ["unet"]
+---
+
 # "Shiny Tubes": increasing render quality with a UNet
 
 I'm often thinking about creating a synthetic dataset with source and target images, 

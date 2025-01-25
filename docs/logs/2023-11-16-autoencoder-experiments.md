@@ -1,3 +1,6 @@
+---
+tags: ["ae"]
+---
 
 
 # variational auto-encoder on RPG Tile dataset

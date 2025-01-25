@@ -61,4 +61,52 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     hookTables();
+
+    function hookIndexTagSelect() {
+        const $div = document.querySelector(".tag-select");
+        if (!$div) return;
+
+        const tags_html =
+            $div.getAttribute("data-tags").split("/")
+                .map(t => t.split(","))
+                .map(t => `<div class="tag" title="${t[1]}" data-tag="${t[0]}">${t[0]}</div>`)
+                .join("");
+        $div.innerHTML = `<hr/><div class="tags">${tags_html}</div><hr/>`;
+
+        function set_article_filter(tag) {
+            document.querySelectorAll(".article-list .article-item").forEach($elem => {
+                if (!tag) {
+                    $elem.classList.remove("hidden");
+                } else {
+                    const elem_tags = $elem.getAttribute("data-tags").split(".");
+                    if (elem_tags.indexOf(tag) >= 0) {
+                        $elem.classList.remove("hidden");
+                    } else {
+                        $elem.classList.add("hidden");
+                    }
+                }
+            });
+        }
+
+        const select_tag = {};
+
+        document.querySelectorAll(".tag-select .tag").forEach($elem => {
+            $elem.addEventListener("click", () => {
+                if (select_tag.elem) {
+                    select_tag.elem.classList.remove("selected");
+                    set_article_filter(null);
+                }
+                if ($elem === select_tag.elem) {
+                    select_tag.elem = null;
+                    set_article_filter(null);
+                } else {
+                    select_tag.elem = $elem;
+                    select_tag.elem.classList.add("selected");
+                    set_article_filter($elem.getAttribute("data-tag"));
+                }
+            });
+        });
+    }
+
+    hookIndexTagSelect();
 });

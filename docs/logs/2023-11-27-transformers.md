@@ -1,3 +1,7 @@
+---
+tags: ["transformer"]
+---
+
 # Experiments with vision transformers
 
 ## Classifying FMNIST

@@ -1,3 +1,7 @@
+---
+tags: ["kan"]
+---
+
 # Reviewing "KAE: Kolmogorov-Arnold Auto-Encoder for Representation Learning"
 
 While browsing arxiv.org, i found a recent paper from the 

@@ -1,3 +1,6 @@
+---
+tags: ["ae", "cnn"]
+---
 
 # stacked symmetric autoencoder, adding one-layer-at-a-time
 

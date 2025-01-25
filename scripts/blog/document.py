@@ -1,10 +1,12 @@
 import dataclasses
+import io
 from pathlib import Path
 from typing import List, Any, Tuple, Dict, Optional
 
 import marko
 import marko.inline
 import github_slugger
+import yaml
 from marko import block, inline
 from marko.ext.gfm import GFM
 
@@ -23,6 +25,7 @@ class Document:
             document: marko.block.Document,
             anchors: List[Anchor],
             links: List[str],
+            frontmatter: Optional[dict] = None,
     ):
         from .__main__ import DOCS_PATH
         self.filename = filename
@@ -31,6 +34,7 @@ class Document:
         self.document = document
         self.anchors = anchors
         self.links = links
+        self.frontmatter = frontmatter or dict()
         self._link_mapping: Optional[Dict[str, str]] = None
         self.assets = [
             link for link in links
@@ -42,10 +46,12 @@ class Document:
 
     @classmethod
     def from_file(cls, filename: Path):
+        frontmatter, text = split_front_matter_and_markup(filename.read_text())
+
         parser = marko.Markdown(
             extensions=['gfm', 'codehilite']
         )
-        doc = parser.parse(filename.read_text())
+        doc = parser.parse(text)
 
         slugger = github_slugger.GithubSlugger()
 
@@ -57,6 +63,7 @@ class Document:
             document=doc,
             anchors=renderer.anchors,
             links=renderer.links,
+            frontmatter=frontmatter,
         )
 
     @property
@@ -105,14 +112,6 @@ class Document:
 
         return self._link_mapping
 
-    def iter_elements(self):
-        yield from self._iter_elements(self.document)
-
-    def _iter_elements(self, element: marko.block.Element):
-        for c in element.children:
-            yield c
-        yield element
-
 
 class ExtractionRenderer(marko.HTMLRenderer):
     """
@@ -142,3 +141,33 @@ class ExtractionRenderer(marko.HTMLRenderer):
     def render_image(self, element: inline.Image) -> str:
         self.links.append(element.dest)
         return super().render_image(element)
+
+
+def split_front_matter_and_markup(markup: str) -> Tuple[Optional[dict], str]:
+    """
+    Split a text into it's front-matter and markup
+
+    :return: tuple of (dict|None, str)
+    """
+    markup_lines = markup.strip().splitlines()
+    if len(markup_lines) < 4:
+        return None, "\n".join(markup_lines) + "\n"
+
+    if markup_lines[0].strip() != "---":
+        return None, "\n".join(markup_lines) + "\n"
+
+    fm_lines = []
+    markup_lines.pop(0)
+    while markup_lines and markup_lines[0] != "---":
+        fm_lines.append(markup_lines.pop(0))
+
+    if not markup_lines:
+        return None, "\n".join(markup_lines) + "\n"
+
+    returned_markup = "\n".join(markup_lines[1:]) + "\n"
+    front_matter = "\n".join(fm_lines) + "\n"
+
+    fp = io.StringIO(front_matter)
+    front_matter = yaml.safe_load(fp)
+
+    return front_matter, returned_markup

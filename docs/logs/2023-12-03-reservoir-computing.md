@@ -1,3 +1,7 @@
+---
+tags: ["reservoir"]
+---
+
 # Reservoir computing
 
 ## Reproducing "Handwritten Digit Recognition by Spin Waves in a Skyrmion Reservoir"

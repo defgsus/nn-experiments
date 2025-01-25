@@ -1,3 +1,7 @@
+---
+tags: ["rant"]
+---
+
 # Mega-Watts are a thing of the past
 
 It's actually quite nice when ML researchers not only publish their results but also

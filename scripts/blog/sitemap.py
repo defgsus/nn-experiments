@@ -1,3 +1,4 @@
+import dataclasses
 import datetime
 import hashlib
 import json
@@ -12,28 +13,40 @@ import scss
 
 from .document import Document
 
+TAGS = {
+    "lm": "language model",
+    "ae": "autoencoder",
+    "pow": "papers of the week",
+}
+
+@dataclasses.dataclass
+class Tag:
+    tag: str
+    name: str
+
 
 class Page:
     def __init__(
             self,
             url: Path,
             document: Document,
-            front_matter: Optional[Dict[str, Any]] = None,
     ):
         self.url = url
         self.document = document
-        self.front_matter = front_matter or {}
 
     def __repr__(self):
         return f"Page('{self.url}')"
 
     @property
     def title(self) -> str:
-        if self.front_matter.get("title"):
-            return self.front_matter["title"]
+        if self.document.frontmatter.get("title"):
+            return self.document.frontmatter["title"]
         if self.document.anchors and self.document.anchors[0].level == 1:
             return self.document.anchors[0].title
-        return self.document.filename.with_suffix("").name
+        name = self.document.filename.with_suffix("").name
+        if re.match(r"^\d\d\d\d-\d\d-\d\d-", name):
+            name = name[11:]
+        return name
 
     def relative_url(self, filename: Union[str, Path]) -> str:
         """
@@ -57,7 +70,7 @@ class Page:
 
     @property
     def template(self) -> str:
-        return self.front_matter.get("template", "article")
+        return self.document.frontmatter.get("template", "article")
 
     @property
     def teaser(self) -> str:
@@ -69,6 +82,16 @@ class Page:
         if re.match(r"^\d\d\d\d-\d\d-\d\d", self.document.filename.name):
             return datetime.datetime.strptime(self.document.filename.name[:10], "%Y-%m-%d").date()
         return datetime.date(2000, 1, 1)
+
+    @property
+    def tags(self) -> List[Tag]:
+        tags = set(self.document.frontmatter.get("tags") or [])
+        if "/posts/" in str(self.document.filename):
+            tags.add("post")
+        return [
+            Tag(tag, TAGS.get(tag, tag))
+            for tag in sorted(tags)
+        ]
 
 
 class StyleSheet:
@@ -161,6 +184,16 @@ class Sitemap:
             name = name[11:]
         return Path(f"html") / filename.parent / name
 
+    def all_tags(self) -> List[Tag]:
+        tags = set()
+        for page in self._pages:
+            for tag in page.tags:
+                tags.add(tag.tag)
+        return [
+            Tag(tag, TAGS.get(tag, tag))
+            for tag in sorted(tags)
+        ]
+
     def render_page(self, page: Page) -> str:
         from .render import render_document_html, render_template
 
@@ -187,6 +220,7 @@ class Sitemap:
             "pages": list(reversed(pages)),
             "previous_page": pages[page_index - 1] if page_index > 0 else None,
             "next_page": pages[page_index + 1] if page_index < len(pages) - 1 else None,
+            **(page.document.frontmatter.get("context") or {}),
         }
         html = render_template(self.base_templates[page.template], context)
 
@@ -194,17 +228,26 @@ class Sitemap:
 
     def create_index_page(self):
         from .__main__ import DOCS_PATH
+        all_tags = self.all_tags()
         # make up a document, just to be able to use `Page` below
         doc = Document(
             filename=DOCS_PATH / "index.md",
             document=marko.block.Document(),
             anchors=[],
             links=[],
+            frontmatter={
+                "title": "Home",
+                "template": "index",
+                "context": {
+                    "all_tags": all_tags,
+                    "all_tags_flat": "/".join(
+                        f"{tag.tag},{tag.name}"
+                        for tag in all_tags
+                    )
+                }
+            }
         )
-        page = Page(url=Path("index.html"), document=doc, front_matter={
-            "title": "Home",
-            "template": "index",
-        })
+        page = Page(url=Path("index.html"), document=doc)
         self._pages.insert(0, page)
 
     def iter_pages(self) -> Generator[Page, None, None]:

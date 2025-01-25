@@ -1,3 +1,7 @@
+---
+tags: ["ae"]
+---
+
 # autoencoder with histogram loss
 
 Stupid experiment, just to get a feeling for the parameters.

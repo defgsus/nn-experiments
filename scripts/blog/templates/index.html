@@ -9,11 +9,25 @@
 
         <p>Dear seeker! This is a collection of logs of my neural network experiments.</p>
 
+        <div class="tag-select" data-tags="{{all_tags_flat}}">
+            <noscript>(Enable javascript to filter by tags)</noscript>
+        </div>
+
+        <br/><br/>
         <div class="article-list">
         {% for p in pages[:-1] %}
-            <div class="article-item">
+            <div class="article-item" data-tags="{% for tag in p.tags %}{{tag.tag}}.{% endfor %}">
                 <div class="date">{{p.date}}</div>
+
                 <a class="link" href="{{page.relative_url(p.url)}}">{{p.title}}</a>
+                {% if p.tags %}
+                &nbsp;<div class="tags">
+                    {% for tag in p.tags %}
+                    <div class="tag" title="{{tag.name}}">{{tag.tag}}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
                 {% if p.teaser %}
                     <div class="teaser">{{p.teaser}}</div>
                 {% endif %}

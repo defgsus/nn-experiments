@@ -1,3 +1,7 @@
+---
+tags: ["lm", "cnn"]
+---
+
 # How does receptive field size increase with self-attention
 
 Still not tired of these **V**ery **S**mall **L**anguage **M**odels...

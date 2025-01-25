@@ -1,3 +1,6 @@
+---
+tags: ["cnn"]
+---
 
 # Parameter tuning for a Residual Deep Image-to-Image CNN
 

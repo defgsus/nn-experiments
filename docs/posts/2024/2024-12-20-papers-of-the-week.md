@@ -1,4 +1,7 @@
-
+---
+title: "Papers of the week"
+tags: ["pow"]
+---
 I might just note some interesting papers here, now that i have a static site renderer.
 (I'm browsing arxiv.org every other day, for recreational purposes..) 
 
