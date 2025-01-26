@@ -159,6 +159,7 @@ class ConvTextModel(nn.Module):
             residual_map_concat: bool = False,
             diagonal_embedding: bool = False,
             symmetric_embedding: bool = True,
+            static_embedding: bool = False,
             fft_conv: Union[bool, Iterable[bool]] = False,
             fft: bool = False,
             fft_concat_dim: int = -1,
@@ -168,7 +169,6 @@ class ConvTextModel(nn.Module):
 
         self.residual = residual
         self.residual_map_concat = residual_map_concat
-
         self.layer_inputs: Dict[int, List[int]] = {}
         if residual_map:
             for l1, l2s in residual_map.items():
@@ -183,6 +183,7 @@ class ConvTextModel(nn.Module):
             num_channels - (2 if pos_embedding else 0),
             diagonal=diagonal_embedding,
             symmetric=symmetric_embedding,
+            requires_grad=not static_embedding,
             fft=fft,
             fft_concat_dim=fft_concat_dim,
         )

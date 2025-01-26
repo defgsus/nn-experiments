@@ -114,3 +114,27 @@ class TrainAutoencoder(Trainer):
 
         self.log_scalar("validation_features_mean", features.mean())
         self.log_scalar("validation_features_std", features.std())
+
+        latent_shape = features.shape[1:]
+        images = self.generate_random(latent_shape, 64, mean=features.mean(), std=features.std())
+        self.log_image("image_random_generated", make_grid(images, nrow=8))
+
+    @torch.no_grad()
+    def generate_random(
+            self,
+            latent_shape: Tuple[int, ...],
+            batch_size: int = 64,
+            mean: float = 0.,
+            std: float = 1.,
+            seed: int = 32,
+    ):
+        gen = torch.Generator().manual_seed(seed)
+        latent_batch = torch.randn(batch_size, *latent_shape, generator=gen).to(self.device) * std + mean
+        output_batch = self.model.decoder(latent_batch)
+
+        if isinstance(output_batch, (list, tuple)):
+            output_batch = output_batch[0]
+
+        output_batch = output_batch.clamp(0, 1)
+
+        return output_batch

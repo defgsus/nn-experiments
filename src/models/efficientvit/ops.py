@@ -122,6 +122,9 @@ class ConvPixelUnshuffleDownSampleLayer(nn.Module):
             act_func=None,
         )
 
+    def extra_repr(self) -> str:
+        return f"factor={self.factor}"
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
         x = F.pixel_unshuffle(x, self.factor)
@@ -141,6 +144,9 @@ class PixelUnshuffleChannelAveragingDownSampleLayer(nn.Module):
         self.factor = factor
         assert in_channels * factor**2 % out_channels == 0
         self.group_size = in_channels * factor**2 // out_channels
+
+    def extra_repr(self) -> str:
+        return f"factor={self.factor}"
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = F.pixel_unshuffle(x, self.factor)
@@ -170,6 +176,9 @@ class ConvPixelShuffleUpSampleLayer(nn.Module):
             act_func=None,
         )
 
+    def extra_repr(self) -> str:
+        return f"factor={self.factor}"
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
         x = F.pixel_shuffle(x, self.factor)
@@ -189,6 +198,9 @@ class ChannelDuplicatingPixelUnshuffleUpSampleLayer(nn.Module):
         self.factor = factor
         assert out_channels * factor**2 % in_channels == 0
         self.repeats = out_channels * factor**2 // in_channels
+
+    def extra_repr(self) -> str:
+        return f"factor={self.factor}"
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.repeat_interleave(self.repeats, dim=1)

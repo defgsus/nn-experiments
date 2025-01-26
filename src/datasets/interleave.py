@@ -10,7 +10,30 @@ import torch
 from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
 from .util import iter_dataset
+from .base_dataset import BaseDataset
 from .base_iterable import BaseIterableDataset
+
+
+class InterleaveDataset(BaseDataset):
+
+    def __init__(
+            self,
+            datasets: Iterable[Dataset],
+    ):
+        super().__init__()
+        self._datasets = list(datasets)
+
+    def __len__(self):
+        l = 0
+        for ds in self._datasets:
+            l += len(ds)
+        return l
+
+    def __getitem__(self, item: int):
+        ds_index = item % len(self._datasets)
+        index = item // len(self._datasets)
+        ds = self._datasets[ds_index]
+        return ds[index % len(ds)]
 
 
 class InterleaveIterableDataset(BaseIterableDataset):

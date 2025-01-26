@@ -9,6 +9,7 @@ class Sobel(nn.Module):
             magnitude: bool = True,
             direction: bool = True,
             padding: int = 0,
+            channels: int = 1,
     ):
         super().__init__()
         self.magnitude = magnitude
@@ -16,10 +17,10 @@ class Sobel(nn.Module):
         self.padding = padding
         self.kernel_1 = nn.Parameter(torch.Tensor([[[
             [1, 0, -1], [2, 0, -2], [1, 0, -1]
-        ]]]), requires_grad=False)
+        ]]]).repeat(channels, channels, 1, 1), requires_grad=False)
         self.kernel_2 = nn.Parameter(torch.Tensor([[[
             [1, 2, 1], [0, 0, 0], [-1, -2, -1]
-        ]]]), requires_grad=False)
+        ]]]).repeat(channels, channels, 1, 1), requires_grad=False)
 
     def forward(self, x):
         g1 = F.conv2d(x, self.kernel_1, padding=self.padding)

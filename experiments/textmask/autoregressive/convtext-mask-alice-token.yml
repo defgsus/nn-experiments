@@ -1,4 +1,8 @@
-experiment_name: textmask/convtext-mask_${matrix_slug}
+# using a tokenizer instead of byte-encoding
+# BUT, the TextMaskTrainer.generate_text() method is not adjusted
+#   and the train/validation images only contain incomprehensible crap
+
+experiment_name: textmask/convtext-mask-token_${matrix_slug}
 
 matrix:
   trial: [1] #, 2, 3, 4, 5]
@@ -58,17 +62,20 @@ matrix:
   norm:
     #- "None"
     - "'bn1d'"
+  demb:
+    - True
   cheap:
     - False
-    #- True
-  staticemb:
-    #- False
-    - True
 
 trainer: experiments.textmask.texttrainer.TextMaskTrainer
 # mask_is_arg: 1
 mask_size: ${mask}
 mask_type: ${maskt}
+tokenizer: |
+  from transformers import AutoTokenizer
+  tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-1_5", trust_remote_code=True)
+  tokenizer.pad_token = tokenizer.eos_token
+  tokenizer
 
 train_set: |
   FILE = Path({
@@ -105,7 +112,7 @@ model: |
   from experiments.textmask.textmodel import ConvTextModel
   
   ConvTextModel(
-      vocab_size=256,
+      vocab_size=50295,
       num_layers=${l},
       num_channels=${ch},
       kernel_size=${ks},
@@ -116,8 +123,7 @@ model: |
       num_attention_heads=${attn},
       attention_invention="${qkv}",
       attention_activation="${attnact}",
-      diagonal_embedding=True,
+      diagonal_embedding=${demb},
       symmetric_embedding=True,
-      static_embedding=${staticemb},
       cheap=${cheap},
   )

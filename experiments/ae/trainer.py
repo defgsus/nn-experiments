@@ -99,6 +99,12 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
         if self.feature_loss_weight:
             loss = loss + self.feature_loss_weight * (loss_batch_std + loss_batch_mean)
 
+        extra_loss = {}
+        if callable(getattr(self.model, "extra_loss", None)):
+            extra_loss = self.model.extra_loss() or {}
+            for key, value in extra_loss.items():
+                loss = loss + value
+
         return {
             "loss": loss,
             "loss_reconstruction": reconstruction_loss,
@@ -106,4 +112,5 @@ class TrainAutoencoderSpecial(TrainAutoencoder):
             # "loss_reconstruction_sobel": sobel_reconstruction_loss,
             "loss_batch_std": loss_batch_std,
             "loss_batch_mean": loss_batch_mean,
+            **extra_loss,
         }

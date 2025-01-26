@@ -1,0 +1,93 @@
+experiment_name: ae/rpg-sinstep_${matrix_slug}
+
+matrix:
+  script:
+    - "ch=32|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1"  # baseline 1:48, 3.2M params, l1-val-loss 0.056, 4min
+#    - "ch=32|down4|ch/2|ch*1|ch/2|ch*1|ch/2|ch*1|ch*1|ch=1"  # 4.7M params, 0.052
+#    - "ch=32|down4|ch/2|ch*1|ch/2|ch*1|ch/2|ch*1|ch/2|ch*1|ch/2|ch*1|ch=1"  # 4.7M, 0.055
+#    - "ch=32|down4|ch*1|ch/2|ch*1|ch*1|ch/2|ch*1|ch*1|ch/2|ch*1|ch*1|ch=1"  # 10.9M, 0.05, SLOW
+#    - "ch=48|down4|ch*1|ch/2|ch*1|ch*1|ch/2|ch*1|ch*1|ch/2|ch*1|ch*1|ch=1"  # 24.5M, 0.046, 24min
+#    - "scl=3|ch=32|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1" # 15.4M, 0.046, 4min faster than above
+#    - "ch=32|down4|scl=3|ch/2|ch/2|ch/2|scl=0|ch*1|ch*1|ch=1"  # 14.8M, 0.049, SLOWWW
+#    - "ch=32|down2|ch*1|ch*1|down2|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1"  # 1.9M, 0.052
+#    - "ch=32|down4|ch/2|ch*1|ch*1|ch*1|ch*1|ch/2|ch/2|ch/2|ch*1|ch=1"  # 7.8M, 0.052
+#    - "ch=32|down4|ch/2|ch*1|ch*1|ch*1|ch*1|ch/2|ch*1|ch*1|ch*1|ch*1|ch=1"  # 8.8M, 0.05, 10min
+#    - "ch=64|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1"  # 12.9M, 0.052, 14min
+#    - "scl=2|ch=32|down2|ch*1|ch*1|down2|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1"  # 13M, 0.047, 24min
+  ks:
+    - 3
+  pad:
+    - 1
+  act:
+    #- "relu6"
+#    - "sinstep1relu"
+#    - "sinstep1relu6"
+#    - "sinstep4relu"
+#    - "sinstep1silu"
+#    - "silu"
+#    - "sinstep1"
+#    - "sinstep2"
+#    - "sinstep3"
+#    - "sinstep4"
+#    - "sinstep6"
+#    - "sinstep8"
+    - "sigmoidstep1"
+    - "sigmoidstep4"
+    - "sigmoidstep1,10"
+    - "sigmoidstep4,10"
+  bn:
+    - False
+  percept_ch:
+    - 0
+    #- 128
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+feature_loss_weight: 0.
+
+perceptual_model: |
+  if ${percept_ch} == 0:
+      model = None
+  else:
+      model = nn.Sequential(
+          nn.Conv2d(SHAPE[0], ${percept_ch}, kernel_size=3, padding=1),
+      )
+  model
+
+train_set: |
+  rpg_tile_dataset_3x32x32(SHAPE, validation=False)
+
+validation_set: |
+  rpg_tile_dataset_3x32x32(SHAPE, validation=True)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingWarmupLR
+loss_function: l1
+max_inputs: 1_000_000
+
+globals:
+  SHAPE: (3, 32, 32)
+
+model: |
+  from experiments.ae.scriptae.scriptae2 import ScriptedAE
+  
+  model = ScriptedAE(
+      channels=SHAPE[0],
+      kernel_size=${ks},
+      padding=${pad},
+      activation="${act}",
+      batch_norm=${bn},
+      script="${script}",
+  )
+  
+  with torch.no_grad():
+      print(model)
+      inp = torch.ones(1, *SHAPE)
+      outp = dump_module_stacktrace(model.encoder, inp)
+      print(inp.shape, "->", outp.shape)
+      print("RATIO:", math.prod(inp.shape) / math.prod(outp.shape))
+      print(f"params: {num_module_parameters(model):,}")  
+      recon = dump_module_stacktrace(model.decoder, outp)
+  
+  model

@@ -23,6 +23,10 @@ class BaseDataset(Dataset):
     def sample(self, size: int):
         return next(iter(DataLoader(self, batch_size=size)))
 
+    def repeat(self, count: int):
+        from .limit import RepeatDataset
+        return RepeatDataset(self, count)
+
     def shuffle(self, *, seed: Optional[int] = None):
         from .shuffle import ShuffleDataset
         return ShuffleDataset(self, seed=seed)

@@ -7,3 +7,7 @@ from ._soft_hist import (
     soft_histogram_flat,
     soft_histogram,
 )
+from ._stepfuncs import (
+    SinStep,
+    SigmoidStep,
+)

@@ -52,3 +52,407 @@ model: |
     cfg = OmegaConf.from_dotlist(CFG_STRINGS[${model}-1].split(" "))
     cfg: DCAEConfig = OmegaConf.to_object(OmegaConf.merge(OmegaConf.structured(DCAEConfig), cfg))
     DCAE(cfg)
+
+
+#DCAE(
+#  (encoder): Encoder(
+#    (project_in): ConvPixelUnshuffleDownSampleLayer(
+#      (conv): ConvLayer(
+#        (conv): Conv2d(3, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#      )
+#    )
+#    (stages): ModuleList(
+#      (0): OpSequential(
+#        (op_list): ModuleList()
+#      )
+#      (1): OpSequential(
+#        (op_list): ModuleList(
+#          (0-3): 4 x ResidualBlock(
+#            (main): ResBlock(
+#              (conv1): ConvLayer(
+#                (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#                (act): SiLU()
+#              )
+#              (conv2): ConvLayer(
+#                (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+#                (norm): TritonRMSNorm2d((128,), eps=1e-05, elementwise_affine=True)
+#              )
+#            )
+#            (shortcut): IdentityLayer()
+#          )
+#          (4): ResidualBlock(
+#            (main): ConvPixelUnshuffleDownSampleLayer(
+#              (conv): ConvLayer(
+#                (conv): Conv2d(128, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#              )
+#            )
+#            (shortcut): PixelUnshuffleChannelAveragingDownSampleLayer()
+#          )
+#        )
+#      )
+#      (2): OpSequential(
+#        (op_list): ModuleList(
+#          (0-7): 8 x ResidualBlock(
+#            (main): ResBlock(
+#              (conv1): ConvLayer(
+#                (conv): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#                (act): SiLU()
+#              )
+#              (conv2): ConvLayer(
+#                (conv): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+#                (norm): TritonRMSNorm2d((256,), eps=1e-05, elementwise_affine=True)
+#              )
+#            )
+#            (shortcut): IdentityLayer()
+#          )
+#          (8): ResidualBlock(
+#            (main): ConvPixelUnshuffleDownSampleLayer(
+#              (conv): ConvLayer(
+#                (conv): Conv2d(256, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#              )
+#            )
+#            (shortcut): PixelUnshuffleChannelAveragingDownSampleLayer()
+#          )
+#        )
+#      )
+#      (3): OpSequential(
+#        (op_list): ModuleList(
+#          (0-1): 2 x EfficientViTBlock(
+#            (context_module): ResidualBlock(
+#              (main): LiteMLA(
+#                (qkv): ConvLayer(
+#                  (conv): Conv2d(256, 768, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                )
+#                (aggreg): ModuleList()
+#                (kernel_func): ReLU()
+#                (proj): ConvLayer(
+#                  (conv): Conv2d(256, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                  (norm): TritonRMSNorm2d((256,), eps=1e-05, elementwise_affine=True)
+#                )
+#              )
+#              (shortcut): IdentityLayer()
+#            )
+#            (local_module): ResidualBlock(
+#              (main): GLUMBConv(
+#                (glu_act): SiLU()
+#                (inverted_conv): ConvLayer(
+#                  (conv): Conv2d(256, 2048, kernel_size=(1, 1), stride=(1, 1))
+#                  (act): SiLU()
+#                )
+#                (depth_conv): ConvLayer(
+#                  (conv): Conv2d(2048, 2048, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=2048)
+#                )
+#                (point_conv): ConvLayer(
+#                  (conv): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                  (norm): TritonRMSNorm2d((256,), eps=1e-05, elementwise_affine=True)
+#                )
+#              )
+#              (shortcut): IdentityLayer()
+#            )
+#          )
+#          (2): ResidualBlock(
+#            (main): ConvPixelUnshuffleDownSampleLayer(
+#              (conv): ConvLayer(
+#                (conv): Conv2d(256, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#              )
+#            )
+#            (shortcut): PixelUnshuffleChannelAveragingDownSampleLayer()
+#          )
+#        )
+#      )
+#      (4): OpSequential(
+#        (op_list): ModuleList(
+#          (0-1): 2 x EfficientViTBlock(
+#            (context_module): ResidualBlock(
+#              (main): LiteMLA(
+#                (qkv): ConvLayer(
+#                  (conv): Conv2d(512, 1536, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                )
+#                (aggreg): ModuleList()
+#                (kernel_func): ReLU()
+#                (proj): ConvLayer(
+#                  (conv): Conv2d(512, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                  (norm): TritonRMSNorm2d((512,), eps=1e-05, elementwise_affine=True)
+#                )
+#              )
+#              (shortcut): IdentityLayer()
+#            )
+#            (local_module): ResidualBlock(
+#              (main): GLUMBConv(
+#                (glu_act): SiLU()
+#                (inverted_conv): ConvLayer(
+#                  (conv): Conv2d(512, 4096, kernel_size=(1, 1), stride=(1, 1))
+#                  (act): SiLU()
+#                )
+#                (depth_conv): ConvLayer(
+#                  (conv): Conv2d(4096, 4096, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=4096)
+#                )
+#                (point_conv): ConvLayer(
+#                  (conv): Conv2d(2048, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                  (norm): TritonRMSNorm2d((512,), eps=1e-05, elementwise_affine=True)
+#                )
+#              )
+#              (shortcut): IdentityLayer()
+#            )
+#          )
+#          (2): ResidualBlock(
+#            (main): ConvPixelUnshuffleDownSampleLayer(
+#              (conv): ConvLayer(
+#                (conv): Conv2d(512, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#              )
+#            )
+#            (shortcut): PixelUnshuffleChannelAveragingDownSampleLayer()
+#          )
+#        )
+#      )
+#      (5): OpSequential(
+#        (op_list): ModuleList(
+#          (0-1): 2 x EfficientViTBlock(
+#            (context_module): ResidualBlock(
+#              (main): LiteMLA(
+#                (qkv): ConvLayer(
+#                  (conv): Conv2d(512, 1536, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                )
+#                (aggreg): ModuleList()
+#                (kernel_func): ReLU()
+#                (proj): ConvLayer(
+#                  (conv): Conv2d(512, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                  (norm): TritonRMSNorm2d((512,), eps=1e-05, elementwise_affine=True)
+#                )
+#              )
+#              (shortcut): IdentityLayer()
+#            )
+#            (local_module): ResidualBlock(
+#              (main): GLUMBConv(
+#                (glu_act): SiLU()
+#                (inverted_conv): ConvLayer(
+#                  (conv): Conv2d(512, 4096, kernel_size=(1, 1), stride=(1, 1))
+#                  (act): SiLU()
+#                )
+#                (depth_conv): ConvLayer(
+#                  (conv): Conv2d(4096, 4096, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=4096)
+#                )
+#                (point_conv): ConvLayer(
+#                  (conv): Conv2d(2048, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                  (norm): TritonRMSNorm2d((512,), eps=1e-05, elementwise_affine=True)
+#                )
+#              )
+#              (shortcut): IdentityLayer()
+#            )
+#          )
+#        )
+#      )
+#    )
+#    (project_out): ResidualBlock(
+#      (main): OpSequential(
+#        (op_list): ModuleList(
+#          (0): ConvLayer(
+#            (conv): Conv2d(512, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#          )
+#        )
+#      )
+#      (shortcut): PixelUnshuffleChannelAveragingDownSampleLayer()
+#    )
+#  )
+#  (decoder): Decoder(
+#    (project_in): ResidualBlock(
+#      (main): ConvLayer(
+#        (conv): Conv2d(64, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#      )
+#      (shortcut): ChannelDuplicatingPixelUnshuffleUpSampleLayer()
+#    )
+#    (stages): ModuleList(
+#      (0): OpSequential(
+#        (op_list): ModuleList()
+#      )
+#      (1): OpSequential(
+#        (op_list): ModuleList(
+#          (0): ResidualBlock(
+#            (main): ConvPixelShuffleUpSampleLayer(
+#              (conv): ConvLayer(
+#                (conv): Conv2d(256, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#              )
+#            )
+#            (shortcut): ChannelDuplicatingPixelUnshuffleUpSampleLayer()
+#          )
+#          (1-5): 5 x ResidualBlock(
+#            (main): ResBlock(
+#              (conv1): ConvLayer(
+#                (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#                (act): ReLU()
+#              )
+#              (conv2): ConvLayer(
+#                (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+#                (norm): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+#              )
+#            )
+#            (shortcut): IdentityLayer()
+#          )
+#        )
+#      )
+#      (2): OpSequential(
+#        (op_list): ModuleList(
+#          (0): ResidualBlock(
+#            (main): ConvPixelShuffleUpSampleLayer(
+#              (conv): ConvLayer(
+#                (conv): Conv2d(256, 1024, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#              )
+#            )
+#            (shortcut): ChannelDuplicatingPixelUnshuffleUpSampleLayer()
+#          )
+#          (1-10): 10 x ResidualBlock(
+#            (main): ResBlock(
+#              (conv1): ConvLayer(
+#                (conv): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#                (act): ReLU()
+#              )
+#              (conv2): ConvLayer(
+#                (conv): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+#                (norm): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+#              )
+#            )
+#            (shortcut): IdentityLayer()
+#          )
+#        )
+#      )
+#      (3): OpSequential(
+#        (op_list): ModuleList(
+#          (0): ResidualBlock(
+#            (main): ConvPixelShuffleUpSampleLayer(
+#              (conv): ConvLayer(
+#                (conv): Conv2d(512, 1024, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#              )
+#            )
+#            (shortcut): ChannelDuplicatingPixelUnshuffleUpSampleLayer()
+#          )
+#          (1-2): 2 x EfficientViTBlock(
+#            (context_module): ResidualBlock(
+#              (main): LiteMLA(
+#                (qkv): ConvLayer(
+#                  (conv): Conv2d(256, 768, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                )
+#                (aggreg): ModuleList()
+#                (kernel_func): ReLU()
+#                (proj): ConvLayer(
+#                  (conv): Conv2d(256, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                  (norm): TritonRMSNorm2d((256,), eps=1e-05, elementwise_affine=True)
+#                )
+#              )
+#              (shortcut): IdentityLayer()
+#            )
+#            (local_module): ResidualBlock(
+#              (main): GLUMBConv(
+#                (glu_act): SiLU()
+#                (inverted_conv): ConvLayer(
+#                  (conv): Conv2d(256, 2048, kernel_size=(1, 1), stride=(1, 1))
+#                  (act): SiLU()
+#                )
+#                (depth_conv): ConvLayer(
+#                  (conv): Conv2d(2048, 2048, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=2048)
+#                )
+#                (point_conv): ConvLayer(
+#                  (conv): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                  (norm): TritonRMSNorm2d((256,), eps=1e-05, elementwise_affine=True)
+#                )
+#              )
+#              (shortcut): IdentityLayer()
+#            )
+#          )
+#        )
+#      )
+#      (4): OpSequential(
+#        (op_list): ModuleList(
+#          (0): ResidualBlock(
+#            (main): ConvPixelShuffleUpSampleLayer(
+#              (conv): ConvLayer(
+#                (conv): Conv2d(512, 2048, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#              )
+#            )
+#            (shortcut): ChannelDuplicatingPixelUnshuffleUpSampleLayer()
+#          )
+#          (1-2): 2 x EfficientViTBlock(
+#            (context_module): ResidualBlock(
+#              (main): LiteMLA(
+#                (qkv): ConvLayer(
+#                  (conv): Conv2d(512, 1536, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                )
+#                (aggreg): ModuleList()
+#                (kernel_func): ReLU()
+#                (proj): ConvLayer(
+#                  (conv): Conv2d(512, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                  (norm): TritonRMSNorm2d((512,), eps=1e-05, elementwise_affine=True)
+#                )
+#              )
+#              (shortcut): IdentityLayer()
+#            )
+#            (local_module): ResidualBlock(
+#              (main): GLUMBConv(
+#                (glu_act): SiLU()
+#                (inverted_conv): ConvLayer(
+#                  (conv): Conv2d(512, 4096, kernel_size=(1, 1), stride=(1, 1))
+#                  (act): SiLU()
+#                )
+#                (depth_conv): ConvLayer(
+#                  (conv): Conv2d(4096, 4096, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=4096)
+#                )
+#                (point_conv): ConvLayer(
+#                  (conv): Conv2d(2048, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                  (norm): TritonRMSNorm2d((512,), eps=1e-05, elementwise_affine=True)
+#                )
+#              )
+#              (shortcut): IdentityLayer()
+#            )
+#          )
+#        )
+#      )
+#      (5): OpSequential(
+#        (op_list): ModuleList(
+#          (0-1): 2 x EfficientViTBlock(
+#            (context_module): ResidualBlock(
+#              (main): LiteMLA(
+#                (qkv): ConvLayer(
+#                  (conv): Conv2d(512, 1536, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                )
+#                (aggreg): ModuleList()
+#                (kernel_func): ReLU()
+#                (proj): ConvLayer(
+#                  (conv): Conv2d(512, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                  (norm): TritonRMSNorm2d((512,), eps=1e-05, elementwise_affine=True)
+#                )
+#              )
+#              (shortcut): IdentityLayer()
+#            )
+#            (local_module): ResidualBlock(
+#              (main): GLUMBConv(
+#                (glu_act): SiLU()
+#                (inverted_conv): ConvLayer(
+#                  (conv): Conv2d(512, 4096, kernel_size=(1, 1), stride=(1, 1))
+#                  (act): SiLU()
+#                )
+#                (depth_conv): ConvLayer(
+#                  (conv): Conv2d(4096, 4096, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=4096)
+#                )
+#                (point_conv): ConvLayer(
+#                  (conv): Conv2d(2048, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+#                  (norm): TritonRMSNorm2d((512,), eps=1e-05, elementwise_affine=True)
+#                )
+#              )
+#              (shortcut): IdentityLayer()
+#            )
+#          )
+#        )
+#      )
+#    )
+#    (project_out): OpSequential(
+#      (op_list): ModuleList(
+#        (0): TritonRMSNorm2d((128,), eps=1e-05, elementwise_affine=True)
+#        (1): ReLU()
+#        (2): ConvPixelShuffleUpSampleLayer(
+#          (conv): ConvLayer(
+#            (conv): Conv2d(128, 12, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#          )
+#        )
+#      )
+#    )
+#  )
+#)

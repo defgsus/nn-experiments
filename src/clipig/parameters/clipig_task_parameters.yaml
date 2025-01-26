@@ -7,9 +7,11 @@ base:
 
   - name: clip_model_name
     type: select
-    default: "ViT-B/32"
+    default: "open_clip:hf-hub:chs20/FARE4-ViT-B-32-laion2B-s34B-b79K"
     choices:
       - "ViT-B/32"
+      - "open_clip:hf-hub:chs20/fare4-clip"
+      - "open_clip:hf-hub:chs20/FARE4-ViT-B-32-laion2B-s34B-b79K"
 
   - name: device
     type: select

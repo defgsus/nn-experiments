@@ -16,6 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torchvision.transforms as VT
 import torchvision.transforms.functional as VF
 from torchvision.utils import make_grid
+from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from src import console
 from src.util.image import signed_to_image, get_images_from_iterable
@@ -35,6 +36,7 @@ class TextMaskTrainer(Trainer):
             mask_is_arg: Optional[int] = None,
             mask_size: int = 10,
             mask_type: Union[str, Iterable[str]] = "single",  # "block", "single", "end"
+            tokenizer: Optional[PreTrainedTokenizerBase] = None,
             **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -42,6 +44,11 @@ class TextMaskTrainer(Trainer):
         self._mask_size = mask_size
         self._mask_type = [mask_type] if isinstance(mask_type, str) else set(mask_type)
         self._font_squares = FontSquares(shape=(3, 8, 8))
+        self._tokenizer = tokenizer
+        if self._tokenizer is not None:
+            self._num_tokens = len(self._tokenizer.get_vocab())
+        else:
+            self._num_tokens = 256
 
     def _split_batch(self, batch):
         if self._mask_is_arg is not None:
@@ -63,7 +70,7 @@ class TextMaskTrainer(Trainer):
 
         target_logits = self._encoded_to_logits(text_batch)
 
-        loss = F.cross_entropy(output_logits.view(-1, 256), target_logits.view(-1, 256).float())
+        loss = F.cross_entropy(output_logits.flatten(1), target_logits.flatten(1).float())
         #loss = F.l1_loss(output_logits, target_logits.float())
         with torch.no_grad():
             mask_mask = (masked_batch == 0)
@@ -101,6 +108,21 @@ class TextMaskTrainer(Trainer):
         return texts * mask
 
     def _encode_texts(self, texts: List[str]):
+        if self._tokenizer is not None:
+            token_ids = [
+                self._tokenizer.encode(text)
+                for text in texts
+            ]
+            fixed_len = min(len(t) for t in texts)
+            token_batch = []
+            for tokens in token_ids:
+                if len(tokens) < fixed_len:
+                    tokens += [self._tokenizer.pad_token_id] * (fixed_len - len(tokens))
+                elif len(tokens) > fixed_len:
+                    tokens = tokens[:fixed_len]
+                token_batch.append(torch.tensor(tokens, dtype=torch.int).unsqueeze(0))
+            return torch.cat(token_batch).to(self.device)
+
         text_batch = []
         texts = [list(t.encode()) for t in texts]
         fixed_len = min(len(t) for t in texts)
@@ -120,10 +142,10 @@ class TextMaskTrainer(Trainer):
     def _encoded_to_logits(self, texts: torch.Tensor) -> torch.Tensor:
         """
         :param texts: tensor of [B, L]
-        :return: tensor of [B, L, 256]
+        :return: tensor of [B, L, <num-tokens>]
         """
         B, L = texts.shape
-        logits = torch.zeros((B, L, 256)).to(texts)
+        logits = torch.zeros((B, L, self._num_tokens)).to(texts)
         logits.scatter_(-1, texts.unsqueeze(-1).to(torch.int64), 1)
         return logits
 

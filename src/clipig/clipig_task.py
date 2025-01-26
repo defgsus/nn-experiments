@@ -157,12 +157,12 @@ class ClipigTask:
 
                 target_dots = (
                     torch.ones(batch_size, len(target_features))
-                    .half().to(self.device)
+                    .to(self.device)
                 )
                 target_weights = (
                     torch.Tensor([[prompt["weight"] for prompt in target_features]])
                     .repeat(batch_size, 1)
-                    .half().to(self.device)
+                    .to(self.device)
                 )
 
             else:
@@ -223,7 +223,7 @@ class ClipigTask:
                 pixel_batch = []
                 for i in range(target["batch_size"]):
                     pixel_batch.append(self._to_clip_pixels(transforms(pixels)).unsqueeze(0))
-                pixel_batch = torch.concat(pixel_batch).half()
+                pixel_batch = torch.concat(pixel_batch)
 
                 image_embeddings = self.clip_encode_image(pixel_batch, requires_grad=True)
 
@@ -273,15 +273,20 @@ class ClipigTask:
             yield {"transformation_preview": {"target_index": target_idx, "pixels": pixel_batch}}
 
     def _to_clip_pixels(self, pixels: torch.Tensor):
-        if tuple(pixels.shape[-2:]) != (224, 224):
-            pixels = image_resize_crop(pixels, (224, 224))
-        #    pixels = VF.resize(pixels, (224, 224), VT.InterpolationMode.NEAREST, antialias=False)
+        model = ClipSingleton.get(
+            model=self.clip_model_name,
+            device=self.device_name,
+        )
 
-        if pixels.shape[0] != 3:
-            pixels = set_image_channels(pixels, 3)
+        if tuple(pixels.shape[-2:]) != model.shape[-2:]:
+            pixels = image_resize_crop(pixels, model.shape[-2:])
+        #    pixels = VF.resize(pixels, model.shape[-2], VT.InterpolationMode.NEAREST, antialias=False)
 
-        if pixels.dtype != torch.float16:
-            pixels = set_image_dtype(pixels, torch.float16)
+        if pixels.shape[0] != model.shape[0]:
+            pixels = set_image_channels(pixels, model.shape[0])
+
+        if pixels.dtype != model.dtype:
+            pixels = set_image_dtype(pixels, model.dtype)
 
         return pixels.clamp(0, 1)
 

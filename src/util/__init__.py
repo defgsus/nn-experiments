@@ -6,3 +6,4 @@ from .module import (
     clip_module_weights,
 )
 from .params import param_make_list, param_make_tuple, iter_parameter_permutations
+from ._seed import set_global_seed

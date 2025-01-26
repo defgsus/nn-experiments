@@ -101,6 +101,14 @@ def activation_to_module(
         s = activation.lower()
         if s == "none":
             return None
+
+        if s.startswith("sinstep"):
+            from src.functional import SinStep
+            return SinStep.create_from_string(activation)
+        if s.startswith("sigmoidstep"):
+            from src.functional import SigmoidStep
+            return SigmoidStep.create_from_string(activation)
+
         for module in (torch.nn, ):
             for key, value in vars(module).items():
                 try:
@@ -134,6 +142,9 @@ def activation_to_callable(
         s = activation.lower()
         if s == "none":
             return None
+        if s.startswith("sinstep") or s.startswith("sigmoidstep"):
+            return activation_to_module(activation)
+
         # catch `torch.tanh` before `nn.tanh`
         for module in (torch, F, torch.nn):
             for key, value in vars(module).items():
@@ -168,9 +179,14 @@ def normalization_to_module(
 
     if isinstance(normalization, str):
         s = normalization.lower()
-        if s == "rms":
+        if s == "none":
+            return None
+        elif s == "rms":
             from src.models.mamba.mamba import RMSNorm
             return RMSNorm(d_model=channels, **kwargs)
+        elif s == "trms2d":
+            from src.models.efficientvit.norm import TritonRMSNorm2d
+            return TritonRMSNorm2d(channels)
         elif s in ("bn1d", "batchnorm1d"):
             return nn.BatchNorm1d(num_features=channels, **kwargs)
         elif s in ("bn2d", "batchnorm2d"):

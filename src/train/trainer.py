@@ -24,7 +24,7 @@ import torchvision.transforms.functional as VF
 from torchvision.utils import make_grid
 
 from src import console
-from src.util import to_torch_device, num_module_parameters
+from src.util import to_torch_device, num_module_parameters, set_global_seed
 from src.util.image import signed_to_image, get_images_from_iterable
 from src.models.util import get_loss_callable
 
@@ -61,7 +61,11 @@ class Trainer:
             model_forward_kwargs: Optional[dict] = None,
             weight_image_kwargs: Optional[dict] = None,
             extra_description_values: Optional[dict] = None,
+            seed: Optional[int] = None,
     ):
+        if seed is not None:
+            set_global_seed(seed)
+
         self.experiment_name = experiment_name
         self.model = model
         self.data_loader = data_loader
@@ -432,7 +436,6 @@ class Trainer:
             torch.nn.utils.clip_grad_value_(
                 self.model.parameters(),
                 self.gradient_clipping,
-                #error_if_nonfinite=True,
             )
 
         for i, opt in enumerate(self.optimizers):

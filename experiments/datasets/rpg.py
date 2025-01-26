@@ -126,9 +126,11 @@ class PixilartPatchDataset(BaseIterableDataset):
             interpolation: VT.InterpolationMode = VT.InterpolationMode.BILINEAR,
             interleave_images: Optional[int] = 20,
             shuffle_images: bool = True,
+            train: bool = True,
     ):
+        self._train = train
         self._ds_image = ImageFolderIterableDataset(
-            Path("~/prog/data/pixilart/raw").expanduser(),
+            Path("~/prog/data/pixilart/raw").expanduser() / ("train" if train else "test"),
             shuffle=shuffle_images,
         )
 
@@ -155,7 +157,7 @@ class PixilartPatchDataset(BaseIterableDataset):
         ))
 
     def __len__(self):
-        return 149_744
+        return 752_253 if self._train else 84_228
 
     def __iter__(self):
         yield from self._ds

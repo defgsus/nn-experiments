@@ -1,4 +1,4 @@
-experiment_name: textmask/convtext-mask_${matrix_slug}
+experiment_name: textmask/trans-mask_${matrix_slug}
 
 matrix:
   trial: [1] #, 2, 3, 4, 5]
@@ -27,43 +27,20 @@ matrix:
     #- 3
     - 4
     #- 6
+  h:
+    - 8
   ch:
     #- 64
-    #- 128
-    - 256
+    - 128
+    #- 256
     #- 512
-  ks:
-    - 13
-    #- 11
-    #- 13
-  dil:
-    - [3, 5, 1]
-    - [3, 5, 7, 1]
-    - [1, 2, 3, 4, 5, 1]
-  $filter: (isinstance(${dil}, int) or len(${dil}) == ${l}) and (isinstance(${attn}, int) or len(${attn}) == ${l})
-  qkv:
-    - "QK"
-    #- "QV"
-    #- "KV"
-    #- "QKV"
-  attn:
-    - [0, 0, True]
-    - [0, 0, 0, True]
-    - [0, 0, 0, 0, 0, True]
-  attnact:
-    - "elu+1"
-    # - "dpfp"
+  ch2:
+    - 128
   act:
-    - "gelu"
-  norm:
-    #- "None"
-    - "'bn1d'"
-  cheap:
+    - "relu"
+  semb:
     - False
     #- True
-  staticemb:
-    #- False
-    - True
 
 trainer: experiments.textmask.texttrainer.TextMaskTrainer
 # mask_is_arg: 1
@@ -95,29 +72,22 @@ learnrate: ${lr}
 optimizer: ${opt}
 scheduler: CosineAnnealingWarmupLR
 #loss_function: l1
-max_inputs: 20_000_000
+max_inputs: 50_000_000
 num_epochs_between_validations: 999999
 num_inputs_between_validations: 100_000
 #freeze_validation_set: True
 
 
 model: |
-  from experiments.textmask.textmodel import ConvTextModel
+  from experiments.textmask.texttransformer import TextTransformer
   
-  ConvTextModel(
+  TextTransformer(
       vocab_size=256,
       num_layers=${l},
       num_channels=${ch},
-      kernel_size=${ks},
-      dilation=${dil},
+      num_channels_mlp=${ch2},
+      num_heads=${h},
       activation="${act}",
-      norm=${norm},
-      #pos_embedding=bool({posemb}),
-      num_attention_heads=${attn},
-      attention_invention="${qkv}",
-      attention_activation="${attnact}",
       diagonal_embedding=True,
-      symmetric_embedding=True,
-      static_embedding=${staticemb},
-      cheap=${cheap},
+      symmetric_embedding=${semb},
   )

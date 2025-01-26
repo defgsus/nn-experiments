@@ -97,6 +97,24 @@ class SkipIterableDataset(BaseIterableDataset):
                 yield item
 
 
+class RepeatDataset(BaseDataset):
+
+    def __init__(
+            self,
+            dataset: Dataset,
+            count: int,
+    ):
+        super().__init__()
+        self._dataset = dataset
+        self._count = count
+
+    def __len__(self):
+        return len(self._dataset) * self._count
+
+    def __getitem__(self, item):
+        return self._dataset[item % len(self._dataset)]
+
+
 class RepeatIterableDataset(BaseIterableDataset):
 
     def __init__(

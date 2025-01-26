@@ -15,6 +15,7 @@ class DiagonalEmbedding(nn.Module):
             symmetric: bool = True,
             fft: bool = False,
             fft_concat_dim: int = -1,
+            requires_grad: bool = True,
     ):
         """
         Wrapper around torch.nn.Embedding
@@ -51,9 +52,16 @@ class DiagonalEmbedding(nn.Module):
                 self.input.weight[:] = create_diagonal_matrix(self.input.weight.shape)
             elif fft:
                 self.input.weight[:] = F.softmax(self.input.weight, dim=-1)
+            if not requires_grad:
+                self.input.weight.requires_grad = False
 
-        if not symmetric:
-            self.output = nn.Linear(channels_out, channels_in)
+            if not symmetric:
+                self.output = nn.Linear(channels_out, channels_in)
+                self.output.weight[:] = self.input.weight
+                self.output.bias[:] = 0.
+                if not requires_grad:
+                    self.output.weight.requires_grad = False
+                    self.output.bias.requires_grad = False
 
     def extra_repr(self) -> str:
         return (

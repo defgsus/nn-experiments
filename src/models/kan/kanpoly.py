@@ -22,7 +22,7 @@ class KANPolyLayer(nn.Module):
         self.input_dim = input_dim
         self.out_dim = out_dim
         self.order = order
-        self.coeffs = nn.Parameter(torch.randn(out_dim, input_dim, order) * 0.01)
+        self.coeffs = nn.Parameter(torch.randn(out_dim, input_dim, order + 1) * 0.01)
         self.bias = None
         if bias:
             self.bias = nn.Parameter(torch.zeros(1, out_dim))
@@ -37,7 +37,7 @@ class KANPolyLayer(nn.Module):
 
         y = torch.zeros((x.shape[0], self.out_dim), device=x.device, dtype=x.dtype)
 
-        for i in range(self.order):
+        for i in range(self.order + 1):
             term = (x_expanded**i) * self.coeffs[:, :, i]
             y += term.sum(dim=-1)
 

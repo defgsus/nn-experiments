@@ -1,42 +1,28 @@
-experiment_name: ae/kanpoly_${matrix_slug}
+experiment_name: ae/kanpoly1l_${matrix_slug}
 
 matrix:
+  trial: [1]
   bs:
     - 64
 #    - 256
   lr:
     - 0.0003
+#    - 0.0001
   opt:
     - "AdamW"
-#    - "Adam"
+    - "Adam"
 #    - "RMSprop"
   ds:
     - ["mnist", [1, 28, 28]]
   ch:
-    - [128, 64, 16]
-#    - [256, 128, 16]  # no performance gain
-    - [128, 128, 16]
-#    - [128, 16, 16]  # BAD
-#    - [128, 64, 32, 16]
+    - [16]
   order:
     - 3
-#    - [1, 2, 2, 3]  not good
-    #- 4  # causes NaN
-    #- [3, 3, 4]
-    #- [3, 3, 5]
   eact:
-#    - ["relu", "relu", "none"]  # baseline
-    - ["relu6", "relu6", "none"]  # slightly better ;)
-#    - ["relu6", "relu6", "tanh"]  # NOT WORKING
-#    - ["relu", "relu", "relu", "none"]
+#    - ["relu"]
+    - ["none"]
   dact:
-    - ["relu", "relu", "sigmoid"]  # baseline
-#    - ["relu6", "relu6", "sigmoid"]  #  NOT WORKING
-#    - ["silu", "silu", "sigmoid"]  # slightly worse
-#    - ["relu", "relu", "relu", "sigmoid"]
-#    - ["none", "none", "sigmoid"]        # NOT AS GOOD AS RELU
-#    - ["tanh", "tanh", "sigmoid"]        # NOT WORKING
-#    - ["sigmoid", "sigmoid", "sigmoid"]  # NOT WORKING
+    - ["sigmoid"]
   percept_ch:
     - 0
     #- 128
@@ -45,6 +31,8 @@ matrix:
     and (isinstance(${order}, int) or len(${order}) == len(${ch}))
 
 trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+seed: |
+  2023 + ${trial}
 feature_loss_weight: 0.
 
 perceptual_model: |

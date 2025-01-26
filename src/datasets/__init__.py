@@ -34,10 +34,10 @@ from .image_patch import (
 )
 from .image_scale import ImageScaleIterableDataset
 from .image_source_target import ImageSourceTargetDataset, ImageSourceTargetCropDataset
-from .interleave import InterleaveIterableDataset
+from .interleave import InterleaveDataset, InterleaveIterableDataset
 from .limit import (
     LimitDataset, SkipDataset, LimitIterableDataset, SkipIterableDataset,
-    RepeatIterableDataset,
+    RepeatDataset, RepeatIterableDataset,
 )
 from .normalize import NormalizeMaxIterableDataset
 from .randomcropall import RandomCropAllDataset
