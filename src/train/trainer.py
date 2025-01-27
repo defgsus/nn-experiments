@@ -342,6 +342,18 @@ class Trainer:
                     if not isinstance(loss_result, dict):
                         loss_result = {"loss": loss_result}
 
+                    if callable(getattr(self.model, "extra_loss", None)):
+                        extra_loss = self.model.extra_loss()
+                        if extra_loss is not None:
+                            if not isinstance(extra_loss, dict):
+                                extra_loss = {"extra_loss": extra_loss}
+                            for key, value in extra_loss.items():
+                                amount = 1.
+                                if isinstance(value, (list, tuple)):
+                                    value, amount = value
+                                loss_result["loss"] = loss_result["loss"] + value * amount
+                                loss_result[key] = value
+
                     progress.update(input_batch_size)
 
                     #(loss_result["loss"] / self.gradient_accumulation).backward()
@@ -531,6 +543,16 @@ class Trainer:
                     loss = self.validation_step(validation_batch)
                     if not isinstance(loss, dict):
                         loss = {"loss": loss}
+
+                    if callable(getattr(self.model, "extra_loss", None)):
+                        extra_loss = self.model.extra_loss()
+                        if extra_loss is not None:
+                            if not isinstance(extra_loss, dict):
+                                extra_loss = {"extra_loss": extra_loss}
+                            for key, value in extra_loss.items():
+                                if isinstance(value, (list, tuple)):
+                                    value = value[0]
+                                loss[key] = value
 
                     for key, value in loss.items():
                         if value is not None:

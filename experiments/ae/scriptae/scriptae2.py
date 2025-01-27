@@ -222,13 +222,47 @@ class VariationalLayer(nn.Module):
 
         return z
 
-    def extra_loss(self) -> Optional[Dict[str, torch.Tensor]]:
+    def extra_loss(self) -> Optional[Dict[str, Union[torch.Tensor, Tuple[torch.Tensor, float]]]]:
         if self._kl_loss_weight:
             sigma, mu = self.last_sigma, self.last_mu
             loss_kl = torch.mean(-0.5 * torch.sum(1 + sigma - mu ** 2 - sigma.exp(), dim=1))
             return {
-                "loss_kl": loss_kl * self._kl_loss_weight
+                "loss_kl": (loss_kl, self._kl_loss_weight)
             }
+
+
+class DecoderDetailWrapper(nn.Module):
+
+    def __init__(
+            self,
+            decoder: nn.Module,
+            latent_size: int,
+            channels: int,
+            out_channels: int,
+            kernel_size: int = 3,
+    ):
+        super().__init__()
+        self.decoder = decoder
+        self.detail = nn.Sequential(
+            nn.Conv2d(out_channels + latent_size, channels, kernel_size, padding=(kernel_size - 1) // 2),
+            nn.ReLU6(),
+            nn.Conv2d(channels, channels, kernel_size, padding=(kernel_size - 1) // 2),
+            nn.ReLU6(),
+            nn.Conv2d(channels, out_channels, kernel_size, padding=(kernel_size - 1) // 2),
+        )
+
+    def forward(self, x: torch.Tensor):
+        decoded = self.decoder(x)
+
+        latent_channels = (
+            x.flatten(1).unsqueeze(-1)  # B, C, 1
+            .repeat(1, 1, decoded.shape[-2]).unsqueeze(-1)  # B, C, H, 1
+            .repeat(1, 1, 1, decoded.shape[-1])  # B, C, H, W
+        )
+        detail_in = torch.cat([decoded, latent_channels], dim=1)
+        detail = self.detail(detail_in)
+
+        return decoded + detail
 
 
 class ScriptedAE(nn.Module):
@@ -275,6 +309,7 @@ class ScriptedAE(nn.Module):
             poly_order: int = 0,
             variational: bool = False,
             kl_loss_weight: float = 1.,
+            detail_wrapper_channels: int = 0,  # experimental, requires fixed input resolution and NOT WORKING GOOD
     ):
         assert kernel_size >= 1, f"Got kernel_size={kernel_size}"
 
@@ -405,6 +440,14 @@ class ScriptedAE(nn.Module):
 
         if variational:
             self.encoder.append(VariationalLayer(ch, kl_loss_weight=kl_loss_weight))
+
+        if detail_wrapper_channels:
+            self.decoder = DecoderDetailWrapper(
+                self.decoder,
+                latent_size=detail_wrapper_channels,
+                channels=32,
+                out_channels=3,
+            )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.decoder(self.encoder(x))

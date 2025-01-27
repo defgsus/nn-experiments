@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>AE MUTATOR</title>
+    <script type="text/javascript" src="main.js"></script>
+
+    <style type="text/css">
+        body, textarea {
+            background: #272727;
+            color: #e8e8e8;
+            font-family: monospace;
+            font-size: 1rem;
+            padding: 0;
+            margin: 0;
+        }
+        .page-content {
+            position: relative;
+            width: 100%;
+        }
+        .content {
+            position: relative;
+            max-width: 70%;
+            margin: 0 auto;
+        }
+
+        #images .image-row {
+            #margin-bottom: 5px;
+        }
+        #images .image-row .image {
+            display: inline-block;
+            padding: 2px;
+        }
+        #images .image-row .image:hover {
+            background: #555;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="page-content">
+    <div class="content">
+
+        <button id="undo">Undo</button>
+
+        <input id="mutation-amount" type="number" value="0.1">
+
+        <br/><br/>
+        <div id="images">
+
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

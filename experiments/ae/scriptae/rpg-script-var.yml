@@ -1,4 +1,4 @@
-experiment_name: ae/vae_rpg-pixil2_${matrix_slug}
+experiment_name: ae/vae_rpg_${matrix_slug}
 
 matrix:
   ds:
@@ -6,38 +6,13 @@ matrix:
 #    - "pixil"
   script:
 #    - "ch=32|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1"  # baseline 1:48, 3.2M params, l1-val-loss 0.056, 4min
-#    - "ch=32|down4|ch/2|ch*1|ch/2|ch*1|ch/2|ch*1|ch*1|ch=1"  # 4.7M params, 0.052
-#    - "ch=32|down4|ch/2|ch*1|ch/2|ch*1|ch/2|ch*1|ch/2|ch*1|ch/2|ch*1|ch=1"  # 4.7M, 0.055
-#    - "ch=32|down4|ch*1|ch/2|ch*1|ch*1|ch/2|ch*1|ch*1|ch/2|ch*1|ch*1|ch=1"  # 10.9M, 0.05, SLOW
-#    - "ch=48|down4|ch*1|ch/2|ch*1|ch*1|ch/2|ch*1|ch*1|ch/2|ch*1|ch*1|ch=1"  # 24.5M, 0.046, 24min
-#    - "ch=32|down2|ch*1|ch*1|down2|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1"  # 1.9M, 0.052
-#    - "ch=32|down4|ch/2|ch*1|ch*1|ch*1|ch*1|ch/2|ch/2|ch/2|ch*1|ch=1"  # 7.8M, 0.052
-#    - "ch=32|down4|ch/2|ch*1|ch*1|ch*1|ch*1|ch/2|ch*1|ch*1|ch*1|ch*1|ch=1"  # 8.8M, 0.05, 10min
-#    - "ch=64|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1"  # 12.9M, 0.052, 14min
 
 # residual down-sampler
-#    - "ch=32|rdown4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1"   # 5.6M, 0.053, 7.4min
-#    - "ch=32|rdown2|ch*1|ch*1|rdown2|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1"  # 6.5M, 0.048, 12min, similar to dcae2.yaml !!
-  - "ch=32|rdown2|ch*1|ch*1|rdown2|ch/2|ch/2|rdown2|ch/2|ch*1|ch*1|ch=4"  # 13.4M, 0.044, 11min
-#  - "ch=32|rdown2|ch*1|rdown2|ch/2|rdown2|ch/2|ch/2|ch/2|rdown2|ch/2|ch/2|ch*1|ch*1|ch=16"  # 33.8M, NOT WORKING
+    - "ch=32|rdown2|ch*1|ch*1|rdown2|ch/2|ch/2|rdown2|ch/2|ch*1|ch*1|ch=4"  # 13.4M, 0.044, 11min
+#    - "ch=32|rdown4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=4"   # 1:12, 5.6M, 0.039, 7min
+#    - "ch=32|rdown2|ch/2|ch*1|ch/2|ch*1|ch*1|ch=3"   # 1:4, 455K, 0.028, 5min
+#    - "ch=64|ch*1|ch*1|ch*1|ch*1|ch*1|ch=3"   # 1:1, 376K, 0.003, 14min with percept_ch=128
 
-# MLA
-#    - "ch=32|down4|ch/2|ch/2|ch/2|ch*1|ch*1|mla|ch=1"  # 3.3M, 0.055, 6.6min
-#    - "ch=32|d:mla|down4|d:mla|ch/2|ch/2|ch/2|ch*1|e:mla|ch*1|e:mla|ch=1"  # 4.6M, BAD
-#    - "ch=32|down4|d:mla|ch/2|ch/2|ch/2|ch*1|e:mla|ch*1|e:mla|ch=1"  # 4.6M, even WORSE
-#    - "ch=32|mla|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1"  # 3.2M, BAD
-#    - "ch=32|down4|ch/2|ch/2|ch/2|mla|ch*1|mla|ch*1|mla|ch=1"  # 3.4M, 0.054, 9.7min
-#    - "ch=32|down4|mla|ch/2|mla|ch/2|mla|ch/2|ch*1|ch*1|ch=1"  # 6.8M, 0.056, 40min !!
-
-# poly-KAN
-#    - "ch=32|down4|ch/2|ch/2|po=3|ch/2|ch*1|ch*1|ch=1"  # 3.8M, 0.054, 6.4min
-#    - "ch=32|down4|ch/2|ch/2|po=4|ch/2|ch*1|ch*1|ch=1"  # 4.1M,  BAAD
-#    - "ch=32|down4|po=3|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1"  # BAAD
-
-# skip-conv-layer
-#    - "scl=3|ch=32|down4|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1" # 15.4M, 0.046, 4min faster than above
-#    - "ch=32|down4|scl=3|ch/2|ch/2|ch/2|scl=0|ch*1|ch*1|ch=1"  # 14.8M, 0.049, SLOWWW
-#    - "scl=2|ch=32|down2|ch*1|ch*1|down2|ch/2|ch/2|ch/2|ch*1|ch*1|ch=1"  # 13M, 0.047, 24min
   ks:
     - 3
   pad:
@@ -51,12 +26,13 @@ matrix:
   var:  # variational auto-encoder kl-loss
 #    - .0
     - .1
+#    - 1.
   flw:
     - 0.
 #    - 0.1
   percept_ch:
     - 0
-    #- 128
+#    - 128
 
 trainer: experiments.ae.trainer.TrainAutoencoderSpecial
 feature_loss_weight: ${flw}
@@ -92,7 +68,7 @@ train_set: |
     else:
       raise NotImplementedError("${ds}")
   dataset()
-  
+
 validation_set: |
   rpg_tile_dataset_3x32x32(SHAPE, validation=True)
 
