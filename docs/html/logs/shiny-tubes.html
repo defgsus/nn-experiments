@@ -78,6 +78,14 @@ can make out the thickenings any more:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/shiny-tubes-spikes-and-spheres-1.2-validation.png" alt="validation images" /></div></p>
 <p>Using the right stroke width for the font, it starts to look interesting:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/shiny-tubes-hello-world-spikes-and-spheres-1.2-medium.png" alt="hello world rendered by network" /></div></p>
+<p>Still, it's not <em>growing</em> those spikes in a reliable manner. After a couple of weeks of thinking,
+i tried a diffusion process. Or, lets say, a controlled denoising, The target image is the spiky
+shiny tubes again and the source image is a noisy version of the white strokes. The amount of
+noise is random and the neural network's input is the noisy strokes plus the amount of noise.</p>
+<p>Training the network still does not produce those spikes, when there is no hint in the source image
+of where the spikes should start. However, since the network is denoising any image, one can
+continually process the image, add noise, process it again, aso.. which produces some nice effects:</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/shiny-tubes-hello-world-diffusion.png" alt="hello world rendered by network" /></div></p>
 
 
         <!-- article footer -->
