@@ -1,4 +1,5 @@
 ---
+title: Papers of the week
 tags: ["pow"]
 ---
 

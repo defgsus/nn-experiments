@@ -99,8 +99,8 @@ class HTMLTeaserRenderer(GFMRendererMixin, marko.HTMLRenderer):
         return super().render_children(element)
 
     def render_heading(self, element: marko.block.Heading) -> str:
-        if self._paragraphs > 0:
-            return self.render_children(element)
+        #if self._paragraphs > 0:
+        #    return self.render_children(element)
         return ""
 
     def render_image(self, element: marko.inline.Image) -> str:
