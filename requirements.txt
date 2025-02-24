@@ -11,6 +11,7 @@ pandas
 plotly
 PyQt5
 qdarkstyle
+python-decouple
 scikit-learn
 tabulate
 tensorboard
