@@ -191,6 +191,8 @@ def normalization_to_module(
             return nn.BatchNorm1d(num_features=channels, **kwargs)
         elif s in ("bn2d", "batchnorm2d"):
             return nn.BatchNorm2d(num_features=channels, **kwargs)
+        elif s == "layernorm":
+            return nn.LayerNorm(normalized_shape=[channels], **kwargs)
         for module in (torch.nn, ):
             for key, value in vars(module).items():
                 try:

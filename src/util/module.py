@@ -21,7 +21,7 @@ def clip_module_weights(module: nn.Module, max_magnitude: float):
             #print(param.max(), param.shape)
 
 
-def dump_module_stacktrace(model: nn.Module, *input) -> Any:
+def dump_module_stacktrace(model: nn.Module, *input, method_name: str = "forward") -> Any:
     stack = []
     hooks = []
 
@@ -56,7 +56,7 @@ def dump_module_stacktrace(model: nn.Module, *input) -> Any:
 
     try:
         with torch.no_grad():
-            result = model(*input)
+            result = getattr(model, method_name)(*input)
 
         return result
 

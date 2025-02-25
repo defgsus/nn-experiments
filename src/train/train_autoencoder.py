@@ -130,7 +130,11 @@ class TrainAutoencoder(Trainer):
     ):
         gen = torch.Generator().manual_seed(seed)
         latent_batch = torch.randn(batch_size, *latent_shape, generator=gen).to(self.device) * std + mean
-        output_batch = self.model.decoder(latent_batch)
+
+        if hasattr(self.model, "decode"):
+            output_batch = self.model.decode(latent_batch)
+        else:
+            output_batch = self.model.decoder(latent_batch)
 
         if isinstance(output_batch, (list, tuple)):
             output_batch = output_batch[0]
