@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MLP-Mixer re-invented for auto-encoding</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../html/style/style.css">
+    <script type="text/javascript" src="../../html/js/main.js"></script>
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#mlp-mixer-re-invented-for-auto-encoding" title="MLP-Mixer re-invented for auto-encoding">MLP-Mixer re-invented for auto-encoding</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#linear-layer-as-mixer" title="Linear layer as mixer">Linear layer as mixer</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#comparison-with-baseline-cnn" title="Comparison with baseline CNN">Comparison with baseline CNN</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="mlp-mixer-re-invented-for-auto-encoding">MLP-Mixer re-invented for auto-encoding <a href="#mlp-mixer-re-invented-for-auto-encoding" class="heading-linker">←</a></h1>
+<p>Recently read this paper <em>&quot;MLP-Mixer: An all-MLP Architecture for Vision&quot;</em> <a href="https://arxiv.org/abs/2105.01601" target="_blank">2105.01601</a>,
+which i found quite inspiring but also left me with some regret of not having come up with it myself. </p>
+<p>Anyways, after some weeks, i set out to program a network based on the ideas but without looking
+at the paper for reference. At least before i have a well performing implementation.
+<em>Of course</em>, i used it to setup an auto-encoder.</p>
+<p>Setup is as follows:</p>
+<p>First split the input image into equal sized patches. I'm using pytorch's <code>unfold</code> method for this.
+For the MNIST digits dataset this yield 4x4 7x7 patches for each 28x28 image. </p>
+<p>Then they are flattened to 16 1-D vectors of size 49. Those vectors are moved to the batch-dimension
+(the first one) of the vector that the linear layers ought to process. For example, when passing
+in a batch-size of 64:</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>input:                      (64, 1, 28, 28)
+patches:                    (64, 4, 4, 1, 7, 7)
+flatten:                    (64, 16, 49)
+move to batch dimension:    (1024, 49)
+</pre></div>
+</div><p>Now these 1024 49-D vectors can be processed by a stack of linear layers (MLP). Each vector is
+processed by the same layer and since it's only one little patch, the linear layer can be very
+small. However, there is no information shared between those patches. Each patch is processed
+individually. To apply the &quot;mixing&quot; strategy, i first tried a 1-D convolutional layer</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>input:                      (1024, 49)
+reverse batch-flattening:   (64, 16, 49)
+apply Conv1d(16, 16, 1):    (64, 16, 49)
+move to batch dimension:    (1024, 49)
+process further with MLP:   (1024, 49)
+</pre></div>
+</div><p>The convolution is applied channel-wise and is able to mix information from the different patches.</p>
+<p>Note that the <code>49</code> is the depth of each layer and does not have to stay like this. Each linear
+layer can make it larger or smaller. In the following experiment, i resized the 49 to 64 in the
+first layer and kept it like this until the final linear layer, which resizes it to 16 which yields
+a compression ratio of 49 (28x28 -&gt; 49) for the auto-encoder.</p>
+<p>Also, whenever a layer has the same input and output dimension, a residual connection is added
+(after the activation function).</p>
+<p>The whole auto-encoder is built <em>symmetrically</em>, so the decoder stack is the reverse of the
+encoder stack. Here is one example in pytorch speak:</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>MixerMLP(
+  (patchify): Patchify(patch_size=7)
+  (encoder): ModuleList(
+    (0): MLPLayer(
+      residual=False
+      (module): Linear(in_features=49, out_features=64, bias=True)
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (1): MLPLayer(
+      residual=True
+      (module): Linear(in_features=64, out_features=64, bias=True)
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (2): MLPMixerLayer(
+      residual=True
+      (module): Conv1d(16, 16, kernel_size=(1,), stride=(1,))
+    )
+    (3): MLPLayer(
+      residual=True
+      (module): Linear(in_features=64, out_features=64, bias=True)
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (4): MLPMixerLayer(
+      residual=True
+      (module): Conv1d(16, 16, kernel_size=(1,), stride=(1,))
+    )
+    (5): MLPLayer(
+      residual=False
+      (module): Linear(in_features=64, out_features=16, bias=True)
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (6): MLPMixerLayer(
+      residual=True
+      (module): Conv1d(16, 16, kernel_size=(1,), stride=(1,))
+    )
+    (7): MLPLayer(
+      residual=False
+      (module): Linear(in_features=256, out_features=16, bias=True)
+    )
+  )
+  (decoder): ModuleList(
+    (0): MLPLayer(
+      residual=False
+      (module): Linear(in_features=16, out_features=256, bias=True)
+    )
+    (1): MLPMixerLayer(
+      residual=True
+      (module): Conv1d(16, 16, kernel_size=(1,), stride=(1,))
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (2): MLPLayer(
+      residual=False
+      (module): Linear(in_features=16, out_features=64, bias=True)
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (3): MLPMixerLayer(
+      residual=True
+      (module): Conv1d(16, 16, kernel_size=(1,), stride=(1,))
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (4): MLPLayer(
+      residual=True
+      (module): Linear(in_features=64, out_features=64, bias=True)
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (5): MLPMixerLayer(
+      residual=True
+      (module): Conv1d(16, 16, kernel_size=(1,), stride=(1,))
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (6): MLPLayer(
+      residual=True
+      (module): Linear(in_features=64, out_features=64, bias=True)
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (7): MLPLayer(
+      residual=False
+      (module): Linear(in_features=64, out_features=49, bias=True)
+    )
+  )
+  (unpatchify): Unpatchify(patch_size=7)
+)
+</pre></div>
+</div><p>Note that, in the encoder, layer 5 compresses each patch from 64 to 16 dimensions, then there
+is another mixing layer, and layer 7 processes all 16 patches at once and outputs
+a final 16-dim vector (256 -&gt; 16).</p>
+<p>In the following table <code>bs</code> = batch size, <code>lr</code> = learnrate, <code>ds</code> is the dataset, <code>ps</code> is the patch size,
+<code>mix</code> means at which layer a mixing-layer is added (1-indexed). Optimizer is <code>AdamW</code> and loss function
+is mean-squared error. Scheduler is cosine-annealing with warmup.</p>
+<p>Experiment file: <a href="https://github.com/defgsus/blob/18e32d81a49aecc6d92a21c346c8a47edbed472c/experiments/ae/mixer/mixer02.yml" target="_blank">experiments/ae/mixer/mixer02.yml @ 18e32d81</a></p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">bs</th>
+<th align="right">lr</th>
+<th align="left">ds</th>
+<th align="right">ps</th>
+<th align="left">ch</th>
+<th align="left">mix</th>
+<th align="left">act</th>
+<th align="right">validation loss<br>(1,000,000 steps)</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left"></td>
+<td align="left">gelu</td>
+<td align="right">0.011366</td>
+<td align="right">33,617</td>
+<td align="right">1.03</td>
+<td align="right">16,126/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">4</td>
+<td align="left">gelu</td>
+<td align="right">0.011248</td>
+<td align="right">34,161</td>
+<td align="right">1.25</td>
+<td align="right">13,335/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">3</td>
+<td align="left">gelu</td>
+<td align="right">0.010779</td>
+<td align="right">34,161</td>
+<td align="right">1.21</td>
+<td align="right">13,779/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2</td>
+<td align="left">gelu</td>
+<td align="right">0.010677</td>
+<td align="right">34,161</td>
+<td align="right">1.2</td>
+<td align="right">13,865/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">1</td>
+<td align="left">gelu</td>
+<td align="right">0.010659</td>
+<td align="right">34,161</td>
+<td align="right">1.21</td>
+<td align="right">13,748/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">1,2</td>
+<td align="left">gelu</td>
+<td align="right">0.010418</td>
+<td align="right">34,705</td>
+<td align="right">1.29</td>
+<td align="right">12,883/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">1,2,3</td>
+<td align="left">gelu</td>
+<td align="right">0.010398</td>
+<td align="right">35,249</td>
+<td align="right">1.46</td>
+<td align="right">11,384/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">1,2,3,4</td>
+<td align="left">gelu</td>
+<td align="right">0.010208</td>
+<td align="right">35,793</td>
+<td align="right">1.61</td>
+<td align="right">10,323/s</td>
+</tr>
+</tbody></table></div><p>Validation loss performance is not actually super good and the mixing only helps a little.
+But it's not so bad either for such a small network.</p>
+<h3 id="linear-layer-as-mixer">Linear layer as mixer <a href="#linear-layer-as-mixer" class="heading-linker">←</a></h3>
+<p>So let's try a linear layer for mixing between patches.</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>input:                      (1024, 49)
+reverse batch-flattening:   (64, 16, 49)
+flatten 2nd dimension:      (64, 784)
+apply Linear(784, 784):     (64, 784)
+unflatten 2nd dimension:    (64, 16, 49)
+and move to batch dim:      (1024, 49)
+process further with MLP:   (1024, 49)
+</pre></div>
+</div><p>Obviously, the linear mixing layer increases the network size considerably. The benefit is, that
+each pixel in each patch can be compared/processed against each other.</p>
+<p>I guess, this is kind of what the MLP-Mixer paper suggests, only i can not confidentially read
+<a href="https://github.com/google-research/vision_transformer/blob/main/vit_jax/models_mixer.py" target="_blank">their jax code</a>
+to confirm.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">bs</th>
+<th align="right">lr</th>
+<th align="left">ds</th>
+<th align="right">ps</th>
+<th align="left">ch</th>
+<th align="left">mix</th>
+<th align="left">act</th>
+<th align="right">validation loss<br>(1,000,000 steps)</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">4</td>
+<td align="left">gelu</td>
+<td align="right">0.0105164</td>
+<td align="right">165,201</td>
+<td align="right">1.16</td>
+<td align="right">14,418/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0078778</td>
+<td align="right">2,132,817</td>
+<td align="right">1.17</td>
+<td align="right">14,292/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2</td>
+<td align="left">gelu</td>
+<td align="right">0.0072450</td>
+<td align="right">2,132,817</td>
+<td align="right">1.16</td>
+<td align="right">14,345/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">3</td>
+<td align="left">gelu</td>
+<td align="right">0.0071680</td>
+<td align="right">2,132,817</td>
+<td align="right">1.21</td>
+<td align="right">13,793/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">3,4</td>
+<td align="left">gelu</td>
+<td align="right">0.0069653</td>
+<td align="right">2,264,401</td>
+<td align="right">1.41</td>
+<td align="right">11,778/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">1,2</td>
+<td align="left">gelu</td>
+<td align="right">0.0068538</td>
+<td align="right">4,232,017</td>
+<td align="right">1.58</td>
+<td align="right">10,559/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">1,2,3,4</td>
+<td align="left">gelu</td>
+<td align="right">0.0066289</td>
+<td align="right">6,462,801</td>
+<td align="right">2.06</td>
+<td align="right">8,083/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">1,2,3</td>
+<td align="left">gelu</td>
+<td align="right">0.0065175</td>
+<td align="right">6,331,217</td>
+<td align="right">1.87</td>
+<td align="right">8,894/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">gelu</td>
+<td align="right">0.0065056</td>
+<td align="right">4,363,601</td>
+<td align="right">1.62</td>
+<td align="right">10,303/s</td>
+</tr>
+</tbody></table></div><p>Here's a plot of the loss curves for both mixing methods:</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/mixermlp/losses-cnn-vs-mlp-mixing.png" alt="loss curves" /></div></p>
+<p>Performance is much better but the number of model parameters is much larger as well.</p>
+<h3 id="comparison-with-baseline-cnn">Comparison with baseline CNN <a href="#comparison-with-baseline-cnn" class="heading-linker">←</a></h3>
+<p>How well does it perform against my baseline CNN with a final linear layer?</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>EncoderDecoder(
+  (encoder): EncoderConv2d(
+    (convolution): Conv2dBlock(
+      (layers): Sequential(
+        (0): Conv2d(1, 24, kernel_size=(5, 5), stride=(1, 1))
+        (1): ReLU()
+        (2): Conv2d(24, 32, kernel_size=(5, 5), stride=(1, 1))
+        (3): ReLU()
+        (4): Conv2d(32, 48, kernel_size=(5, 5), stride=(1, 1))
+        (5): ReLU()
+      )
+    )
+    (linear): Linear(in_features=12288, out_features=16, bias=True)
+  )
+  (decoder): Sequential(
+    (0): Linear(in_features=16, out_features=12288, bias=True)
+    (1): Reshape(shape=(48, 16, 16))
+    (2): Conv2dBlock(
+      (layers): Sequential(
+        (0): ConvTranspose2d(48, 32, kernel_size=(5, 5), stride=(1, 1))
+        (1): ReLU()
+        (2): ConvTranspose2d(32, 24, kernel_size=(5, 5), stride=(1, 1))
+        (3): ReLU()
+        (4): ConvTranspose2d(24, 1, kernel_size=(5, 5), stride=(1, 1))
+      )
+    )
+  )
+)
+</pre></div>
+</div><p><code>ks</code> is kernel size</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">ch</th>
+<th align="right">ks</th>
+<th align="right">validation loss<br>(1,000,000 steps)</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">24,32,48</td>
+<td align="right">9</td>
+<td align="right">0.00780634</td>
+<td align="right">402,657</td>
+<td align="right">1.87</td>
+<td align="right">8,914/s</td>
+</tr>
+<tr>
+<td align="left">24,32,48</td>
+<td align="right">7</td>
+<td align="right">0.00710207</td>
+<td align="right">386,721</td>
+<td align="right">1.44</td>
+<td align="right">11,557/s</td>
+</tr>
+<tr>
+<td align="left">24,32,48</td>
+<td align="right">3</td>
+<td align="right">0.00718373</td>
+<td align="right">808,737</td>
+<td align="right">2.11</td>
+<td align="right">7,908/s</td>
+</tr>
+<tr>
+<td align="left">24,32,48</td>
+<td align="right">5</td>
+<td align="right">0.00655708</td>
+<td align="right">522,081</td>
+<td align="right">1.93</td>
+<td align="right">8,643/s</td>
+</tr>
+</tbody></table></div><p>Seems to be equally good at first glance. However, training both networks a bit longer reveals that
+the CNN is able to squeeze out some more performance:</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/mixermlp/losses-cnn-vs-mixermlp-6M.png" alt="loss curves" /></div></p>
+<p>After 6 million steps (or 100 epochs), the best performing Mixer-MLP from above archives a
+validation loss of <strong>0.0063</strong> vs. <strong>0.0055</strong> for the CNN model. </p>
+<p>The Mixer-MLP is 4 times larger than the CNN model (because of the 3 linear mixing stages) and
+we can see from the loss curves that it actually overfitted the training set. It's validation
+performance starts to get worse after 5 million steps. </p>
+<p>However, since it seems to behave quite differently to the baseline CNN, it's certainly a nice
+new tool to try things on.</p>
+<p>It would be interesting to see if the mixing stages implemented with a convolution,
+can--somehow--reach the performance of the linear mixers.
+That would make it very small <strong>and</strong> powerful.</p>
+
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a target="_blank" href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a target="_blank" href="https://github.com/defgsus/nn-experiments/blob/master/docs/logs/2025-02-25-mixer-mlp.md">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../html/posts/2025/papers-of-the-week2.html">
+                        &lt;&lt; Papers of the week
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>
