@@ -4,7 +4,7 @@ matrix:
   ch:
     - [24, 32, 48]
   ks:
-    - 5
+    - 5zz
 
 trainer: experiments.ae.trainer.TrainAutoencoderSpecial
 

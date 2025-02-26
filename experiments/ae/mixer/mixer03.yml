@@ -1,4 +1,4 @@
-experiment_name: ae/mixer/mixer02_${matrix_slug}
+experiment_name: ae/mixer/mixer03_${matrix_slug}
 
 matrix:
   bs:
@@ -8,7 +8,7 @@ matrix:
 #    - 256
   lr:
 #    - 0.0003
-    - 0.003
+    - 0.0003
 #    - 0.03
   ds:
     - "mnist"
@@ -19,27 +19,28 @@ matrix:
   ch:
     #- [32, 32, 32, 16]
     - [64, 64, 64, 16]
+    #- [64, 64, 64, 64, 64, 16]
     #- [128, 128, 128, 16]
     #- [128, 128, 128, 128, 128, 128, 16]  # v0.007
     #- [128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 16]  # v0.006
     #- [64, 64, 128, 128, 256, 256, 16]  #
   mix:
 #    - []
-    - [1]
-    - [2]
-    - [3]
-    - [4]
-    - [1,2]
-    - [1,2,3]
-    - [1,2,3,4]
+#    - [1]
+#    - [2]
+#    - [3]
+#    - [4]
+#    - [1,2]
+#    - [1,2,3]
+#    - [1,2,3,4]
     - [2,3,4]
-    - [3,4]
+#    - [3,4]
   #kae:
   #  - {}
     #- {0: 3}
   mixt:
-    - "cnn"
-    #- "mlp"
+    #- "cnn"
+    - "mlp"
   act:
     - "gelu"
     #- "relu6"  # much worse
@@ -65,7 +66,7 @@ learnrate: ${lr}
 optimizer: AdamW
 scheduler: CosineAnnealingWarmupLR
 loss_function: l2
-max_inputs: 1_000_000
+max_inputs: 10_000_000
 
 model: |
   from experiments.ae.mixer.mixermodel import MixerMLP
@@ -83,7 +84,7 @@ model: |
   
   with torch.no_grad():
       print(model)
-      inp = torch.ones(1, *${s})
+      inp = torch.ones(64, *${s})
       outp = dump_module_stacktrace(model, inp, method_name="encode")
       print(inp.shape[1:], "->", outp.shape[1:])
       print("RATIO:", math.prod(inp.shape) / math.prod(outp.shape))

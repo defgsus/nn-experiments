@@ -121,16 +121,25 @@ class MLPMixerLayer(nn.Module):
 
     def __init__(
             self,
+            num_patches: int,
             channels: int,
+            type: str = "cnn",  # "cnn", "mlp"
             activation: Union[None, str, Callable] = None,
             bias: bool = True,
             residual: bool = True,
     ):
         super().__init__()
         self._residual = residual
+        self.num_patches = num_patches
         self.channels = channels
+        self.type = type
 
-        self.module = nn.Conv1d(channels, channels, kernel_size=1, bias=bias)
+        if type == "cnn":
+            self.module = nn.Conv1d(num_patches, num_patches, kernel_size=1, bias=bias)
+        elif type == "mlp":
+            self.module = nn.Linear(num_patches * channels, num_patches * channels, bias=bias)
+        else:
+            raise ValueError(f"Unknown type '{type}'")
 
         self.act = activation_to_module(activation)
 
@@ -139,7 +148,10 @@ class MLPMixerLayer(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         shape = x.shape
-        x = x.reshape(x.shape[0] // self.channels, self.channels, -1)
+        if self.type == "cnn":
+            x = x.reshape(x.shape[0] // self.num_patches, self.num_patches, -1)
+        else:
+            x = x.reshape(x.shape[0] // self.num_patches, -1)
         y = self.module(x)
         if self.act is not None:
             y = self.act(y)
@@ -156,6 +168,7 @@ class MixerMLP(nn.Module):
             patch_size: int,
             hidden_channels: Tuple[int, ...],
             mixer_at: Tuple[int, ...],
+            mixer_type: str = "mlp",
             kae_order_at: Optional[Dict[int, int]] = None,
             activation: Union[None, str, Callable] = None,
             kae_activation: Union[None, str, Callable] = None,
@@ -189,8 +202,12 @@ class MixerMLP(nn.Module):
                 next_ch, ch, activation=act if (i != 0 or i + 1 in mixer_at) else None, norm=norm, kae_order=kae_order_at.get(i)
             ))
             if i + 1 in mixer_at:
-                self.encoder.append(MLPMixerLayer(math.prod(self.patches_shape)))
-                self.decoder.insert(0, MLPMixerLayer(math.prod(self.patches_shape), activation=activation))
+                self.encoder.append(MLPMixerLayer(
+                    math.prod(self.patches_shape), next_ch, type=mixer_type,
+                ))
+                self.decoder.insert(0, MLPMixerLayer(
+                    math.prod(self.patches_shape), next_ch, type=mixer_type, activation=activation
+                ))
 
         self.encoder.append(MLPLayer(next_ch * math.prod(self.patches_shape), next_ch))
         self.decoder.insert(0, MLPLayer(next_ch, next_ch * math.prod(self.patches_shape)))
@@ -200,9 +217,9 @@ class MixerMLP(nn.Module):
         assert (C, H, W) == self.image_shape, f"Expected image shape {self.image_shape}, got {(C, H, W)}"
 
         patch_batch = self.patchify(batch)
-        self._last_patch_shape = patch_shape = patch_batch.shape
+        patch_shape = patch_batch.shape
         y = patch_batch.reshape(math.prod(patch_shape[:3]), -1)  # B*X*Y, C*S*S
-        # print(y.shape, self._patch_batch_shape, self.encoder)
+
         for i, module in enumerate(self.encoder):
             if i == len(self.encoder) - 1:
                 y = y.reshape(B, -1)
@@ -210,8 +227,6 @@ class MixerMLP(nn.Module):
         return y
 
     def decode(self, x: torch.Tensor) -> torch.Tensor:
-        # assert self._last_patch_shape is not None, "Must call encode() before decode()"
-        #patch_shape = self._last_patch_shape
         patch_shape = (
             x.shape[0],
             *self.patches_shape,
