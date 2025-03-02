@@ -16,9 +16,9 @@ class BaseIterableDataset(IterableDataset):
         from .limit import SkipIterableDataset
         return SkipIterableDataset(self, count)
 
-    def repeat(self, count: int):
+    def repeat(self, count: int, per_item: bool = False):
         from .limit import RepeatIterableDataset
-        return RepeatIterableDataset(self, count)
+        return RepeatIterableDataset(self, count, per_item=per_item)
 
     def shuffle(self, max_shuffle: int, *, seed: Optional[int] = None):
         from .shuffle import IterableShuffle
@@ -87,3 +87,14 @@ class BaseIterableDataset(IterableDataset):
     def filter(self, *filters: Callable[[Any], bool]):
         from .filter import FilterIterableDataset
         return FilterIterableDataset(self, *filters)
+
+
+class WrapIterableDataset(BaseIterableDataset):
+    def __init__(self, wrapped_dataset: Union[Dataset, IterableDataset]):
+        self._wrapped_dataset = wrapped_dataset
+
+    def __len__(self):
+        return len(self._wrapped_dataset)
+
+    def __iter__(self):
+        yield from self._wrapped_dataset

@@ -23,13 +23,13 @@ class BaseDataset(Dataset):
     def sample(self, size: int):
         return next(iter(DataLoader(self, batch_size=size)))
 
-    def repeat(self, count: int):
+    def repeat(self, count: int, per_item: bool = False):
         from .limit import RepeatDataset
-        return RepeatDataset(self, count)
+        return RepeatDataset(self, count, per_item=per_item)
 
-    def shuffle(self, *, seed: Optional[int] = None):
+    def shuffle(self, *, seed: Optional[int] = None, max_shuffle: Optional[int] = None):
         from .shuffle import ShuffleDataset
-        return ShuffleDataset(self, seed=seed)
+        return ShuffleDataset(self, seed=seed, max_shuffle=max_shuffle)
 
     def freeze(self):
         from .freeze import FreezeDataset
@@ -60,6 +60,10 @@ class BaseDataset(Dataset):
     def random_crop_all(self, size: int):
         from .randomcropall import RandomCropAllDataset
         return RandomCropAllDataset(self, size=size)
+
+    def to_iterable(self):
+        from .base_iterable import WrapIterableDataset
+        return WrapIterableDataset(self)
 
 
 class WrapDataset(BaseDataset):

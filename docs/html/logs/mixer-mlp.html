@@ -28,6 +28,14 @@
             <li class="indent-3"><a href="#comparison-with-baseline-cnn" title="Comparison with baseline CNN">Comparison with baseline CNN</a></li>
             
             
+            
+            <li class="indent-3"><a href="#tweaking-the-convolutional-mixing-stage" title="Tweaking the convolutional mixing stage">Tweaking the convolutional mixing stage</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#increasing-resolution" title="Increasing resolution">Increasing resolution</a></li>
+            
+            
         </ul>
     </div>
 
@@ -41,14 +49,14 @@
 <p>Recently read this paper <em>&quot;MLP-Mixer: An all-MLP Architecture for Vision&quot;</em> <a href="https://arxiv.org/abs/2105.01601" target="_blank">2105.01601</a>,
 which i found quite inspiring but also left me with some regret of not having come up with it myself. </p>
 <p>Anyways, after some weeks, i set out to program a network based on the ideas but without looking
-at the paper for reference. At least before i have a well performing implementation.
-<em>Of course</em>, i used it to setup an auto-encoder.</p>
+at the paper for reference. At least before i have a performing implementation.
+<em>Of course</em>, because i like auto-encoders so much, i used it for auto-encoding.</p>
 <p>Setup is as follows:</p>
 <p>First split the input image into equal sized patches. I'm using pytorch's <code>unfold</code> method for this.
 For the MNIST digits dataset this yield 4x4 7x7 patches for each 28x28 image. </p>
 <p>Then they are flattened to 16 1-D vectors of size 49. Those vectors are moved to the batch-dimension
 (the first one) of the vector that the linear layers ought to process. For example, when passing
-in a batch-size of 64:</p>
+in a batch-size of 64 (64 images at once):</p>
 <div style="overflow: scroll;"><div class="highlight"><pre><span></span>input:                      (64, 1, 28, 28)
 patches:                    (64, 4, 4, 1, 7, 7)
 flatten:                    (64, 16, 49)
@@ -159,6 +167,8 @@ encoder stack. Here is one example in pytorch speak:</p>
 </div><p>Note that, in the encoder, layer 5 compresses each patch from 64 to 16 dimensions, then there
 is another mixing layer, and layer 7 processes all 16 patches at once and outputs
 a final 16-dim vector (256 -&gt; 16).</p>
+<p>As with other MLPs, this auto-encoder is input-size-dependent. The network is constructed
+for a fixed image size and can not be used for other sizes.</p>
 <p>In the following table <code>bs</code> = batch size, <code>lr</code> = learnrate, <code>ds</code> is the dataset, <code>ps</code> is the patch size,
 <code>mix</code> means at which layer a mixing-layer is added (1-indexed). Optimizer is <code>AdamW</code> and loss function
 is mean-squared error. Scheduler is cosine-annealing with warmup.</p>
@@ -439,7 +449,7 @@ to confirm.</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/mixermlp/losses-cnn-vs-mlp-mixing.png" alt="loss curves" /></div></p>
 <p>Performance is much better but the number of model parameters is much larger as well.</p>
 <h3 id="comparison-with-baseline-cnn">Comparison with baseline CNN <a href="#comparison-with-baseline-cnn" class="heading-linker">←</a></h3>
-<p>How well does it perform against my baseline CNN with a final linear layer?</p>
+<p>How well does it perform against a baseline CNN with a final linear layer?</p>
 <div style="overflow: scroll;"><div class="highlight"><pre><span></span>EncoderDecoder(
   (encoder): EncoderConv2d(
     (convolution): Conv2dBlock(
@@ -525,8 +535,858 @@ performance starts to get worse after 5 million steps. </p>
 <p>However, since it seems to behave quite differently to the baseline CNN, it's certainly a nice
 new tool to try things on.</p>
 <p>It would be interesting to see if the mixing stages implemented with a convolution,
-can--somehow--reach the performance of the linear mixers.
+can--somehow--reach the performance of the fully connected linear mixers.
 That would make it very small <strong>and</strong> powerful.</p>
+<h3 id="tweaking-the-convolutional-mixing-stage">Tweaking the convolutional mixing stage <a href="#tweaking-the-convolutional-mixing-stage" class="heading-linker">←</a></h3>
+<p>First of all, we can use a larger kernel size than <strong>1</strong>. That would allow the mixing stage to
+correlate nearby pixels of individual patches. Since it's a 1-D convolution that would still
+only correlate pixels left and right and not the ones above and below. </p>
+<p>Secondly we might use 2 convolutions. One that mixes the patches and one that mixes the pixels.
+Following the example above, that would look like:</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>input:                      (1024, 49)
+reverse batch-flattening:   (64, 16, 49)
+apply Conv1d(16, 16):       (64, 16, 49)
+transpose vector:           (64, 49, 16)
+apply Conv1d(49, 49):       (64, 49, 16)
+transpose vector:           (64, 16, 49)
+move to batch dimension:    (1024, 49)
+process further with MLP:   (1024, 49)
+</pre></div>
+</div><p>And thirdly, we <em>could</em> actually do a 2-dimensional convolutional mixing: </p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>input:                      (1024, 49)
+reverse batch-flattening:   (64, 16, 49)
+restore 2-D patches:        (64, 16, 7, 7) 
+apply Conv2d(16, 16):       (64, 16, 7, 7)
+flatten the patches:        (64, 16, 49)
+move to batch dimension:    (1024, 49)
+process further with MLP:   (1024, 49)
+</pre></div>
+</div><p>However, since the final dimension is not actually fixed at 49 (7x7) but can be anything, it does
+not really represent the 2-dimensional patch content but rather just the computational breadth of
+the MLP stack at each layer. We might still treat it as <em>spatial</em>, and let the network figure
+out some good way to use it.</p>
+<p>Fourthly, if that is even a word, we can combine the two-consecutive-convolution method with the
+2-D convolution which puts another constraint on the number of patches resulting from the input
+image: It also has to be a square number. It gets a bit complicated then:</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>input:                      (1024, 49)
+reverse batch-flattening:   (64, 16, 49)
+restore 2-D patches:        (64, 16, 7, 7) 
+apply Conv2d(16, 16, 1):    (64, 16, 7, 7)
+flatten patches:            (64, 16, 49)
+transpose dimensions:       (64, 49, 16)
+make &quot;breadth&quot; 2-dim:       (64, 49, 4, 4)
+apply Conv2d(49, 49, 1):    (64, 49, 4, 4)
+flatten &quot;breadth&quot; dim:      (64, 49, 16)
+transpose dimensions:       (64, 16, 49)
+move to batch dimension:    (1024, 49)
+process further with MLP:   (1024, 49)
+</pre></div>
+</div><p>Okay, lets test all the methods with different kernel sizes from 1 to 13. The padding of the
+convolution is adjusted (<code>(ks - 1) // 2</code>) so the convolutions always produce the same output size.</p>
+<p>In below table <code>mixtype</code> is either:</p>
+<ul>
+<li><code>cnn</code>: The 1-D convolution used in the beginning</li>
+<li><code>cnnf</code>: two 1-D convolutions with patch/channel <strong>f</strong>lipping in between</li>
+<li><code>cnn2d</code>: 2-D convolution</li>
+<li><code>cnnf2d</code>: two 2-D convolutions with patch/channel <strong>f</strong>lipping in between</li>
+</ul>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">bs</th>
+<th align="right">lr</th>
+<th align="left">ds</th>
+<th align="right">ps</th>
+<th align="left">ch</th>
+<th align="left">mix</th>
+<th align="left">mixtype</th>
+<th align="right">ks</th>
+<th align="left">act</th>
+<th align="right">validation loss<br>(1,000,000 steps)</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0105176</td>
+<td align="right">35,249</td>
+<td align="right">1.53</td>
+<td align="right">10,866/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2d</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0103852</td>
+<td align="right">35,249</td>
+<td align="right">1.45</td>
+<td align="right">11,517/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn</td>
+<td align="right">3</td>
+<td align="left">gelu</td>
+<td align="right">0.0101478</td>
+<td align="right">38,321</td>
+<td align="right">1.46</td>
+<td align="right">11,447/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn</td>
+<td align="right">5</td>
+<td align="left">gelu</td>
+<td align="right">0.0097217</td>
+<td align="right">41,393</td>
+<td align="right">1.50</td>
+<td align="right">11,076/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2df</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0096381</td>
+<td align="right">52,433</td>
+<td align="right">2.09</td>
+<td align="right">7,989/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnnf</td>
+<td align="right">1</td>
+<td align="left">gelu</td>
+<td align="right">0.0095420</td>
+<td align="right">52,433</td>
+<td align="right">1.90</td>
+<td align="right">8,772/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn</td>
+<td align="right">7</td>
+<td align="left">gelu</td>
+<td align="right">0.0095143</td>
+<td align="right">44,465</td>
+<td align="right">1.42</td>
+<td align="right">11,726/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn</td>
+<td align="right">9</td>
+<td align="left">gelu</td>
+<td align="right">0.0094267</td>
+<td align="right">47,537</td>
+<td align="right">1.45</td>
+<td align="right">11,489/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2d</td>
+<td align="right">3</td>
+<td align="left">gelu</td>
+<td align="right">0.0093458</td>
+<td align="right">47,537</td>
+<td align="right">1.65</td>
+<td align="right">10,115/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn</td>
+<td align="right">11</td>
+<td align="left">gelu</td>
+<td align="right">0.0092456</td>
+<td align="right">50,609</td>
+<td align="right">1.47</td>
+<td align="right">11,327/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn</td>
+<td align="right">13</td>
+<td align="left">gelu</td>
+<td align="right">0.0092080</td>
+<td align="right">53,681</td>
+<td align="right">1.50</td>
+<td align="right">11,107/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2d</td>
+<td align="right">5</td>
+<td align="left">gelu</td>
+<td align="right">0.0086525</td>
+<td align="right">72,113</td>
+<td align="right">1.79</td>
+<td align="right">9,292/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2d</td>
+<td align="right">7</td>
+<td align="left">gelu</td>
+<td align="right">0.0083488</td>
+<td align="right">108,977</td>
+<td align="right">1.87</td>
+<td align="right">8,911/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2d</td>
+<td align="right">9</td>
+<td align="left">gelu</td>
+<td align="right">0.0080035</td>
+<td align="right">158,129</td>
+<td align="right">2.05</td>
+<td align="right">8,120/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnnf</td>
+<td align="right">3</td>
+<td align="left">gelu</td>
+<td align="right">0.0079969</td>
+<td align="right">89,297</td>
+<td align="right">1.98</td>
+<td align="right">8,404/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2d</td>
+<td align="right">13</td>
+<td align="left">gelu</td>
+<td align="right">0.0077707</td>
+<td align="right">293,297</td>
+<td align="right">2.02</td>
+<td align="right">8,240/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2d</td>
+<td align="right">11</td>
+<td align="left">gelu</td>
+<td align="right">0.0077622</td>
+<td align="right">219,569</td>
+<td align="right">1.88</td>
+<td align="right">8,865/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnnf</td>
+<td align="right">5</td>
+<td align="left">gelu</td>
+<td align="right">0.0075978</td>
+<td align="right">126,161</td>
+<td align="right">2.31</td>
+<td align="right">7,211/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnnf</td>
+<td align="right">7</td>
+<td align="left">gelu</td>
+<td align="right">0.0073687</td>
+<td align="right">163,025</td>
+<td align="right">2.47</td>
+<td align="right">6,740/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2df</td>
+<td align="right">3</td>
+<td align="left">gelu</td>
+<td align="right">0.0071530</td>
+<td align="right">199,889</td>
+<td align="right">2.12</td>
+<td align="right">7,855/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnnf</td>
+<td align="right">9</td>
+<td align="left">gelu</td>
+<td align="right">0.0071354</td>
+<td align="right">199,889</td>
+<td align="right">2.62</td>
+<td align="right">6,351/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnnf</td>
+<td align="right">13</td>
+<td align="left">gelu</td>
+<td align="right">0.0070266</td>
+<td align="right">273,617</td>
+<td align="right">2.87</td>
+<td align="right">5,815/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnnf</td>
+<td align="right">11</td>
+<td align="left">gelu</td>
+<td align="right">0.0070069</td>
+<td align="right">236,753</td>
+<td align="right">2.52</td>
+<td align="right">6,625/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2df</td>
+<td align="right">5</td>
+<td align="left">gelu</td>
+<td align="right">0.0068095</td>
+<td align="right">494,801</td>
+<td align="right">2.35</td>
+<td align="right">7,086/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2df</td>
+<td align="right">13</td>
+<td align="left">gelu</td>
+<td align="right">0.0067350</td>
+<td align="right">3,149,009</td>
+<td align="right">7.85</td>
+<td align="right">2,123/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2df</td>
+<td align="right">11</td>
+<td align="left">gelu</td>
+<td align="right">0.0066938</td>
+<td align="right">2,264,273</td>
+<td align="right">6.05</td>
+<td align="right">2,755/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2df</td>
+<td align="right">9</td>
+<td align="left">gelu</td>
+<td align="right">0.0066766</td>
+<td align="right">1,526,993</td>
+<td align="right">4.45</td>
+<td align="right">3,745/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.003</td>
+<td align="left">mnist</td>
+<td align="right">7</td>
+<td align="left">64,64,64,16</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2df</td>
+<td align="right">7</td>
+<td align="left">gelu</td>
+<td align="right">0.0066100</td>
+<td align="right">937,169</td>
+<td align="right">2.43</td>
+<td align="right">6,872/s</td>
+</tr>
+</tbody></table></div><p>Okay, first of all, just increasing the kernel size is not so helpful. As stated above, it
+only connects pixels left and right but not the once above and below. The <code>cnn</code> mixer archives
+a validation loss between <strong>0.01</strong> and <strong>0.0092</strong> for kernel sizes 1 to 13. </p>
+<p>The second option: Two convolutions for mixing (<code>cnnf</code>) work pretty good in comparison. The losses
+range between <strong>0.0095</strong> and <strong>0.007</strong> for the different kernel sizes.</p>
+<p>Third option (<code>cnn2d</code>): The <em>spatial</em> 2-D convolutions work okayish. They range between
+<strong>0.01</strong> (similar to first option with kernel size 1) and <strong>0.0078</strong>.
+It should be noted, that the huge kernel sizes do not make much sense in this example.
+The spatial patches are either 7x7 or 4x4. It would make a difference for
+larger input sizes, though.</p>
+<p>Forth option (<code>cnn2df</code>): Two spatial convolutions work best in this example. The losses range
+between <strong>0.0096</strong> (similar to <code>cnnf</code>) and <strong>0.0066</strong>. Almost reaching the performance of the
+network with fully connected linear mixers, while being much smaller in number of parameters
+(at least the kernel size 7 one).</p>
+<p>So, lets look what happens when processing something larger than the MNIST digit set.</p>
+<h2 id="increasing-resolution">Increasing resolution <a href="#increasing-resolution" class="heading-linker">←</a></h2>
+<p>In ML-papers, when larger images are required, it's almost always the
+<a href="https://image-net.org/" target="_blank">ImageNet</a> dataset that is used. Well, i sent them a request but
+got never got an answer. If it's just about auto-encoding, one can just crawl the web for a
+hundredthousand random images but this diminishes reproducibility. </p>
+<p>So i chose the <a href="https://unsplash.com/data" target="_blank">Unsplash Lite dataset</a>, although it has
+some <a href="https://github.com/unsplash/datasets/issues/61" target="_blank">minor issues</a> at the moment.</p>
+<p>These are about 25,000 images, which i scaled down to 160 pixels for the longest edge,
+but at least 96 pixels for the smallest edge and randomly cropped 96x96 patches for training.
+The first 100 images are used for validation and they are center-cropped to 96x96.</p>
+<p>To keep the auto-encoder compression ratio of 49 for comparison, the latent code has a size
+of 564 (<code>3*96*96 / 564 = 49.0213</code>).</p>
+<p>First, i tried different patch sizes with the <code>cnn</code> and <code>cnnf</code> mixers.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">bs</th>
+<th align="right">lr</th>
+<th align="left">ds</th>
+<th align="right">ps</th>
+<th align="left">ch</th>
+<th align="left">mix</th>
+<th align="left">mixt</th>
+<th align="right">ks</th>
+<th align="left">act</th>
+<th align="right">validation loss<br>(1,000,000 steps)</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">64</td>
+<td align="right">0.0003</td>
+<td align="left">unsplash</td>
+<td align="right">32</td>
+<td align="left">64,64,64,564</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn</td>
+<td align="right">3</td>
+<td align="left">gelu</td>
+<td align="right">0.0073214</td>
+<td align="right">6,218,692</td>
+<td align="right">10.03</td>
+<td align="right">1,660/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.0003</td>
+<td align="left">unsplash</td>
+<td align="right">32</td>
+<td align="left">64,64,64,564</td>
+<td align="left">2,3,4</td>
+<td align="left">cnnf</td>
+<td align="right">3</td>
+<td align="left">gelu</td>
+<td align="right">0.0057957</td>
+<td align="right">8,177,804</td>
+<td align="right">10.27</td>
+<td align="right">1,622/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.0003</td>
+<td align="left">unsplash</td>
+<td align="right">16</td>
+<td align="left">64,64,64,564</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn</td>
+<td align="right">3</td>
+<td align="left">gelu</td>
+<td align="right">0.0034742</td>
+<td align="right">23,135,920</td>
+<td align="right">11.07</td>
+<td align="right">1,505/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.0003</td>
+<td align="left">unsplash</td>
+<td align="right">16</td>
+<td align="left">64,64,64,564</td>
+<td align="left">2,3,4</td>
+<td align="left">cnnf</td>
+<td align="right">3</td>
+<td align="left">gelu</td>
+<td align="right">0.0033309</td>
+<td align="right">25,095,032</td>
+<td align="right">11.63</td>
+<td align="right">1,432/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.0003</td>
+<td align="left">unsplash</td>
+<td align="right">8</td>
+<td align="left">64,64,64,564</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn</td>
+<td align="right">3</td>
+<td align="left">gelu</td>
+<td align="right">0.0032881</td>
+<td align="right">92,181,832</td>
+<td align="right">19.27</td>
+<td align="right">864/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.0003</td>
+<td align="left">unsplash</td>
+<td align="right">8</td>
+<td align="left">64,64,64,564</td>
+<td align="left">2,3,4</td>
+<td align="left">cnnf</td>
+<td align="right">3</td>
+<td align="left">gelu</td>
+<td align="right">0.0031301</td>
+<td align="right">94,140,944</td>
+<td align="right">32.87</td>
+<td align="right">507/s</td>
+</tr>
+</tbody></table></div><p>Whoa, what happened here? First of all, the number of parameters is <strong>huge</strong> in comparison, and
+then the validation loss beats every previous model run on the MNIST digits dataset. Let's look
+closer at both phenomena.</p>
+<p>The increased parameter count can be blamed to mostly a single layer.
+Look at the encoder of the patch-size-8 model:</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>(patchify): Patchify(patch_size=8)
+(encoder): ModuleList(
+    (0): MLPLayer(
+      residual=False
+      (module): Linear(in_features=192, out_features=64, bias=True)
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (1): MLPLayer(
+      residual=True
+      (module): Linear(in_features=64, out_features=64, bias=True)
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (2): MLPMixerLayer(
+      residual=True
+      (module): Conv1d(144, 144, kernel_size=(3,), stride=(1,), padding=(1,))
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (3): MLPLayer(
+      residual=True
+      (module): Linear(in_features=64, out_features=64, bias=True)
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (4): MLPMixerLayer(
+      residual=True
+      (module): Conv1d(144, 144, kernel_size=(3,), stride=(1,), padding=(1,))
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (5): MLPLayer(
+      residual=False
+      (module): Linear(in_features=64, out_features=564, bias=True)
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (6): MLPMixerLayer(
+      residual=True
+      (module): Conv1d(144, 144, kernel_size=(3,), stride=(1,), padding=(1,))
+      (act): GELU(approximate=&#39;none&#39;)
+    )
+    (7): MLPLayer(
+      residual=False
+      (module): Linear(in_features=81216, out_features=564, bias=True)
+    )
+)
+</pre></div>
+</div><p>The 96x96 images are sliced into 144 8x8 patches.
+The convolutions require <code>144 * 144 * 3 * 3 = 186,624</code> parameters each (+ the bias) so their
+size is <em>acceptable</em>.</p>
+<p>The fifth layer expands to hidden dimension of 564 and the final mixdown-to-latent-code
+layer (lets call it <em>head</em>) gets a 144 * 564 vector as input and mixes it down to 564:
+<code>81216 * 564 = 45,805,824</code>! The decoder has the same thing in reverse. That's completely
+exagerated for the <em>head</em> of a otherwise tiny network.</p>
+<p>Quite obviously, there is no need to expand the hidden dimensions to 564 <strong>before</strong> the head.
+That was just how i wrote the code without thinking too much when the networks were small.
+That needs to be fixed.</p>
+<p>So what about the validation loss of around <strong>0.003</strong>? Turns out that photos generally yield
+a lower reconstruction error compared to the high-contrast black and white MNIST digits.
+It does not look too great, though:</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/mixermlp/reconstruction-unsplash-0.0033.png" alt="reconstructed images" /></div></p>
+<p>(original on top, reconstruction below)</p>
+<p>To fix the problem with the large final layer, there is now one additonal channel number in the
+model configuration, which defines the breath of the final layer before the head. To keep the
+networks small, i used 32 (or 36 to make it square for the 2-D convolutions).
+Here a are a few other setups:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">bs</th>
+<th align="right">lr</th>
+<th align="left">ds</th>
+<th align="right">ps</th>
+<th align="left">ch</th>
+<th align="left">mix</th>
+<th align="left">mixt</th>
+<th align="right">ks</th>
+<th align="left">act</th>
+<th align="right">validation loss<br>(1,000,000 steps)</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">64</td>
+<td align="right">0.0003</td>
+<td align="left">unsplash</td>
+<td align="right">8</td>
+<td align="left">144,144,144,36,564</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2df</td>
+<td align="right">7</td>
+<td align="left">gelu</td>
+<td align="right">0.0544467</td>
+<td align="right">16,292,160</td>
+<td align="right">37.2</td>
+<td align="right">448/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.0001</td>
+<td align="left">unsplash</td>
+<td align="right">8</td>
+<td align="left">144x9...,36,564</td>
+<td align="left">2,4,6,8</td>
+<td align="left">cnn2df</td>
+<td align="right">7</td>
+<td align="left">gelu</td>
+<td align="right">0.0036219</td>
+<td align="right">22,512,888</td>
+<td align="right">60.97</td>
+<td align="right">273/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.0003</td>
+<td align="left">unsplash</td>
+<td align="right">8</td>
+<td align="left">64,64,64,32,564</td>
+<td align="left">2,3,4</td>
+<td align="left">cnnf</td>
+<td align="right">3</td>
+<td align="left">gelu</td>
+<td align="right">0.0033642</td>
+<td align="right">5,678,388</td>
+<td align="right">10.78</td>
+<td align="right">1,546/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.0003</td>
+<td align="left">unsplash</td>
+<td align="right">8</td>
+<td align="left">64,64,64,32,564</td>
+<td align="left">2,3,4</td>
+<td align="left">cnnf</td>
+<td align="right">13</td>
+<td align="left">gelu</td>
+<td align="right">0.0033175</td>
+<td align="right">7,106,868</td>
+<td align="right">12.61</td>
+<td align="right">1,322/s</td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td align="right">0.0003</td>
+<td align="left">unsplash</td>
+<td align="right">8</td>
+<td align="left">64,64,64,36,564</td>
+<td align="left">2,3,4</td>
+<td align="left">cnn2df</td>
+<td align="right">7</td>
+<td align="left">gelu</td>
+<td align="right">0.0032664</td>
+<td align="right">12,926,880</td>
+<td align="right">23.34</td>
+<td align="right">713/s</td>
+</tr>
+</tbody></table></div><p>The networks are still pretty big, which feels unjustified when trusting my gut feelings. There
+is also no increase in performance using the 2-D convolutions or making the network deeper
+(the <code>144x9...</code> means an mlp with 9 layers of 144 channels each). It actually starts to feel
+like a waste of energy, literally. </p>
+<p>Just to see what else is possible i compare against some recent &quot;baseline&quot; CNN-only
+model that uses no MLP layers but instead decreases the spatial resolution via torch's
+<a href="https://pytorch.org/docs/stable/generated/torch.nn.PixelUnshuffle.html" target="_blank"><code>PixelUnshuffle</code></a> method.
+This move parts of the spatial pixels into the channels dimension,
+which can be gradually decreased to match a certain compression ratio. In this case, the
+network transforms the <code>3x96x96</code> to <code>1x24x24</code>, which corresponds to a ratio of <strong>48</strong>.</p>
+<p>The &quot;script&quot; explains the design of the network: <code>ch=X</code> means: set the size of the
+color/channel-dimension to <code>X</code> via a 2-D convolution and activation function.
+<code>ch*X</code> or <code>ch/X</code> multiplies or divides the number of channels via such a convolution layer.
+If the channel number is unchanged (e.g. <code>ch*1</code>) the layer also has a residual skip connection.
+<code>downX</code> is the <code>PixelUnshuffle</code> transform. E.g. <code>down4</code> means, transform
+<code>C x H x W</code> to <code>C*4*4 x H/4 x W/4</code>. And the <code>ch=32|down4</code> part means transform
+input image <code>3x96x96</code> to <code>32x96x96</code> and the unshuffle to <code>512x24x24</code>.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">script</th>
+<th align="right">ks</th>
+<th align="left">act</th>
+<th align="right">validation loss<br>(1,000,000 steps)</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">ch=32|down4|ch/2|ch/2|ch<em>1|ch</em>1|ch=1</td>
+<td align="right">3</td>
+<td align="left">relu6</td>
+<td align="right">0.00282578</td>
+<td align="right">3,248,612</td>
+<td align="right">36.04</td>
+<td align="right">462/s</td>
+</tr>
+<tr>
+<td align="left">scl=3|ch=32|down4|ch/2|ch/2|ch<em>1|\ch</em>1|ch=1</td>
+<td align="right">3</td>
+<td align="left">relu6</td>
+<td align="right">0.00232538</td>
+<td align="right">15,446,750</td>
+<td align="right">179.57</td>
+<td align="right">92/s</td>
+</tr>
+</tbody></table></div><p>The <code>scl=3</code> in the second network script sets the number of
+<strong>s</strong>kip-<strong>c</strong>onvolution-<strong>l</strong>ayers for all the following convolutions.
+This idea is borrowed from <em>Latent Space Characterization of Autoencoder Variants</em>
+(<a href="https://archive.org/abs/2412.04755" target="_blank">2412.04755</a>)
+and is called <strong>s</strong>kip-<strong>c</strong>onnected <strong>t</strong>riple <strong>c</strong>onvolution* there. In our case it means,
+for each convolution, actually do three of them + add a residual skip connection.</p>
+<p>Performance is certainly better than the Mixer-MLP's above. Still, it feels much like a waste of
+energy and time to pursue, e.g., twice the performance with similar models.</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/mixermlp/reconstruction-unsplash-0.0023.png" alt="reconstructed images" /></div></p>
+<p>I rather stop the high-res (well 96² is not high resolution by any modern standards but you know
+what i mean) experiments for now and rather try some new tricks in lower resolution
+for faster experiment iterations.</p>
 
 
         <!-- article footer -->

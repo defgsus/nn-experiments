@@ -123,7 +123,8 @@ class MLPMixerLayer(nn.Module):
             self,
             num_patches: int,
             channels: int,
-            type: str = "cnn",  # "cnn", "mlp"
+            type: str = "cnn",  # "cnn", "cnnf", "cnn2d", "cnn2df", "mlp"
+            kernel_size: int = 1,
             activation: Union[None, str, Callable] = None,
             bias: bool = True,
             residual: bool = True,
@@ -133,13 +134,36 @@ class MLPMixerLayer(nn.Module):
         self.num_patches = num_patches
         self.channels = channels
         self.type = type
+        self.is_conv_flip = False
+        self.is_conv_2d = False
 
-        if type == "cnn":
-            self.module = nn.Conv1d(num_patches, num_patches, kernel_size=1, bias=bias)
+        pad = (kernel_size - 1) // 2
+        if type == "cnnf":
+            self.is_conv_flip = True
+            self.conv1 = nn.Conv1d(num_patches, num_patches, kernel_size=kernel_size, padding=pad, bias=bias)
+            self.conv2 = nn.Conv1d(channels, channels, kernel_size=kernel_size, padding=pad, bias=bias)
+        elif type == "cnn2df":
+            self.is_conv_flip = True
+            self.is_conv_2d = True
+            self.conv1 = nn.Conv2d(num_patches, num_patches, kernel_size=kernel_size, padding=pad, bias=bias)
+            self.conv2 = nn.Conv2d(channels, channels, kernel_size=kernel_size, padding=pad, bias=bias)
+        elif type == "cnn2d":
+            self.is_conv_2d = True
+            self.module = nn.Conv2d(num_patches, num_patches, kernel_size=kernel_size, padding=pad, bias=bias)
+        elif type == "cnn":
+            self.module = nn.Conv1d(num_patches, num_patches, kernel_size=kernel_size, padding=pad, bias=bias)
         elif type == "mlp":
             self.module = nn.Linear(num_patches * channels, num_patches * channels, bias=bias)
         else:
             raise ValueError(f"Unknown type '{type}'")
+
+        if self.is_conv_2d:
+            sqrt = math.sqrt(self.channels)
+            assert sqrt == int(sqrt), f"channels must be a square number for type `cnn2d`, got {self.channels}"
+
+            if self.is_conv_flip:
+                sqrt = math.sqrt(self.num_patches)
+                assert sqrt == int(sqrt), f"num_patches must be a square number for type `cnn2df`, got {self.num_patches}"
 
         self.act = activation_to_module(activation)
 
@@ -147,17 +171,45 @@ class MLPMixerLayer(nn.Module):
         return f"residual={self._residual}"
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x_orig = x
         shape = x.shape
-        if self.type == "cnn":
-            x = x.reshape(x.shape[0] // self.num_patches, self.num_patches, -1)
+        # TODO: this only works for square inputs,
+        final_dims = (-1, ) if not self.is_conv_2d else (int(math.sqrt(self.channels)), -1)
+        if self.is_conv_flip:
+            if not self.is_conv_2d:
+                x = x.reshape(x.shape[0] // self.num_patches, self.num_patches, *final_dims)
+                y = self.conv1(x)
+                y = y.permute(0, 2, 1)
+                y = self.conv2(y)
+                y = y.permute(0, 2, 1)
+            else:
+                x = x.reshape(x.shape[0] // self.num_patches, self.num_patches, *final_dims)
+                y = self.conv1(x)
+                y = (
+                    y.reshape(shape[0] // self.num_patches, self.num_patches, -1)
+                    .permute(0, 2, 1)
+                    .reshape(shape[0] // self.num_patches, self.channels, int(math.sqrt(self.num_patches)), -1)
+                )
+                y = self.conv2(y)
+                y = (
+                    y.reshape(shape[0] // self.num_patches, self.channels, -1)
+                    .permute(0, 2, 1)
+                    .reshape(shape)
+                )
+        elif self.type.startswith("cnn"):
+            x = x.reshape(x.shape[0] // self.num_patches, self.num_patches, *final_dims)
         else:
             x = x.reshape(x.shape[0] // self.num_patches, -1)
-        y = self.module(x)
+
+        if not self.is_conv_flip:
+            y = self.module(x)
+
         if self.act is not None:
             y = self.act(y)
+        y = y.reshape(shape)
         if self._residual:
-            y = y + x
-        return y.reshape(shape)
+            y = y + x_orig
+        return y
 
 
 class MixerMLP(nn.Module):
@@ -169,6 +221,7 @@ class MixerMLP(nn.Module):
             hidden_channels: Tuple[int, ...],
             mixer_at: Tuple[int, ...],
             mixer_type: str = "mlp",
+            mixer_kernel_size: int = 1,
             kae_order_at: Optional[Dict[int, int]] = None,
             activation: Union[None, str, Callable] = None,
             kae_activation: Union[None, str, Callable] = None,
@@ -193,7 +246,7 @@ class MixerMLP(nn.Module):
 
         kae_order_at = kae_order_at or {}
         channels = (self.patch_dim, *self.hidden_channels)
-        for i, (ch, next_ch) in enumerate(zip(channels, channels[1:])):
+        for i, (ch, next_ch) in enumerate(zip(channels[:-1], channels[1:-1])):
             act = kae_activation if kae_order_at.get(i) else activation
             self.encoder.append(MLPLayer(
                 ch, next_ch, activation=act, norm=norm, kae_order=kae_order_at.get(i)
@@ -204,13 +257,15 @@ class MixerMLP(nn.Module):
             if i + 1 in mixer_at:
                 self.encoder.append(MLPMixerLayer(
                     math.prod(self.patches_shape), next_ch, type=mixer_type,
+                    kernel_size=mixer_kernel_size, activation=activation,
                 ))
                 self.decoder.insert(0, MLPMixerLayer(
-                    math.prod(self.patches_shape), next_ch, type=mixer_type, activation=activation
+                    math.prod(self.patches_shape), next_ch, type=mixer_type,
+                    kernel_size=mixer_kernel_size, activation=activation
                 ))
 
-        self.encoder.append(MLPLayer(next_ch * math.prod(self.patches_shape), next_ch))
-        self.decoder.insert(0, MLPLayer(next_ch, next_ch * math.prod(self.patches_shape)))
+        self.encoder.append(MLPLayer(next_ch * math.prod(self.patches_shape), channels[-1]))
+        self.decoder.insert(0, MLPLayer(channels[-1], next_ch * math.prod(self.patches_shape)))
 
     def encode(self, batch: torch.Tensor) -> torch.Tensor:
         B, C, H, W = batch.shape

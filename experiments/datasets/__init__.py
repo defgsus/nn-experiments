@@ -29,3 +29,4 @@ from .teletext import (
     TeletextPixelIterableDataset,
     TeletextMatrixIterableDataset,
 )
+from .unsplash import unsplash_dataset

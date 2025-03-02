@@ -22,22 +22,50 @@ class ShuffleDataset(BaseDataset):
     def __init__(
             self,
             dataset: Dataset,
+            max_shuffle: Optional[int] = None,
             seed: Optional[int] = None,
     ):
+        """
+        1
+        2
+        3
+        4
+        5
+        6
+        7
+        8
+        9
+
+        :param dataset:
+        :param max_shuffle:
+        :param seed:
+        """
         self._dataset = dataset
-        if seed is None:
-            generator = None
+        if max_shuffle is None:
+            if seed is None:
+                generator = None
+            else:
+                generator = torch.manual_seed(seed)
+            self._indices = list(torch.utils.data.sampler.RandomSampler(self, generator=generator))
         else:
-            generator = torch.manual_seed(seed)
-        self._indices = list(torch.utils.data.sampler.RandomSampler(self, generator=generator))
+            if seed is None:
+                rng = random
+            else:
+                rng = random.Random(seed)
+            self._indices = []
+            stack = []
+            for i in range(len(self)):
+                stack.append(i)
+                if len(stack) >= max_shuffle:
+                    self._indices.append(stack.pop(rng.randrange(len(stack))))
+            while stack:
+                self._indices.append(stack.pop(rng.randrange(len(stack))))
 
     def __len__(self):
         return len(self._dataset)
 
     def __getitem__(self, index):
         return self._dataset[self._indices[index]]
-
-
 
 
 

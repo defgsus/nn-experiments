@@ -1,10 +1,11 @@
 import json
 import zipfile
 from pathlib import Path
-from typing import Union, Optional, Tuple
+from typing import Union, Optional, Tuple, Dict
 
 import pandas as pd
 import PIL.Image
+import torch
 import torchvision.transforms.functional as VF
 
 from src import config
@@ -37,6 +38,7 @@ class UnsplashDataset(BaseDataset):
             data: Tuple[str] = ("tensor", "data"),
             base_dir: Union[str, Path] = config.BIG_DATASETS_PATH / "unsplash",
             max_size: Optional[int] = None,
+            cache_size: int = 10,
     ):
         """
         The Unsplash Lite Dataset: https://github.com/unsplash/datasets/
@@ -62,6 +64,10 @@ class UnsplashDataset(BaseDataset):
         self._base_dir = Path(base_dir)
         self._max_size = max_size
         self._table: Optional[pd.DataFrame] = None
+        self._cache_size = cache_size
+        self._cache: Dict[Path, dict] = {}
+        self._cache_time: int = 0
+        self._cache_misses: int = 0
 
     def _download(self) -> Path:
         zip_filename = self._base_dir / self._ZIP_FILENAME
@@ -119,23 +125,14 @@ class UnsplashDataset(BaseDataset):
             except Exception as e:
                 raise IOError(f"{type(e).__name__}: {e} for image:\n{json.dumps(row.to_dict(), indent=2)}")
 
-        pil_image = None
-        tensor_image = None
-
         return_data = []
 
         for what in self._data:
             if what == "tensor":
-                if pil_image is None:
-                    pil_image = PIL.Image.open(filename)
-                if tensor_image is None:
-                    tensor_image = VF.to_tensor(pil_image)
-                return_data.append(tensor_image)
+                return_data.append(self._get_tensor_image(filename))
 
             elif what == "pil":
-                if pil_image is None:
-                    pil_image = PIL.Image.open(filename)
-                return_data.append(pil_image)
+                return_data.append(self._get_pil_image(filename))
 
             elif what == "data":
                 return_data.append(row.to_dict())
@@ -149,6 +146,45 @@ class UnsplashDataset(BaseDataset):
             return return_data[0]
         else:
             return tuple(return_data)
+
+    def _get_pil_image(self, filename):
+        if filename not in self._cache:
+            self._cache_misses += 1
+            image = PIL.Image.open(filename)
+            if "pil" in self._data:
+                self._store_cache(filename, "pil", image)
+            return image
+        cache = self._cache[filename]
+        cache["time"] = self._cache_time
+        self._cache_time += 1
+        return cache["pil"]
+
+    def _get_tensor_image(self, filename):
+        if filename not in self._cache:
+            self._cache_misses += 1
+            image = PIL.Image.open(filename)
+            if "pil" in self._data:
+                self._store_cache(filename, "pil", image)
+            tensor_image = VF.to_tensor(image)
+            self._store_cache(filename, "tensor", tensor_image)
+            return tensor_image
+        cache = self._cache[filename]
+        cache["time"] = self._cache_time
+        self._cache_time += 1
+        return cache["tensor"]
+
+    def _store_cache(self, filename: Path, type: str, image: Union[PIL.Image.Image, torch.Tensor]):
+        if filename not in self._cache:
+            self._cache[filename] = {
+                "time": self._cache_time
+            }
+            if len(self._cache) > self._cache_size:
+                oldest = sorted(self._cache.keys(), key=lambda k: self._cache[k]["time"])[0]
+                if oldest != filename:
+                    del self._cache[oldest]
+
+        cache = self._cache[filename]
+        cache[type] = image
 
 
 def download_unsplash(ds: UnsplashDataset, workers: int = 4):

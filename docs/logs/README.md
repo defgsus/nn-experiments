@@ -13,6 +13,8 @@ You can also view these files online at [defgsus.github.io/nn-experiments/](http
   - [:arrow_forward:](2025-02-25-mixer-mlp.md#mlp-mixer-re-invented-for-auto-encoding) MLP-Mixer re-invented for auto-encoding
       - [:arrow_forward:](2025-02-25-mixer-mlp.md#linear-layer-as-mixer) Linear layer as mixer
       - [:arrow_forward:](2025-02-25-mixer-mlp.md#comparison-with-baseline-cnn) Comparison with baseline CNN
+      - [:arrow_forward:](2025-02-25-mixer-mlp.md#tweaking-the-convolutional-mixing-stage) Tweaking the convolutional mixing stage
+    - [:arrow_forward:](2025-02-25-mixer-mlp.md#increasing-resolution) Increasing resolution
 - [2025-01-14-DRAFT-cnn-kae-01.md](2025-01-14-DRAFT-cnn-kae-01.md)
 - [2025-01-10-review-kan-autoencoder.md](2025-01-10-review-kan-autoencoder.md)
   - [:arrow_forward:](2025-01-10-review-kan-autoencoder.md#reviewing-kae-kolmogorov-arnold-auto-encoder-for-representation-learning) Reviewing "KAE: Kolmogorov-Arnold Auto-Encoder for Representation Learning"

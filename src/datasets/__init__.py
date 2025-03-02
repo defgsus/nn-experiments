@@ -49,6 +49,7 @@ from .text import (
     TextGithubEventIterableDataset,
     TextWiki9SegmentIterableDataset,
 )
+from .unsplash import UnsplashDataset
 from .pixelart import RpgTileIterableDataset
 from .text2pix import TextToPixelIterableDataset
 from .transform import TransformDataset, TransformIterableDataset

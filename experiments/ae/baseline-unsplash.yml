@@ -1,0 +1,52 @@
+# Don't actually know how well this performs,
+#  it is SUUPER slow (100it/s)
+experiment_name: ae/baseline-unsplash_${matrix_slug}
+
+matrix:
+  ch:
+    - [24, 32, 48, 48]
+  ks:
+    - 13
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  unsplash_dataset(shape=SHAPE, train=True)
+
+validation_set: |
+  unsplash_dataset(shape=SHAPE, train=False)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l2
+max_inputs: 1_000_000
+
+globals:
+  SHAPE: (3, 96, 96)
+  CODE_SIZE: 564
+
+model: |
+  encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=${ch}, kernel_size=${ks})
+
+  encoded_shape = encoder.convolution.get_output_shape(SHAPE)
+  decoder = nn.Sequential(
+      nn.Linear(CODE_SIZE, math.prod(encoded_shape)),
+      Reshape(encoded_shape),
+      encoder.convolution.create_transposed(act_last_layer=False),
+  )
+
+  model = EncoderDecoder(encoder, decoder)
+  
+  with torch.no_grad():
+      print(model)
+      inp = torch.ones(64, *SHAPE)
+      outp = dump_module_stacktrace(model.encoder, inp)
+      print(inp.shape[1:], "->", outp.shape[1:])
+      print("RATIO:", math.prod(inp.shape) / math.prod(outp.shape))
+      print(f"params: {num_module_parameters(model):,}")
+  
+      recon = dump_module_stacktrace(model.decoder, outp)
+  
+  model  

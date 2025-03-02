@@ -1,0 +1,98 @@
+experiment_name: ae/mixer/mixer05_${matrix_slug}
+
+matrix:
+  bs:
+#    - 32
+    - 64
+#    - 128
+#    - 256
+  lr:
+    - 0.0001
+#    - 0.0003
+#    - 0.003
+  ds:
+    - "unsplash"
+  s:
+    - [3, 96, 96]
+  ps:
+    - 8
+    #- 16
+    #- 32
+  ch:
+    #- [64, 64, 64, 32, 564]
+    #- [64, 64, 64, 36, 564]
+#    - [144, 144, 144, 36, 564]
+    - [144, 144, 144, 144, 144, 144, 144, 144, 144, 36, 564]
+
+  mix:
+#    - [2,3,4]
+    - [2,4,6,8]
+  #kae:
+  #  - {}
+    #- {0: 3}
+  mixt:
+    #- "cnn"
+    #- "cnnf"
+    #- "cnn2d"
+    - "cnn2df"
+    #- "mlp"
+  ks:
+    #- 3
+    #- 5
+    - 7
+    #- 9
+    #- 11
+    #- 13
+  act:
+    - "gelu"
+    #- "relu6"  # much worse
+    #- "silu"
+  #kaeact:
+  #  - "sigmoid"
+    #- "tanh"
+  #norm:
+    #- "layernorm"
+    #- "bn1d"
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+feature_loss_weight: 0.
+
+train_set: |
+  ${ds}_dataset(shape=${s}, train=True)
+
+validation_set: |
+  ${ds}_dataset(shape=${s}, train=False)
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: AdamW
+scheduler: CosineAnnealingWarmupLR
+loss_function: l2
+max_inputs: 1_000_000
+
+model: |
+  from experiments.ae.mixer.mixermodel import MixerMLP
+  
+  model = MixerMLP(
+      image_shape=${s},
+      patch_size=${ps},
+      hidden_channels=${ch},
+      mixer_at=${mix},
+      mixer_type='${mixt}',
+      mixer_kernel_size=${ks},
+      # kae_order_at={kae},
+      activation='${act}',
+      # kae_activation='{kaeact}',
+  )
+  
+  with torch.no_grad():
+      print(model)
+      inp = torch.ones(64, *${s})
+      outp = dump_module_stacktrace(model, inp, method_name="encode")
+      print(inp.shape[1:], "->", outp.shape[1:])
+      print("RATIO:", math.prod(inp.shape) / math.prod(outp.shape))
+      print(f"params: {num_module_parameters(model):,}")
+  
+      recon = dump_module_stacktrace(model, outp, method_name="decode")
+  
+  model

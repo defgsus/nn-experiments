@@ -103,16 +103,21 @@ class RepeatDataset(BaseDataset):
             self,
             dataset: Dataset,
             count: int,
+            per_item: bool = False,
     ):
         super().__init__()
         self._dataset = dataset
         self._count = count
+        self._per_item = per_item
 
     def __len__(self):
         return len(self._dataset) * self._count
 
     def __getitem__(self, item):
-        return self._dataset[item % len(self._dataset)]
+        if self._per_item:
+            return self._dataset[item // self._count]
+        else:
+            return self._dataset[item % len(self._dataset)]
 
 
 class RepeatIterableDataset(BaseIterableDataset):
@@ -121,15 +126,22 @@ class RepeatIterableDataset(BaseIterableDataset):
             self,
             dataset: Union[IterableDataset, Dataset],
             count: int,
+            per_item: bool = False,
     ):
         super().__init__()
         self._dataset = dataset
         self._count = count
+        self._per_item = per_item
 
     def __len__(self):
         return len(self._dataset) * self._count
 
     def __iter__(self):
-        for i in range(self._count):
-            yield from self._dataset
+        if self._per_item:
+            for item in self._dataset:
+                for i in range(self._count):
+                    yield item
+        else:
+            for i in range(self._count):
+                yield from self._dataset
 
