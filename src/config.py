@@ -15,3 +15,12 @@ BIG_DATASETS_PATH = Path(decouple.config(
     "BIG_DATASETS_PATH",
     Path("~/datasets"),
 )).expanduser()
+<<<<<<< Updated upstream
+=======
+
+
+SMALL_DATASETS_PATH = Path(decouple.config(
+    "SMALL_DATASETS_PATH",
+    Path("~/prog/data"),
+)).expanduser()
+>>>>>>> Stashed changes

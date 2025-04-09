@@ -1,0 +1,116 @@
+experiment_name: nexttoken/fefe-stride_${matrix_slug}
+
+matrix:
+  trial: [1] #, 2, 3, 4, 5]
+  bs: [64]
+  ga: [1]
+  opt: ["AdamW"]
+  lr: [.0005]
+  dsm:
+    - "concatstride"
+  vocab:
+    - 4096
+  seqlen:
+    - 256
+  l:
+    #- 4
+    - 6
+  ch:
+    #-  [64, 64, 64, 2]
+    -  [64, 64, 64, 64, 64, 2]
+    #- [64, 64, 64, 64, 64, 64, 64, 2]
+  ks:
+    - 9
+  dil:
+    #- [2, 3, 5, 1]
+    - [2, 3, 5, 1, 1, 1]
+    #- [2, 2, 3, 3, 5, 5, 1, 1]
+  perm:
+    - "'even'"
+  att:
+    - []
+    #- [2,3]
+    #- [4]
+  qkv:
+    - "qkv"
+  norm:
+    - "none"
+  act:
+    - "gelu"
+  cheap:
+    - False
+  $filter: ${l} == len(${ch}) and ${l} == len(${dil})
+
+globals:
+  TOKENIZER: |
+    transformers.AutoTokenizer.from_pretrained(
+        str(config.SMALL_DATASETS_PATH / "fefe" / "tokenizer-bpe-${vocab}-spaces")
+    )
+
+trainer: experiments.nexttoken.trainer.TextTrainer
+tokenizer: |
+  TOKENIZER
+seq_length: ${seqlen}
+vocab_size: ${vocab}
+
+train_set: |
+  from experiments.minimind.tokenizedataset import TokenizeDataset
+  dataset = FefePostIterableDataset().freeze()
+  TokenizeDataset(
+      dataset.limit(47000),
+      TOKENIZER,
+      ${seqlen} + 1,
+      return_types="X[:-1],X[-1:]",
+      method="${dsm}",
+      stride=[1,10],
+  )
+
+validation_set: |
+  TokenizeDataset(
+      dataset.skip(47000),
+      TOKENIZER,
+      ${seqlen} + 1,
+      return_types="X[:-1],X[-1:]",
+      method="${dsm}",
+      stride=40,
+  )
+  
+
+batch_size: ${bs}
+gradient_accumulation: ${ga}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+#loss_function: l1
+max_inputs: 20_000_000
+num_epochs_between_validations: 999999
+num_inputs_between_validations: 100_000
+#freeze_validation_set: True
+
+
+model: |
+  from experiments.nexttoken.textmodel import ConvTextModel
+  
+  model = ConvTextModel(
+      vocab_size=${vocab},
+      seq_length=${seqlen},
+      num_layers=${l},
+      num_channels=${ch},
+      dilation=${dil},
+      kernel_size=${ks},
+      permute=${perm},
+      norm="${norm}",
+      activation="${act}",
+      residual=True,
+      cheap=${cheap},
+      attention_at=${att},
+      attention_invention="${qkv}",
+  )
+  with torch.no_grad():
+      print(model)
+      inp = torch.ones(${bs}, ${seqlen}, dtype=torch.long)
+      outp = dump_module_stacktrace(model, inp)
+      print(f"shape: {inp.shape} -> {outp.shape}")
+      print(f"params: {num_module_parameters(model):,}")
+  
+  model

@@ -1,0 +1,104 @@
+experiment_name: minimind/fefe_${matrix_slug}
+
+matrix:
+  trial: [1] #, 2, 3, 4, 5]
+  bs:
+    - 16
+    #- 256
+  ga:
+    - 1
+  opt: ["AdamW"]
+  lr:
+    - .0005
+    #- .002
+  len:
+    - 512
+    #- 8192
+  vocab:
+    - 1024
+    #- 4096
+  l:
+    - 4
+  dim:
+    #- 128
+    - 256
+    #- 512
+  h:
+    - 8
+  kvh:
+    - 2
+  diag:
+    #- False
+    - True
+  qkvlayer:
+    - "linear"
+    #- "cnn"
+  fflayer:
+    - "linear"
+    #- "cnn"
+
+
+globals:
+  TOKENIZER: |
+    transformers.AutoTokenizer.from_pretrained(
+        str(config.SMALL_DATASETS_PATH / "fefe" / "tokenizer-bpe-${vocab}")
+    )
+
+trainer: experiments.minimind.minimindtrainer.MiniMindTrainer
+tokenizer: |
+  TOKENIZER
+max_seq_length: ${len}
+
+train_set: |
+  from experiments.minimind.tokenizedataset import TokenizeDataset
+  dataset = FefePostIterableDataset().freeze() 
+  TokenizeDataset(
+      dataset.limit(47000), #.shuffle(100)
+      TOKENIZER,
+      ${len},
+  )
+
+validation_set: |
+  TokenizeDataset(
+      dataset.skip(47000),
+      TOKENIZER,
+      ${len},
+  )
+  
+
+batch_size: ${bs}
+gradient_accumulation: ${ga}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+#loss_function: l1
+max_inputs: 20_000_000
+num_epochs_between_validations: 999999
+num_inputs_between_validations: 50_000
+#freeze_validation_set: True
+
+
+model: |
+  from src.models.minimind import LMConfig, MiniMindLM
+  
+  model = MiniMindLM(
+      LMConfig(
+          dim=${dim},
+          n_layers=${l},
+          n_heads=${h},
+          n_kv_heads=${kvh},
+          vocab_size=${vocab},
+          hidden_dim=None,
+          multiple_of=64,
+          max_seq_len=${len},
+          diagonal_embedding=${diag},
+          qkv_layer_type="${qkvlayer}",
+          ff_layer_type="${fflayer}",
+      )
+  )
+  with torch.no_grad():
+      print(model)
+      inp = torch.ones(${bs}, ${len}, dtype=torch.long)
+      dump_module_stacktrace(model, inp)
+  
+  model

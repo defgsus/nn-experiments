@@ -38,6 +38,10 @@ Those papers are reviewed by researchers and, we all hope, none of those hoax pa
 into a professional journal. The fact that reviewers are not payed for their reviewing work and
 that professional publishers sell the access to those papers (at very high rates!), while the
 research is generally funded by tax-payers money is the worst trend of all. 
+<<<<<<< Updated upstream
+=======
+See, e.g., [here](https://www.lieffcabraser.com/antitrust/academic-journals/).
+>>>>>>> Stashed changes
 
 Anyways, that's just a side-note to provide some context. Out of curiosity, i will examine 
 the paper myself. 

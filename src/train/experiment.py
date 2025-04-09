@@ -31,9 +31,13 @@ import torchvision.transforms.functional as VF
 import torchvision.models
 from torchvision.utils import make_grid
 import pandas as pd
+try:
+    import transformers
+except ImportError:
+    pass
 
 # make all the local stuff available to experiments
-from src import console
+from src import config, console
 from src.util import *
 from src.util.image import *
 from src.util.module import *
@@ -116,7 +120,15 @@ def run_experiment_from_command_args():
     run_experiment(experiment_file, extra_args=args)
 
 
+<<<<<<< Updated upstream
 def load_experiment_trainer(experiment_file, device: str = "auto"):
+=======
+def load_experiment_trainer(experiment_file, device: str = "auto", clear_cache: bool = True):
+    if clear_cache:
+        _yaml_data_cache.clear()
+        _yaml_text_cache.clear()
+
+>>>>>>> Stashed changes
     return run_experiment(experiment_file, extra_args={
         "command": "get_trainer",
         "device": device,

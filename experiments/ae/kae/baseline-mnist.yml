@@ -1,0 +1,47 @@
+experiment_name: ae/baseline-mnist_${matrix_slug}
+
+matrix:
+  ch:
+    #- [24, 32, 48]
+    - [24, 24, 24]
+  ks:
+    #- 3
+    #- 5
+    - 7
+  enckae:
+    - 0
+    - 3
+  deckae:
+    - 3
+    - 0
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  mnist_dataset(shape=SHAPE, train=True)
+
+validation_set: |
+  mnist_dataset(shape=SHAPE, train=False)
+
+batch_size: 64
+learnrate: 0.0003
+optimizer: AdamW
+#scheduler: CosineAnnealingLR
+loss_function: l2
+max_inputs: 600_000
+
+globals:
+  SHAPE: (1, 28, 28)
+  CODE_SIZE: 16
+
+model: |
+  from experiments.ae.kae.cnn_kae import CNNAutoEncoder
+  
+  CNNAutoEncoder(
+      shape=SHAPE, 
+      latent_dim=CODE_SIZE, 
+      channels=${ch}, 
+      kernel_size=${ks},
+      encoder_kae_order=${enckae},
+      decoder_kae_order=${deckae},
+  )
