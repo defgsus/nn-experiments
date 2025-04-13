@@ -221,7 +221,8 @@ academic ranking tying your name with the words superior and SOTA often enough?<
 Those papers are reviewed by researchers and, we all hope, none of those hoax papers make it
 into a professional journal. The fact that reviewers are not payed for their reviewing work and
 that professional publishers sell the access to those papers (at very high rates!), while the
-research is generally funded by tax-payers money is the worst trend of all. </p>
+research is generally funded by tax-payers money is the worst trend of all.
+See, e.g., <a href="https://www.lieffcabraser.com/antitrust/academic-journals/" target="_blank">here</a>.</p>
 <p>Anyways, that's just a side-note to provide some context. Out of curiosity, i will examine
 the paper myself. </p>
 <h3 id="kolmogorov-arnold-auto-encoder">Kolmogorov-Arnold Auto-Encoder <a href="#kolmogorov-arnold-auto-encoder" class="heading-linker">←</a></h3>
@@ -237,13 +238,13 @@ reproduced. Generally, the paper is very clean and tidy and the conducted experi
 insightful. </p>
 <p>I cloned the repo (at commit <code>bce71dca</code> from Dec 31, 2024) and started a
 <a href="https://jupyter.org/" target="_blank">jupyter lab</a> to reproduce the results of Table 2: </p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
-<span class="kn">import</span> <span class="nn">math</span>
-<span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">ExpToolKit</span>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">ExpToolKit</span>
 
 
-<span class="k">def</span> <span class="nf">run_experiment</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_experiment</span><span class="p">(</span>
         <span class="n">config_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">num_trials</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
         <span class="n">is_print</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>

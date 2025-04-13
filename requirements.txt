@@ -11,6 +11,8 @@ pandas
 plotly
 PyQt5
 qdarkstyle
+# https://github.com/Kronuz/pyScss/issues/431
+git+https://github.com/Kronuz/pyScss.git
 python-decouple
 scikit-learn
 tabulate

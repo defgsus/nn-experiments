@@ -11,10 +11,7 @@ class DiagonalEmbedding(nn.Module):
             self,
             channels_in: int,
             channels_out: int,
-<<<<<<< Updated upstream
-=======
             permute: bool = True,
->>>>>>> Stashed changes
             diagonal: bool = True,
             symmetric: bool = True,
             fft: bool = False,
@@ -26,10 +23,7 @@ class DiagonalEmbedding(nn.Module):
 
         :param channels_in: int, vocabulary size
         :param channels_out: int, internal representation size
-<<<<<<< Updated upstream
-=======
         :param permute: bool, If True, transposes last two dimensions
->>>>>>> Stashed changes
         :param diagonal: bool, if True, the embedding weights are initialized with
             a diagonal matrix, e.g. if channels_in==channels_out, the representation
             matches the input
@@ -42,12 +36,9 @@ class DiagonalEmbedding(nn.Module):
             if -2, it's concatenated along the channel dimensions and `channels_out` is divided by 2!
         """
         super().__init__()
-<<<<<<< Updated upstream
-=======
         self._channels_in = channels_in
         self._channels_out = channels_out
         self._permute = permute
->>>>>>> Stashed changes
         self._diagonal = diagonal
         self._symmetric = symmetric
         self._fft = fft
@@ -79,14 +70,11 @@ class DiagonalEmbedding(nn.Module):
 
     def extra_repr(self) -> str:
         return (
-<<<<<<< Updated upstream
             f"diagonal={self._diagonal}, symmetric={self._symmetric}"
             f", fft={self._fft}, fft_concat_dim={self._fft_concat_dim}"
-=======
             f"channels_in={self._channels_in}, channels_out={self._channels_out}"
             f",\ndiagonal={self._diagonal}, symmetric={self._symmetric}"
             f",\nfft={self._fft}, fft_concat_dim={self._fft_concat_dim}"
->>>>>>> Stashed changes
         )
 
     def forward(
@@ -115,24 +103,13 @@ class DiagonalEmbedding(nn.Module):
             if self._fft:
                 outp = torch.fft.fft(outp, dim=-2)
                 outp = torch.concat([outp.real, outp.imag], dim=self._fft_concat_dim)
-<<<<<<< Updated upstream
-            return outp
-=======
-
             output = outp
->>>>>>> Stashed changes
 
         else:
             if self._fft:
                 x = torch.complex(*torch.split(x, x.shape[self._fft_concat_dim] // 2, dim=self._fft_concat_dim))
                 x = torch.fft.ifft(x, dim=-2).real
 
-<<<<<<< Updated upstream
-            if self._symmetric:
-                return (self.input.weight @ x).permute(0, 2, 1).contiguous()
-            else:
-                return self.output(x.permute(0, 2, 1))
-=======
             if not self._permute:
                 if self._symmetric:
                     output = (self.input.weight @ x.permute(0, 2, 1)).contiguous()
@@ -147,4 +124,3 @@ class DiagonalEmbedding(nn.Module):
         if not self._permute:
             return output.permute(0, 2, 1)
         return output
->>>>>>> Stashed changes

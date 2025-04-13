@@ -129,6 +129,9 @@ You can also view these files online at [defgsus.github.io/nn-experiments/](http
   - [:arrow_forward:](2023-11-16-autoencoder-experiments.md#variational-auto-encoder-on-rpg-tile-dataset) variational auto-encoder on RPG Tile dataset
   - [:arrow_forward:](2023-11-16-autoencoder-experiments.md#comparing-different-datasets) comparing different datasets
       - [:arrow_forward:](2023-11-16-autoencoder-experiments.md#take-care-of-the-choice-of-interpolation) Take care of the choice of interpolation!
+  - [:arrow_forward:](2023-11-16-autoencoder-experiments.md#2023-12-08-autoencoder-with-histogram-loss) 2023-12-08 autoencoder with histogram loss
+  - [:arrow_forward:](2023-11-16-autoencoder-experiments.md#2024-01-21-stacked-symmetric-one-layer-at-a-time) 2024-01-21 stacked symmetric one-layer-at-a-time
+  - [:arrow_forward:](2023-11-16-autoencoder-experiments.md#2024-10-23-deep-compression-auto-encoder) 2024-10-23 Deep-Compression Auto-Encoder
 - [2023-11-12-mnist.md](2023-11-12-mnist.md)
   - [:arrow_forward:](2023-11-12-mnist.md#autoencoder-training-on-mnist-dataset) Autoencoder training on MNIST dataset
     - [:arrow_forward:](2023-11-12-mnist.md#varying-kernel-size) varying kernel size

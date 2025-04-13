@@ -26,17 +26,10 @@ class TrainImg2Img(TrainAutoencoder):
     """
     expects (arg1, arg2) in data sample, then
 
-<<<<<<< Updated upstream
-        output = model(arg2)
-        loss = arg1 - output
-
-    if `first_arg_is_transforms` is defined, arg2 will be transformed from original arg1
-=======
         output = model(arg1)
         loss = arg2 - output
 
     if `first_arg_is_transforms` is defined, arg1 will be transformed from original arg1
->>>>>>> Stashed changes
     """
     def __init__(
             self,

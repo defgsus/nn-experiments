@@ -125,7 +125,7 @@ they are just randomly initialized.</p>
 </pre></div>
 </div><p>Below is the code used to create those images (in jupyter lab) followed by a <a href="../../html/logs/perceptual-distance.html#discussion">discussion</a>.</p>
 <h3 id="experiment-setup">Experiment setup <a href="#experiment-setup" class="heading-linker">←</a></h3>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">generalized_mean_image</span><span class="p">(</span>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">generalized_mean_image</span><span class="p">(</span>
         <span class="n">target_images</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>  <span class="c1"># B,C,H,W</span>
         <span class="n">perceptual_model</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
         <span class="n">loss_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
@@ -167,7 +167,7 @@ they are just randomly initialized.</p>
     <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">empty_cache</span><span class="p">()</span>
     
     
-<span class="k">def</span> <span class="nf">create_target_images</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">o</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_target_images</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">o</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">):</span>
     <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
     <span class="n">h</span> <span class="o">-=</span> <span class="n">o</span>
     <span class="n">w</span> <span class="o">-=</span> <span class="n">o</span>
@@ -356,7 +356,7 @@ let's compare the frequency spectrum of the images. </p>
 </tr>
 </tbody></table></div><p><strong>FFT1</strong> is the <code>torch.fft.fft2</code> (2-dimensional) function which transforms the image
 into complex numbers. Complex numbers are not supported by the l2 loss, so <strong>FFT2</strong> is an adaption:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">fft_func</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">fft_func</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">x</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">imag</span><span class="p">],</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">3</span><span class="p">)</span>
 </pre></div>
@@ -371,7 +371,7 @@ comparison. I tried to multiply high frequency components to make them more effe
 comparison but whatever i tried, it did not increase the resulting image quality compared to
 the normal FFT.</p>
 <p>Just for fun, let's look at the resulting images when only the low or high frequencies are compared</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">fft_func</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">fft_func</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="mi">10</span><span class="p">,</span> <span class="p">:</span><span class="mi">10</span><span class="p">]</span>  <span class="c1"># for low frequencies</span>
     <span class="k">return</span> <span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">10</span><span class="p">:,</span> <span class="mi">10</span><span class="p">:]</span>  <span class="c1"># or this for high frequencies</span>

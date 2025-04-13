@@ -12,10 +12,7 @@ from .classlogits import ClassLogitsDataset
 from .contrastive import ContrastiveIterableDataset
 from .contrastive_image import ContrastiveImageDataset
 from .echords import EChordsIterableDataset
-<<<<<<< Updated upstream
-=======
 from .fefe import FefePostIterableDataset
->>>>>>> Stashed changes
 from .filenames import FilenameDataset
 from .filter import (
     FilterIterableDataset,
@@ -53,10 +50,7 @@ from .text import (
     TextGithubEventIterableDataset,
     TextWiki9SegmentIterableDataset,
 )
-<<<<<<< Updated upstream
-=======
 from .textstride import TextStrideIterableDataset
->>>>>>> Stashed changes
 from .unsplash import UnsplashDataset
 from .pixelart import RpgTileIterableDataset
 from .text2pix import TextToPixelIterableDataset

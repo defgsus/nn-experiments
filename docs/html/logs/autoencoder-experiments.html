@@ -28,6 +28,28 @@
             <li class="indent-3"><a href="#take-care-of-the-choice-of-interpolation" title="Take care of the choice of interpolation!">Take care of the choice of interpolation!</a></li>
             
             
+            
+            <li class="indent-1"><a href="#2023-12-08-autoencoder-with-histogram-loss" title="2023-12-08 autoencoder with histogram loss">2023-12-08 autoencoder with histogram loss</a></li>
+            
+            
+            
+            <li class="indent-1"><a href="#2024-01-21-stacked-symmetric-one-layer-at-a-time" title="2024-01-21 stacked symmetric one-layer-at-a-time">2024-01-21 stacked symmetric one-layer-at-a-time</a></li>
+            
+            
+            
+            <li class="indent-1"><a href="#2024-10-23-deep-compression-auto-encoder" title="2024-10-23 Deep-Compression Auto-Encoder">2024-10-23 Deep-Compression Auto-Encoder</a></li>
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
         </ul>
     </div>
 
@@ -500,6 +522,158 @@ interpolation.</p>
 noise images (mean=0.5, std=0.5, clamped to range [0, 1]),
 +10,000 for validation (green). </p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/vae-32-noise.png" alt="loss plots" /></div></p>
+<h1 id="2023-12-08-autoencoder-with-histogram-loss">2023-12-08 autoencoder with histogram loss <a href="#2023-12-08-autoencoder-with-histogram-loss" class="heading-linker">←</a></h1>
+<p>Stupid experiment, just to get a feeling for the parameters.</p>
+<p>Basically a simple autoencoder but the loss only considers the histogram
+using the <em>soft histogram</em> mentioned by Tony-Y in the
+<a href="https://discuss.pytorch.org/t/differentiable-torch-histc/25865/4" target="_blank">pytorch forum</a>.</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nt">matrix</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">bins</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">100</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">200</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">50</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">sigma</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">100</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">200</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">50</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">norm</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">False</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">loss</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;&#39;l1&#39;&quot;</span><span class="p p-Indicator">]</span>
+
+<span class="nt">experiment_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ae/hist/hl-${matrix_slug}</span>
+
+<span class="nt">trainer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">experiments.ae.trainer.TrainAutoencoderSpecial</span>
+
+<span class="nt">train_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">rpg_tile_dataset_3x32x32(SHAPE, validation=False)</span>
+
+<span class="nt">validation_set</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">rpg_tile_dataset_3x32x32(SHAPE, validation=True)</span>
+
+<span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">64</span>
+<span class="nt">learnrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0003</span>
+<span class="nt">optimizer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">AdamW</span>
+<span class="nt">scheduler</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CosineAnnealingLR</span>
+<span class="nt">loss_function</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">HistogramLoss(${bins}, 0., 1., sigma=${sigma}, loss=${loss}, normalize=${norm})</span>
+<span class="nt">max_inputs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500_000</span>
+
+<span class="nt">globals</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">SHAPE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(3, 32, 32)</span>
+<span class="w">  </span><span class="nt">CODE_SIZE</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">128</span>
+
+<span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">  </span><span class="no">encoder = EncoderConv2d(SHAPE, code_size=CODE_SIZE, channels=(24, 32, 48), kernel_size=5)</span>
+
+<span class="w">  </span><span class="no">encoded_shape = encoder.convolution.get_output_shape(SHAPE)</span>
+<span class="w">  </span><span class="no">decoder = nn.Sequential(</span>
+<span class="w">      </span><span class="no">nn.Linear(CODE_SIZE, math.prod(encoded_shape)),</span>
+<span class="w">      </span><span class="no">Reshape(encoded_shape),</span>
+<span class="w">      </span><span class="no">encoder.convolution.create_transposed(act_last_layer=False),</span>
+<span class="w">  </span><span class="no">)</span>
+
+<span class="w">  </span><span class="no">EncoderDecoder(encoder, decoder)</span>
+</pre></div>
+</div><p><div style="overflow: scroll;"><img src="../../logs/img/ae-histogramloss.png" alt="loss plots" /></div></p>
+<p>Normalizing the histograms before calculating the difference did not
+converge well. And reproduction look terrible as could be expected: </p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th>green</th>
+<th>yellow</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/ae-histogramloss-repro-green.png" alt="repro" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/ae-histogramloss-repro-yellow.png" alt="repro" /></div></td>
+</tr>
+</tbody></table></div><div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th>purple</th>
+<th>gray</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div style="overflow: scroll;"><img src="../../logs/img/ae-histogramloss-repro-purple.png" alt="repro" /></div></td>
+<td><div style="overflow: scroll;"><img src="../../logs/img/ae-histogramloss-repro-gray.png" alt="repro" /></div></td>
+</tr>
+</tbody></table></div><h1 id="2024-01-21-stacked-symmetric-one-layer-at-a-time">2024-01-21 stacked symmetric one-layer-at-a-time <a href="#2024-01-21-stacked-symmetric-one-layer-at-a-time" class="heading-linker">←</a></h1>
+<p>Trained autoencoder on 3x64x64 images. Encoder and decoder are each 25 layers
+of 3x3 cnn kernels and a final fully connected layer. code_size=128</p>
+<p>In training, every N input steps the number of used layers is increased. First,
+the autoencoder only uses first encoder and last decoder layer. That way,
+it's possible to train the whole 25 layers after a time. It's just not good:</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/ae-stacked-64.png" alt="loss plots" /></div></p>
+<ul>
+<li><strong>white</strong>: reference baseline cnn (using space-to-depth)</li>
+<li><strong>cyan</strong>: 32-chan 25 layer cnn, next layer activated every 47,000 steps (1 epoch)</li>
+<li><strong>yellow</strong>: 32-chan 25 layer cnn, next layer activated every 8,000 steps</li>
+<li><strong>purple</strong>: 128-chan 25 layer cnn, next layer activated every 8,000 steps</li>
+</ul>
+<p>Also compared symmetric vs. non-symmetric. Symmetric means the convolutions
+and fully connected layer use <strong>the same</strong> weights for encoding and decoding.
+symmetric is half the number of parameters for the autoencoder and performs only
+slightly below non-symmetric. The biases are not shared between encoder and decoder.</p>
+<h1 id="2024-10-23-deep-compression-auto-encoder">2024-10-23 Deep-Compression Auto-Encoder <a href="#2024-10-23-deep-compression-auto-encoder" class="heading-linker">←</a></h1>
+<p>Experiments with a small version of DC-AE from the paper
+<em>DEEP COMPRESSION AUTOENCODER FOR EFFICIENT HIGH-RESOLUTION DIFFUSION MODELS</em> <a href="https://arxiv.org/abs/2205.14756" target="_blank">arxiv.org/abs/2205.14756</a></p>
+<p>Code can be found here <a href="https://github.com/mit-han-lab/efficientvit" target="_blank">https://github.com/mit-han-lab/efficientvit</a>, and i copied the DC-AE parts and ported
+the type-hints back to python &lt;3.10 <a href="https://github.com/defgsus/nn-experiments/blob/master/src/models/efficientvit" target="_blank">here</a>.</p>
+<p>Using the good ol' 47,579 RPG dataset, for one million 3x32x32 images.</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/dc-ae-rpg47k-1M.png" alt="loss plots" /></div></p>
+<p>(Not all runs are finished because they seemed to converge at the same validation error)</p>
+<p>The <strong>baseline (gray)</strong> is the usual stacked symmetric CNN AE with 24, 32, 48 channels, kernel-size 5 and a linear
+layer for latent code size of 128, which results in a <strong>compression ratio of 24</strong>.</p>
+<p>The DC-AE model configurations i tried are:</p>
+<h4 id="dcae-03-yellow-params-81m-ratio-96">dcae-03 (yellow) params: 81M, ratio 96 <a href="#dcae-03-yellow-params-81m-ratio-96" class="heading-linker">←</a></h4>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="s">&quot;latent_channels=32 &quot;</span>
+<span class="s">&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
+<span class="s">&quot;encoder.width_list=[64,128,256,256,512,512] encoder.depth_list=[0,4,8,2,2,2] &quot;</span>
+<span class="s">&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
+<span class="s">&quot;decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,2,2] &quot;</span>
+<span class="s">&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;</span>
+</pre></div>
+</div><h4 id="dcae-04-purple-params-81m-ratio-48">dcae-04 (purple) params: 81M, ratio 48 <a href="#dcae-04-purple-params-81m-ratio-48" class="heading-linker">←</a></h4>
+<p>lowered compression ratio (via <code>latent_channels</code>)</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="s">&quot;latent_channels=64 &quot;</span>
+<span class="s">&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
+<span class="s">&quot;encoder.width_list=[64,128,256,256,512,512] encoder.depth_list=[0,4,8,2,2,2] &quot;</span>
+<span class="s">&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
+<span class="s">&quot;decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,2,2] &quot;</span>
+<span class="s">&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;</span>
+</pre></div>
+</div><h4 id="dcae-05-green-params-110m-ratio-48">dcae-05 (green) params: 110M, ratio: 48 <a href="#dcae-05-green-params-110m-ratio-48" class="heading-linker">←</a></h4>
+<p>increased width</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="s">&quot;latent_channels=64 &quot;</span>
+<span class="s">&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
+<span class="s">&quot;encoder.width_list=[128,256,256,512,512,512] encoder.depth_list=[0,4,8,2,2,2] &quot;</span>
+<span class="s">&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
+<span class="s">&quot;decoder.width_list=[128,256,256,512,512,512] decoder.depth_list=[0,5,10,2,2,2] &quot;</span>
+<span class="s">&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;</span>
+</pre></div>
+</div><h4 id="dcae-06-orange-params-142m-ratio-48">dcae-06 (orange): params: 142M, ratio: 48 <a href="#dcae-06-orange-params-142m-ratio-48" class="heading-linker">←</a></h4>
+<p>increased width</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="s">&quot;latent_channels=64 &quot;</span>
+<span class="s">&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
+<span class="s">&quot;encoder.width_list=[64,128,256,256,512,1024] encoder.depth_list=[0,4,8,2,2,2] &quot;</span>
+<span class="s">&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
+<span class="s">&quot;decoder.width_list=[64,128,256,256,512,1024] decoder.depth_list=[0,5,10,2,2,2] &quot;</span>
+<span class="s">&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;</span>
+</pre></div>
+</div><h4 id="dcae-07-pink-params-106m-ratio-48">dcae-07 (pink): params: 106M, ratio: 48 <a href="#dcae-07-pink-params-106m-ratio-48" class="heading-linker">←</a></h4>
+<p>Sames as dcae-04 but increased depth.</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="s">&quot;latent_channels=64 &quot;</span>
+<span class="s">&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
+<span class="s">&quot;encoder.width_list=[64,128,256,256,512,512] encoder.depth_list=[0,4,8,2,3,4] &quot;</span>
+<span class="s">&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
+<span class="s">&quot;decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,3,4] &quot;</span><span class="w">  </span>
+<span class="s">&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;</span>
+</pre></div>
+</div><p>The original model in the repo has 323M parameters which i could not train on my GPU,
+so i lowered the width of the layers to make it fit. Also increased the learning rate from
+originally <code>9.375e-7</code> to <code>9.375e-5</code>. Batch size was 64.</p>
+<p>The latent shape for 32x32 images is actually <code>[&lt;latent_channels&gt;, 1, 1]</code>. The first try with
+compression ratio 96 was a bit too much. With ratio 48 the results are better than the baseline (with 24)
+so this is promising. However, none of the changes (dcae-05 to dcae-07) did enhance the performance.</p>
+<p>Here's the reconstruction of the validation set for <strong>baseline</strong> and <strong>dcae-05</strong>:</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/dc-ae-rpg47k-1M-recon-baseline.png" alt="reconstruction plot" /></div> <div style="overflow: scroll;"><img src="../../logs/img/dc-ae-rpg47k-1M-recon-05.png" alt="reconstruction plot" /></div></p>
 
 
         <!-- article footer -->
