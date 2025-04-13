@@ -72,7 +72,9 @@ class TotalCALayer(nn.Module):
 
     def _ca_step(self, x: torch.Tensor) -> torch.Tensor:
 
-        cells = (x >= self.threshold).float()
+        #cells = (x - self.threshold).clamp(0, 0.000001) / 0.000001
+        #cells = torch.where(x >= self.threshold, 1., 0.)
+        cells = F.sigmoid(1000 * (x - self.threshold))
 
         if self.wrap:
             cellsp = torch.concat([cells[..., -1, None], cells, cells[..., 0, None]], dim=-1)
