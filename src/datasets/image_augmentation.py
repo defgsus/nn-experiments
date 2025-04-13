@@ -7,7 +7,6 @@ import PIL.Image
 
 import torch
 from torch.utils.data import Dataset, IterableDataset, get_worker_info
-from torch.utils.data.dataset import T_co
 from torchvision.datasets import ImageFolder as TorchImageFolder, DatasetFolder
 from torchvision.datasets.folder import is_image_file
 import torchvision.transforms.functional as VF

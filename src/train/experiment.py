@@ -467,7 +467,7 @@ def _load_yaml(filename: Union[str, Path], matrix_entry: Optional[Dict] = None):
 
 
 def apply_parameter_matrix(text: str, params: dict):
-    re_variable = re.compile("\$\{([^}]+)}")
+    re_variable = re.compile(r"\$\{([^}]+)}")
     def _repl(match):
         name = match.groups()[0]
         if name not in params:
