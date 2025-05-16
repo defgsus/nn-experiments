@@ -12,6 +12,7 @@ checkpoints/
 runs/
 scratchpad/
 /datasets/
+cache/
 
 *.pyc
 __pycache__/
