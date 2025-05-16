@@ -30,11 +30,13 @@ from .image_dissimilar import DissimilarImageIterableDataset
 from .image_encode import ImageEncodeIterableDataset
 from .image_filter import ImageFilterIterableDataset
 from .image_folder import ImageFolderIterableDataset
+from .image_jigsaw import ImageJigsawDataset
 from .image_patch import (
     ImagePatchDataset, ImagePatchIterableDataset, make_image_patch_dataset, RandomImagePatchIterableDataset
 )
 from .image_scale import ImageScaleIterableDataset
 from .image_source_target import ImageSourceTargetDataset, ImageSourceTargetCropDataset
+from .imagenet import Imagenet1kIterableDataset
 from .interleave import InterleaveDataset, InterleaveIterableDataset
 from .limit import (
     LimitDataset, SkipDataset, LimitIterableDataset, SkipIterableDataset,

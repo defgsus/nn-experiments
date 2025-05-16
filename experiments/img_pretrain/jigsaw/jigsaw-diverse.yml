@@ -1,0 +1,82 @@
+experiment_name: img/jigsaw-diverse_${matrix_slug}
+
+matrix:
+  bs:
+    - 64
+  lr:
+    - 0.0003
+  ps:
+    - [3, 3]
+  s:
+    - 32
+  rs:
+    #- 20
+    - 5
+  cls:
+    - 50
+  ks:
+    - 7
+  ch:
+    - [32, 32, 32, 4]
+
+trainer: experiments.img_pretrain.jigsaw.jigsawtrainer.JigsawTrainer
+num_classes: ${cls}
+
+train_set: |
+  image_ds = ImageFolderIterableDataset(
+    "~/Pictures/__diverse",
+    recursive=True,
+    force_channels=3,
+  )
+  test_ds = ImageJigsawDataset(
+    image_ds.skip(100),
+    puzzle_size=(${ps}[0], ${ps}[1]),
+    tile_size=(${s}, ${s}),
+    random_spacing=${rs},
+    num_permutation_classes=${cls},
+    num_permutations_per_image=100,
+    permutation_class_seed=2025,
+  )
+  test_ds.shuffle(max_shuffle=100*5)
+
+validation_set: |
+  ImageJigsawDataset(
+    image_ds.limit(100),
+    puzzle_size=(${ps}[0], ${ps}[1]),
+    tile_size=(${s}, ${s}),
+    random_spacing=${rs},
+    num_permutation_classes=${cls},
+    num_permutations_per_image=2,
+    permutation_class_seed=2025,
+    seed=42,
+  )
+
+# pass the jigsaw setup to trainer
+jigsaw_dataset: |
+  test_ds
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: AdamW
+scheduler: CosineAnnealingWarmupLR
+max_inputs: 10_000_000
+#num_inputs_between_validations: 10_000
+
+model: |
+  from experiments.img_pretrain.jigsaw.models import JigsawModel
+  
+  model = JigsawModel(
+      patch_shape=(3, ${s}, ${s}),
+      num_patches=math.prod(${ps}),
+      num_classes=${cls},
+      kernel_size=${ks},
+      channels=[3, *${ch}],
+  )
+  
+  with torch.no_grad():
+      print(model)
+      inp = torch.ones(${bs}, math.prod(${ps}), 3, ${s}, ${s})
+      outp = dump_module_stacktrace(model, inp)
+      print(inp.shape[1:], "->", outp.shape[1:])
+      print(f"params: {num_module_parameters(model):,}")
+  
+  model  

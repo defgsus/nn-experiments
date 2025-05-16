@@ -1,0 +1,68 @@
+experiment_name: img/jigsaw-unsplash_${matrix_slug}
+
+matrix:
+  bs:
+    - 64
+  lr:
+    - 0.003
+  ps:
+    - [3, 3]
+  s:
+    - 32
+  rs:
+    - 20
+  cls:
+    - 100
+  ks:
+    - 7
+
+trainer: experiments.img_pretrain.jigsaw.jigsawtrainer.JigsawTrainer
+num_classes: ${cls}
+
+train_set: |
+  ImageJigsawDataset(
+    unsplash_dataset(shape=None, train=True),
+    puzzle_size=(${ps}[0], ${ps}[1]),
+    tile_size=(${s}, ${s}),
+    random_spacing=${rs},
+    num_permutation_classes=${cls},
+    num_permutations_per_image=20,
+    permutation_class_seed=2025,
+  ).shuffle(max_shuffle=20)
+
+validation_set: |
+  ImageJigsawDataset(
+    unsplash_dataset(shape=None, train=False),
+    puzzle_size=(${ps}[0], ${ps}[1]),
+    tile_size=(${s}, ${s}),
+    random_spacing=${rs},
+    num_permutation_classes=${cls},
+    num_permutations_per_image=2,
+    permutation_class_seed=2025,
+    seed=42,
+  )
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: AdamW
+scheduler: CosineAnnealingWarmupLR
+max_inputs: 1_000_000
+
+model: |
+  from experiments.img_pretrain.jigsaw.models import JigsawModel
+  
+  model = JigsawModel(
+      patch_shape=(3, ${s}, ${s}),
+      num_patches=math.prod(${ps}),
+      num_classes=${cls},
+      kernel_size=${ks},
+  )
+  
+  with torch.no_grad():
+      print(model)
+      inp = torch.ones(${bs}, math.prod(${ps}), 3, ${s}, ${s})
+      outp = dump_module_stacktrace(model, inp)
+      print(inp.shape[1:], "->", outp.shape[1:])
+      print(f"params: {num_module_parameters(model):,}")
+  
+  model  

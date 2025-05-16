@@ -93,7 +93,7 @@ class SkipIterableDataset(BaseIterableDataset):
 
     def __iter__(self):
         for i, item in enumerate(self._dataset):
-            if i > self._offset:
+            if i >= self._offset:
                 yield item
 
 
