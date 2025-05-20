@@ -64,7 +64,7 @@ def train(
     for layer_index in range(num_layers):
 
         if layer_index > 2:
-            patch_stride = max(1, patch_stride - 2)
+            patch_stride = max(1, patch_stride - 1)
 
         print(f"layer#{layer_index:02}: patch_stride={patch_stride}")
 
@@ -75,6 +75,7 @@ def train(
 
             def _iter_patches():
                 output_batch = []
+                demo_images = []
                 for image in tqdm(dataset, desc=f"layer#{layer_index:02}"):
 
                     # print("IMAGE IN: ", image.shape)
@@ -82,6 +83,8 @@ def train(
                     # print("IMAGE OUT:", image.shape)
                     #if any(s < kernel_size for s in image.shape[-2:]):
                     #    continue
+                    if len(demo_images) < 4:
+                        demo_images.append(image[:3].clamp(0, 1))
 
                     for patch in iter_image_patches(
                             image=image,
@@ -96,6 +99,11 @@ def train(
 
                 if output_batch:
                     yield torch.concat(output_batch)
+
+                os.makedirs(cache_filename.parent, exist_ok=True)
+                VF.to_pil_image(
+                    make_grid(demo_images)
+                ).save(cache_filename.parent / f"layer-{layer_index:02}-images.png")
 
             for patch_batch in _iter_patches():
                 pca.partial_fit(
@@ -148,6 +156,8 @@ def load_layers(
         max_layers: Optional[int] = None,
 ):
     files = sorted((cache_path / config.slug).glob("layer-*.pt"))
+    if max_layers is not None:
+        files = files[:max_layers]
     if not files:
         raise ValueError(f"No data for config slug '{config.slug}'")
 
@@ -162,20 +172,20 @@ def load_layers(
             layers.append(activation_to_module(config.activation))
         num_input_components = config.num_components
 
-        if max_layers is not None and len(layers) >= max_layers:
-            break
-
     return layers
 
 
 def create_random_layers(
         config: Config,
-        max_layers: int,
+        num_layers: int,
 ):
     layers = nn.Sequential()
     num_input_components = 3
-    for i in range(max_layers):
-        conv = nn.Conv2d(num_input_components, config.num_components, config.kernel_size, stride=config.conv_stride)
+    for i in range(num_layers):
+        conv = nn.Conv2d(
+            num_input_components, config.num_components, config.kernel_size, stride=config.conv_stride,
+            bias=False,
+        )
         layers.append(conv)
         if config.activation is not None:
             layers.append(activation_to_module(config.activation))
@@ -189,7 +199,8 @@ def test_classification(
         config: Config,
         cache_path: Path = CACHE_PATH,
         # since the STL10 is pretty small (96²), need to limit layers when using conv_stride
-        max_layers: int = 3,
+        max_layers: int = 1,
+        random_weights: bool = False,
 ):
     """
     Check classification accuracy by linear probing.
@@ -197,17 +208,30 @@ def test_classification(
     Accuracy for STL10 with RidgeClassifier:
 
         raw images:                     21.8125%
+        l3-ks7-nc64-s2-tanh:            23.3625%
+        l1-ks7-nc64-s2-sigmoid:         23.8250%
+        l1-ks7-nc64-s2-tanh(random):    23.9000%
+        l1-ks7-nc64-s2-sigmoid(random): 24.7125%
         l3-ks7-nc64-s2-None:            25.4250%
-        l3-ks7-nc64-s2-None(random):    29.3749%
-        l3-ks7-nc64-s2-relu(random):    40.4750%
-        l3-ks7-nc64-s2-relu:            42.6875%
+        l2-ks7-nc64-s2-tanh(random):    25.5875%
+        l3-ks7-nc64-s2-sigmoid(random): 27.6000%
+        l3-ks7-nc64-s2-None(random):    28.6875%
+        l3-ks7-nc64-s2-tanh(random):    30.5750%
+        l3-ks7-nc64-s2-relu:            32.6000%
+        l2-ks7-nc64-s2-sigmoid:         34.1375%
+        l2-ks7-nc64-s2-sigmoid(random): 35.3875%
+        l3-ks7-nc64-s2-relu(random):    41.2500%
+        l2-ks7-nc64-s2-relu:            42.6875%
+        l1-ks7-nc64-s2-relu:            44.1500%
     """
-    layers = load_layers(
-        config=config,
-        cache_path=cache_path,
-        max_layers=max_layers,
-    )
-    # layers = create_random_layers(config, max_layers=max_layers)
+    if not random_weights:
+        layers = load_layers(
+            config=config,
+            cache_path=cache_path,
+            max_layers=max_layers,
+        )
+    else:
+        layers = create_random_layers(config, num_layers=max_layers)
     print(layers)
 
     def _process(images: np.ndarray, batch_size: int = 32):
@@ -237,16 +261,16 @@ def test_classification(
 
     accuracy = (predicted_y == test_y).astype(np.float32).mean() * 100
 
-    print(f"classification accuracy {config.slug}: {accuracy}%")
+    print(f"classification accuracy l{max_layers}-{config.slug}{'(random)' if random_weights else ''}: {accuracy}%")
 
 
 if __name__ == "__main__":
 
     config = Config(
-        kernel_size = 7,
-        num_components = 64,
-        activation = "tanh",
+        kernel_size=7,
+        num_components=64,
+        activation="sigmoid",
     )
 
     train(config=config, num_layers=6)
-    test_classification(config=config)
+    test_classification(config=config, random_weights=False, max_layers=1)
