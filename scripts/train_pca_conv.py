@@ -1,12 +1,16 @@
 import dataclasses
+import json
 import os
+import time
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torchvision.transforms.functional as VF
+from jupyterlab.semver import valid
 from networkx.algorithms.components import number_connected_components
 from torchvision.utils import make_grid
 import torchvision.datasets
@@ -14,11 +18,12 @@ from sklearn.decomposition import IncrementalPCA
 from sklearn.linear_model import RidgeClassifier
 from tqdm import tqdm
 
-from src.datasets import Imagenet1kIterableDataset
+from src.datasets import Imagenet1kIterableDataset, WrapDataset
 from src.models.util import activation_to_module
-from src.util import to_torch_device
+from src.util import to_torch_device, iter_parameter_permutations
 from src.util.image import iter_image_patches, signed_to_image
 from experiments.datasets import cifar10_dataset, stl10_dataset
+from src import config as global_config
 
 
 CACHE_PATH = Path(__file__).resolve().parent.parent / "cache" / "pca_conv"
@@ -26,6 +31,7 @@ CACHE_PATH = Path(__file__).resolve().parent.parent / "cache" / "pca_conv"
 
 @dataclasses.dataclass
 class Config:
+    pca_ds: Literal["stl", "imagenet"] = "stl"
     kernel_size: int = 7
     num_components: int = 64
     activation: Optional[str] = "relu"
@@ -33,11 +39,11 @@ class Config:
 
     @property
     def slug(self) -> str:
-        return f"ks{self.kernel_size}-nc{self.num_components}-s{self.conv_stride}-{self.activation}"
+        return f"pcads-{self.pca_ds}_ks{self.kernel_size}_nc{self.num_components}_s{self.conv_stride}_act-{self.activation}"
 
 
 @torch.no_grad()
-def train(
+def train_pca(
         config: Config,
         cache_path: Path = CACHE_PATH,
         num_layers: int = 10,
@@ -49,13 +55,19 @@ def train(
 
     cache_path = cache_path / config.slug
 
-    dataset = (
-        Imagenet1kIterableDataset(
-            size_filter=[(500, 500)],
+    if config.pca_ds == "imagenet":
+        dataset = (
+            Imagenet1kIterableDataset(
+                size_filter=[(500, 500)],
+            )
+            #.shuffle(1000, seed=23)
+            .limit(50)
         )
-        #.shuffle(1000, seed=23)
-        .limit(50)
-    )
+    else:
+        dataset = (
+            WrapDataset(torchvision.datasets.STL10(global_config.SMALL_DATASETS_PATH, split="train"))
+            .transform([lambda x: VF.to_tensor(x.convert("RGB"))])
+        )
 
     conv_layers = nn.Sequential().to(device)
     num_input_components = 3
@@ -77,6 +89,8 @@ def train(
                 output_batch = []
                 demo_images = []
                 for image in tqdm(dataset, desc=f"layer#{layer_index:02}"):
+                    if isinstance(image, tuple):
+                        image = image[0]
 
                     # print("IMAGE IN: ", image.shape)
                     image = conv_layers(image.to(device)).cpu()
@@ -194,6 +208,21 @@ def create_random_layers(
     return layers
 
 
+_CLASSIFICATION_DATASET = None
+def get_classification_dataset():
+    global _CLASSIFICATION_DATASET
+    if _CLASSIFICATION_DATASET is None:
+        print("loading dataset")
+        ds = torchvision.datasets.STL10(global_config.SMALL_DATASETS_PATH, split="train")
+        train_x, train_y = ds.data.astype(np.float32) / 255., ds.labels
+        ds = torchvision.datasets.STL10(global_config.SMALL_DATASETS_PATH, split="test")
+        test_x, test_y = ds.data.astype(np.float32) / 255., ds.labels
+
+        _CLASSIFICATION_DATASET = train_x, train_y, test_x, test_y
+
+    return _CLASSIFICATION_DATASET
+
+
 @torch.no_grad()
 def test_classification(
         config: Config,
@@ -244,24 +273,92 @@ def test_classification(
                 progress.update(batch.shape[0])
         return np.concat(result, axis=0)
 
-    print("loading dataset")
-    ds = torchvision.datasets.STL10("~/prog/data/datasets/", split="train")
-    train_x, train_y = ds.data.astype(np.float32) / 255., ds.labels
-    ds = torchvision.datasets.STL10("~/prog/data/datasets/", split="test")
-    test_x, test_y = ds.data.astype(np.float32) / 255., ds.labels
+    train_x, train_y, test_x, test_y = get_classification_dataset()
 
     train_x = _process(train_x)
     test_x = _process(test_x)
 
     classifier = RidgeClassifier()
     print("fitting classifier")
+    start_time = time.time()
     classifier.fit(train_x, train_y)
+    train_time = time.time() - start_time
     print("predicting validation set")
-    predicted_y = classifier.predict(test_x)
+    predicted_train_y = classifier.predict(train_x)
+    print("predicting validation set")
+    predicted_val_y = classifier.predict(test_x)
 
-    accuracy = (predicted_y == test_y).astype(np.float32).mean() * 100
+    train_accuracy = (predicted_train_y == train_y).astype(np.float32).mean() * 100
+    val_accuracy = (predicted_val_y == test_y).astype(np.float32).mean() * 100
 
-    print(f"classification accuracy l{max_layers}-{config.slug}{'(random)' if random_weights else ''}: {accuracy}%")
+    print(f"classification accuracy l{max_layers}-{config.slug}{'(random)' if random_weights else ''}: {val_accuracy}, {train_accuracy}%")
+
+    return {
+        "train_accuracy": float(train_accuracy),
+        "val_accuracy": float(val_accuracy),
+        "train_time": train_time,
+    }
+
+
+def test_random_convs(num_repeats: int = 5):
+    param_matrix = {
+        "kernel_size": [3, 5, 7, 9, 11],
+        "num_components": [32, 64],
+        "activation": ["relu"],
+        "max_layers": [1, 2, 3, 4],
+        "conv_stride": [2],
+    }
+    for params in iter_parameter_permutations(param_matrix):
+        max_layers = params.pop("max_layers")
+        config = Config(**params)
+
+        filename = CACHE_PATH / "random" / f"l{max_layers}_{config.slug}.json"
+
+        if filename.exists():
+            continue
+
+        results = []
+        for repeat_idx in range(num_repeats):
+            try:
+                result = test_classification(
+                    config=config,
+                    max_layers=max_layers,
+                    random_weights=True,
+                )
+            except Exception as e:
+                print(f"{type(e).__name__}: {e}")
+                continue
+
+            results.append(result)
+
+        os.makedirs(filename.parent, exist_ok=True)
+        filename.write_text(json.dumps({
+            "parameters": {**params, "num_layers": max_layers},
+            "results": results,
+        }))
+
+
+def print_random_convs_table():
+    path = CACHE_PATH / "random"
+    rows = []
+    for file in path.glob("*.json"):
+        data = json.loads(file.read_text())
+        data["parameters"].setdefault("conv_stride", 2)
+
+        if not data["results"]:
+            continue
+
+        row = data["parameters"]
+        rows.append(row)
+
+        row.update({
+            "train_accuracy": sum(r["train_accuracy"] for r in data["results"]) / len(data["results"]),
+            "val_accuracy": sum(r["val_accuracy"] for r in data["results"]) / len(data["results"]),
+        })
+
+    df = pd.DataFrame(rows).sort_values("val_accuracy")
+
+    print(df.to_markdown())
 
 
 if __name__ == "__main__":
@@ -269,8 +366,11 @@ if __name__ == "__main__":
     config = Config(
         kernel_size=7,
         num_components=64,
-        activation="sigmoid",
+        activation="relu",
     )
 
-    train(config=config, num_layers=6)
-    test_classification(config=config, random_weights=False, max_layers=1)
+    #train_pca(config=config, num_layers=6)
+    #test_classification(config=config, random_weights=False, max_layers=2)
+
+    test_random_convs()
+    print_random_convs_table()

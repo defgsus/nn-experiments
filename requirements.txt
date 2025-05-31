@@ -2,6 +2,7 @@
 
 accelerate
 bitsandbytes
+einops
 faiss-cpu
 git+https://github.com/openai/CLIP.git
 github-slugger
@@ -10,11 +11,14 @@ marko
 pandas
 plotly
 PyQt5
-qdarkstyle
+pyrr
 # https://github.com/Kronuz/pyScss/issues/431
 git+https://github.com/Kronuz/pyScss.git
 python-decouple
+PyWavelets
+qdarkstyle
 scikit-learn
 tabulate
 tensorboard
 tqdm
+transformers

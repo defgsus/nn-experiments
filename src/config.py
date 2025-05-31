@@ -11,6 +11,9 @@ from pathlib import Path
 import decouple
 
 
+PROJECT_PATH = Path(__file__).resolve().parent.parent
+
+
 BIG_DATASETS_PATH = Path(decouple.config(
     "BIG_DATASETS_PATH",
     Path("~/datasets"),
