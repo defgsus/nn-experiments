@@ -1,3 +1,14 @@
+## notable conv patterns
+
+| kernel size |  stride | dilation | throughput | accuracy |     ratio |
+|------------:|--------:|---------:|-----------:|---------:|----------:|
+|     9, 3, 3 | 3, 1, 2 |  2, 3, 1 |       3000 |   35.62% | 0.2314815 |
+|     5, 3, 5 | 3, 1, 1 |  1, 1, 2 |       3900 |   33.30% | 0.5104167 |
+|     9, 3, 5 | 3, 1, 1 |  1, 1, 3 |       2800 |   34.30% | 0.5925926 |
+|     9, 5, 3 | 2, 2, 1 |  1, 2, 1 |       1400 |   35.82% | 0.5925926 |
+|     3, 3, 3 | 2, 2, 1 |  3, 1, 3 |       1600 |   35.54% | 0.5925926 |
+
+
 ### 1000 train/test images from STL10, 5 trials
 
 |     | channels   | kernel_size   | stride   | dilation   | activation       |   train_accuracy |   val_accuracy |   train_time |

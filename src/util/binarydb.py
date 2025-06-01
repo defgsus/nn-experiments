@@ -95,6 +95,19 @@ class BinaryDB:
                 meta = json.loads(meta)
             yield id, data, meta
 
+    def iter_meta(self) -> Generator[Tuple[str, Optional[dict]], None, None]:
+        c = self.cursor()
+        c.execute(
+            """
+                SELECT id, meta FROM binary_table
+                ORDER BY id
+            """
+        )
+        for id, meta in c.fetchall():
+            if meta is not None:
+                meta = json.loads(meta)
+            yield id, meta
+
     def has(self, id: Any) -> bool:
         c = self.cursor()
         c.execute(

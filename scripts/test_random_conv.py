@@ -52,9 +52,9 @@ class ConvModelTester:
 
     def __init__(
             self,
-            model_count: int = 1000,
+            model_count: int = 5000,
             layers_range: Tuple[int, int] = (3, 3),
-            channel_choices: Tuple[int, ...] = (32, 48, 64),
+            channel_choices: Tuple[int, ...] = (64, ), #32, 48, 64),
             kernel_size_choices: Tuple[int, ...] = (3, 5, 7, 9),
             stride_choices: Tuple[int, ...] = (1, 2, 3),
             dilation_choices: Tuple[int, ...] = (1, 2, 3),
@@ -65,6 +65,9 @@ class ConvModelTester:
             dataset_max_size_train: int = 1000,
             dataset_max_size_test: int = 1000,
             num_random_trails: int = 5,
+            min_val_accuracy: Optional[float] = 33.,
+            min_throughput: Optional[float] = 1000.,
+            do_store_models: bool = False,
             cache_path: Path = global_config.PROJECT_PATH / "cache" / "random_pca",
     ):
         self.model_count = model_count
@@ -80,9 +83,26 @@ class ConvModelTester:
         self.dataset_max_size_train = dataset_max_size_train
         self.dataset_max_size_test = dataset_max_size_test
         self.num_random_trails = num_random_trails
+        self.min_val_accuracy = min_val_accuracy
+        self.min_throughput = min_throughput
+        self.do_store_models = do_store_models
         self.cache_path = cache_path
         self._dataset = None
         self._db = BinaryDB(self.cache_path / "db2.sqlite")
+        print(f"num permutations: {self.num_permutations():,}")
+
+    def num_permutations(self):
+        num = 1
+        for num_layers in range(self.layers_range[0], self.layers_range[1] + 1):
+            for choices in (
+                    self.channel_choices,
+                    self.kernel_size_choices,
+                    self.stride_choices,
+                    self.dilation_choices,
+                    self.activation_choices,
+            ):
+                num *= len(choices) ** num_layers
+        return num
 
     @torch.no_grad()
     def iter_model_params(
@@ -208,10 +228,21 @@ class ConvModelTester:
                     model = ConvModel(**params)
                     result = self.test_classification(model)
 
-                    with io.BytesIO() as fp:
-                        torch.save(model, fp)
-                        fp.seek(0)
-                        self._db.store(id, data=fp.read(), meta={"params": params, "result": result})
+                    data = None
+                    if self.do_store_models:
+                        with io.BytesIO() as fp:
+                            torch.save(model, fp)
+                            fp.seek(0)
+                            data = fp.read()
+
+                    self._db.store(id, data=data, meta={"params": params, "result": result})
+
+                    if self.min_val_accuracy is not None and result["val_accuracy"] < self.min_val_accuracy:
+                        break
+
+                    if self.min_throughput is not None and result["throughput"] < self.min_throughput:
+                        break
+
         except KeyboardInterrupt:
             pass
         return self
@@ -232,7 +263,10 @@ class ConvModelTester:
                 **{
                     key: sum(t["result"][key] for t in trials) / len(trials)
                     for key in trials[0]["result"].keys()
-                }
+                },
+                "min_val_acc": min(t["result"]["val_accuracy"] for t in trials),
+                "max_val_acc": max(t["result"]["val_accuracy"] for t in trials),
+                "trails": len(trials),
             }
             rows.append(row)
 
@@ -245,6 +279,6 @@ class ConvModelTester:
 
 if __name__ == "__main__":
     (ConvModelTester()
-        .run()
-        .dump()
+        #.run()
+        #.dump()
     )
