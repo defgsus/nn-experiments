@@ -15,6 +15,7 @@ from tqdm import tqdm
 
 from src.models.util import activation_to_module
 from src import config as global_config
+from src.util import iter_parameter_permutations
 from src.util.binarydb import BinaryDB
 
 
@@ -52,20 +53,20 @@ class ConvModelTester:
 
     def __init__(
             self,
-            model_count: int = 5000,
+            model_count: Optional[int] = None,
             layers_range: Tuple[int, int] = (3, 3),
-            channel_choices: Tuple[int, ...] = (64, ), #32, 48, 64),
+            channel_choices: Tuple[int, ...] = (32, ), #32, 48, 64),
             kernel_size_choices: Tuple[int, ...] = (3, 5, 7, 9),
             stride_choices: Tuple[int, ...] = (1, 2, 3),
             dilation_choices: Tuple[int, ...] = (1, 2, 3),
             activation_choices: Tuple[Optional[str], ...] = ("relu", ),
             input_shape: Tuple[int, int, int] = (3, 96, 96),
-            ratio_range: Tuple[float, float] = (.1, .6),
-            seed: int = 42,
-            dataset_max_size_train: int = 1000,
-            dataset_max_size_test: int = 1000,
+            ratio_range: Optional[Tuple[float, float]] = (0., 1.), #(.28, .9),
+            seed: int = 667,
+            dataset_max_size_train: int = 500,
+            dataset_max_size_test: int = 500,
             num_random_trails: int = 5,
-            min_val_accuracy: Optional[float] = 33.,
+            min_val_accuracy: Optional[float] = 29.,
             min_throughput: Optional[float] = 1000.,
             do_store_models: bool = False,
             cache_path: Path = global_config.PROJECT_PATH / "cache" / "random_pca",
@@ -88,7 +89,7 @@ class ConvModelTester:
         self.do_store_models = do_store_models
         self.cache_path = cache_path
         self._dataset = None
-        self._db = BinaryDB(self.cache_path / "db2.sqlite")
+        self._db = BinaryDB(self.cache_path / "db-ch32.sqlite")
         print(f"num permutations: {self.num_permutations():,}")
 
     def num_permutations(self):
@@ -105,46 +106,77 @@ class ConvModelTester:
         return num
 
     @torch.no_grad()
-    def iter_model_params(
-        self,
-    ) -> Generator[dict, None, None]:
+    def iter_model_params(self) -> Generator[dict, None, None]:
         params_hash_set = set()
-        num_duplicates = 0
-        num_skipped = 0
-        with tqdm(total=self.model_count, desc="creating model params") as progress:
-            while progress.n < self.model_count:
-                progress.set_postfix({"duplicates": num_duplicates, "skipped": num_skipped})
+        self._num_duplicates = 0
+        self._num_skipped = 0
+        self._num_yielded = 0
+        if self.model_count is None:
+            iterable = self._iter_all_model_params()
+        else:
+            iterable = self._iter_random_model_params()
 
-                num_layers = self.rng.randint(*self.layers_range)
-                params = {
-                    "channels": [self.rng.choice(self.channel_choices) for _ in range(num_layers)],
-                    "kernel_size": [self.rng.choice(self.kernel_size_choices) for _ in range(num_layers)],
-                    "stride": [self.rng.choice(self.stride_choices) for _ in range(num_layers)],
-                    "dilation": [self.rng.choice(self.dilation_choices) for _ in range(num_layers)],
-                    "activation": [self.rng.choice(self.activation_choices) for _ in range(num_layers)],
-                }
-                params_hash = str(params)
-                if params_hash in params_hash_set:
-                    num_duplicates += 1
-                    continue
-                params_hash_set.add(params_hash)
+        # iterable = shuffle_iter(iterable)
 
-                model = ConvModel(**params)
+        for num_tried, params in enumerate(iterable):
+            if self.model_count is not None and self._num_yielded >= self.model_count:
+                break
 
-                try:
-                    output_shape = model(torch.ones(*self.input_shape)).shape
-                except RuntimeError:
-                    num_skipped += 1
-                    continue
+            params_hash = str(params)
+            if params_hash in params_hash_set:
+                self._num_duplicates += 1
+                continue
+            params_hash_set.add(params_hash)
 
+            model = ConvModel(**params)
+
+            try:
+                output_shape = model(torch.ones(*self.input_shape)).shape
+            except RuntimeError:
+                self._num_skipped += 1
+                continue
+
+            if self.ratio_range is not None:
                 ratio = math.prod(output_shape) / math.prod(self.input_shape)
                 if not self.ratio_range[0] <= ratio <= self.ratio_range[1]:
-                    num_skipped += 1
+                    self._num_skipped += 1
                     continue
 
-                yield params
+            yield params
+            self._num_yielded += 1
 
-                progress.update()
+    def _iter_random_model_params(self):
+        for num_tied in range(self.num_permutations() * 10):
+            if self._num_yielded >= self.model_count:
+                break
+
+            num_layers = self.rng.randint(*self.layers_range)
+            yield {
+                "channels": [self.rng.choice(self.channel_choices) for _ in range(num_layers)],
+                "kernel_size": [self.rng.choice(self.kernel_size_choices) for _ in range(num_layers)],
+                "stride": [self.rng.choice(self.stride_choices) for _ in range(num_layers)],
+                "dilation": [self.rng.choice(self.dilation_choices) for _ in range(num_layers)],
+                "activation": [self.rng.choice(self.activation_choices) for _ in range(num_layers)],
+            }
+
+    def _iter_all_model_params(self):
+        for num_layers in range(self.layers_range[0], self.layers_range[1] + 1):
+            matrix = {}
+            for i in range(num_layers):
+                matrix[f"activation-{i}"] = self.activation_choices
+                matrix[f"dilation-{i}"] = self.dilation_choices
+                matrix[f"stride-{i}"] = self.stride_choices
+                matrix[f"kernel_size-{i}"] = self.kernel_size_choices
+                matrix[f"channels-{i}"] = self.channel_choices
+
+            for param in iter_parameter_permutations(matrix):
+                yield {
+                    "channels": [param[f"channels-{i}"] for i in range(num_layers)],
+                    "kernel_size": [param[f"kernel_size-{i}"] for i in range(num_layers)],
+                    "stride": [param[f"stride-{i}"] for i in range(num_layers)],
+                    "dilation": [param[f"dilation-{i}"] for i in range(num_layers)],
+                    "activation": [param[f"activation-{i}"] for i in range(num_layers)],
+                }
 
     def get_classification_dataset(self):
         if self._dataset is None:
@@ -216,32 +248,59 @@ class ConvModelTester:
 
 
     def run(self):
+
+        def _result_meets_criteria(result: dict):
+            if self.min_val_accuracy is not None and result["val_accuracy"] < self.min_val_accuracy:
+                return False
+
+            if self.min_throughput is not None and result["throughput"] < self.min_throughput:
+                return False
+
+            return True
+
         try:
-            params_list = list(self.iter_model_params())
-            for params in tqdm(params_list):
+            with tqdm(total=self.num_permutations() if self.model_count is None else self.model_count) as progress:
+                num_skipped = 0
+                num_existing = 0
+                fully_tested = 0
+                for params in self.iter_model_params():
+                    progress.set_postfix({
+                        "duplicates": self._num_duplicates,
+                        "already in db": num_existing,
+                        "skipped early": self._num_skipped,
+                        "skipped late": num_skipped,
+                        "fully_tested": fully_tested,
+                    })
+                    progress.update()
 
-                for i in range(self.num_random_trails):
-                    id = self._db.to_id({**params, "trial": i})
-                    if self._db.has(id):
-                        continue
+                    for i in range(self.num_random_trails):
+                        id = self._db.to_id({**params, "trial": i})
+                        if existing := self._db.get(id):
+                            result = existing[1]["result"]
+                            num_existing += 1
+                            if not _result_meets_criteria(result):
+                                break
 
-                    model = ConvModel(**params)
-                    result = self.test_classification(model)
+                            continue
 
-                    data = None
-                    if self.do_store_models:
-                        with io.BytesIO() as fp:
-                            torch.save(model, fp)
-                            fp.seek(0)
-                            data = fp.read()
+                        model = ConvModel(**params)
+                        result = self.test_classification(model)
 
-                    self._db.store(id, data=data, meta={"params": params, "result": result})
+                        data = None
+                        if self.do_store_models:
+                            with io.BytesIO() as fp:
+                                torch.save(model, fp)
+                                fp.seek(0)
+                                data = fp.read()
 
-                    if self.min_val_accuracy is not None and result["val_accuracy"] < self.min_val_accuracy:
-                        break
+                        self._db.store(id, data=data, meta={"params": params, "result": result})
 
-                    if self.min_throughput is not None and result["throughput"] < self.min_throughput:
-                        break
+                        if not _result_meets_criteria(result):
+                            num_skipped += 1
+                            break
+
+                        if i == self.num_random_trails - 1:
+                            fully_tested += 1
 
         except KeyboardInterrupt:
             pass
@@ -277,8 +336,21 @@ class ConvModelTester:
         print(df.to_markdown())
 
 
+def shuffle_iter(iterable, max_shuffle: int = 10_000) -> Generator:
+    buffer = []
+    for item in iterable:
+        buffer.append(item)
+        if len(buffer) >= max_shuffle:
+            idx = random.randrange(len(buffer))
+            yield buffer.pop(idx)
+
+    while buffer:
+        idx = random.randrange(len(buffer))
+        yield buffer.pop(idx)
+
+
 if __name__ == "__main__":
     (ConvModelTester()
-        #.run()
+        .run()
         #.dump()
     )
