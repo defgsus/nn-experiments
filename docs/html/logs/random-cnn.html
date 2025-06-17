@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Exploring classification accuracy of convolutional neural network architectures with random weights</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../html/style/style.css">
+    <script type="text/javascript" src="../../html/js/main.js"></script>
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#exploring-classification-accuracy-of-convolutional-neural-network-architectures-with-random-weights" title="Exploring classification accuracy of convolutional neural network architectures with random weights">Exploring classification accuracy of convolutional neural network architectures with random weights</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#conclusion" title="Conclusion">Conclusion</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="exploring-classification-accuracy-of-convolutional-neural-network-architectures-with-random-weights">Exploring classification accuracy of convolutional neural network architectures with random weights <a href="#exploring-classification-accuracy-of-convolutional-neural-network-architectures-with-random-weights" class="heading-linker">←</a></h1>
+<p>The most prominent settings in a convolutional layer are <strong>kernel size</strong>, <strong>stride</strong> and <strong>dilation</strong>.
+I've tested all (sensible) permutations of those settings for a 3-layer network and measured
+image classification accuracy with a linear classifier on top. There are a few architectures that
+stand out considerably!</p>
+<p>The little convolutional networks all look like this:</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span>nn.Sequential(
+    nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3|5|7|9, stride=1|2|3, dilation=1|2|3),
+    nn.ReLU(),
+    nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3|5|7|9, stride=1|2|3, dilation=1|2|3),
+    nn.ReLU(),
+    nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3|5|7|9, stride=1|2|3, dilation=1|2|3),
+    nn.ReLU(),
+)
+</pre></div>
+</div><p>The <code>|</code> symbol means that <strong>one</strong> of the separated numbers is used for each parameter. So each layer
+has <code>4 * 3 * 3 = 36</code> possible permutations which leads to <code>36 ^ 3 = 46,656</code> possible 3-layer networks
+to test. </p>
+<p>Testing procedure is as follows and the code is available
+<a href="https://github.com/defgsus/nn-experiments/blob/599b4f6512234ab5b9890f05a4144c2600a60ecc/scripts/test_random_conv.py" target="_blank">here</a>:</p>
+<ul>
+<li>create a network with random weights and pass a 3x96x96 image through. If that fails, e.g.,
+because the kernel size of the last layer is larger than it's input,
+or because the output of the network is larger than the input, the architecture is ignored. </li>
+<li><code>32,629</code> networks pass this test.</li>
+<li>Pass the first 500 images of the <a href="https://cs.stanford.edu/~acoates/stl10/" target="_blank">STL10</a> training dataset through
+the network and fit a scikit-learn <a href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.RidgeClassifier.html" target="_blank">LinearRidge</a>
+classifier.</li>
+<li>Pass the first 500 validation images from the dataset through the network and the fitted classifier and
+calculate the <em>accuracy</em> (the percentage of correctly labeled images).</li>
+<li>If the <em>accuracy</em> is below 25% or the <em>throughput</em> (the number of 3x96x96 images the model can process per second)
+is below 200, ignore the model.</li>
+<li>Otherwise, repeat this test 5 times, each with new random weights.</li>
+<li><code>1,760</code> networks pass the test and are evaluated 5 times and the average of <em>accuracy</em> and <em>throughput</em> is reported.</li>
+</ul>
+<p>The reason for only using 32 channels and only 500 images, obviously, is to make things fast. One test pass
+takes only about a second.</p>
+<p>Here is a plot of all the 5-trial networks. X-axis is <em>throughput</em>, y-axis is <em>accuracy</em> and the color is
+related to the <em>ratio</em>, the factor by which the input size is reduced by the network.   </p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/random-conv-ch32-STL10-val500-trials5.png" alt="scatter plot of test results" /></div></p>
+<p>The <em>accuracy</em> is not very high but that is to be expected when only training on 500 images. I believe that
+it's still a meaningful measurement for comparing the different architectures. Remember that we only fitted
+a linear classifier and the CNN weights are completely random.</p>
+<p>The top-right architectures in above plot are the interesting ones. They have high accuracy (in comparison)
+and run fast on my GPU. Here is a hand-picked list:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">kernel size</th>
+<th align="right">stride</th>
+<th align="right">dilation</th>
+<th align="right">throughput</th>
+<th align="right">accuracy</th>
+<th align="right">ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">7, 3, 5</td>
+<td align="right">2, 1, 2</td>
+<td align="right">1, 3, 1</td>
+<td align="right">1850</td>
+<td align="right">31.24%</td>
+<td align="right">0.3750000</td>
+</tr>
+<tr>
+<td align="right">7, 3, 9</td>
+<td align="right">2, 1, 2</td>
+<td align="right">3, 1, 1</td>
+<td align="right">2300</td>
+<td align="right"><strong>31.28%</strong></td>
+<td align="right">0.2604166</td>
+</tr>
+<tr>
+<td align="right">9, 3, 7</td>
+<td align="right">3, 1, 1</td>
+<td align="right">1, 1, 1</td>
+<td align="right">2900</td>
+<td align="right">31.20%</td>
+<td align="right">0.5601852</td>
+</tr>
+<tr>
+<td align="right">9, 3, 7</td>
+<td align="right">3, 1, 1</td>
+<td align="right">2, 1, 1</td>
+<td align="right">3500</td>
+<td align="right">30.92%</td>
+<td align="right">0.4178241</td>
+</tr>
+<tr>
+<td align="right">9, 3, 5</td>
+<td align="right">3, 1, 1</td>
+<td align="right">1, 1, 1</td>
+<td align="right">2850</td>
+<td align="right">30.84%</td>
+<td align="right">0.6666666</td>
+</tr>
+<tr>
+<td align="right">5, 5, 3</td>
+<td align="right">3, 1, 1</td>
+<td align="right">3, 1, 3</td>
+<td align="right">3000</td>
+<td align="right">31.04%</td>
+<td align="right">0.3750000</td>
+</tr>
+<tr>
+<td align="right">7, 3, 3</td>
+<td align="right">3, 1, 1</td>
+<td align="right">3, 3, 1</td>
+<td align="right">5150</td>
+<td align="right">29.96%</td>
+<td align="right">0.3750000</td>
+</tr>
+<tr>
+<td align="right">7, 3, 3</td>
+<td align="right">3, 1, 2</td>
+<td align="right">3, 1, 1</td>
+<td align="right">6350</td>
+<td align="right">30.16%</td>
+<td align="right">0.1400463</td>
+</tr>
+<tr>
+<td align="right">5, 3, 5</td>
+<td align="right">3, 2, 1</td>
+<td align="right">2, 1, 1</td>
+<td align="right"><strong>6450</strong></td>
+<td align="right">30.00%</td>
+<td align="right">0.1157407</td>
+</tr>
+</tbody></table></div><p>Training these architectures with actual gradient descent, after adding a fully-connected linear layer,
+on the whole STL10 training set for a hundred epochs, with
+<a href="https://docs.pytorch.org/vision/main/generated/torchvision.transforms.TrivialAugmentWide.html" target="_blank">TrivialAugmentWide</a>
+augmentation and cross-entropy loss, yields:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">kernel size</th>
+<th align="right">stride</th>
+<th align="right">dilation</th>
+<th align="right">validation loss</th>
+<th align="right">val. accuracy</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput*</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">7, 3, 5</td>
+<td align="right">2, 1, 2</td>
+<td align="right">1, 3, 1</td>
+<td align="right"><strong>1.20086</strong></td>
+<td align="right">57.57%</td>
+<td align="right">143,306</td>
+<td align="right">6.90</td>
+<td align="right">1,207/s</td>
+</tr>
+<tr>
+<td align="right">7, 3, 9</td>
+<td align="right">2, 1, 2</td>
+<td align="right">3, 1, 1</td>
+<td align="right">1.27710</td>
+<td align="right">54.09%</td>
+<td align="right">168,970</td>
+<td align="right">6.72</td>
+<td align="right">1,239/s</td>
+</tr>
+<tr>
+<td align="right">9, 3, 7</td>
+<td align="right">3, 1, 1</td>
+<td align="right">1, 1, 1</td>
+<td align="right">1.21700</td>
+<td align="right"><strong>58.59%</strong></td>
+<td align="right">222,154</td>
+<td align="right">6.02</td>
+<td align="right">1,383/s</td>
+</tr>
+<tr>
+<td align="right">9, 3, 7</td>
+<td align="right">3, 1, 1</td>
+<td align="right">2, 1, 1</td>
+<td align="right">1.26847</td>
+<td align="right">54.88%</td>
+<td align="right">182,794</td>
+<td align="right"><strong>5.08</strong></td>
+<td align="right"><strong>1,639/s</strong></td>
+</tr>
+<tr>
+<td align="right">9, 3, 5</td>
+<td align="right">3, 1, 1</td>
+<td align="right">1, 1, 1</td>
+<td align="right">1.26713</td>
+<td align="right">56.65%</td>
+<td align="right">227,018</td>
+<td align="right">5.15</td>
+<td align="right">1,617/s</td>
+</tr>
+<tr>
+<td align="right">5, 5, 3</td>
+<td align="right">3, 1, 1</td>
+<td align="right">3, 1, 3</td>
+<td align="right">1.24014</td>
+<td align="right">55.70%</td>
+<td align="right">141,002</td>
+<td align="right">6.24</td>
+<td align="right">1,334/s</td>
+</tr>
+<tr>
+<td align="right">7, 3, 3</td>
+<td align="right">3, 1, 1</td>
+<td align="right">3, 3, 1</td>
+<td align="right">1.30604</td>
+<td align="right">52.73%</td>
+<td align="right">126,922</td>
+<td align="right">6.04</td>
+<td align="right">1,378/s</td>
+</tr>
+<tr>
+<td align="right">7, 3, 3</td>
+<td align="right">3, 1, 2</td>
+<td align="right">3, 1, 1</td>
+<td align="right">1.30700</td>
+<td align="right">52.63%</td>
+<td align="right"><strong>61,962</strong></td>
+<td align="right">5.93</td>
+<td align="right">1,406/s</td>
+</tr>
+<tr>
+<td align="right">5, 3, 5</td>
+<td align="right">3, 2, 1</td>
+<td align="right">2, 1, 1</td>
+<td align="right">1.20183</td>
+<td align="right">56.75%</td>
+<td align="right">69,322</td>
+<td align="right">5.59</td>
+<td align="right">1,492/s</td>
+</tr>
+<tr>
+<td align="right">9, 9, 7</td>
+<td align="right">2, 2, 1</td>
+<td align="right">2, 1, 1</td>
+<td align="right">1.26590</td>
+<td align="right">54.44%</td>
+<td align="right">173,002</td>
+<td align="right">5.48</td>
+<td align="right">1,520/s</td>
+</tr>
+</tbody></table></div><p>And with 128 instead of 32 convolutional channels:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right">kernel size</th>
+<th align="right">stride</th>
+<th align="right">dilation</th>
+<th align="right">validation loss</th>
+<th align="right">val. accuracy</th>
+<th align="right">model params</th>
+<th align="right">train time (minutes)</th>
+<th align="right">throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">7, 3, 5</td>
+<td align="right">2, 1, 2</td>
+<td align="right">1, 3, 1</td>
+<td align="right"><strong>1.08960</strong></td>
+<td align="right"><strong>63.91%</strong></td>
+<td align="right">990,986</td>
+<td align="right">11.91</td>
+<td align="right">699/s</td>
+</tr>
+<tr>
+<td align="right">7, 3, 9</td>
+<td align="right">2, 1, 2</td>
+<td align="right">3, 1, 1</td>
+<td align="right">1.20499</td>
+<td align="right">59.97%</td>
+<td align="right">1,781,770</td>
+<td align="right">14.67</td>
+<td align="right">568/s</td>
+</tr>
+<tr>
+<td align="right">9, 3, 7</td>
+<td align="right">3, 1, 1</td>
+<td align="right">1, 1, 1</td>
+<td align="right">1.12620</td>
+<td align="right">62.67%</td>
+<td align="right">1,601,290</td>
+<td align="right">6.85</td>
+<td align="right">1,217/s</td>
+</tr>
+<tr>
+<td align="right">9, 3, 7</td>
+<td align="right">3, 1, 1</td>
+<td align="right">2, 1, 1</td>
+<td align="right">1.23929</td>
+<td align="right">59.92%</td>
+<td align="right">1,443,850</td>
+<td align="right">7.55</td>
+<td align="right">1,103/s</td>
+</tr>
+<tr>
+<td align="right">9, 3, 5</td>
+<td align="right">3, 1, 1</td>
+<td align="right">1, 1, 1</td>
+<td align="right">1.13976</td>
+<td align="right">62.14%</td>
+<td align="right">1,325,834</td>
+<td align="right">7.11</td>
+<td align="right">1,172/s</td>
+</tr>
+<tr>
+<td align="right">5, 5, 3</td>
+<td align="right">3, 1, 1</td>
+<td align="right">3, 1, 3</td>
+<td align="right">1.22916</td>
+<td align="right">59.92%</td>
+<td align="right">981,770</td>
+<td align="right">7.11</td>
+<td align="right">1,172/s</td>
+</tr>
+<tr>
+<td align="right">7, 3, 3</td>
+<td align="right">3, 1, 1</td>
+<td align="right">3, 3, 1</td>
+<td align="right">1.24541</td>
+<td align="right">58.24%</td>
+<td align="right">728,842</td>
+<td align="right">6.85</td>
+<td align="right">1,216/s</td>
+</tr>
+<tr>
+<td align="right">7, 3, 3</td>
+<td align="right">3, 1, 2</td>
+<td align="right">3, 1, 1</td>
+<td align="right">1.27375</td>
+<td align="right">56.62%</td>
+<td align="right"><strong>469,002</strong></td>
+<td align="right">6.71</td>
+<td align="right">1,242/s</td>
+</tr>
+<tr>
+<td align="right">5, 3, 5</td>
+<td align="right">3, 2, 1</td>
+<td align="right">2, 1, 1</td>
+<td align="right">1.10181</td>
+<td align="right">63.36%</td>
+<td align="right">695,050</td>
+<td align="right"><strong>6.14</strong></td>
+<td align="right"><strong>1,356/s</strong></td>
+</tr>
+<tr>
+<td align="right">9, 9, 7</td>
+<td align="right">2, 2, 1</td>
+<td align="right">2, 1, 1</td>
+<td align="right">1.33770</td>
+<td align="right">57.35%</td>
+<td align="right">2,289,418</td>
+<td align="right">10.91</td>
+<td align="right">763/s</td>
+</tr>
+</tbody></table></div><p><code>*</code>: The throughput is severely limited by the image augmentation stage!</p>
+<p>The state-of-the-art accuracy for the STL10 validation set when only training on the STL10
+data is <strong>87.3%</strong> (<a href="https://arxiv.org/abs/1708.04552" target="_blank">arxiv:1708.04552</a>). My little networks are
+far from this result but they are also pretty small.
+The <a href="https://cs.stanford.edu/~acoates/papers/coatesleeng_aistats_2011.pdf" target="_blank">original STL10 paper</a>
+archived <strong>51.5%</strong> accuracy with a single layer network (section 4.6).</p>
+<p>The <code>9,3,5 - 3,1,1 - 1,1,1</code> architecture archived the best convergence speed during training. The loss was
+immediately and unusually shooting downwards.</p>
+<p>Without the augmentation, all models were overfitting pretty fast and the validation accuracy decreased a lot. </p>
+<p>The <code>9,9,7 - 2,2,1 - 2,1,1</code> architecture was the one with the worst accuracy in the selection experiment before (25.72%).
+However, when trained, it seems to get equally accurate as the other ones.</p>
+<h2 id="conclusion">Conclusion <a href="#conclusion" class="heading-linker">←</a></h2>
+<p>I don't know, really. The test is just for classification and results might be quite different for other
+problems. However, the <em>good</em> architectures above do probably behave well in many setups and i will try them
+whenever i need a CNN block. Identifying the best
+performing architectures (using only random weights and fast linear probes)
+while considering the throughput (which is one of the most important properties for impatient people like me)
+seems worth the trouble of running this exhaustive experiment. </p>
+<p>Is there some rule-of-thumb for setting up the CNN parameters? </p>
+<p>Not really, it seems.
+Larger kernel-size, stride and dilation values should be in the first layers rather than the last ones,
+but there are exceptions.</p>
+<p>Looking at the correlation-plot of parameters and test result values among those 1,760 networks, one can
+see a few significant correlations. In below plot, <code>kernel_size-0</code> means, kernel size of first layer, aso.
+<code>train_time</code> is the time it took to fit the linear regression, <code>min_val_acc</code> and <code>max_val_acc</code> are the minimum
+and maximum archived validation accuracies among the 5 trials and <code>fitness</code> is some subjective measure
+calculated by <code>normalized(accuracy) + 0.3 * normalized(throughput)</code>.</p>
+<p><div style="overflow: scroll;"><img src="../../logs/img/random-conv-ch32-STL10-val500-trials5-correlations.png" alt="correlation plot of test parameters and results" /></div></p>
+<ul>
+<li><em>validation accuracy</em> does not seem to correlate to specific parameters. The largest correlation value is 0.15
+with the kernel size of the last layer, followed by 0.12 for the stride of the first layer.
+Both numbers are well below statistical significance.</li>
+<li><em>throughput</em> is largely influenced by the size of the <em>stride</em> in the first layer (correlation: 0.9)</li>
+<li>Surprisingly, <em>throughput</em> is negatively influenced by larger <em>stride</em> values in the second and third layer (-0.32, -0.5)</li>
+<li>Not so surprising, <em>throughput</em> is also negatively influenced by larger kernel sizes in second and third layer (-0.42, -0.32)</li>
+</ul>
+
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a target="_blank" href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a target="_blank" href="https://github.com/defgsus/nn-experiments/blob/master/docs/logs/2025-06-17-random-cnn.md">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../html/logs/mixer-mlp.html">
+                        &lt;&lt; MLP-Mixer re-invented for auto-encoding
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

@@ -9,6 +9,9 @@ You can also view these files online at [defgsus.github.io/nn-experiments/](http
 
 
 ## Index
+- [2025-06-17-random-cnn.md](2025-06-17-random-cnn.md)
+  - [:arrow_forward:](2025-06-17-random-cnn.md#exploring-classification-accuracy-of-convolutional-neural-network-architectures-with-random-weights) Exploring classification accuracy of convolutional neural network architectures with random weights
+    - [:arrow_forward:](2025-06-17-random-cnn.md#conclusion) Conclusion
 - [2025-02-25-mixer-mlp.md](2025-02-25-mixer-mlp.md)
   - [:arrow_forward:](2025-02-25-mixer-mlp.md#mlp-mixer-re-invented-for-auto-encoding) MLP-Mixer re-invented for auto-encoding
       - [:arrow_forward:](2025-02-25-mixer-mlp.md#linear-layer-as-mixer) Linear layer as mixer
