@@ -163,6 +163,38 @@ class TestScriptConv(TestBase):
             """,
         )
 
+    def test_global_max_pool(self):
+        self.assert_model(
+            "32x-gmaxp",
+            (3, 100, 100),
+            (32, ),
+            """
+            ScriptConvModel(
+              (layers): Sequential(
+                (0): Conv2d(3, 32, kernel_size=(3, 3), stride=(1, 1))
+                (1): MaxPool2d(kernel_size=(98, 98), stride=(98, 98), padding=0, dilation=1, ceil_mode=False)
+                (2): Flatten(start_dim=-3, end_dim=-1)
+              )
+            )
+            """,
+        )
+
+    def test_global_avg_pool(self):
+        self.assert_model(
+            "32xs2-gavgp",
+            (3, 100, 100),
+            (32, ),
+            """
+            ScriptConvModel(
+              (layers): Sequential(
+                (0): Conv2d(3, 32, kernel_size=(3, 3), stride=(2, 2))
+                (1): AvgPool2d(kernel_size=(49, 49), stride=(49, 49), padding=0)
+                (2): Flatten(start_dim=-3, end_dim=-1)
+              )
+            )
+            """,
+        )
+
     def test_dropout(self):
         self.assert_model(
             "32x-do-16x-do.2",
@@ -210,6 +242,29 @@ class TestScriptConv(TestBase):
                 (3): BatchNorm1d(1000, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
                 (4): Dropout(p=0.5, inplace=False)
                 (5): Linear(in_features=1000, out_features=10, bias=True)
+              )
+            )
+            """,
+        )
+
+    def test_linear_residual(self):
+        self.assert_model(
+            "32x7-2x(fc100)-r(2x(fc100))",
+            (3, 100, 100),
+            (100,),
+            """
+            ScriptConvModel(
+              (layers): Sequential(
+                (0): Conv2d(3, 32, kernel_size=(7, 7), stride=(1, 1))
+                (1): Flatten(start_dim=-3, end_dim=-1)
+                (2): Linear(in_features=282752, out_features=100, bias=True)
+                (3): Linear(in_features=100, out_features=100, bias=True)
+                (4): ResidualAdd(
+                  (module): Sequential(
+                    (0): Linear(in_features=100, out_features=100, bias=True)
+                    (1): Linear(in_features=100, out_features=100, bias=True)
+                  )
+                )
               )
             )
             """,

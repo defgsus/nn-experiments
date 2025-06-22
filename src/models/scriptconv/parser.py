@@ -22,7 +22,7 @@ def get_parser():
     elements: element ("-" element)*
     element: layer | loop | default_assignment
     loop: UINT "x(" elements ")"
-    layer: conv | activation_layer | batch_norm | residual | max_pool | avg_pool | dropout | fully_connected
+    layer: conv | activation_layer | batch_norm | residual | max_pool | avg_pool | dropout | fully_connected | global_max_pool | global_avg_pool
     
     activation_layer: ACTIVATION
     
@@ -32,6 +32,9 @@ def get_parser():
     
     max_pool: "maxp" (kernel_size | stride | dilation | padding)*
     avg_pool: "avgp" (kernel_size | stride | padding)*
+    
+    global_max_pool: "gmaxp"
+    global_avg_pool: "gavgp"
     
     dropout: "do" UFLOAT?
     
@@ -74,12 +77,13 @@ class Context:
             input_shape: Tuple[int, int, int],
             default_conv_attrs: dict,
             previous_channels: int,
+            previous_linear_channels: Optional[int] = None,
     ):
         self.input_shape = input_shape
         self.layers = layers
         self.default_conv_attrs = default_conv_attrs
         self.previous_channels = previous_channels
-        self.previous_linear_channels: Optional[int] = None
+        self.previous_linear_channels = previous_linear_channels
 
     def copy(self):
         return self.__class__(
@@ -87,6 +91,7 @@ class Context:
             layers=self.layers,
             default_conv_attrs=self.default_conv_attrs.copy(),
             previous_channels=self.previous_channels,
+            previous_linear_channels=self.previous_linear_channels,
         )
 
     @torch.no_grad()
@@ -179,6 +184,7 @@ def add_layers(
             add_layers(sub_context, tree.children[0].children[0])
             context.layers.append(ResidualAdd(sub_context.layers))
             context.previous_channels = sub_context.previous_channels
+            context.previous_linear_channels = sub_context.previous_linear_channels
 
         elif tree.children[0].data.value in ("max_pool", "avg_pool"):
             if context.previous_linear_channels is not None:
@@ -196,6 +202,16 @@ def add_layers(
             if tree.children[0].data.value == "avg_pool":
                 pool_attrs.pop("dilation")
             context.layers.append(klass(**pool_attrs))
+
+        elif tree.children[0].data.value in ("global_max_pool", "global_avg_pool"):
+            if context.previous_linear_channels is not None:
+                raise ValueError(f"Can't add pooling after linear layer")
+
+            channels, height, width = context.get_current_shape()
+            klass = nn.MaxPool2d if tree.children[0].data.value == "global_max_pool" else nn.AvgPool2d
+            context.layers.append(klass(kernel_size=(height, width)))
+            context.layers.append(nn.Flatten(-3))
+            context.previous_linear_channels = channels
 
         elif tree.children[0].data.value == "dropout":
             value = .5
