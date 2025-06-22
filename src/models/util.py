@@ -213,7 +213,7 @@ def get_model_weight_images(
         max_size: int = 128,
         normalize: str = "all",  # "each", "shape", "all", "none"
         size_to_scale: Dict[int, float] = {10: 4, 20: 2},
-):
+) -> Optional[torch.Tensor]:
     from torchvision.utils import make_grid
     from src.util.image import signed_to_image
 
@@ -264,6 +264,9 @@ def get_model_weight_images(
             grids.append(make_grid([signed_to_image(p) for p in params], nrow=nrow))
         else:
             grids.append(make_grid([p.unsqueeze(0) for p in params], nrow=nrow))
+
+    if not grids:
+        return None
 
     max_width = max(g.shape[-1] for g in grids)
 
