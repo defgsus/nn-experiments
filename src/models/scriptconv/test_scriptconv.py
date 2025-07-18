@@ -4,6 +4,7 @@ from textwrap import dedent
 from src.tests.base import *
 
 from src.models.scriptconv import ScriptConvModel
+from src.util.module import num_module_parameters
 
 
 class TestScriptConv(TestBase):
@@ -35,6 +36,8 @@ class TestScriptConv(TestBase):
             expected_output_shape,
             outp.shape[1:],
         )
+
+        print(f"\n{script}\nparams: {num_module_parameters(model):,}")
 
     def test_conv_attr(self):
         self.assert_model(
@@ -265,6 +268,71 @@ class TestScriptConv(TestBase):
                     (1): Linear(in_features=100, out_features=100, bias=True)
                   )
                 )
+              )
+            )
+            """,
+        )
+
+    def test_SimpNet(self):
+        """
+        (Almost) the SimpNet architecture
+        https://arxiv.org/abs/1802.06205
+
+        Although i get 5M parameters which is mentioned nowhere in the paper ???
+        """
+        self.assert_model(
+            "arelu-66xk3-bn-3x(128x3-bn)-192x3-bn-maxp2-do.5-4x(192x3-bn)-288x3-bn-maxp2-do.5-288x3-bn-355x3-bn-432x3-bn-gmaxp-fc10",
+            (3, 100, 100),
+            (10,),
+            """
+            ScriptConvModel(
+              (layers): Sequential(
+                (0): Conv2d(3, 66, kernel_size=(3, 3), stride=(1, 1))
+                (1): ReLU()
+                (2): BatchNorm2d(66, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                (3): Conv2d(66, 128, kernel_size=(3, 3), stride=(1, 1))
+                (4): ReLU()
+                (5): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                (6): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1))
+                (7): ReLU()
+                (8): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                (9): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1))
+                (10): ReLU()
+                (11): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                (12): Conv2d(128, 192, kernel_size=(3, 3), stride=(1, 1))
+                (13): ReLU()
+                (14): BatchNorm2d(192, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                (15): MaxPool2d(kernel_size=2, stride=1, padding=0, dilation=1, ceil_mode=False)
+                (16): Dropout2d(p=0.5, inplace=False)
+                (17): Conv2d(192, 192, kernel_size=(3, 3), stride=(1, 1))
+                (18): ReLU()
+                (19): BatchNorm2d(192, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                (20): Conv2d(192, 192, kernel_size=(3, 3), stride=(1, 1))
+                (21): ReLU()
+                (22): BatchNorm2d(192, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                (23): Conv2d(192, 192, kernel_size=(3, 3), stride=(1, 1))
+                (24): ReLU()
+                (25): BatchNorm2d(192, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                (26): Conv2d(192, 192, kernel_size=(3, 3), stride=(1, 1))
+                (27): ReLU()
+                (28): BatchNorm2d(192, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                (29): Conv2d(192, 288, kernel_size=(3, 3), stride=(1, 1))
+                (30): ReLU()
+                (31): BatchNorm2d(288, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                (32): MaxPool2d(kernel_size=2, stride=1, padding=0, dilation=1, ceil_mode=False)
+                (33): Dropout2d(p=0.5, inplace=False)
+                (34): Conv2d(288, 288, kernel_size=(3, 3), stride=(1, 1))
+                (35): ReLU()
+                (36): BatchNorm2d(288, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                (37): Conv2d(288, 355, kernel_size=(3, 3), stride=(1, 1))
+                (38): ReLU()
+                (39): BatchNorm2d(355, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                (40): Conv2d(355, 432, kernel_size=(3, 3), stride=(1, 1))
+                (41): ReLU()
+                (42): BatchNorm2d(432, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                (43): MaxPool2d(kernel_size=(72, 72), stride=(72, 72), padding=0, dilation=1, ceil_mode=False)
+                (44): Flatten(start_dim=-3, end_dim=-1)
+                (45): Linear(in_features=432, out_features=10, bias=True)
               )
             )
             """,

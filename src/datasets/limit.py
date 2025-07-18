@@ -114,6 +114,8 @@ class RepeatDataset(BaseDataset):
         return len(self._dataset) * self._count
 
     def __getitem__(self, item):
+        if item >= len(self):
+            raise StopIteration
         if self._per_item:
             return self._dataset[item // self._count]
         else:

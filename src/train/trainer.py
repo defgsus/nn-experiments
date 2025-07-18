@@ -662,6 +662,8 @@ class Trainer:
         from src.models.util import get_model_weight_images
         kwargs = self.weight_image_kwargs or {}
         grid1 = get_model_weight_images(self.model, **{**kwargs, "normalize": "each"})
+        if grid1 is None:
+            return
         grid2 = get_model_weight_images(self.model, **{**kwargs, "normalize": "all"})
         self.log_image("weights", make_grid([grid1, grid2], nrow=1))
 

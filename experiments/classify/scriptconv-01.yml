@@ -1,0 +1,78 @@
+experiment_name: classify/scriptconv_${matrix_slug}
+
+matrix:
+  script:
+    #- arelu-64x3-64x3-64x3-fc10
+    #- arelu-64x3-4x(1.25x3)-fc10
+    #- arelu-64x3-64x3-64x3-gmaxp-fc10
+    #- arelu-64xk9s3d1-64xk3s1d1-64xk7s1d1-fc10
+    #- arelu-64x9s3-64x3-64x7-64x9-64x3-64x7-fc10  # good compromise for speed and loss
+    - arelu-64x9s3-64x3-64x7-do.5-64x9-64x3-64x7-fc10
+  trial: [1]
+  bs:
+    - 64
+  lr:
+    - 0.0003
+  opt:
+    - AdamW
+  ds:
+    #- "mnist"
+    - "stl10"
+  shape:
+#    - [1, 28, 28]
+    #- [3, 32, 32]
+    - [3, 96, 96]
+  cls:
+    - 10
+  aug:
+    - "'wide'"
+  #  - "'cutout'"
+  #  - "'elastic'"
+
+trainer: experiments.classify.classifier_trainer.ClassifierTrainer
+num_classes: ${cls}
+
+train_set: |
+  ds = ${ds}_dataset(shape=${shape}, train=True).resize(${shape}[1:]).repeat(10)
+  if ${aug} == "wide":
+      ds = TransformIterableDataset(ds, transforms=[
+          lambda x: (x * 255.).to(torch.uint8),
+          VT.TrivialAugmentWide(),
+          lambda x: x.float() / 255.,
+      ])
+  elif ${aug} == "cutout":
+      ds = TransformIterableDataset(ds, transforms=[
+          VT.Compose((
+              VT.Pad(12),
+              VT.RandomCrop((96, 96)),
+              VT.RandomHorizontalFlip(),
+              VT.RandomErasing(),
+          ))
+      ])
+  elif ${aug} == "elastic":
+      ds = TransformIterableDataset(
+          ds,
+          transforms=[VT.ElasticTransform(alpha=100., sigma=10.)],
+      )
+  ds
+
+validation_set: |
+  ${ds}_dataset(shape=${shape}, train=False).resize(${shape}[1:])
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+max_inputs: 1_200_000
+#num_inputs_between_validations: 1000000
+#num_workers: 4
+
+model: |
+  from src.models.scriptconv import ScriptConvModel
+  
+  model = ScriptConvModel(
+      input_shape=${shape},
+      script="${script}",
+  )
+  # print(model)
+  model

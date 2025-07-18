@@ -8,8 +8,10 @@ import torchvision.transforms.functional as VF
 
 from src.datasets import *
 from src.util.image import *
+from src import config
 
-DATASETS_ROOT = "~/prog/data/datasets/"
+DATASETS_ROOT = config.SMALL_DATASETS_PATH
+DO_DOWNLOAD = True
 
 
 def _dataset(
@@ -57,7 +59,7 @@ def mnist_dataset(
         interpolation: bool = True,
         normalize_between: Optional[Tuple[float, float]] = None,
 ) -> Dataset:
-    ds = torchvision.datasets.MNIST("~/prog/data/datasets/", train=train)
+    ds = torchvision.datasets.MNIST(DATASETS_ROOT, train=train, download=DO_DOWNLOAD)
     return _dataset(
         TensorDataset(ds.data, ds.targets),
         shape=shape,
@@ -73,7 +75,7 @@ def fmnist_dataset(
         interpolation: bool = True,
         normalize_between: Optional[Tuple[float, float]] = None,
 ) -> Dataset:
-    ds = torchvision.datasets.FashionMNIST("~/prog/data/datasets/", train=train)
+    ds = torchvision.datasets.FashionMNIST(DATASETS_ROOT, train=train, download=DO_DOWNLOAD)
     return _dataset(
         TensorDataset(ds.data, ds.targets),
         shape=shape,
@@ -89,7 +91,7 @@ def cifar10_dataset(
         interpolation: bool = True,
         normalize_between: Optional[Tuple[float, float]] = None,
 ) -> Dataset:
-    ds = torchvision.datasets.CIFAR10("~/prog/data/datasets/", train=train)
+    ds = torchvision.datasets.CIFAR10(DATASETS_ROOT, train=train, download=DO_DOWNLOAD)
     return _dataset(
         TensorDataset(torch.Tensor(ds.data).permute(0, 3, 1, 2), torch.tensor(ds.targets, dtype=torch.int64)),
         shape=shape,
@@ -105,7 +107,7 @@ def stl10_dataset(
         interpolation: bool = True,
         normalize_between: Optional[Tuple[float, float]] = None,
 ) -> Dataset:
-    ds = torchvision.datasets.STL10("~/prog/data/datasets/", split="train" if train else "test")
+    ds = torchvision.datasets.STL10(DATASETS_ROOT, split="train" if train else "test", download=DO_DOWNLOAD)
     return _dataset(
         TensorDataset(torch.Tensor(ds.data) / 255., torch.tensor(ds.labels, dtype=torch.int64)),
         shape=shape,
@@ -121,7 +123,7 @@ def flowers102_dataset(
         interpolation: bool = True,
 ) -> Dataset:
     ds = torchvision.datasets.Flowers102(
-        "~/prog/data/datasets/", split="train" if train else "test", #download=True,
+        DATASETS_ROOT, split="train" if train else "test", download=DO_DOWNLOAD
     )
     def cropper(item):
         return image_resize_crop(

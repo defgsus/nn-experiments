@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Tuple, Generator
 
 import pandas as pd
 import torch
@@ -68,3 +68,17 @@ def dump_module_stacktrace(model: nn.Module, *input, method_name: str = "forward
             df = pd.DataFrame(stack)
             print(df.to_markdown(index=False))
 
+
+def iter_module_layers(
+        model: nn.Module,
+        path: Tuple[str, ...] = tuple(),
+) -> Generator[Tuple[str, nn.Module], None, None]:
+    for name, child in model.named_children():
+        yield ".".join((*path, name)), child
+        yield from iter_module_layers(child, path=(*path, name))
+
+
+def find_module_layer(model: nn.Module, path: str) -> Optional[nn.Module]:
+    for name, layer in iter_module_layers(model):
+        if name == path:
+            return layer

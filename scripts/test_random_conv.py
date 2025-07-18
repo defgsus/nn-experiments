@@ -28,6 +28,7 @@ class ConvModel(nn.Module):
             stride: List[int],
             dilation: List[int],
             activation: List[Optional[str]],
+            input_channels: int = 3,
     ):
         super().__init__()
 
@@ -35,7 +36,7 @@ class ConvModel(nn.Module):
         for i in range(len(channels)):
             self.layers.append(
                 nn.Conv2d(
-                    in_channels=3 if i == 0 else channels[i - 1],
+                    in_channels=input_channels if i == 0 else channels[i - 1],
                     out_channels=channels[i],
                     kernel_size=kernel_size[i],
                     stride=stride[i],

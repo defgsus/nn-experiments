@@ -8,6 +8,7 @@ git+https://github.com/openai/CLIP.git
 github-slugger
 graphviz
 jupyterlab
+lark
 marko
 pandas
 plotly

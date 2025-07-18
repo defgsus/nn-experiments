@@ -25,7 +25,7 @@ class BaseDataset(Dataset):
 
     def repeat(self, count: int, per_item: bool = False):
         from .limit import RepeatDataset
-        return RepeatDataset(self, count, per_item=per_item)
+        return RepeatDataset(self, count=count, per_item=per_item)
 
     def shuffle(self, *, seed: Optional[int] = None, max_shuffle: Optional[int] = None):
         from .shuffle import ShuffleDataset
