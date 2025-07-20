@@ -22,10 +22,11 @@ def interpolate_poly5(t):
 def numpy_perlin_noise_2d(
         shape: Tuple[int, int],
         res: Tuple[int, int],
-        tileable: Tuple[bool, bool] = (False, False),
+        warp: Tuple[bool, bool] = (False, False),
         interpolant: Callable[[np.ndarray], np.ndarray] = interpolate_poly5,
         rng: Optional[np.random.Generator] = None,
         values: Optional[np.ndarray] = None,
+        constant_edge: Optional[float] = None,
 ) -> np.ndarray:
     """Generate a 2D numpy array of perlin noise.
     Args:
@@ -34,7 +35,7 @@ def numpy_perlin_noise_2d(
         res: The number of periods of noise to generate along each
             axis (tuple of two ints). Note: shape must be a multiple of
             res.
-        tileable: If the noise should be tileable along each axis
+        warp: If the noise should be tileable along each axis
             (tuple of two bools). Defaults to (False, False).
         interpolant: The interpolation function, defaults to
             t*t*t*(t*(t*6 - 15) + 10).
@@ -56,6 +57,13 @@ def numpy_perlin_noise_2d(
         if values.shape != (res[0]+1, res[1]+1):
             raise ValueError(f"expected {(res[0]+1, res[1]+1)}, got {values.shape}")
 
+    if constant_edge is not None:
+        values = values.copy()
+        values[:1, :] = constant_edge
+        values[-1:, :] = constant_edge
+        values[:, :1] = constant_edge
+        values[:, -1:] = constant_edge
+
     delta = (res[0] / shape[0], res[1] / shape[1])
     d = (shape[0] // res[0], shape[1] // res[1])
     grid = np.mgrid[0:res[0]:delta[0], 0:res[1]:delta[1]].transpose(1, 2, 0) % 1
@@ -66,9 +74,9 @@ def numpy_perlin_noise_2d(
     # Gradients
     angles = 2*np.pi*values
     gradients = np.dstack((np.cos(angles), np.sin(angles)))
-    if tileable[0]:
+    if warp[0]:
         gradients[-1,:] = gradients[0,:]
-    if tileable[1]:
+    if warp[1]:
         gradients[:,-1] = gradients[:,0]
     gradients = gradients.repeat(d[0], 0).repeat(d[1], 1)
     g00 = gradients[    :-d[0],    :-d[1]]
