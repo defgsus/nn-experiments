@@ -75,6 +75,12 @@ class LImageTiling:
                 self.tr = color
 
         def matches_left(self, other: "LImageTiling.Attributes") -> bool:
+            if self.tl != other.tr:
+                return False
+            if self.l != other.r:
+                return False
+            if self.bl != other.br:
+                return False
             if self.tl >= 0 and self.tl != other.tr:
                 return False
             if self.l >= 0 and self.l != other.r:
@@ -87,7 +93,13 @@ class LImageTiling:
             return other.matches_left(self)
 
         def matches_top(self, other: "LImageTiling.Attributes") -> bool:
-            if self.tl >= 0 and self.tl != other.bl:
+            if self.tl != other.bl:
+                return False
+            if self.t != other.b:
+                return False
+            if self.tr != other.br:
+                return False
+            if self.tl != other.bl:
                 return False
             if self.t >= 0 and self.t != other.b:
                 return False
@@ -189,8 +201,9 @@ class LImageTiling:
             self._attributes_map[pos].set_color(attr_index, color)
         else:
             self._attributes_map[pos].set_color(attr_index, color)
-            if not self._attributes_map[pos].has_attributes():
-                del self._attributes_map[pos]
+            # TODO: keep them in to allow empty tiles to render
+            #if not self._attributes_map[pos].has_attributes():
+            #    del self._attributes_map[pos]
 
     def clear_attributes(self):
         self._attributes_map.clear()

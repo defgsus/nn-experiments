@@ -114,6 +114,9 @@ class ClipigTask:
     def create_targets(self, source_model: nn.Module) -> List[dict]:
         targets = []
         for target_conf in self.config["targets"]:
+            if not target_conf["active"]:
+                continue
+
             batch_size = target_conf["batch_size"]
 
             if self.task_type in (self.TaskType.T_CLIPIG, ):
@@ -182,6 +185,9 @@ class ClipigTask:
             else:
                 optimizer = None
 
+            mask_layer = self.get_mask_layer(target_conf["mask_layer"])
+            if target_conf["mask_layer"] and mask_layer is None:
+                print(f"Mask layer '{target_conf['mask_layer']}' not found")
             targets.append({
                 **target_conf,
                 "optimizer": optimizer,
@@ -189,6 +195,7 @@ class ClipigTask:
                 "target_embeddings": target_embeddings,
                 "target_dots": target_dots,
                 "target_weights": target_weights,
+                "mask_layer": mask_layer,
             })
 
         return targets
@@ -202,6 +209,7 @@ class ClipigTask:
             ClipSingleton.get(self.clip_model_name, self.device_name)
 
         targets = self.create_targets(source_model)
+        gradient_layer = None
 
         yield {"status": "running"}
 
@@ -216,8 +224,9 @@ class ClipigTask:
                 yield {"pixels": source_model().detach()}
 
             loss_per_target = []
-            for target in targets:
+            for target_idx, target in enumerate(targets):
                 pixels = source_model()
+                pixels_backup = pixels.clone()
                 transforms = target["transformations"]
 
                 pixel_batch = []
@@ -235,11 +244,42 @@ class ClipigTask:
                 optimizer: torch.optim.Optimizer = target["optimizer"]
                 optimizer.zero_grad()
                 loss.backward()
+
+                if self.config["output_gradient_layer"]:
+                    with torch.no_grad():
+                        params = list(source_model.parameters())
+                        grad = params[0].grad.abs()
+                        if grad.ndim == 3 and grad.shape[0] == 3:
+                            if target["mask_layer"] is not None:
+                                mask_layer = self._get_mask_layer(target, pixels_backup)
+                                grad = grad * mask_layer
+                            gradient_layer = self._accumulate_gradient_layer(gradient_layer, grad)
+
                 if target["clip_grad_norm"]:
                     torch.nn.utils.clip_grad_norm_(source_model.parameters(), target["clip_grad_norm"])
+
+                if target["clip_grad_above_percent"] > 0 or target["clip_grad_below_percent"] > 0:
+                    for param in source_model.parameters():
+                        min_value = param.grad.abs().min()
+                        max_value = param.grad.abs().max()
+                        if target["clip_grad_below_percent"] > 0:
+                            too_low_value = min_value * target["clip_grad_below_percent"] / 100
+                            param.grad[param.grad < too_low_value] = 0.
+                        if target["clip_grad_above_percent"] > 0:
+                            too_high_value = max_value * target["clip_grad_above_percent"] / 100
+                            param.grad[param.grad > too_high_value] = 0.
+
                 optimizer.step()
 
                 loss_per_target.append(float(loss))
+
+                if target["mask_layer"] is not None:
+                    mask_layer = self._get_mask_layer(target, pixels_backup)
+                    with torch.no_grad():
+                        pixels = source_model()
+                        source_model.set_image(
+                            pixels * mask_layer + (1 - mask_layer) * pixels_backup
+                        )
 
             message = {
                 "iteration": int,
@@ -252,7 +292,35 @@ class ClipigTask:
                 with torch.no_grad():
                     message["pixels"] = source_model().detach()
 
+                    if self.config["output_gradient_layer"] and gradient_layer is not None:
+                        layer = gradient_layer
+                        max_value = gradient_layer.max()
+                        if max_value > 0:
+                            layer = layer / max_value
+                        message["gradient_layer"] = layer
+
             yield message
+
+    def _accumulate_gradient_layer(self, accumulator: torch.Tensor, grad: torch.Tensor):
+        if accumulator is None:
+            return grad
+
+        if self.config["gradient_layer_accumulation"] == "average":
+            return accumulator + grad
+        elif self.config["gradient_layer_accumulation"] == "moving_average":
+            return accumulator + self.config["gradient_layer_smoothness"] * (grad - accumulator)
+        elif self.config["gradient_layer_accumulation"] == "max":
+            return torch.maximum(accumulator, grad)
+        else:
+            raise ValueError(f"Invalid gradient_layer_accumulation '{self.config['gradient_layer_accumulation']}'")
+
+    def _get_mask_layer(self, target: dict, pixels: torch.Tensor) -> torch.Tensor:
+        if target["mask_layer"] is None:
+            return pixels
+
+        if target["mask_layer"].shape[1:] != pixels.shape:
+            target["mask_layer"] = VF.resize(target["mask_layer"], pixels.shape[1:], VF.InterpolationMode.BICUBIC)
+        return target["mask_layer"]
 
     @torch.no_grad()
     def _preview_transformations(
@@ -297,6 +365,16 @@ class ClipigTask:
 
         if isinstance(image, torch.Tensor):
             return image
+
+    def get_mask_layer(self, name: str) -> Optional[torch.Tensor]:
+        if not name:
+            return
+        layers = self.config.get("mask_layers")
+        if layers is None or name not in layers:
+            return
+        image = layers[name]
+        if isinstance(image, torch.Tensor):
+            return image.to(self.device)
 
     def input_tiling(self) -> Optional[LImageTiling]:
         return self.config.get("input_tiling")

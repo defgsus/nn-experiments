@@ -188,6 +188,7 @@ class ProjectWidget(QWidget):
             new_widget.set_limage(limage)
         if task_config is not None:
             new_widget.set_task_config(task_config)
+        self.set_changed()
 
     def slot_run_task(self, task_id: Hashable, config: dict):
         self.clipig.run_task(task_id, config)
@@ -206,10 +207,13 @@ class ProjectWidget(QWidget):
         with Filestream(buffer, "r") as fs:
             new_widget.load_from_filestream(fs, "config.yaml")
 
-        #self.slot_new_task_with(limage=task.limage.copy(), task_config=task.get_task_config())
-
     def slot_delete_task(self):
-        self.tab_widget.removeTab(self.tab_widget.currentIndex())
+        task_idx = self.tab_widget.currentIndex()
+        task_id = self.tab_widget.widget(task_idx).task_id
+        self.tab_widget.removeTab(task_idx)
+        if task_id in self._task_map:
+            del self._task_map[task_id]
+        self.set_changed()
 
     def task_event(self, task_id: Hashable, event: dict):
         if task_id not in self._task_map:

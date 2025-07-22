@@ -34,7 +34,12 @@ class Multiplication(ValueTransformBase):
         self.add = add
 
     def __call__(self, image: torch.Tensor) -> torch.Tensor:
-        return image * self.multiply + self.add
+        if image.shape[0] == 3:
+            return image * self.multiply + self.add
+        else:
+            image = image.clone()
+            image[:3] = image[:3] * self.multiply + self.add
+            return image
 
 
 class Color(ValueTransformBase):

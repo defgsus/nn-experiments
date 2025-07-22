@@ -39,15 +39,25 @@ base:
     default: .1
     $visible: initialize == "random"
 
+  - name: output_gradient_layer
+    type: bool
+    default: false
+
+  - name: gradient_layer_accumulation
+    type: select
+    default: "average"
+    choices: ["average", "moving_average", "max"]
+    $visible: output_gradient_layer
+
+  - name: gradient_layer_smoothness
+    type: float
+    default: 0.01
+    $visible: gradient_layer_accumulation == "moving_average"
 
 target:
-  #- name: prompt
-  #  type: str
-  #  default: pixelart
-
-  #- name: negative_prompt
-  #  type: str
-  #  default: letters
+  - name: active
+    type: bool
+    default: true
 
   - name: optimizer
     type: select
@@ -65,6 +75,22 @@ target:
     default: 0.
     min: 0.
     max: 100000.
+
+  - name: clip_grad_above_percent
+    type: float
+    default: 0
+    min: 0
+    max: 100
+
+  - name: clip_grad_below_percent
+    type: float
+    default: 0
+    min: 0
+    max: 100
+
+  - name: mask_layer
+    type: str
+    default: ""
 
 target_feature:
   - name: type

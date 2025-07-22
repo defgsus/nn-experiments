@@ -152,9 +152,13 @@ class TaskWidget(QWidget):
         if "message" in event:
             message = event["message"]
 
+            if message.get("gradient_layer") is not None:
+                layer: torch.Tensor = message["gradient_layer"]
+                if layer.ndim == 3 and layer.shape[0] == 3:
+                    self.image_widget.set_image("<gradient>", layer)
+
             if message.get("pixels") is not None:
                 pixels: torch.Tensor = message["pixels"]
-
                 self.image_widget.set_image("<clipig>", pixels)
                 self.set_changed()
 
@@ -178,6 +182,18 @@ class TaskWidget(QWidget):
 
         if self.image_widget.limage.tiling:
             config["input_tiling"] = self.image_widget.limage.tiling
+
+        mask_layers = {}
+        for target in config["targets"]:
+            layer_name = target["mask_layer"]
+            if layer_name and layer_name not in mask_layers:
+                for layer in self.image_widget.limage.layers:
+                    if layer.name == layer_name:
+                        mask_layers[target["mask_layer"]] = layer.to_torch()[:3].mean(axis=0, keepdim=True).clip(0, 1)
+                    elif f"-{layer.name}" == layer_name:
+                        mask_layers[target["mask_layer"]] = 1. - layer.to_torch()[:3].mean(axis=0, keepdim=True).clip(0, 1)
+
+        config["mask_layers"] = mask_layers
 
         return config
 

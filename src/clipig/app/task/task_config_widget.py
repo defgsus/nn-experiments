@@ -130,10 +130,11 @@ class TaskConfigWidget(QWidget):
             w["transformation_widget"].set_running(running)
 
     def slot_new_target(self):
-        default_config = self.preset_model.default_config()["config"]
+        #default_config = self.preset_model.default_config()["config"]
         config = self.get_values()
         config["targets"].append(
-            deepcopy(default_config["targets"][0])
+            deepcopy(config["targets"][0])
+            #deepcopy(default_config["targets"][0])
         )
         self.set_values(config)
         self.target_tab_widget.setCurrentIndex(self.target_tab_widget.count() - 2)
