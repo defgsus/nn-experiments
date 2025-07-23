@@ -191,6 +191,7 @@ class ClipigTask:
             targets.append({
                 **target_conf,
                 "optimizer": optimizer,
+                "learnrate": target_conf["optimizer"]["learnrate"],
                 "transformations": VT.Compose(transforms) if transforms else lambda x: x,
                 "target_embeddings": target_embeddings,
                 "target_dots": target_dots,
@@ -227,51 +228,42 @@ class ClipigTask:
             for target_idx, target in enumerate(targets):
                 pixels = source_model()
                 pixels_backup = pixels.clone()
-                transforms = target["transformations"]
-
-                pixel_batch = []
-                for i in range(target["batch_size"]):
-                    pixel_batch.append(self._to_clip_pixels(transforms(pixels)).unsqueeze(0))
-                pixel_batch = torch.concat(pixel_batch)
-
-                image_embeddings = self.clip_encode_image(pixel_batch, requires_grad=True)
-
-                dots = image_embeddings @ target["target_embeddings"].T
-
-                abs_error = (dots - target["target_dots"]).abs()
-                loss = (abs_error * target["target_weights"]).mean()
 
                 optimizer: torch.optim.Optimizer = target["optimizer"]
                 optimizer.zero_grad()
-                loss.backward()
+
+                for accum_idx in range(target["grad_accum_steps"]):
+                    transforms = target["transformations"]
+
+                    pixel_batch = []
+                    for i in range(target["batch_size"]):
+                        pixel_batch.append(self._to_clip_pixels(transforms(pixels)).unsqueeze(0))
+                    pixel_batch = torch.concat(pixel_batch)
+
+                    image_embeddings = self.clip_encode_image(pixel_batch, requires_grad=True)
+
+                    dots = image_embeddings @ target["target_embeddings"].T
+
+                    abs_error = (dots - target["target_dots"]).abs()
+                    loss = (abs_error * target["target_weights"]).mean()
+
+                    loss.backward()
+                    loss_per_target.append(float(loss))
+
+                self._clip_gradient(source_model, target)
 
                 if self.config["output_gradient_layer"]:
                     with torch.no_grad():
                         params = list(source_model.parameters())
                         grad = params[0].grad.abs()
                         if grad.ndim == 3 and grad.shape[0] == 3:
+                            grad = grad / target["grad_accum_steps"] / target["learnrate"]
                             if target["mask_layer"] is not None:
                                 mask_layer = self._get_mask_layer(target, pixels_backup)
                                 grad = grad * mask_layer
                             gradient_layer = self._accumulate_gradient_layer(gradient_layer, grad)
 
-                if target["clip_grad_norm"]:
-                    torch.nn.utils.clip_grad_norm_(source_model.parameters(), target["clip_grad_norm"])
-
-                if target["clip_grad_above_percent"] > 0 or target["clip_grad_below_percent"] > 0:
-                    for param in source_model.parameters():
-                        min_value = param.grad.abs().min()
-                        max_value = param.grad.abs().max()
-                        if target["clip_grad_below_percent"] > 0:
-                            too_low_value = min_value * target["clip_grad_below_percent"] / 100
-                            param.grad[param.grad < too_low_value] = 0.
-                        if target["clip_grad_above_percent"] > 0:
-                            too_high_value = max_value * target["clip_grad_above_percent"] / 100
-                            param.grad[param.grad > too_high_value] = 0.
-
                 optimizer.step()
-
-                loss_per_target.append(float(loss))
 
                 if target["mask_layer"] is not None:
                     mask_layer = self._get_mask_layer(target, pixels_backup)
@@ -313,6 +305,21 @@ class ClipigTask:
             return torch.maximum(accumulator, grad)
         else:
             raise ValueError(f"Invalid gradient_layer_accumulation '{self.config['gradient_layer_accumulation']}'")
+
+    def _clip_gradient(self, source_model: nn.Module, target: dict):
+        if target["clip_grad_norm"]:
+            torch.nn.utils.clip_grad_norm_(source_model.parameters(), target["clip_grad_norm"])
+
+        if target["clip_grad_above_percent"] > 0 or target["clip_grad_below_percent"] > 0:
+            for param in source_model.parameters():
+                min_value = param.grad.abs().min()
+                max_value = param.grad.abs().max()
+                if target["clip_grad_below_percent"] > 0:
+                    too_low_value = min_value * target["clip_grad_below_percent"] / 100
+                    param.grad[param.grad < too_low_value] = 0.
+                if target["clip_grad_above_percent"] > 0:
+                    too_high_value = max_value * target["clip_grad_above_percent"] / 100
+                    param.grad[param.grad > too_high_value] = 0.
 
     def _get_mask_layer(self, target: dict, pixels: torch.Tensor) -> torch.Tensor:
         if target["mask_layer"] is None:

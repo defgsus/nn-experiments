@@ -70,6 +70,12 @@ target:
     min: 1
     max: 100000
 
+  - name: grad_accum_steps
+    type: int
+    default: 1
+    min: 1
+    max: 100000
+
   - name: clip_grad_norm
     type: float
     default: 0.

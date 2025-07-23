@@ -3,6 +3,7 @@ from functools import partial
 from pathlib import Path
 from typing import Optional, List, Union, Tuple, Dict
 
+import PIL.Image
 import torch
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -192,6 +193,12 @@ class LImageLayer:
     def from_torch(self, image: torch.Tensor):
         self._image = torch_to_qimage(image)
         self.set_changed()
+
+    def to_pil(self) -> Optional[PIL.Image.Image]:
+        from torchvision.transforms.functional import to_pil_image
+        if not self._image:
+            return None
+        return to_pil_image(qimage_to_torch(self._image))
 
     def paint(self, painter: QPainter):
         if self._image is None or not self._active:
@@ -577,6 +584,10 @@ class LImage:
 
     def to_torch(self) -> torch.Tensor:
         return qimage_to_torch(self.to_qimage())
+
+    def to_pil(self) -> PIL.Image.Image:
+        from torchvision.transforms.functional import to_pil_image
+        return to_pil_image(qimage_to_torch(self.to_qimage()))
 
     def copy(self, merged: bool = False) -> "LImage":
         if merged:

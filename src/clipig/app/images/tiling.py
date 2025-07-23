@@ -9,6 +9,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 import torch
+import numpy as np
 
 from src.util.image import get_image_window
 
@@ -55,6 +56,13 @@ class LImageTiling:
                 self.t >= 0 or self.tl >= 0 or self.l >= 0 or self.bl >= 0
                 or self.b >= 0 or self.br >= 0 or self.r >= 0 or self.tr >= 0
             )
+
+        def num_elements(self) -> int:
+            num = 0
+            for c in self.colors:
+                if c >= 0:
+                    num += 1
+            return num
 
         def set_color(self, index: int, color: int):
             if index == LImageTiling.PosIndex.T:
@@ -322,11 +330,112 @@ class LImageTiling:
 
         return map
 
+    def create_map_stochastic_perlin(
+            self,
+            size: Tuple[int, int],
+            seed: Optional[int] = None,
+    ):
+        from src.algo.sdf.two_d.util import perlin_noise_2d
+        rng = random.Random(seed)
+        tiles_outside = []
+        tiles_inside = []
+        for idx, a in self.attributes_map.items():
+            n = a.num_elements()
+            if n == 0:
+                tiles_outside.append(idx)
+            if n == 4:
+                tiles_inside.append(idx)
+        noise = perlin_noise_2d(
+            shape=(size[1], size[0]),
+            res=(size[1]//3, size[0]//3),
+            rng=np.random.RandomState(seed),
+        )
+        map = np.tile(np.array([[None]], dtype=np.object_), noise.shape)
+        for y, row in enumerate(map):
+            for x, v in enumerate(row):
+                if noise[y, x] > .1:
+                    map[y, x] = repr(rng.choice(tiles_inside))
+                if noise[y, x] < -.3:
+                    map[y, x] = repr(rng.choice(tiles_outside))
+
+        all_tiles = list(self.attributes_map.keys())
+        for i in range(size[0]*size[1] // 20):
+            x, y = rng.randrange(size[0]), rng.randrange(size[1])
+            if map[y, x] is None or rng.uniform(0, 1) < .1:
+                map[y, x] = repr(rng.choice(all_tiles))
+        map = [
+            [eval(x) if x else None for x in row]
+            for row in map
+        ]
+        self.set_map_default(map, (0, 0))
+        for i in range(10):
+            has_errors, is_solved = self.resolve_map(map)
+            if is_solved:
+                break
+        return map
+
+    def set_map_default(self, map: List[List[Optional[Tuple[int, int]]]], default: Tuple[int, int] = (0, 0)):
+        for row in map:
+            for x, v in enumerate(row):
+                if v is None:
+                    row[x] = default
+
+    def tile_matches_map(
+            self,
+            map: List[List[Optional[Tuple[int, int]]]],
+            tile_idx: Tuple[int, int],
+            x: int,
+            y: int,
+    ) -> bool:
+        attrs = self.tile_attributes(tile_idx)
+        if y > 0 and map[y-1][x] is not None and not attrs.matches_top(self.tile_attributes(map[y - 1][x])):
+            return False
+        if y < len(map)-1 and map[y+1][x] is not None and not attrs.matches_bottom(self.tile_attributes(map[y + 1][x])):
+            return False
+        if x > 0 and map[y][x-1] is not None and not attrs.matches_left(self.tile_attributes(map[y][x - 1])):
+            return False
+        if x < len(map[0])-1 and map[y][x+1] is not None and not attrs.matches_right(self.tile_attributes(map[y][x + 1])):
+            return False
+        return True
+
+    def resolve_map(
+            self,
+            map: List[List[Optional[Tuple[int, int]]]],
+    ):
+        def _iter_mismatches():
+            positions = [(x, y) for y in range(len(map)) for x in range(len(map[0]))]
+            random.shuffle(positions)
+            for x, y in positions:
+                #for y in range(len(map)):
+                #    for x in range(len(map[0])):
+                if map[y][x] is not None and not self.tile_matches_map(map, map[y][x], x, y):
+                    yield x, y
+
+        def _find_tile(x, y):
+            for tile_idx in self.attributes_map.keys():
+                if self.tile_matches_map(map, tile_idx, x, y):
+                    return tile_idx
+
+        all_tiles = list(self.attributes_map.keys())
+        has_errors = False
+        is_solved = True
+        for x, y in _iter_mismatches():
+            has_errors = True
+            t = _find_tile(x, y)
+            if t is None:
+                is_solved = False
+                t = random.choice(all_tiles)
+
+            map[y][x] = t
+
+        return has_errors, is_solved
+
     def render_tile_map(
             self,
             template: torch.Tensor,
             map: List[List[Tuple[int, int]]],
             overlap: Union[int, Tuple[int, int]] = 0,
+            default_tile_idx: Tuple[int, int] = (0, 0)
     ):
         if isinstance(overlap, int):
             overlap = (overlap, overlap)
@@ -349,6 +458,8 @@ class LImageTiling:
 
         for y, row in enumerate(map):
             for x, tile_pos in enumerate(row):
+                if tile_pos is None:
+                    tile_pos = default_tile_idx
                 if (tile_pos[0] + 1) * self.tile_size[0] > template.shape[-1]:
                     continue
                 if (tile_pos[1] + 1) * self.tile_size[1] > template.shape[-2]:

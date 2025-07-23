@@ -10,6 +10,7 @@ graphviz
 jupyterlab
 lark
 marko
+open-clip-torch
 pandas
 plotly
 PyQt5
