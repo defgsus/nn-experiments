@@ -37,6 +37,7 @@ class ProjectWidget(QWidget):
 
     signal_changed = pyqtSignal()
     signal_menu_changed = pyqtSignal()
+    signal_message = pyqtSignal(str)
 
     def __init__(
             self,
@@ -276,3 +277,7 @@ class ProjectWidget(QWidget):
         if accepted:
             self.project_name = name
             self.set_changed()
+
+    def emit_message(self, message: str):
+        print(f"{self.project_filename.name}: {message}")
+        self.signal_message.emit(message)

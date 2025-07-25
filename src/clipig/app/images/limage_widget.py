@@ -104,11 +104,14 @@ class LImageWidget(QWidget):
         self._limage.get_model().modelReset.connect(lambda *args, **kwargs: self._set_changed())
         self._set_changed()
 
-    def set_image(self, name: str, image: AnyImage):
+    def set_image(self, name: str, image: AnyImage, replace: bool = True):
         """
         Create or replace the layer matching `name` with the given image
         """
         image = image_to_qimage(image).convertToFormat(QImage.Format_ARGB32)
+
+        if not replace:
+            name = self._limage.get_unique_layer_name(name)
 
         if layer := self._limage.get_layer(name):
             layer.set_image(image)
@@ -143,6 +146,16 @@ class LImageWidget(QWidget):
                 self.tr("Reload {filename}").format(filename=Path(filename).name),
                 partial(self.action_load_image, filename),
             )
+
+        if QApplication.clipboard().mimeData().hasImage():
+            sub_menu = QMenu(self.tr("Paste ..."), menu)
+            menu.addMenu(sub_menu)
+            if self.limage.selected_layer:
+                sub_menu.addAction(
+                    self.tr("To layer") + f": {self.limage.selected_layer.name}",
+                    partial(self.action_paste_to_layer, self.limage.selected_layer),
+                )
+            sub_menu.addAction(self.tr("To new layer"), self.action_paste_to_new_layer)
 
         # --- show/hide submenu ----
 
@@ -180,6 +193,15 @@ class LImageWidget(QWidget):
                 self._last_loaded_images.remove(filename)
             self._last_loaded_images.insert(0, filename)
             self._last_loaded_images = self._last_loaded_images[:4]
+
+    def action_paste_to_layer(self, layer: LImageLayer):
+        image = QApplication.clipboard().image()
+        layer.set_image(image)
+        self._set_changed()
+
+    def action_paste_to_new_layer(self):
+        image = QApplication.clipboard().image()
+        self.set_image("pasted", image, replace=False)
 
     def action_load_image(self, filename: Union[str, Path]):
         image = QImage(filename)

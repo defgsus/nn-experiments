@@ -183,17 +183,30 @@ class TaskWidget(QWidget):
         if self.image_widget.limage.tiling:
             config["input_tiling"] = self.image_widget.limage.tiling
 
-        mask_layers = {}
-        for target in config["targets"]:
-            layer_name = target["mask_layer"]
-            if layer_name and layer_name not in mask_layers:
-                for layer in self.image_widget.limage.layers:
-                    if layer.name == layer_name:
-                        mask_layers[target["mask_layer"]] = layer.to_torch()[:3].mean(axis=0, keepdim=True).clip(0, 1)
-                    elif f"-{layer.name}" == layer_name:
-                        mask_layers[target["mask_layer"]] = 1. - layer.to_torch()[:3].mean(axis=0, keepdim=True).clip(0, 1)
+        # -- collect needed layers --
+        needed_layers = {}
+        def _add_layer(layer_name: str):
+            if layer_name and layer_name not in needed_layers:
+                try:
+                    if (layer := self.image_widget.limage.get_layer_torch_expression(layer_name)) is not None:
+                        needed_layers[layer_name] = layer
+                except Exception as e:
+                    self._project.emit_message(f"layer '{layer_name}': {type(e).__name__}: {e}")
 
-        config["mask_layers"] = mask_layers
+        if config["initialize"] == "layer":
+            _add_layer(config["input_layer"])
+
+        for target in config["targets"]:
+            if not target["active"]:
+                continue
+
+            _add_layer(target["mask_layer"])
+
+            for feature in target["target_features"]:
+                if feature["type"] == "layer":
+                    _add_layer(feature["layer"])
+
+        config["layers"] = needed_layers
 
         return config
 

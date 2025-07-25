@@ -1,4 +1,5 @@
 import dataclasses
+import re
 from functools import partial
 from pathlib import Path
 from typing import Optional, List, Union, Tuple, Dict
@@ -200,6 +201,9 @@ class LImageLayer:
             return None
         return to_pil_image(qimage_to_torch(self._image))
 
+    def to_clipboard(self):
+        QApplication.clipboard().setImage(self.image)
+
     def paint(self, painter: QPainter):
         if self._image is None or not self._active:
             return
@@ -314,6 +318,21 @@ class LImage:
         self._tiling = None
         self._layers_changed()
 
+    def get_unique_layer_name(self, prefix: str):
+        new_name = prefix
+        count = 1
+        while True:
+            is_unique = True
+            for layer in self._layers:
+                if layer.name == new_name:
+                    is_unique = False
+                    break
+            if is_unique:
+                return new_name
+
+            count += 1
+            new_name = f"{prefix} #{count}"
+
     @property
     def tiling(self) -> Optional[LImageTiling]:
         return self._tiling
@@ -375,6 +394,26 @@ class LImage:
             for layer in self.layers:
                 if layer.name == layer_or_name_or_index:
                     return layer
+
+    def get_layer_torch_expression(self, expression: str) -> Optional[torch.Tensor]:
+        """
+        Supports things like:
+
+            layer_name * .5 + other_layer_name
+        """
+        torch_layers = {}
+
+        for match in re.finditer(r"([a-zA-Z_][a-zA-Z0-9_]*)", expression):
+            layer_name = match.groups()[0]
+            layer = self.get_layer(layer_name)
+            if not layer:
+                raise NameError(f"Layer '{layer_name}' not found for expression '{expression}'")
+            torch_layers[layer_name] = layer.to_torch()
+
+        try:
+            return eval(expression, torch_layers)
+        except Exception as e:
+            raise RuntimeError(f"Expression '{expression}' failed with: {type(e).__name__}: {e}")
 
     @property
     def selected_layer(self) -> Optional[LImageLayer]:
@@ -546,15 +585,17 @@ class LImage:
     def add_menu_actions(self, menu: QMenu, project: "ProjectWidget"):
         from .new_layer_dialog import NewLayerDialog
         from .image_transform_dialog import ImageTransformDialog
-        menu.addAction("Add layer", partial(NewLayerDialog.run_new_layer_dialog, self, menu))
+        menu.addAction(menu.tr("Add layer"), partial(NewLayerDialog.run_new_layer_dialog, self, menu))
 
         if self.selected_layer:
-            sub_menu = QMenu("Layer", menu)
+            sub_menu = QMenu(menu.tr("Layer") + f" \"{self.selected_layer.name}\"", menu)
             menu.addMenu(sub_menu)
 
-            sub_menu.addAction("Duplicate", self.duplicate_selected_layer)
+            sub_menu.addAction(menu.tr("Copy to clipboard"), self.selected_layer.to_clipboard)
+
+            sub_menu.addAction(menu.tr("Duplicate"), self.duplicate_selected_layer)
             sub_menu.addAction(
-                "Transform",
+                menu.tr("Transform"),
                 partial(ImageTransformDialog.run_dialog_on_limage_layer, limage=self, parent=menu, project=project),
             )
 
@@ -571,7 +612,7 @@ class LImage:
                 )
                 if accepted:
                     self.selected_layer.repeat_image(*repeat_xy)
-            sub_menu.addAction("Repeat ...", _repeat_action)
+            sub_menu.addAction(menu.tr("Repeat ..."), _repeat_action)
 
     def to_qimage(self) -> QImage:
         image = QImage(self.size(), QImage.Format.Format_ARGB32)

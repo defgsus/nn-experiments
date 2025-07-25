@@ -103,7 +103,7 @@ class ClipigTask:
                 std=self.config["init_random_var"],
             )
 
-        elif init_method == "input" and ((image := self.get_input_image()) is not None):
+        elif init_method in ("input", "layer") and ((image := self.get_input_image()) is not None):
             model.set_image(image.to(self.device))
 
         else:
@@ -133,10 +133,20 @@ class ClipigTask:
                                 self.load_image(feature["image"])
                             )
                             target_embeddings.append(None)
+
                     elif feature.get("type") == "text":
                         if feature.get("text") is not None:
                             text_targets[len(target_embeddings)] = feature["text"]
                             target_embeddings.append(None)
+
+                    elif feature.get("type") == "layer":
+                        if feature.get("layer") is not None:
+                            img = self.get_layer(feature["layer"])
+                            if img is None:
+                                print(f"Target feature layer '{feature['layer']}' not found")
+                            else:
+                                image_targets[len(target_embeddings)] = self._to_clip_pixels(img)
+                                target_embeddings.append(None)
 
                 if image_targets:
                     for idx, emb in zip(
@@ -146,6 +156,7 @@ class ClipigTask:
                             ], dim=0))
                     ):
                         target_embeddings[idx] = emb
+
                 if text_targets:
                     for idx, emb in zip(
                             text_targets.keys(),
@@ -185,9 +196,13 @@ class ClipigTask:
             else:
                 optimizer = None
 
-            mask_layer = self.get_mask_layer(target_conf["mask_layer"])
-            if target_conf["mask_layer"] and mask_layer is None:
-                print(f"Mask layer '{target_conf['mask_layer']}' not found")
+            mask_layer = self.get_layer(target_conf["mask_layer"])
+            if target_conf["mask_layer"]:
+                if mask_layer is None:
+                    print(f"Mask layer '{target_conf['mask_layer']}' not found")
+                else:
+                    mask_layer = mask_layer[:3].mean(dim=0, keepdim=True).clamp(0, 1)
+
             targets.append({
                 **target_conf,
                 "optimizer": optimizer,
@@ -363,20 +378,26 @@ class ClipigTask:
         if pixels.dtype != model.dtype:
             pixels = set_image_dtype(pixels, model.dtype)
 
-        return pixels.clamp(0, 1)
+        return pixels.clamp(0, 1).to(self.device)
 
     def get_input_image(self) -> Optional[torch.Tensor]:
-        image = self.config.get("input_image")
+        if self.config["initialize"] == "input":
+            image = self.config.get("input_image")
+        elif self.config["initialize"] == "layer":
+            image = self.get_layer(self.config["input_layer"])
+        else:
+            return None
+
         if image is None:
-            return
+            return None
 
         if isinstance(image, torch.Tensor):
             return image
 
-    def get_mask_layer(self, name: str) -> Optional[torch.Tensor]:
+    def get_layer(self, name: str) -> Optional[torch.Tensor]:
         if not name:
             return
-        layers = self.config.get("mask_layers")
+        layers = self.config.get("layers")
         if layers is None or name not in layers:
             return
         image = layers[name]

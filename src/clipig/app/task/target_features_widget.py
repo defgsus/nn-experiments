@@ -97,7 +97,7 @@ class FeatureWidget(QWidget):
                 self._widgets[key].set_value(value, emit=emit)
 
         if not emit:
-            self._update_text_image()
+            self._update_visibility()
 
     def _create_widgets(self):
         lh = QHBoxLayout(self)
@@ -110,7 +110,7 @@ class FeatureWidget(QWidget):
         param = next(iter(filter(lambda p: p["name"] == "type", self._parameters)))
         self._widgets["type"] = widget = ParameterWidget(param, parent=self, show_label=False)
         lh.addWidget(widget)
-        widget.signal_value_changed.connect(self._update_text_image)
+        widget.signal_value_changed.connect(self._update_visibility)
 
         param = next(iter(filter(lambda p: p["name"] == "text", self._parameters)))
         self._widgets["text"] = widget = ParameterWidget(param, parent=self, show_label=False)
@@ -121,12 +121,18 @@ class FeatureWidget(QWidget):
         lh.addWidget(widget)
         widget.setVisible(False)
 
+        param = next(iter(filter(lambda p: p["name"] == "layer", self._parameters)))
+        self._widgets["layer"] = widget = ParameterWidget(param, parent=self, show_label=False)
+        lh.addWidget(widget)
+        widget.setVisible(False)
+
         butt = QPushButton("X", self)
         butt.setToolTip(self.tr("Remove feature"))
         butt.clicked.connect(self.signal_remove)
         lh.addWidget(butt)
 
-    def _update_text_image(self):
-        is_image = self._widgets["type"].get_value() == "image"
-        self._widgets["text"].setVisible(not is_image)
-        self._widgets["image"].setVisible(is_image)
+    def _update_visibility(self):
+        type = self._widgets["type"].get_value()
+        self._widgets["text"].setVisible(type == "text")
+        self._widgets["image"].setVisible(type == "image")
+        self._widgets["layer"].setVisible(type == "layer")

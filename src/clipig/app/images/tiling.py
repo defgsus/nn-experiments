@@ -383,11 +383,10 @@ class LImageTiling:
     def tile_matches_map(
             self,
             map: List[List[Optional[Tuple[int, int]]]],
-            tile_idx: Tuple[int, int],
+            attrs: "LImageTiling.Attributes",
             x: int,
             y: int,
     ) -> bool:
-        attrs = self.tile_attributes(tile_idx)
         if y > 0 and map[y-1][x] is not None and not attrs.matches_top(self.tile_attributes(map[y - 1][x])):
             return False
         if y < len(map)-1 and map[y+1][x] is not None and not attrs.matches_bottom(self.tile_attributes(map[y + 1][x])):
@@ -424,7 +423,7 @@ class LImageTiling:
             t = _find_tile(x, y)
             if t is None:
                 is_solved = False
-                t = random.choice(all_tiles)
+                #t = random.choice(all_tiles)
 
             map[y][x] = t
 

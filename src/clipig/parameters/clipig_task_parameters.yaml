@@ -26,8 +26,14 @@ base:
     default: random
     choices:
       - input
+      - layer
       - random
       - zero
+
+  - name: input_layer
+    type: str
+    default: ""
+    $visible: initialize == "layer"
 
   - name: init_random_mean
     type: float
@@ -105,11 +111,15 @@ target_feature:
     choices:
       - text
       - image
+      - layer
   - name: text
     type: str
     default: pixelart
   - name: image
     type: image
+    default: ""
+  - name: layer
+    type: str
     default: ""
   - name: weight
     type: float

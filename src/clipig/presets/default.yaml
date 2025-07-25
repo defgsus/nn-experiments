@@ -1,7 +1,12 @@
-clip_model_name: ViT-B/32
+clip_model_name: open_clip:hf-hub:chs20/FARE4-ViT-B-32-laion2B-s34B-b79K
 device: auto
+gradient_layer_accumulation: average
+gradient_layer_smoothness: 0.01
+init_random_mean: 0.3
+init_random_var: 0.1
 initialize: random
 num_iterations: 1000
+output_gradient_layer: false
 source_model:
   name: pixels
   params:
@@ -10,8 +15,13 @@ source_model:
     - 224
     - 224
 targets:
-- batch_size: 1
-  negative_prompt: letters
+- active: true
+  batch_size: 1
+  clip_grad_above_percent: 0.0
+  clip_grad_below_percent: 0.0
+  clip_grad_norm: 0.0
+  grad_accum_steps: 1
+  mask_layer: ''
   optimizer:
     amsgrad: false
     betas:
@@ -21,7 +31,15 @@ targets:
     learnrate: 0.01
     optimizer: Adam
     weight_decay: 0.0
-  prompt: pixelart graphics
+  target_features:
+  - image: ''
+    text: pixelart graphics
+    type: text
+    weight: 1.0
+  - image: ''
+    text: letters
+    type: text
+    weight: -1.0
   transformations:
   - name: random_affine
     params:
@@ -42,4 +60,6 @@ targets:
   - name: random_crop
     params:
       active: true
+      pad_if_needed: true
+      padding_mode: constant
       size: 224
