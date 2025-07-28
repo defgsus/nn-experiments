@@ -404,12 +404,13 @@ archived <strong>51.5%</strong> accuracy with a single layer network (section 4.
 <p>The <code>9,3,5 - 3,1,1 - 1,1,1</code> architecture archived the best convergence speed during training. The loss was
 immediately and unusually shooting downwards.</p>
 <p>Without the augmentation, all models were overfitting pretty fast and the validation accuracy decreased a lot. </p>
-<p>The <code>9,9,7 - 2,2,1 - 2,1,1</code> architecture was the one with the worst accuracy in the selection experiment before (25.72%).
-However, when trained, it seems to get equally accurate as the other ones.</p>
+<p>The <code>9,9,7 - 2,2,1 - 2,1,1</code> architecture was added for comparison because it had the worst accuracy in the selection experiment before (25.72%).
+However, when trained with gradient descent, the 32-channel version gets into the same performance range as the other ones.
+That is not true for the 128-channel version. Although it is the largest network, it has the 2nd-worst performance.</p>
 <h2 id="conclusion">Conclusion <a href="#conclusion" class="heading-linker">←</a></h2>
 <p>I don't know, really. The test is just for classification and results might be quite different for other
 problems. However, the <em>good</em> architectures above do probably behave well in many setups and i will try them
-whenever i need a CNN block. Identifying the best
+whenever i need a little CNN block. Identifying the best
 performing architectures (using only random weights and fast linear probes)
 while considering the throughput (which is one of the most important properties for impatient people like me)
 seems worth the trouble of running this exhaustive experiment. </p>
@@ -458,6 +459,10 @@ Both numbers are well below statistical significance.</li>
             <div class="flex-grow"></div>
 
             <div>
+                
+                <a href="../../html/posts/2025/clipig-tilesets.html">
+                    Generating wang tile sets with CLIP &gt;&gt;
+                </a>
                 
             </div>
         </div>

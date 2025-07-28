@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Generating wang tile sets with CLIP</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../html/style/style.css">
+    <script type="text/javascript" src="../../../html/js/main.js"></script>
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#generating-wang-tile-sets-with-clip" title="Generating wang tile sets with CLIP">Generating wang tile sets with CLIP</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#1-use-emrobust-clipem" title="1. Use <em>Robust CLIP</em>">1. Use <em>Robust CLIP</em></a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#2-know-your-tiling" title="2. Know your tiling">2. Know your tiling</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="generating-wang-tile-sets-with-clip">Generating wang tile sets with CLIP <a href="#generating-wang-tile-sets-with-clip" class="heading-linker">←</a></h1>
+<p><em>Tile sets</em> in computer games are images containing a number of graphics that fit together at certain edges.
+With these one can draw nice minimal game maps and backgrounds. It would be awesome to create those via text prompts,
+and i've been trying just long enough...</p>
+<p>This is in the making since a couple of years. I played with the OpenAI CLIP model <strong>a lot</strong> and
+here's a few findings of how to create tilesets.</p>
+<h3 id="1-use-emrobust-clipem">1. Use <em>Robust CLIP</em> <a href="#1-use-emrobust-clipem" class="heading-linker">←</a></h3>
+<p><em>Robust CLIP: Unsupervised Adversarial Fine-Tuning of Vision Embeddings for Robust Large Vision-Language Models,
+Christian Schlarmann, Naman Deep Singh, Francesco Croce, Matthias Hein</em> (<a href="https://arxiv.org/abs/2402.12336" target="_blank">arxiv:2402.12336</a>)</p>
+<p>(Thanks to <a href="https://github.com/realfolkcode" target="_blank">realfolkcode</a> for pointing me there!)</p>
+<p>To recapitulate quickly: CLIP (<strong>C</strong>ontrastive <strong>L</strong>anguage/<strong>I</strong>mage <strong>P</strong>reprocessing) is a framework to train an
+image encoder and a text encoder to output a similar stream of numbers (an encoding) for similar images and/or texts, and, of course,
+a dissimilar stream of numbers for dissimilar images and/or texts. The stream of numbers as such is not that important.
+Important is, how close or far different encodings are. </p>
+<p>A trained model can immediately be used to search for images using a text prompt or a reference image.
+But it can also be used to change an image (e.g. noise)
+to match a certain text prompt or other image. This does not create images in the quality of Stable Diffusion but, in comparison,
+the process is very easy to control. One can use any specific initial conditions, apply a few steps of CLIP prompt-matching,
+make some adjustments, apply some transformations and a few more CLIP steps. All in the actual image space. It's much like kneading.</p>
+<p>The original <a href="https://arxiv.org/abs/2103.00020" target="_blank">OpenAI CLIP</a> model was trained on 200 million image/text pairs,
+if i remember that right, which was never heard of at the time.
+They released the model code and the weights, because, i guess, they thought it can not be used for evil circumstances. However,
+the enormous dataset was kept closed but the paper explained pretty detailed, how it was created. </p>
+<p>Soon after, <a href="https://laion.ai/" target="_blank">LAION</a> took the effort of creating similar datasets of image/text pairs and released it.
+The largest of it containg 5 billion image/text pairs!
+The <a href="https://github.com/mlfoundations/open_clip" target="_blank">Open CLIP</a> project reimplemented the model <strong>and</strong> the training code
+and researchers with access to a cluster of expensive GPUS trained and released new models.</p>
+<p>In the following, i use the Robust CLIP model <a href="https://huggingface.co/chs20/FARE4-ViT-B-32-laion2B-s34B-b79K" target="_blank">chs20/FARE4-ViT-B-32-laion2B-s34B-b79K</a>, released on huggingface. As the name suggests, it was initially trained on 2 billion LAION image/text pairs
+and then <em>adversarially fine-tuned</em> on the ImageNet dataset.</p>
+<p>This fine-tuning makes the model much more usable to <strong>create</strong> images.<br />
+Compare these renderings, 1000 steps each, run on a simple gray head template, with prompt: &quot;the face of h.p. lovecraft&quot;</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/portrait-lovecraft.png" alt="portrait lovecraft" /></div></p>
+<p>OpenAI CLIP is left, Robust CLIP on the right.
+They both do not really look like a photo of Lovecraft and the usual CLIP generation issues, like duplicate mouths and such,
+are visible but robust CLIP produces much more pronounced renderings and less indefinite color gradients in general. </p>
+<h3 id="2-know-your-tiling">2. Know your tiling <a href="#2-know-your-tiling" class="heading-linker">←</a></h3>
+<p>You need to have a convenient way of a) defining a tilesets, b) rendering the tile templates and c) rendering random maps.</p>
+<p>I certainly recommend this resource <strong>cr31.co.uk</strong>, which is now gone but fortunately mirrored at
+<a href="https://www.boristhebrave.com/permanent/24/06/cr31/stagecast/wang/intro.html" target="_blank">boristhebrave.com</a></p>
+<p>There is ongoing research about optimal packings of larger tile sets. For the <strong>edge-and-corner-tiles</strong> shown below, i used
+a variant released by user <a href="https://opengameart.org/users/caeles" target="_blank">caeles</a> on opengameart.org</p>
+<p>When <code>B</code>, <code>BL</code>, <code>BR</code> aso. are constants with exclusive bits, you can use this definition to represent the tileset:</p>
+<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">EDGE_AND_CORNER_TILESET</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">[</span><span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BR</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">TL</span><span class="p">,</span> <span class="n">BL</span><span class="p">,</span> <span class="n">BR</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">BL</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BR</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">TL</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BR</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">BL</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">TL</span><span class="p">,</span> <span class="n">TR</span><span class="p">,</span> <span class="n">BR</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">TL</span><span class="p">,</span> <span class="n">BR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">TR</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">TL</span><span class="p">,</span> <span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">TL</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BR</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BR</span><span class="o">|</span><span class="n">TL</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="p">,</span> <span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">L</span><span class="o">|</span><span class="n">TL</span><span class="p">,</span> <span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">T</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">,</span> <span class="n">B</span><span class="o">|</span><span class="n">BL</span><span class="o">|</span><span class="n">BR</span><span class="o">|</span><span class="n">R</span><span class="o">|</span><span class="n">TL</span><span class="o">|</span><span class="n">TR</span><span class="p">],</span>
+<span class="p">]</span>
+</pre></div>
+</div><p>To just run experiments without immediately falling back to using a painting application, let's have a little framework to
+render tile templates. They are useful for testing and as <em>suggestions</em> to the image generation pipeline.</p>
+<p>Thanks to the articles by <a href="https://iquilezles.org/articles/" target="_blank">iQ</a>, every graphics programmer knows
+about <em>Signed Distance Functions</em> (SDF). The implicit distance-based representation
+makes it easy to render smooth masks, boundaries or normal-maps for lighting. Just add some boxes and circles at the right places
+and each possible tile template can be rendered without much effort.</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/edge-corner-demo.png" alt="edge corner demo" /></div></p>
+<p>A random map generator can compare the edges and corner settings of adjacent tiles, and generate endless, seemless random maps:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/edge-corner-preview.png" alt="edge corner preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/edge-corner-ec-16x16px-7x7map.png" alt="edge corner ec 16x16px 7x7map" /></div></p>
+<p>(The small image you can download and use as a tileset template. It's 7x7 tiles with 16x16 pixels each)</p>
+<p>Playing with the objects used on the edges and corners creates quite versatile templates:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/edge-corner-round-preview.png" alt="edge corner round preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/edge-corner-round-ec-16x16px-7x7map.png" alt="edge corner round ec 16x16px 7x7map" /></div></p>
+<p>These endless random maps can then be fed into CLIP, and the gradient of the target error passes back to the tileset image.</p>
+<p>I make this all look simple to boost your motivation. There are a couple of details that require fiddling with the values.
+You can read more about it <a href="https://defgsus.github.io/clipig/" target="_blank">here</a>.</p>
+<p>Starting from random noise with the prompt &quot;rpg tile map&quot;, the algorithm yielded:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/rpg-tileset-from-noise-preview.png" alt="rpg tileset from noise preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/rpg-tileset-from-noise-ec-16x16px-7x7map.png" alt="rpg tileset from noise ec 16x16px 7x7map" /></div></p>
+<p>It's nice and smooth and tileable. But it's also pretty chaotic.
+Using the spiky lighting template from above as source creates a tileset that better follows the inside/outside
+logic of the tiling:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/rpg-tileset-from-template-preview.png" alt="rpg tileset from template preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/rpg-tileset-from-template-ec-16x16px-7x7map.png" alt="rpg tileset from template ec 16x16px 7x7map" /></div></p>
+<p>And to gain further control over the image generation, one can use a soft or hard mask to apply different prompts at
+the inside and outside of the tiling.</p>
+<p>In this case &quot;desert wasteland&quot; and &quot;top-down view of an ancient castle&quot;:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/desert-castle-preview.png" alt="desert castle preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/desert-castle-ec-16x16px-7x7map.png" alt="desert castle ec 16x16px 7x7map" /></div></p>
+<p>So, below are some cherry-picked generated tilesets for viewing pleasure. I experimented with different prompts,
+different masking strategies and different optimizers, learnrates, batch-sizes and transformations... There's a lot of parameters
+to tweak.</p>
+<p>Cthulhu's labyrinth:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image.png" alt="image" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image-02.png" alt="image" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/cthulhu-labyrinth2-preview.png" alt="cthulhu labyrinth2 preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/cthulhu-labyrinth2-ec-16x16px-7x7map.png" alt="cthulhu labyrinth2 ec 16x16px 7x7map" /></div></p>
+<p>Cthulhu's dungeon:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/cthulhu-dungeon-preview.png" alt="cthulhu dungeon preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/cthulhu-dungeon-ec-16x16px-7x7map.png" alt="cthulhu dungeon ec 16x16px 7x7map" /></div></p>
+<p>Cthulhu's oil platform:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/cthulhu-labyrinth-preview.png" alt="cthulhu labyrinth preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/cthulhu-labyrinth-ec-16x16px-7x7map.png" alt="cthulhu labyrinth ec 16x16px 7x7map" /></div></p>
+<p>Cthulhu's funky temple:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/cthulhu-funky-temple-preview.png" alt="cthulhu funky temple preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/cthulhu-funky-temple-ec-16x16px-7x7map.png" alt="cthulhu funky temple ec 16x16px 7x7map" /></div></p>
+<p>Forest and desert:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/forest-desert-preview.png" alt="forest desert preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/forest-desert-ec-16x16px-7x7map.png" alt="forest desert ec 16x16px 7x7map" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/forest-desert2-preview.png" alt="forest desert2 preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/forest-desert2-ec-16x16px-7x7map.png" alt="forest desert2 ec 16x16px 7x7map" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/foreset-desert3-preview.png" alt="foreset desert3 preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/foreset-desert3-ec-16x16px-7x7map.png" alt="foreset desert3 ec 16x16px 7x7map" /></div></p>
+<p>Jungle and sandy path:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/jungle-path-preview.png" alt="jungle path preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/jungle-path-ec-16x16px-7x7map.png" alt="jungle path ec 16x16px 7x7map" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/jungle-path2-preview.png" alt="jungle path2 preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/jungle-path2-ec-16x16px-7x7map.png" alt="jungle path2 ec 16x16px 7x7map" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/jungle-path3-preview.png" alt="jungle path3 preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/jungle-path3-ec-16x16px-7x7map.png" alt="jungle path3 ec 16x16px 7x7map" /></div></p>
+<p>Dystopian city and wasteland:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/city-wasteland-preview.png" alt="city wasteland preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/city-wasteland-ec-16x16px-7x7map.png" alt="city wasteland ec 16x16px 7x7map" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/city-wasteland2-preview.png" alt="city wasteland2 preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/city-wasteland2-ec-16x16px-7x7map.png" alt="city wasteland2 ec 16x16px 7x7map" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/city-wasteland3-preview.png" alt="city wasteland3 preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/city-wasteland3-ec-16x16px-7x7map.png" alt="city wasteland3 ec 16x16px 7x7map" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/city-wasteland4-preview.png" alt="city wasteland4 preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/city-wasteland4-ec-16x16px-7x7map.png" alt="city wasteland4 ec 16x16px 7x7map" /></div></p>
+<p>Here i spent some extra effort to render a nice template with the SDF functions, Mixing grass, dirt and water colors,
+adding some perlin noise and some nice lighting:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/grass-water-template-16x16px-7x7map.png" alt="grass water template 16x16px 7x7map" /></div></p>
+<p>Then using the prompts &quot;grassy meadow, pixelart&quot; and &quot;wavy water, pixelart&quot; for outside and inside:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/grass-water-preview.png" alt="grass water preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/grass-water-ec-16x16px-7x7map.png" alt="grass water ec 16x16px 7x7map" /></div></p>
+<p>We can also use existing images as targets for CLIP. Here's one tileset that targets a famous printing by M.C. Escher:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/city-wasteland-preview-02.png" alt="city wasteland preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/city-wasteland-ec-16x16px-7x7map-02.png" alt="city wasteland ec 16x16px 7x7map" /></div></p>
+<p>Image of corals:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/coral-preview.png" alt="coral preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/coral-ec-16x16px-7x7map.png" alt="coral ec 16x16px 7x7map" /></div></p>
+<p>Image of a brain:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/brain-preview.png" alt="brain preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/brain-ec-16x16px-7x7map.png" alt="brain ec 16x16px 7x7map" /></div></p>
+<p>Image of Mulder and Scully from the X-Files:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/x-files-preview.png" alt="x files preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/x-files-ec-16x16px-7x7map.png" alt="x files ec 16x16px 7x7map" /></div></p>
+<p>Why do they stick there tounges out? Well, the source image is a bit special. Don't know where i got this from:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/gillian-and-david.png" alt="gillian and david" /></div></p>
+<p>There are images on the net that show more of Gillian Anderson's skin:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/gillian-preview.png" alt="gillian preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/gillian-ec-16x16px-7x7map.png" alt="gillian ec 16x16px 7x7map" /></div></p>
+<p>Police brutality can be a source, too:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/police-brutality-preview.png" alt="police brutality preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/police-brutality-ec-16x16px-7x7map.png" alt="police brutality ec 16x16px 7x7map" /></div></p>
+<p>Or long dead soldiers at their duty:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/soldiers-preview.png" alt="soldiers preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/soldiers-ec-16x16px-7x7map.png" alt="soldiers ec 16x16px 7x7map" /></div></p>
+<p>The target prompts and images can be differently weighted (by multiplying the cosine distance of the CLIP embeddings by a factor).</p>
+<p>Below are different mixes of this target image:</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/photo-of-machine.png" alt="photo of machine" /></div></p>
+<p>and the prompt &quot;cthulhu's labyrinth, pixelart&quot;.</p>
+<p>No masking was applied and both the text prompt feature and the target image feature are applied
+at the same time with different weights</p>
+<p>image 1.0 / prompt 0.0</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image-1_0-prompt-0_0-preview.png" alt="image 1_0 prompt 0_0 preview" /></div></p>
+<p>image 1.0 / prompt 0.5</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image-1_0-prompt-0_5-preview.png" alt="image 1_0 prompt 0_5 preview" /></div></p>
+<p>image 1.0 / prompt 1.0</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image-1_0-prompt-1_0-preview.png" alt="image 1_0 prompt 1_0 preview" /></div></p>
+<p>image 0.7 / prompt 1.0</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image-0_7-prompt-1_0-preview.png" alt="image 0_7 prompt 1_0 preview" /></div></p>
+<p>image 0.4 / prompt 1.0</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image-0_4-prompt-1_0-preview.png" alt="image 0_4 prompt 1_0 preview" /></div></p>
+<p>image 0.37 / prompt 1.0</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image-0_37-prompt-1_0-preview.png" alt="image 0_37 prompt 1_0 preview" /></div></p>
+<p>image 0.36 / prompt 1.0</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image-0_36-prompt-1_0-preview.png" alt="image 0_36 prompt 1_0 preview" /></div></p>
+<p>image 0.35 / prompt 1.0</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image-0_35-prompt-1_0-preview.png" alt="image 0_35 prompt 1_0 preview" /></div></p>
+<p>image 0.3 / prompt 1.0</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image-0_3-prompt-1_0-preview.png" alt="image 0_3 prompt 1_0 preview" /></div></p>
+<p>image 0.2 / prompt 1.0</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image-0_2-prompt-1_0-preview.png" alt="image 0_2 prompt 1_0 preview" /></div></p>
+<p>image 0.1 / prompt 1.0</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image-0_1-prompt-1_0-preview.png" alt="image 0_1 prompt 1_0 preview" /></div></p>
+<p>image 0.0 / prompt 1.0</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/image-0_0-prompt-1_0-preview.png" alt="image 0_0 prompt 1_0 preview" /></div></p>
+<p>Image prompts are usually much stronger then text prompts. Using only image prompts, the tiling generally gets
+less seamless. I think this is because CLIP wants to reproduce a particular spatial image composition but is only
+seeing random tile-maps and cares less for smooth transitions of the particular tile edges but more for
+the target image features. While text prompts often do not imply a particular spatial composition and
+CLIP can care more for correct tile transitions.</p>
+<p>Mixing the prompt &quot;fir trees on the hillside&quot; with this target image</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/mountain-target.png" alt="mountain target" /></div></p>
+<p>yields this quite astonishing tilest</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/fir-trees-preview.png" alt="fir trees preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/fir-trees-ec-16x16px-7x7map.png" alt="fir trees ec 16x16px 7x7map" /></div></p>
+<p>The above is created with the <strong>RMSprop</strong> optimizer and below with <strong>AdamW</strong>.</p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/fir-trees2-preview.png" alt="fir trees2 preview" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../posts/2025/assets/2025-07-27-clipig-tilesets/fir-trees2-ec-16x16px-7x7map.png" alt="fir trees2 ec 16x16px 7x7map" /></div></p>
+<p>Both optimizers are fun to play with. And it's really hypnotic to watch a template gradually grow into a
+CLIP-generated tileset. With <strong>RMSprop</strong> in particular, CLIP, over time, shifts attention from one set of objects
+to the next and it's hard to resist watching the process for minutes and minutes..</p>
+<p>I did all the graphics with &quot;CLIPig 2&quot;, found <a href="https://github.com/defgsus/nn-experiments/?tab=readme-ov-file#clipig-2" target="_blank">here</a>.
+It's a Qt application, no scripting or coding required, but it's yet buggy and without documentation.</p>
+<p>Integrating something like this as a GIMP plugin or directly into the <a href="https://github.com/mapeditor/tiled" target="_blank">Tiled map editor</a>
+would be really cool.</p>
+
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a target="_blank" href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a target="_blank" href="https://github.com/defgsus/nn-experiments/blob/master/docs/posts/2025/2025-07-27-clipig-tilesets.md">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../html/logs/random-cnn.html">
+                        &lt;&lt; Exploring classification accuracy of convolutional neural network architectures with random weights
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>
