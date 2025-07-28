@@ -180,7 +180,7 @@ class RandomAffine(RandomSpatialTransformBase):
 
 class RandomTilingMap(RandomSpatialTransformBase):
     """
-    Uses the defined tiling and renders a random tiled map
+    Uses the defined LImageTiling and renders a random tiled map
     """
     NAME = "random_tile_map"
     IS_RESIZE = True
@@ -207,6 +207,34 @@ class RandomTilingMap(RandomSpatialTransformBase):
             "min": 0.,
             "max": 1.,
         },
+        {
+            "name": "generator",
+            "type": "select",
+            "default": "scanline",
+            "choices": ["scanline", "perlin_islands"],
+        },
+        {
+            "name": "perlin_island_size",
+            "type": "float",
+            "default": .5,
+            "min": 0.,
+            "$visible": "generator == 'perlin_islands'",
+        },
+        {
+            "name": "perlin_island_cells",
+            "type": "int",
+            "default": 3,
+            "min": 1,
+            "$visible": "generator == 'perlin_islands'",
+        },
+        {
+            "name": "perlin_island_randomness",
+            "type": "float",
+            "default": .1,
+            "min": 0.,
+            "max": 1.,
+            "$visible": "generator == 'perlin_islands'",
+        },
     ]
 
     def __init__(
@@ -214,11 +242,19 @@ class RandomTilingMap(RandomSpatialTransformBase):
             map_size: Tuple[int, int],
             overlap: Union[int, Tuple[int, int]],
             probability: float,
+            generator: str,
+            perlin_island_size: float,
+            perlin_island_cells: int,
+            perlin_island_randomness: float,
     ):
         super().__init__()
         self.map_size = map_size
         self.overlap = overlap
         self.probability = probability
+        self.generator = generator
+        self.perlin_island_size = perlin_island_size
+        self.perlin_island_cells = perlin_island_cells
+        self.perlin_island_randomness = perlin_island_randomness
 
     def __call__(self, image: torch.Tensor) -> torch.Tensor:
 
@@ -231,7 +267,17 @@ class RandomTilingMap(RandomSpatialTransformBase):
             if not tiling:
                 return template
 
-            tile_map = tiling.create_map_stochastic_scanline(self.map_size)
+            if self.generator == "scanline":
+                tile_map = tiling.create_map_stochastic_scanline(self.map_size)
+            elif self.generator == "perlin_islands":
+                tile_map = tiling.create_map_stochastic_perlin_islands(
+                    size=self.map_size,
+                    island_size=self.perlin_island_size,
+                    island_cells=self.perlin_island_cells,
+                    random_prob=self.perlin_island_randomness,
+                )
+            else:
+                raise ValueError(f"Invalid generator '{self.generator}'")
 
             return tiling.render_tile_map(template, tile_map, overlap=self.overlap)
 

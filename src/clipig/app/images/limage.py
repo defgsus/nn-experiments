@@ -401,17 +401,21 @@ class LImage:
 
             layer_name * .5 + other_layer_name
         """
-        torch_layers = {}
+        from src.util import calc
+
+        _globals = {
+            **vars(calc),
+        }
 
         for match in re.finditer(r"([a-zA-Z_][a-zA-Z0-9_]*)", expression):
             layer_name = match.groups()[0]
             layer = self.get_layer(layer_name)
-            if not layer:
-                raise NameError(f"Layer '{layer_name}' not found for expression '{expression}'")
-            torch_layers[layer_name] = layer.to_torch()
+            if layer:
+                #raise NameError(f"Layer '{layer_name}' not found for expression '{expression}'")
+                _globals[layer_name] = layer.to_torch()
 
         try:
-            return eval(expression, torch_layers)
+            return eval(expression, _globals)
         except Exception as e:
             raise RuntimeError(f"Expression '{expression}' failed with: {type(e).__name__}: {e}")
 

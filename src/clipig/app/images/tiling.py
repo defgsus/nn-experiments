@@ -51,6 +51,14 @@ class LImageTiling:
         def colors(self) -> Tuple[int, ...]:
             return self.t, self.tl, self.l, self.bl, self.b, self.br, self.r, self.tr
 
+        @property
+        def edge_colors(self) -> Tuple[int, ...]:
+            return self.t, self.l, self.b, self.r
+
+        @property
+        def corner_colors(self) -> Tuple[int, ...]:
+            return self.tl, self.bl, self.br, self.tr
+
         def has_attributes(self) -> bool:
             return (
                 self.t >= 0 or self.tl >= 0 or self.l >= 0 or self.bl >= 0
@@ -89,12 +97,6 @@ class LImageTiling:
                 return False
             if self.bl != other.br:
                 return False
-            if self.tl >= 0 and self.tl != other.tr:
-                return False
-            if self.l >= 0 and self.l != other.r:
-                return False
-            if self.bl >= 0 and self.bl != other.br:
-                return False
             return True
 
         def matches_right(self, other: "LImageTiling.Attributes") -> bool:
@@ -108,10 +110,6 @@ class LImageTiling:
             if self.tr != other.br:
                 return False
             if self.tl != other.bl:
-                return False
-            if self.t >= 0 and self.t != other.b:
-                return False
-            if self.tr >= 0 and self.tr != other.br:
                 return False
             return True
 
@@ -141,9 +139,14 @@ class LImageTiling:
         config = deepcopy(config)
         self._tile_size = config["tile_size"]
         self._offset = config["offset"]
-        self._attributes_map = {
+        attributes_map = {
             tuple(int(i) for i in key.split(",")): self.Attributes(**value)
             for key, value in config["attributes_map"].items()
+
+        }
+        self._attributes_map = {
+            key: value for key, value in attributes_map.items()
+            if all(k >= 0 for k in key)  # fix illegal value
         }
 
     def copy(self):
@@ -160,6 +163,15 @@ class LImageTiling:
         return self._offset
 
     @property
+    def map_size(self) -> Tuple[int, int]:
+        if not self._attributes_map:
+            return 0, 0
+        return (
+            max(x for x, y in self._attributes_map.keys()) + 1,
+            max(y for x, y in self._attributes_map.keys()) + 1,
+        )
+
+    @property
     def attributes_map(self) -> Dict[Tuple[int, int], "LImageTiling.Attributes"]:
         return self._attributes_map
 
@@ -168,12 +180,24 @@ class LImageTiling:
 
     def set_optimal_attributes_map(self, num_colors: int = 2, mode: str = "edge"):
         from src.algo import wangtiles
+        from src.algo.wangtiles2 import WangTiles2
+
+        if num_colors == 1 and mode == "edge+corner":
+            self._attributes_map.clear()
+            for y, row in enumerate(WangTiles2.LAYOUTS["edge-corner-7x7"]):
+                for x, v in enumerate(row):
+                    attr_kwargs = {}
+                    for key in ("TL", "T", "TR", "L", "R", "BL", "B", "BR"):
+                        attr_kwargs[key.lower()] = int(bool(v & getattr(WangTiles2, key))) - 1
+                    self._attributes_map[(x, y)] = self.Attributes(**attr_kwargs)
+            return
+
         opt_indices = wangtiles.OPTIMAL_WANG_INDICES_SQUARE.get((mode, num_colors))
         if opt_indices is None:
             raise NotImplementedError(f"Sorry, no optimal tile indices for {num_colors}-{mode}")
         wang_tiles = wangtiles.WangTiles(colors=wangtiles.get_wang_tile_colors(num_colors), mode=mode)
 
-        self._attributes_map = {}
+        self._attributes_map.clear()
         for y, row in enumerate(opt_indices):
             for x, idx in enumerate(row):
                 t = wang_tiles.tiles[idx]
@@ -328,57 +352,113 @@ class LImageTiling:
                     map[y][x] = tile_idx
                     break
 
+        self.resolve_map(map, seed=seed)
         return map
 
-    def create_map_stochastic_perlin(
+    def create_map_stochastic_perlin_islands(
             self,
             size: Tuple[int, int],
+            island_size: float = .5,
+            island_cells: int = 2,
+            random_prob: float = .1,
             seed: Optional[int] = None,
     ):
         from src.algo.sdf.two_d.util import perlin_noise_2d
+
+        island_size = 1 - island_size * 2
         rng = random.Random(seed)
-        tiles_outside = []
-        tiles_inside = []
-        for idx, a in self.attributes_map.items():
-            n = a.num_elements()
-            if n == 0:
-                tiles_outside.append(idx)
-            if n == 4:
-                tiles_inside.append(idx)
+
+        elements_tiles = [
+            (a.num_elements(), idx)
+            for idx, a in self.attributes_map.items()
+        ]
+        elements_tiles.sort(key=lambda t: t[0])
+        tiles_outside = [t[1] for t in elements_tiles if t[0] == elements_tiles[0][0]]
+        tiles_inside = [t[1] for t in elements_tiles if t[0] == elements_tiles[-1][0]]
+
         noise = perlin_noise_2d(
             shape=(size[1], size[0]),
-            res=(size[1]//3, size[0]//3),
+            res=(
+                max(1, int(size[1] / island_cells)),
+                max(1, int(size[0] / island_cells)),
+            ),
             rng=np.random.RandomState(seed),
         )
+
         map = np.tile(np.array([[None]], dtype=np.object_), noise.shape)
         for y, row in enumerate(map):
             for x, v in enumerate(row):
-                if noise[y, x] > .1:
+                if noise[y, x] > island_size:
                     map[y, x] = repr(rng.choice(tiles_inside))
-                if noise[y, x] < -.3:
-                    map[y, x] = repr(rng.choice(tiles_outside))
 
         all_tiles = list(self.attributes_map.keys())
-        for i in range(size[0]*size[1] // 20):
+        for i in range(int(size[0]*size[1] * random_prob)):
             x, y = rng.randrange(size[0]), rng.randrange(size[1])
-            if map[y, x] is None or rng.uniform(0, 1) < .1:
+            if map[y, x] is None or rng.uniform(0, 1) < random_prob:
                 map[y, x] = repr(rng.choice(all_tiles))
-        map = [
-            [eval(x) if x else None for x in row]
-            for row in map
-        ]
-        self.set_map_default(map, (0, 0))
-        for i in range(10):
-            has_errors, is_solved = self.resolve_map(map)
-            if is_solved:
-                break
-        return map
+
+        map_list = []
+        for row in map:
+            row_list = []
+            for x in row:
+                if x is None:
+                    x = rng.choice(tiles_outside)
+                else:
+                    x = eval(x)
+                row_list.append(x)
+            map_list.append(row_list)
+        self.resolve_map(map_list)
+        return map_list
 
     def set_map_default(self, map: List[List[Optional[Tuple[int, int]]]], default: Tuple[int, int] = (0, 0)):
         for row in map:
             for x, v in enumerate(row):
                 if v is None:
                     row[x] = default
+
+    def tile_num_map_mismatches(
+            self,
+            map: List[List[Tuple[int, int]]],
+            attrs: Attributes,
+            x: int,
+            y: int,
+            min_color: int = 0,
+    ) -> int:
+        count = 0
+        if x > 0:
+            other = self.tile_attributes(map[y][x-1])
+            if attrs.l >= min_color and attrs.l != other.r:
+                count += 1
+            if attrs.tl >= min_color and attrs.tl != other.tr:
+                count += 1
+            if attrs.bl >= min_color and attrs.bl != other.br:
+                count += 1
+        if x < len(map[0]) - 1:
+            other = self.tile_attributes(map[y][x+1])
+            if attrs.r >= min_color and attrs.r != other.l:
+                count += 1
+            if attrs.tr >= min_color and attrs.tr != other.tl:
+                count += 1
+            if attrs.br >= min_color and attrs.br != other.bl:
+                count += 1
+        if y > 0:
+            other = self.tile_attributes(map[y-1][x])
+            if attrs.t >= min_color and attrs.t != other.b:
+                count += 1
+            if attrs.tl >= min_color and attrs.tl != other.bl:
+                count += 1
+            if attrs.tr >= min_color and attrs.tr != other.br:
+                count += 1
+        if y < len(map) - 1:
+            other = self.tile_attributes(map[y+1][x])
+            if attrs.b >= min_color and attrs.b != other.t:
+                count += 1
+            if attrs.bl >= min_color and attrs.bl != other.tl:
+                count += 1
+            if attrs.br >= min_color and attrs.br != other.tr:
+                count += 1
+
+        return count
 
     def tile_matches_map(
             self,
@@ -400,34 +480,41 @@ class LImageTiling:
     def resolve_map(
             self,
             map: List[List[Optional[Tuple[int, int]]]],
-    ):
+            num_iterations: int = 23,
+            seed: Optional[int] = None,
+    ) -> bool:
+        rng = random.Random(seed)
         def _iter_mismatches():
             positions = [(x, y) for y in range(len(map)) for x in range(len(map[0]))]
-            random.shuffle(positions)
+            rng.shuffle(positions)
             for x, y in positions:
-                #for y in range(len(map)):
-                #    for x in range(len(map[0])):
-                if map[y][x] is not None and not self.tile_matches_map(map, map[y][x], x, y):
-                    yield x, y
+                if map[y][x] is not None:
+                    attrs = self.attributes_map[map[y][x]]
+                    if (count := self.tile_num_map_mismatches(map, attrs, x, y)) > 0:
+                        yield x, y
 
         def _find_tile(x, y):
-            for tile_idx in self.attributes_map.keys():
-                if self.tile_matches_map(map, tile_idx, x, y):
-                    return tile_idx
+            tiles = []
+            for tile_idx, attrs in self.attributes_map.items():
+                count = self.tile_num_map_mismatches(map, attrs, x, y)
+                tiles.append((count, tile_idx))
 
-        all_tiles = list(self.attributes_map.keys())
-        has_errors = False
-        is_solved = True
-        for x, y in _iter_mismatches():
-            has_errors = True
-            t = _find_tile(x, y)
-            if t is None:
-                is_solved = False
-                #t = random.choice(all_tiles)
+            rng.shuffle(tiles)
+            tiles.sort(key=lambda t: t[0])
+            return tiles[0][1]
 
-            map[y][x] = t
+        for it in range(max(1, num_iterations)):
+            has_errors = False
+            for x, y in _iter_mismatches():
+                has_errors = True
+                t = _find_tile(x, y)
+                if t is not None:
+                    map[y][x] = t
 
-        return has_errors, is_solved
+            if not has_errors:
+                return True
+
+        return not has_errors
 
     def render_tile_map(
             self,
@@ -445,9 +532,10 @@ class LImageTiling:
             )
 
         image = torch.zeros(
-            template.shape[-3],
-            len(map[0]) * self.tile_size[1],
-            len(map[1]) * self.tile_size[0],
+            (template.shape[-3],
+             len(map) * self.tile_size[1],
+             len(map[0]) * self.tile_size[0]
+            ),
             dtype=template.dtype,
             device=template.device,
         )
