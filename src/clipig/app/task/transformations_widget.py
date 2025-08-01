@@ -63,6 +63,7 @@ class TransformationsWidget(QWidget):
         self.list_widget.setFixedWidth(200)
         lv.addWidget(self.list_widget)
         self.list_widget.setDragDropMode(QAbstractItemView.DragDrop)
+        self.list_widget.setDefaultDropAction(Qt.MoveAction)
         self.list_widget.model().rowsMoved.connect(self._row_changed)
 
         for trans in self._init_transformations:
