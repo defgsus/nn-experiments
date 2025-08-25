@@ -78,7 +78,7 @@ So, that is our latest, most top-notch, revolutionary technology, that changes h
 - The `available_tools` section is pretty verbose json with nicely 2-space indentation. That's how the official
   template is rendering this, which certainly eats a lot of tokens when adding many tools. And yeah, although
   it's json, it will be parsed by a language model, not a json parser.
-- The *assistant* 'calls' the tool, hallucinates a return value and then messes up the json syntax with an 
+- The *assistant* 'calls' the tool, 'hallucinates' a return value and then messes up the json syntax with an 
   unmatched `}`.
 
 *I think this is ready to push to our users!*

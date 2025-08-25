@@ -19,19 +19,20 @@ $color-tag-background: #ddd;
 $color-tag-background-selected: #a9a9e9;
 $color-tag-border: #b0b0b0;
 $color-llmchat-border: #3c3c3c;
-$color-llmchat-window: #ddd;
-$color-llmchat-window-background: #181818;
+$color-llmchat-window: #444;
+$color-llmchat-window-background: #eee;
 $color-llmchat-window-border: #919191;
-$color-llmchat-role-system: #cacaca;
-$color-llmchat-role-system-border: #3b3b3b;
-$color-llmchat-role-available_tools-background: #182a2f;
-$color-llmchat-role-available_tools-border: #314449;
-$color-llmchat-role-user-background: #444;
-$color-llmchat-role-user-content: white;
-$color-llmchat-role-assistant-background: #394d33;
-$color-llmchat-role-assistant-content: white;
-$color-llmchat-role-tool_call-background: #182a2f;
-$color-llmchat-role-tool_call-border: #314449;
+$color-llm-chat-window-title: #555;
+$color-llmchat-role-system: #919191;
+$color-llmchat-role-system-border: #c2c2c2;
+$color-llmchat-role-available_tools-background: #d9eaef;
+$color-llmchat-role-available_tools-border: #93bcc7;
+$color-llmchat-role-user-background: #c7c7c7;
+$color-llmchat-role-user-content: black;
+$color-llmchat-role-assistant-background: #cde7c6;
+$color-llmchat-role-assistant-content: black;
+$color-llmchat-role-tool_call-background: #d9eaef;
+$color-llmchat-role-tool_call-border: #93bcc7;
 $color-llmchat-full-transcript: #191919;
 $color-llmchat-full-transcript-background: unset;
 
@@ -54,6 +55,7 @@ $d-color-llmchat-border: #3c3c3c;
 $d-color-llmchat-window: #ddd;
 $d-color-llmchat-window-background: #181818;
 $d-color-llmchat-window-border: #919191;
+$d-color-llm-chat-window-title: #5c5c5c;
 $d-color-llmchat-role-system: #cacaca;
 $d-color-llmchat-role-system-border: #3b3b3b;
 $d-color-llmchat-role-available_tools-background: #182a2f;
@@ -278,7 +280,7 @@ main.index {
       top: -.01rem;
       left: .3rem;
       font-size: 62%;
-      color: $color-border;
+      color: $color-llm-chat-window-title;
     }
     .llm-chat-window-content {
       white-space: pre-wrap;
@@ -408,7 +410,7 @@ main.index {
       color: $d-color-llmchat-window;
       border-color: $d-color-llmchat-window-border;
       .llm-chat-window-title {
-        color: $d-color-border;
+        color: $d-color-llm-chat-window-title;
       }
       .llm-chat-window-content {
         pre {
