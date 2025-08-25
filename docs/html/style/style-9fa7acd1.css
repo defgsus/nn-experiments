@@ -153,7 +153,7 @@ main.index {
       top: -0.01rem;
       left: 0.3rem;
       font-size: 62%;
-      color: #919191; }
+      color: #bababa; }
       .llm-chat .llm-chat-window .llm-chat-window-content {
         white-space: pre-wrap; }
         .llm-chat .llm-chat-window .llm-chat-window-content pre {
@@ -191,8 +191,8 @@ main.index {
           display: unset; }
   .llm-chat .llm-chat-full-transcript {
     cursor: pointer;
-    background: #191919;
-    color: #686868;
+    background: unset;
+    color: #191919;
     padding: 0.25rem;
     line-height: 125%; }
     .llm-chat .llm-chat-full-transcript pre {
@@ -248,6 +248,37 @@ main.index {
   main.index .article-list .article-item .link {
     font-size: 150%;
     color: #ddd;   }
+  .llm-chat {
+    border-color: #3c3c3c;   }
+    .llm-chat .llm-chat-window {
+      background: #181818;
+      color: #ddd;
+      border-color: #919191;   }
+      .llm-chat .llm-chat-window .llm-chat-window-title {
+        color: #5c5c5c;   }
+        .llm-chat .llm-chat-window .llm-chat-window-content pre {
+          background: unset;
+          color: unset;   }
+      .llm-chat .llm-chat-window.llm-chat-role-system {
+        color: #cacaca;
+        border-color: #3b3b3b;   }
+        .llm-chat .llm-chat-window.llm-chat-role-available_tools {
+          background: #182a2f;
+          border-color: #314449;   }
+          .llm-chat .llm-chat-window.llm-chat-role-user {
+            background: #444;   }
+            .llm-chat .llm-chat-window.llm-chat-role-user .llm-chat-window-content {
+              color: white;   }
+      .llm-chat .llm-chat-window.llm-chat-role-assistant {
+        background: #394d33;   }
+        .llm-chat .llm-chat-window.llm-chat-role-assistant .llm-chat-window-content {
+          color: white;   }
+      .llm-chat .llm-chat-window.llm-chat-role-tool_call {
+        background: #182a2f;
+        border-color: #314449;   }
+    .llm-chat .llm-chat-full-transcript {
+      background: #191919;
+      color: #686868;   }
 }
 
 td.linenos .normal {

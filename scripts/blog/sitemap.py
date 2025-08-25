@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 from pathlib import Path
 from io import StringIO
 from typing import List, Tuple, Dict, Optional, Union, Generator, Any
@@ -102,8 +103,8 @@ class StyleSheet:
 
     @property
     def target_filename(self) -> str:
-        name = self.original_filename.with_suffix(".css").name
-        #hash = hashlib.md5(self.content().encode()).hexdigest()[:8]
+        hash = hashlib.sha3_512(self.content().encode()).hexdigest()[:8]
+        name = f"{self.original_filename.with_suffix('').name}-{hash}.css"
         return f"html/style/{name}"
 
     def content(self):
@@ -126,7 +127,8 @@ class JavascriptFile:
 
     @property
     def target_filename(self) -> str:
-        name = self.original_filename.name
+        hash = hashlib.sha3_512(self.content().encode()).hexdigest()[:8]
+        name = f"{self.original_filename.with_suffix('').name}-{hash}.js"
         return f"html/js/{name}"
 
     def content(self):
@@ -319,6 +321,10 @@ class Sitemap:
             else:
                 tag = 'unchanged' if unchanged else 'CHANGED  '
             print(f"{tag}: {filename}")
+        
+        if write:
+            shutil.rmtree(DOCS_PATH / "html" / "style", ignore_errors=True)
+            shutil.rmtree(DOCS_PATH / "html" / "js", ignore_errors=True)
 
         for page in self.iter_pages():
             _write_file(page.url, self.render_page(page))

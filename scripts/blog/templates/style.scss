@@ -18,6 +18,22 @@ $color-code-back: #eee;
 $color-tag-background: #ddd;
 $color-tag-background-selected: #a9a9e9;
 $color-tag-border: #b0b0b0;
+$color-llmchat-border: #3c3c3c;
+$color-llmchat-window: #ddd;
+$color-llmchat-window-background: #181818;
+$color-llmchat-window-border: #919191;
+$color-llmchat-role-system: #cacaca;
+$color-llmchat-role-system-border: #3b3b3b;
+$color-llmchat-role-available_tools-background: #182a2f;
+$color-llmchat-role-available_tools-border: #314449;
+$color-llmchat-role-user-background: #444;
+$color-llmchat-role-user-content: white;
+$color-llmchat-role-assistant-background: #394d33;
+$color-llmchat-role-assistant-content: white;
+$color-llmchat-role-tool_call-background: #182a2f;
+$color-llmchat-role-tool_call-border: #314449;
+$color-llmchat-full-transcript: #191919;
+$color-llmchat-full-transcript-background: unset;
 
 $d-color-font: #ddd;
 $d-color-font-transparent: rgba(224, 224, 224, .5);
@@ -34,6 +50,22 @@ $d-color-code-back: #191919;
 $d-color-tag-background: #525252;
 $d-color-tag-background-selected: #55a;
 $d-color-tag-border: #000;
+$d-color-llmchat-border: #3c3c3c;
+$d-color-llmchat-window: #ddd;
+$d-color-llmchat-window-background: #181818;
+$d-color-llmchat-window-border: #919191;
+$d-color-llmchat-role-system: #cacaca;
+$d-color-llmchat-role-system-border: #3b3b3b;
+$d-color-llmchat-role-available_tools-background: #182a2f;
+$d-color-llmchat-role-available_tools-border: #314449;
+$d-color-llmchat-role-user-background: #444;
+$d-color-llmchat-role-user-content: white;
+$d-color-llmchat-role-assistant-background: #394d33;
+$d-color-llmchat-role-assistant-content: white;
+$d-color-llmchat-role-tool_call-background: #182a2f;
+$d-color-llmchat-role-tool_call-border: #314449;
+$d-color-llmchat-full-transcript: #686868;
+$d-color-llmchat-full-transcript-background: #191919;
 
 
 html {
@@ -228,15 +260,15 @@ main.index {
 
 .llm-chat {
   margin-top: 1rem;
-  border: 1px solid #3c3c3c;
+  border: 1px solid $color-llmchat-border;
   border-radius: .3rem;
   padding: .2rem;
 
   .llm-chat-window {
     cursor: pointer;
-    background: #181818;
-    color: #ddd;
-    border: 1px solid #919191;
+    background: $color-llmchat-window-background;
+    color: $color-llmchat-window;
+    border: 1px solid $color-llmchat-window-border;
     border-radius: .5rem;
     padding: .8rem .5rem;
     margin-bottom: .3rem;
@@ -246,7 +278,7 @@ main.index {
       top: -.01rem;
       left: .3rem;
       font-size: 62%;
-      color: #919191;  // border color!
+      color: $color-border;
     }
     .llm-chat-window-content {
       white-space: pre-wrap;
@@ -258,11 +290,11 @@ main.index {
         overflow: scroll;
       }
     }
-    &.llm-chat-role-system { color: #cacaca; border-color: #3b3b3b; }
-    &.llm-chat-role-available_tools { background: #182a2f; border-color: #314449; .llm-chat-window-content { font-family: monospace; } }
-    &.llm-chat-role-user { background: #444; .llm-chat-window-content { color: white; } }
-    &.llm-chat-role-assistant { background: #394d33; .llm-chat-window-content { color: white; }}
-    &.llm-chat-role-tool_call { background: #182a2f; border-color: #314449; .llm-chat-window-content { font-family: monospace; } }
+    &.llm-chat-role-system { color: $color-llmchat-role-system; border-color: $color-llmchat-role-system-border; }
+    &.llm-chat-role-available_tools { background: $color-llmchat-role-available_tools-background; border-color: $color-llmchat-role-available_tools-border; .llm-chat-window-content { font-family: monospace; } }
+    &.llm-chat-role-user { background: $color-llmchat-role-user-background; .llm-chat-window-content { color: $color-llmchat-role-user-content; } }
+    &.llm-chat-role-assistant { background: $color-llmchat-role-assistant-background; .llm-chat-window-content { color: $color-llmchat-role-assistant-content; }}
+    &.llm-chat-role-tool_call { background: $color-llmchat-role-tool_call-background; border-color: $color-llmchat-role-tool_call-border; .llm-chat-window-content { font-family: monospace; } }
 
     input[type="checkbox"] {
       display: none;
@@ -276,8 +308,8 @@ main.index {
   }
   .llm-chat-full-transcript {
     cursor: pointer;
-    background: #191919;
-    color: #686868;
+    background: $color-llmchat-full-transcript-background;
+    color: $color-llmchat-full-transcript;
     padding: .25rem;
     line-height: 125%;
     pre { display: block; overflow: scroll; }
@@ -366,6 +398,33 @@ main.index {
           color: $d-color-font;
         }
       }
+    }
+  }
+
+  .llm-chat {
+    border-color: $d-color-llmchat-border;
+    .llm-chat-window {
+      background: $d-color-llmchat-window-background;
+      color: $d-color-llmchat-window;
+      border-color: $d-color-llmchat-window-border;
+      .llm-chat-window-title {
+        color: $d-color-border;
+      }
+      .llm-chat-window-content {
+        pre {
+          background: unset;
+          color: unset;
+        }
+      }
+      &.llm-chat-role-system { color: $d-color-llmchat-role-system; border-color: $d-color-llmchat-role-system-border; }
+      &.llm-chat-role-available_tools { background: $d-color-llmchat-role-available_tools-background; border-color: $d-color-llmchat-role-available_tools-border; }
+      &.llm-chat-role-user { background: $d-color-llmchat-role-user-background; .llm-chat-window-content { color: $d-color-llmchat-role-user-content; } }
+      &.llm-chat-role-assistant { background: $d-color-llmchat-role-assistant-background; .llm-chat-window-content { color: $d-color-llmchat-role-assistant-content; }}
+      &.llm-chat-role-tool_call { background: $d-color-llmchat-role-tool_call-background; border-color: $d-color-llmchat-role-tool_call-border; }
+    }
+    .llm-chat-full-transcript {
+      background: $d-color-llmchat-full-transcript-background;
+      color: $d-color-llmchat-full-transcript;
     }
   }
 

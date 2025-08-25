@@ -1,5 +1,5 @@
 ---
-tags: ["llm"]
+tags: ["lm"]
 ---
 
 # Tool usage with the granite language model
