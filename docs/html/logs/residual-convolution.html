@@ -91,24 +91,24 @@ which seems to do the exact thing.</p>
 <p>--</p>
 <p>This simple CNN is composed of an encoder and a decoder, while the decoder is
 the reverse of the encoder. The layout is (in pytorch style):</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>ResConv(
+<div style="overflow: scroll;"><pre>ResConv(
   (encoder): ModuleDict(
     (layer_1): ConvLayer(
       (bn): BatchNorm2d(1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
       (conv): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (layer_...): ConvLayer(
       (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
       (conv): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
   )
   (decoder): ModuleDict(
     (layer_...): ConvLayer(
       (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
       (conv): ConvTranspose2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (layer_15): ConvLayer(
       (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
@@ -117,8 +117,7 @@ the reverse of the encoder. The layout is (in pytorch style):</p>
     )
   )
 )
-</pre></div>
-</div><p>In the forward pass each encoder layer stores it's result which is later
+</pre></div><p>In the forward pass each encoder layer stores it's result which is later
 added to the input of the inverse decoder layer. In the example above, result
 of <code>layer_1</code> is added to the output of <code>layer_14</code> which is the input of <code>layer_15</code>.</p>
 <p>I think this is basically a U-NET. In any case, we can add as much layers as we
@@ -498,9 +497,8 @@ on the original FMNIST resolution of 28x28 pixels:</p>
 <p>Should one scale the residual signal that comes from the encoder layers
 before adding it to the decoder layer input? It's denoted <code>RWF</code> in the
 following expression and experimental results.</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>dec-layer input N = dec-layer output N-1 + RWF * enc-layer-output -N 
-</pre></div>
-</div><div style="overflow: scroll;"><table>
+<div style="overflow: scroll;"><pre>dec-layer input N = dec-layer output N-1 + RWF * enc-layer-output -N 
+</pre></div><div style="overflow: scroll;"><table>
 <thead>
 <tr>
 <th align="right">l</th>
@@ -592,27 +590,24 @@ following expression and experimental results.</p>
 <h2 id="compare-position-of-batch-normalization">Compare position of batch normalization? <a href="#compare-position-of-batch-normalization" class="heading-linker">←</a></h2>
 <p>In each layer, the batch norm was placed at the first position, more
 out of my intuition than actual knowledge.</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>ConvLayer(
+<div style="overflow: scroll;"><pre>ConvLayer(
   (bn): BatchNorm2d(1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
   (conv): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-  (act): GELU(approximate=&#39;none&#39;)
+  (act): GELU(approximate=&#x27;none&#x27;)
 )
-</pre></div>
-</div><p>It could be placed as well after the convolution:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>ConvLayer(
+</pre></div><p>It could be placed as well after the convolution:</p>
+<div style="overflow: scroll;"><pre>ConvLayer(
   (conv): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
   (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (act): GELU(approximate=&#39;none&#39;)
+  (act): GELU(approximate=&#x27;none&#x27;)
 )
-</pre></div>
-</div><p>or after the activation function</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>ConvLayer(
+</pre></div><p>or after the activation function</p>
+<div style="overflow: scroll;"><pre>ConvLayer(
   (conv): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-  (act): GELU(approximate=&#39;none&#39;)
+  (act): GELU(approximate=&#x27;none&#x27;)
   (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
 )
-</pre></div>
-</div><p>The following table lists the results for the different
+</pre></div><p>The following table lists the results for the different
 batch-norm positions (<code>bnp</code>), separately for encoder (<code>bnp-e</code>)
 and decoder (<code>bnp-d</code>). </p>
 <ul>
@@ -1411,9 +1406,8 @@ even faster on my hardware/lib/driver setup. It is very likely, though, that the
 kernel size must be re-evaluated for each particular task.</p>
 <p>Similar to the channel size abve , the kernel size is varied layer-wise in the following experiment.
 The top performing network with <code>ks1=3</code> and <code>ks2=9</code>, for example, has the following kernel sizes:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="k">[3, 3, 5, 5, 5, 7, 7, 7, 7, 9, 9]</span>
-</pre></div>
-</div><div style="overflow: scroll;"><table>
+<div style="overflow: scroll;"><pre>[3, 3, 5, 5, 5, 7, 7, 7, 7, 9, 9]
+</pre></div><div style="overflow: scroll;"><table>
 <thead>
 <tr>
 <th align="right">l</th>

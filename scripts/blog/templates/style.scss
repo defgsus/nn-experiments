@@ -226,6 +226,76 @@ main.index {
   }
 }
 
+.llm-chat {
+  margin-top: 1rem;
+  border: 1px solid #3c3c3c;
+  border-radius: .3rem;
+  padding: .2rem;
+
+  .llm-chat-window {
+    cursor: pointer;
+    background: #181818;
+    color: #ddd;
+    border: 1px solid #919191;
+    border-radius: .5rem;
+    padding: .8rem .5rem;
+    margin-bottom: .3rem;
+    position: relative;
+    .llm-chat-window-title {
+      position: absolute;
+      top: -.01rem;
+      left: .3rem;
+      font-size: 62%;
+      color: #919191;  // border color!
+    }
+    .llm-chat-window-content {
+      white-space: pre-wrap;
+      pre {
+        background: unset;
+        color: unset;
+        padding: 0;
+        white-space: pre-wrap;
+        overflow: scroll;
+      }
+    }
+    &.llm-chat-role-system { color: #cacaca; border-color: #3b3b3b; }
+    &.llm-chat-role-available_tools { background: #182a2f; border-color: #314449; .llm-chat-window-content { font-family: monospace; } }
+    &.llm-chat-role-user { background: #444; .llm-chat-window-content { color: white; } }
+    &.llm-chat-role-assistant { background: #394d33; .llm-chat-window-content { color: white; }}
+    &.llm-chat-role-tool_call { background: #182a2f; border-color: #314449; .llm-chat-window-content { font-family: monospace; } }
+
+    input[type="checkbox"] {
+      display: none;
+      & ~ .llm-chat-window-content {
+        display: none;
+      }
+      &:checked ~ .llm-chat-window-content {
+        display: unset;
+      }
+    }
+  }
+  .llm-chat-full-transcript {
+    cursor: pointer;
+    background: #191919;
+    color: #686868;
+    padding: .25rem;
+    line-height: 125%;
+    pre { display: block; overflow: scroll; }
+    .llm-chat-label-show {
+      font-size: 62%;
+    }
+
+    input[type="checkbox"] {
+      display: none;
+      & ~ pre { display: none; }
+      &:checked ~ pre { display: block; }
+      & ~ .llm-chat-label-show { display: unset; }
+      &:checked ~ .llm-chat-label-show { display: none; }
+    }
+  }
+}
+
+
 /* dark-theme colors */
 
 @media (prefers-color-scheme: dark) {

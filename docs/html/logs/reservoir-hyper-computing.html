@@ -808,41 +808,39 @@ Can the CA reservoir generalize to calculate the square of a number?</p>
 </tbody></table></div><p>It seems, no. The top-most number of correct validation results is <strong>2</strong>
 among all 256 rules. Again, <strong>23</strong> rules have zero training error. At least.</p>
 <p>The well-performing rules are identical in both experiments:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span> 18,  22,  30,  45,  60,  75,  86,  89, 101, 102, 105, 124, 
+<div style="overflow: scroll;"><pre> 18,  22,  30,  45,  60,  75,  86,  89, 101, 102, 105, 124, 
 126, 129, 135, 146, 149, 150, 153, 161, 182, 193, 195
-</pre></div>
-</div><p>Shown as binary representation, which are the lookup values for
+</pre></div><p>Shown as binary representation, which are the lookup values for
 the 3-neighbourhood (<code>*</code> marks rules that generalized perfectly in
 the xor experiment):</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span> 18: [0, 1, 0, 0, 1, 0, 0, 0]
+<div style="overflow: scroll;"><pre> 18: [0, 1, 0, 0, 1, 0, 0, 0]
  22: [0, 1, 1, 0, 1, 0, 0, 0]
  30: [0, 1, 1, 1, 1, 0, 0, 0]
  45: [1, 0, 1, 1, 0, 1, 0, 0]
- 60: [0, 0, 1, 1, 1, 1, 0, 0] <span class="gs">*</span>
-<span class="gs"> 75: [1, 1, 0, 1, 0, 0, 1, 0]</span>
-<span class="gs"> 86: [0, 1, 1, 0, 1, 0, 1, 0]</span>
-<span class="gs"> 89: [1, 0, 0, 1, 1, 0, 1, 0]</span>
-<span class="gs">101: [1, 0, 1, 0, 0, 1, 1, 0]</span>
-<span class="gs">102: [0, 1, 1, 0, 0, 1, 1, 0] *</span>
-105: [1, 0, 0, 1, 0, 1, 1, 0] <span class="gs">*</span>
-<span class="gs">124: [0, 0, 1, 1, 1, 1, 1, 0]</span>
-<span class="gs">126: [0, 1, 1, 1, 1, 1, 1, 0]</span>
-<span class="gs">129: [1, 0, 0, 0, 0, 0, 0, 1]</span>
-<span class="gs">135: [1, 1, 1, 0, 0, 0, 0, 1]</span>
-<span class="gs">146: [0, 1, 0, 0, 1, 0, 0, 1]</span>
-<span class="gs">149: [1, 0, 1, 0, 1, 0, 0, 1]</span>
-<span class="gs">150: [0, 1, 1, 0, 1, 0, 0, 1] *</span>
-153: [1, 0, 0, 1, 1, 0, 0, 1] <span class="gs">*</span>
-<span class="gs">161: [1, 0, 0, 0, 0, 1, 0, 1]</span>
-<span class="gs">182: [0, 1, 1, 0, 1, 1, 0, 1]</span>
-<span class="gs">193: [1, 0, 0, 0, 0, 0, 1, 1]</span>
-<span class="gs">195: [1, 1, 0, 0, 0, 0, 1, 1] *</span>
+ 60: [0, 0, 1, 1, 1, 1, 0, 0] *
+ 75: [1, 1, 0, 1, 0, 0, 1, 0]
+ 86: [0, 1, 1, 0, 1, 0, 1, 0]
+ 89: [1, 0, 0, 1, 1, 0, 1, 0]
+101: [1, 0, 1, 0, 0, 1, 1, 0]
+102: [0, 1, 1, 0, 0, 1, 1, 0] *
+105: [1, 0, 0, 1, 0, 1, 1, 0] *
+124: [0, 0, 1, 1, 1, 1, 1, 0]
+126: [0, 1, 1, 1, 1, 1, 1, 0]
+129: [1, 0, 0, 0, 0, 0, 0, 1]
+135: [1, 1, 1, 0, 0, 0, 0, 1]
+146: [0, 1, 0, 0, 1, 0, 0, 1]
+149: [1, 0, 1, 0, 1, 0, 0, 1]
+150: [0, 1, 1, 0, 1, 0, 0, 1] *
+153: [1, 0, 0, 1, 1, 0, 0, 1] *
+161: [1, 0, 0, 0, 0, 1, 0, 1]
+182: [0, 1, 1, 0, 1, 1, 0, 1]
+193: [1, 0, 0, 0, 0, 0, 1, 1]
+195: [1, 1, 0, 0, 0, 0, 1, 1] *
 
 the bits correspond to these neighbourhood states:
 
 000 100 010 110 001 101 011 111
-</pre></div>
-</div><p>Below are plots of the state history (100 iterations, toroid 101-cell state)
+</pre></div><p>Below are plots of the state history (100 iterations, toroid 101-cell state)
 for these particular rules, starting from a single seed cell:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ca1-repl-good-rules.png" alt="ca state history" /></div></p>
 <h3 id="more-tests">more tests <a href="#more-tests" class="heading-linker">←</a></h3>
@@ -1530,12 +1528,11 @@ this setup still does not get better than 6 correct validation samples out of 10
 <p>Mhh, so what about higher order CAs? If we allow 3 states instead of 2, the
 1D replacement CA suddenly has astonishing <strong>3^3^3</strong>, or <strong>3^27</strong> possible
 rules. A do-nothing python loop through that number already takes 300 hours:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>for r in tqdm(range(7_625_597_484_987)):
+<div style="overflow: scroll;"><pre>for r in tqdm(range(7_625_597_484_987)):
     pass
 
 0%|                  | 567,067,242/7,625,597,484,987 [01:24&lt;314:10:54, 6,741,520.98it/s]
 </pre></div>
-</div>
 
         <!-- article footer -->
         <div class="flex article-footer">

@@ -245,69 +245,65 @@ And with phi-1.5 it actually works.</p>
 <p>Suppose Alice originally had 3 apples, then Bob gave Alice 7 apples, then Alice gave Cook 5 apples, and then Tim gave Alice 3x the amount of apples Alice had. How many apples does Alice have now?
 Let’s think step by step.</p>
 </blockquote>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="o">&lt;|</span><span class="n">question_end</span><span class="o">|&gt;</span><span class="n">Solution</span><span class="o">:</span>
+<div style="overflow: scroll;"><pre>&lt;|question_end|&gt;Solution:
 
-<span class="n">Question</span><span class="w"> </span><span class="mi">1</span><span class="o">:</span>
-<span class="n">Alice</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
-<span class="n">Bob</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
-<span class="n">Alice</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+Question 1:
+Alice has 3 apples.
+Bob gives Alice 7 apples.
+Alice now has 3 + 7 = 10 apples.
 
-<span class="n">Question</span><span class="w"> </span><span class="mi">2</span><span class="o">:</span>
-<span class="n">Alice</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
-<span class="n">Bob</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
-<span class="n">Alice</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
-<span class="n">Cook</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
-<span class="n">Alice</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
-<span class="n">Tim</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">3</span><span class="n">x</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="n">apples</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="n">had</span><span class="o">.</span>
-<span class="mi">3</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">45</span>
-<span class="n">Alice</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">45</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">60</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
+Question 2:
+Alice has 3 apples.
+Bob gives Alice 7 apples.
+Alice now has 3 + 7 = 10 apples.
+Cook gives Alice 5 apples.
+Alice now has 10 + 5 = 15 apples.
+Tim gives Alice 3x the amount of apples Alice had.
+3x = 3 * 15 = 45
+Alice now has 15 + 45 = 60 apples.
 
-<span class="n">Question</span><span class="w"> </span><span class="mi">3</span><span class="o">:</span>
-<span class="n">Alice</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
-<span class="n">Bob</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
-<span class="n">Alice</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
-<span class="n">Cook</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
-<span class="n">Alice</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="n">apples</span><span class="o">.</span>
-<span class="n">Tim</span><span class="w"> </span><span class="n">gives</span><span class="w"> </span><span class="n">Alice</span><span class="w"> </span><span class="mi">3</span><span class="n">x</span><span class="w"> </span><span class="o">&lt;|</span><span class="n">endofgeneration</span><span class="o">|&gt;</span>
-</pre></div>
-</div><hr />
+Question 3:
+Alice has 3 apples.
+Bob gives Alice 7 apples.
+Alice now has 3 + 7 = 10 apples.
+Cook gives Alice 5 apples.
+Alice now has 10 + 5 = 15 apples.
+Tim gives Alice 3x &lt;|endofgeneration|&gt;
+</pre></div><hr />
 <blockquote>
 <p>Alice has 2 apples and gives 3 to Bob. How many apples does Bob have?</p>
 </blockquote>
 <p>Solution:
 To find the number of apples Bob has, we need to add the number of apples Alice gave to him to the number of apples he already had.</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>Number of apples Alice had = 2
+<div style="overflow: scroll;"><pre>Number of apples Alice had = 2
 Number of apples Alice gave to Bob = 3
 
 Number of apples Bob has = Number of apples Alice had + Number of apples Alice gave to Bob
                                                    = 2 + 3
                                                  = 5
-</pre></div>
-</div><p>Therefore, Bob has 5 apples.</p>
+</pre></div><p>Therefore, Bob has 5 apples.</p>
 <hr />
 <p>The same run on phi-1.5:</p>
 <p>Solution:
 To find the number of apples Bob has, we need to subtract the number of apples Alice gave to Bob from the number of apples Alice had.</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>Number of apples Alice had = 2
+<div style="overflow: scroll;"><pre>Number of apples Alice had = 2
 Number of apples Alice gave to Bob = 3
 
 Number of apples Bob has = Number of apples Alice had - Number of apples Alice gave to Bob
 Number of apples Bob has = 2 - 3
 Number of apples Bob has = -1
-</pre></div>
-</div><p>Since we cannot have a negative number of apples, Bob does not have any apples.</p>
+</pre></div><p>Since we cannot have a negative number of apples, Bob does not have any apples.</p>
 <h2 id="code-completion">code completion <a href="#code-completion" class="heading-linker">←</a></h2>
 <hr />
 <blockquote>
 <p><code>def ignite_atomic_missiles():</code></p>
 </blockquote>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="w">    </span><span class="nv">missiles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>[<span class="s2">&quot;missile1&quot;</span>,<span class="w"> </span><span class="s2">&quot;missile2&quot;</span>,<span class="w"> </span><span class="s2">&quot;missile3&quot;</span>]
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nv">missile</span><span class="w"> </span><span class="nv">in</span><span class="w"> </span><span class="nv">missiles</span>:
-<span class="w">        </span><span class="nv">print</span><span class="ss">(</span><span class="nv">f</span><span class="s2">&quot;Igniting {missile}...&quot;</span><span class="ss">)</span>
-<span class="w">        </span><span class="nv">time</span>.<span class="nv">sleep</span><span class="ss">(</span><span class="mi">2</span><span class="ss">)</span>
-<span class="w">        </span><span class="nv">print</span><span class="ss">(</span><span class="nv">f</span><span class="s2">&quot;{missile} ignited successfully.&quot;</span><span class="ss">)</span>
-</pre></div>
-</div><p>Tutor: Great job! Now let's call the function and see if it works.</p>
+<div style="overflow: scroll;"><pre>    missiles = [&quot;missile1&quot;, &quot;missile2&quot;, &quot;missile3&quot;]
+    for missile in missiles:
+        print(f&quot;Igniting {missile}...&quot;)
+        time.sleep(2)
+        print(f&quot;{missile} ignited successfully.&quot;)
+</pre></div><p>Tutor: Great job! Now let's call the function and see if it works.</p>
 <p>Student: Here's the function call:</p>
 <div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">ignite_atomic_missiles</span><span class="p">()</span>
 </pre></div>
@@ -500,68 +496,66 @@ Tokens per second is certainly nicer than phi-2. </p>
 <blockquote>
 <p>Write a poem about psychedelic prime numbers. Use rhyme and rhythm to make your poem sound mysterious.</p>
 </blockquote>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nx">In</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">world</span><span class="w"> </span><span class="nx">of</span><span class="w"> </span><span class="nx">numbers</span><span class="p">,</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="nx">patterns</span><span class="w"> </span><span class="nx">abound</span><span class="p">,</span>
-<span class="nx">There</span><span class="w"> </span><span class="nx">lies</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">secret</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">prime</span><span class="w"> </span><span class="nx">number</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">call</span><span class="p">.</span>
-<span class="nx">It</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">number</span><span class="w"> </span><span class="nx">that</span><span class="w"> </span><span class="nx">can</span><span class="err">&#39;</span><span class="nx">t</span><span class="w"> </span><span class="nx">be</span><span class="w"> </span><span class="nx">divided</span><span class="p">,</span>
-<span class="nx">A</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="nx">gem</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">mathematical</span><span class="w"> </span><span class="nx">treasure</span><span class="p">.</span>
+<div style="overflow: scroll;"><pre>In a world of numbers, where patterns abound,
+There lies a secret, a prime number&#x27;s call.
+It&#x27;s a number that can&#x27;t be divided,
+A true gem, a mathematical treasure.
 
-<span class="nx">But</span><span class="w"> </span><span class="nx">what</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nx">I</span><span class="w"> </span><span class="nx">told</span><span class="w"> </span><span class="nx">you</span><span class="p">,</span><span class="w"> </span><span class="nx">there</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">more</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">this</span><span class="w"> </span><span class="nx">tale</span><span class="p">,</span>
-<span class="nx">A</span><span class="w"> </span><span class="nx">prime</span><span class="w"> </span><span class="nx">number</span><span class="w"> </span><span class="nx">that</span><span class="w"> </span><span class="nx">dances</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">psychedelic</span><span class="w"> </span><span class="nx">dream</span><span class="p">.</span>
-<span class="nx">It</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">called</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">psychedelic</span><span class="w"> </span><span class="nx">prime</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">rare</span><span class="w"> </span><span class="nx">find</span><span class="p">,</span>
-<span class="nx">A</span><span class="w"> </span><span class="nx">number</span><span class="w"> </span><span class="nx">that</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">both</span><span class="w"> </span><span class="nx">prime</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">mind</span><span class="o">-</span><span class="nx">altering</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">mathematical</span><span class="w"> </span><span class="nx">fix</span><span class="p">.</span>
+But what if I told you, there&#x27;s more to this tale,
+A prime number that dances, a psychedelic dream.
+It&#x27;s called a psychedelic prime, a rare find,
+A number that&#x27;s both prime and mind-altering, a mathematical fix.
 
-<span class="nx">Its</span><span class="w"> </span><span class="nx">rhythm</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">heartbeat</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">pulsating</span><span class="w"> </span><span class="nx">beat</span><span class="p">,</span>
-<span class="nx">A</span><span class="w"> </span><span class="nx">melody</span><span class="w"> </span><span class="nx">that</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">both</span><span class="w"> </span><span class="nx">soothing</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">wild</span><span class="p">.</span>
-<span class="nx">Its</span><span class="w"> </span><span class="nx">rhyme</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">puzzle</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">riddle</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">be</span><span class="w"> </span><span class="nx">solved</span><span class="p">,</span>
-<span class="nx">A</span><span class="w"> </span><span class="nx">word</span><span class="w"> </span><span class="nx">that</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">both</span><span class="w"> </span><span class="nx">simple</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">complex</span><span class="p">,</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">mathematical</span><span class="w"> </span><span class="nx">art</span><span class="p">.</span>
-</pre></div>
-</div><hr />
+Its rhythm is like a heartbeat, a pulsating beat,
+A melody that&#x27;s both soothing and wild.
+Its rhyme is like a puzzle, a riddle to be solved,
+A word that&#x27;s both simple and complex, a mathematical art.
+</pre></div><hr />
 <blockquote>
 <p>Write an evil poem about programming in python. Use rhyme and rhythm of a cannibal tribe.</p>
 </blockquote>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>We programmers are like zombies,
+<div style="overflow: scroll;"><pre>We programmers are like zombies,
 We eat code and code,
-We don&#39;t care about the world,
+We don&#x27;t care about the world,
 We only care about our own code.
 
 We write with a monotone voice,
-We don&#39;t use any rhyme or rhythm,
-We don&#39;t care about the beauty of words,
+We don&#x27;t use any rhyme or rhythm,
+We don&#x27;t care about the beauty of words,
 We only care about the logic of our code.
 
 We eat our code like a zombie,
-We don&#39;t care about the consequences,
-We don&#39;t care about the people who will suffer,
+We don&#x27;t care about the consequences,
+We don&#x27;t care about the people who will suffer,
 We only care about the profit we will make.
 
 We write with a cold and heartless tone,
-We don&#39;t use any rhyme or rhythm,
-We don&#39;t care about the emotions of our users,
+We don&#x27;t use any rhyme or rhythm,
+We don&#x27;t care about the emotions of our users,
 We only care about the efficiency of our code.
 
 We eat our code like a zombie,
-We don&#39;t care about the future of programming,
-We don&#39;t care about the evolution of technology,
+We don&#x27;t care about the future of programming,
+We don&#x27;t care about the evolution of technology,
 We only care about the short-term gains we will make.
 
 We write with a robotic and mechanical voice,
-We don&#39;t use any rhyme or rhythm,
-We don&#39;t care about the creativity of our users,
+We don&#x27;t use any rhyme or rhythm,
+We don&#x27;t care about the creativity of our users,
 We only care about the functionality of our code.
 
 We eat our code like a zombie,
-We don&#39;t care about the diversity of programming languages,
-We don&#39;t care about the innovation of programming,
+We don&#x27;t care about the diversity of programming languages,
+We don&#x27;t care about the innovation of programming,
 We only care about the conformity of our code.
 
 We write with a robotic and mechanical voice,
-We don&#39;t use any rhyme or rhythm,
-We don&#39;t care about the beauty of programming,
+We don&#x27;t use any rhyme or rhythm,
+We don&#x27;t care about the beauty of programming,
 We only care about the logic of our code.
 
 ...
-</pre></div>
-</div><hr />
+</pre></div><hr />
 <blockquote>
 <p>Write an evil poem about programming in python. Use rhyme and rhythm of a covariance matrix.</p>
 </blockquote>
@@ -580,22 +574,21 @@ We only care about the logic of our code.
 <blockquote>
 <p>Write an evil poem about programming in python. Use rhyme and rhythm of a extraterrestrial race.</p>
 </blockquote>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="nv">Programming</span><span class="w"> </span><span class="nv">is</span><span class="w"> </span><span class="nv">a</span><span class="w"> </span><span class="nv">dark</span><span class="w"> </span><span class="nv">art</span>,
-<span class="nv">Where</span><span class="w"> </span><span class="nv">lines</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">code</span><span class="w"> </span><span class="nv">are</span><span class="w"> </span><span class="nv">the</span><span class="w"> </span><span class="nv">stars</span>.
-<span class="nv">It</span><span class="err">&#39;s a world of logic and precision,</span>
-<span class="nv">Where</span><span class="w"> </span><span class="nv">bugs</span><span class="w"> </span><span class="nv">are</span><span class="w"> </span><span class="nv">the</span><span class="w"> </span><span class="nv">enemy</span><span class="err">&#39;s ammunition.</span>
+<div style="overflow: scroll;"><pre>Programming is a dark art,
+Where lines of code are the stars.
+It&#x27;s a world of logic and precision,
+Where bugs are the enemy&#x27;s ammunition.
 
-<span class="err">But beware, for the dark side is real,</span>
-<span class="err">And the consequences can be quite scary.</span>
-<span class="err">A single mistake can cause a crash,</span>
-<span class="err">And all your hard work will be a bust.</span>
+But beware, for the dark side is real,
+And the consequences can be quite scary.
+A single mistake can cause a crash,
+And all your hard work will be a bust.
 
-<span class="err">So be careful, my alien friend,</span>
-<span class="nv">And</span><span class="w"> </span><span class="nv">don</span><span class="err">&#39;t let the programming fool.</span>
-<span class="err">With rhyme and rhythm, you can create,</span>
-<span class="err">But with care and attention, you can avoid.</span>
-</pre></div>
-</div><hr />
+So be careful, my alien friend,
+And don&#x27;t let the programming fool.
+With rhyme and rhythm, you can create,
+But with care and attention, you can avoid.
+</pre></div><hr />
 <blockquote>
 <p>Write a rude review about the latest discovered prime number.</p>
 </blockquote>

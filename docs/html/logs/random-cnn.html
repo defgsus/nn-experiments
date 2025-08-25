@@ -39,7 +39,7 @@ I've tested all (sensible) permutations of those settings for a 3-layer network 
 image classification accuracy with a linear classifier on top. There are a few architectures that
 stand out considerably!</p>
 <p>The little convolutional networks all look like this:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>nn.Sequential(
+<div style="overflow: scroll;"><pre>nn.Sequential(
     nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3|5|7|9, stride=1|2|3, dilation=1|2|3),
     nn.ReLU(),
     nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3|5|7|9, stride=1|2|3, dilation=1|2|3),
@@ -47,8 +47,7 @@ stand out considerably!</p>
     nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3|5|7|9, stride=1|2|3, dilation=1|2|3),
     nn.ReLU(),
 )
-</pre></div>
-</div><p>The <code>|</code> symbol means that <strong>one</strong> of the separated numbers is used for each parameter. So each layer
+</pre></div><p>The <code>|</code> symbol means that <strong>one</strong> of the separated numbers is used for each parameter. So each layer
 has <code>4 * 3 * 3 = 36</code> possible permutations which leads to <code>36 ^ 3 = 46,656</code> possible 3-layer networks
 to test. </p>
 <p>Testing procedure is as follows and the code is available

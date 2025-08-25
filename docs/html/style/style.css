@@ -134,6 +134,83 @@ main.index {
         font-size: 150%;
         color: #000; }
 
+.llm-chat {
+  margin-top: 1rem;
+  border: 1px solid #3c3c3c;
+  border-radius: 0.3rem;
+  padding: 0.2rem; }
+  .llm-chat .llm-chat-window {
+    cursor: pointer;
+    background: #181818;
+    color: #ddd;
+    border: 1px solid #919191;
+    border-radius: 0.5rem;
+    padding: 0.8rem 0.5rem;
+    margin-bottom: 0.3rem;
+    position: relative; }
+    .llm-chat .llm-chat-window .llm-chat-window-title {
+      position: absolute;
+      top: -0.01rem;
+      left: 0.3rem;
+      font-size: 62%;
+      color: #919191; }
+      .llm-chat .llm-chat-window .llm-chat-window-content {
+        white-space: pre-wrap; }
+        .llm-chat .llm-chat-window .llm-chat-window-content pre {
+          background: unset;
+          color: unset;
+          padding: 0;
+          white-space: pre-wrap;
+          overflow: scroll; }
+    .llm-chat .llm-chat-window.llm-chat-role-system {
+      color: #cacaca;
+      border-color: #3b3b3b; }
+      .llm-chat .llm-chat-window.llm-chat-role-available_tools {
+        background: #182a2f;
+        border-color: #314449; }
+        .llm-chat .llm-chat-window.llm-chat-role-available_tools .llm-chat-window-content {
+          font-family: monospace; }
+    .llm-chat .llm-chat-window.llm-chat-role-user {
+      background: #444; }
+      .llm-chat .llm-chat-window.llm-chat-role-user .llm-chat-window-content {
+        color: white; }
+    .llm-chat .llm-chat-window.llm-chat-role-assistant {
+      background: #394d33; }
+      .llm-chat .llm-chat-window.llm-chat-role-assistant .llm-chat-window-content {
+        color: white; }
+    .llm-chat .llm-chat-window.llm-chat-role-tool_call {
+      background: #182a2f;
+      border-color: #314449; }
+      .llm-chat .llm-chat-window.llm-chat-role-tool_call .llm-chat-window-content {
+        font-family: monospace; }
+    .llm-chat .llm-chat-window input[type="checkbox"] {
+      display: none; }
+      .llm-chat .llm-chat-window input[type="checkbox"] ~ .llm-chat-window-content {
+        display: none; }
+        .llm-chat .llm-chat-window input[type="checkbox"]:checked ~ .llm-chat-window-content {
+          display: unset; }
+  .llm-chat .llm-chat-full-transcript {
+    cursor: pointer;
+    background: #191919;
+    color: #686868;
+    padding: 0.25rem;
+    line-height: 125%; }
+    .llm-chat .llm-chat-full-transcript pre {
+      display: block;
+      overflow: scroll; }
+      .llm-chat .llm-chat-full-transcript .llm-chat-label-show {
+        font-size: 62%; }
+        .llm-chat .llm-chat-full-transcript input[type="checkbox"] {
+          display: none; }
+          .llm-chat .llm-chat-full-transcript input[type="checkbox"] ~ pre {
+            display: none; }
+            .llm-chat .llm-chat-full-transcript input[type="checkbox"]:checked ~ pre {
+              display: block; }
+              .llm-chat .llm-chat-full-transcript input[type="checkbox"] ~ .llm-chat-label-show {
+                display: unset; }
+                .llm-chat .llm-chat-full-transcript input[type="checkbox"]:checked ~ .llm-chat-label-show {
+                  display: none; }
+
 @media (prefers-color-scheme: dark) {
   html {
     background: #222;

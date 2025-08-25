@@ -623,50 +623,45 @@ the type-hints back to python &lt;3.10 <a href="https://github.com/defgsus/nn-ex
 layer for latent code size of 128, which results in a <strong>compression ratio of 24</strong>.</p>
 <p>The DC-AE model configurations i tried are:</p>
 <h4 id="dcae-03-yellow-params-81m-ratio-96">dcae-03 (yellow) params: 81M, ratio 96 <a href="#dcae-03-yellow-params-81m-ratio-96" class="heading-linker">←</a></h4>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="s">&quot;latent_channels=32 &quot;</span>
-<span class="s">&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
-<span class="s">&quot;encoder.width_list=[64,128,256,256,512,512] encoder.depth_list=[0,4,8,2,2,2] &quot;</span>
-<span class="s">&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
-<span class="s">&quot;decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,2,2] &quot;</span>
-<span class="s">&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;</span>
-</pre></div>
-</div><h4 id="dcae-04-purple-params-81m-ratio-48">dcae-04 (purple) params: 81M, ratio 48 <a href="#dcae-04-purple-params-81m-ratio-48" class="heading-linker">←</a></h4>
+<div style="overflow: scroll;"><pre>&quot;latent_channels=32 &quot;
+&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
+&quot;encoder.width_list=[64,128,256,256,512,512] encoder.depth_list=[0,4,8,2,2,2] &quot;
+&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
+&quot;decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,2,2] &quot;
+&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;
+</pre></div><h4 id="dcae-04-purple-params-81m-ratio-48">dcae-04 (purple) params: 81M, ratio 48 <a href="#dcae-04-purple-params-81m-ratio-48" class="heading-linker">←</a></h4>
 <p>lowered compression ratio (via <code>latent_channels</code>)</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="s">&quot;latent_channels=64 &quot;</span>
-<span class="s">&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
-<span class="s">&quot;encoder.width_list=[64,128,256,256,512,512] encoder.depth_list=[0,4,8,2,2,2] &quot;</span>
-<span class="s">&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
-<span class="s">&quot;decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,2,2] &quot;</span>
-<span class="s">&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;</span>
-</pre></div>
-</div><h4 id="dcae-05-green-params-110m-ratio-48">dcae-05 (green) params: 110M, ratio: 48 <a href="#dcae-05-green-params-110m-ratio-48" class="heading-linker">←</a></h4>
+<div style="overflow: scroll;"><pre>&quot;latent_channels=64 &quot;
+&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
+&quot;encoder.width_list=[64,128,256,256,512,512] encoder.depth_list=[0,4,8,2,2,2] &quot;
+&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
+&quot;decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,2,2] &quot;
+&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;
+</pre></div><h4 id="dcae-05-green-params-110m-ratio-48">dcae-05 (green) params: 110M, ratio: 48 <a href="#dcae-05-green-params-110m-ratio-48" class="heading-linker">←</a></h4>
 <p>increased width</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="s">&quot;latent_channels=64 &quot;</span>
-<span class="s">&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
-<span class="s">&quot;encoder.width_list=[128,256,256,512,512,512] encoder.depth_list=[0,4,8,2,2,2] &quot;</span>
-<span class="s">&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
-<span class="s">&quot;decoder.width_list=[128,256,256,512,512,512] decoder.depth_list=[0,5,10,2,2,2] &quot;</span>
-<span class="s">&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;</span>
-</pre></div>
-</div><h4 id="dcae-06-orange-params-142m-ratio-48">dcae-06 (orange): params: 142M, ratio: 48 <a href="#dcae-06-orange-params-142m-ratio-48" class="heading-linker">←</a></h4>
+<div style="overflow: scroll;"><pre>&quot;latent_channels=64 &quot;
+&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
+&quot;encoder.width_list=[128,256,256,512,512,512] encoder.depth_list=[0,4,8,2,2,2] &quot;
+&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
+&quot;decoder.width_list=[128,256,256,512,512,512] decoder.depth_list=[0,5,10,2,2,2] &quot;
+&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;
+</pre></div><h4 id="dcae-06-orange-params-142m-ratio-48">dcae-06 (orange): params: 142M, ratio: 48 <a href="#dcae-06-orange-params-142m-ratio-48" class="heading-linker">←</a></h4>
 <p>increased width</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="s">&quot;latent_channels=64 &quot;</span>
-<span class="s">&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
-<span class="s">&quot;encoder.width_list=[64,128,256,256,512,1024] encoder.depth_list=[0,4,8,2,2,2] &quot;</span>
-<span class="s">&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
-<span class="s">&quot;decoder.width_list=[64,128,256,256,512,1024] decoder.depth_list=[0,5,10,2,2,2] &quot;</span>
-<span class="s">&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;</span>
-</pre></div>
-</div><h4 id="dcae-07-pink-params-106m-ratio-48">dcae-07 (pink): params: 106M, ratio: 48 <a href="#dcae-07-pink-params-106m-ratio-48" class="heading-linker">←</a></h4>
+<div style="overflow: scroll;"><pre>&quot;latent_channels=64 &quot;
+&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
+&quot;encoder.width_list=[64,128,256,256,512,1024] encoder.depth_list=[0,4,8,2,2,2] &quot;
+&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
+&quot;decoder.width_list=[64,128,256,256,512,1024] decoder.depth_list=[0,5,10,2,2,2] &quot;
+&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;
+</pre></div><h4 id="dcae-07-pink-params-106m-ratio-48">dcae-07 (pink): params: 106M, ratio: 48 <a href="#dcae-07-pink-params-106m-ratio-48" class="heading-linker">←</a></h4>
 <p>Sames as dcae-04 but increased depth.</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="s">&quot;latent_channels=64 &quot;</span>
-<span class="s">&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
-<span class="s">&quot;encoder.width_list=[64,128,256,256,512,512] encoder.depth_list=[0,4,8,2,3,4] &quot;</span>
-<span class="s">&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;</span>
-<span class="s">&quot;decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,3,4] &quot;</span><span class="w">  </span>
-<span class="s">&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;</span>
-</pre></div>
-</div><p>The original model in the repo has 323M parameters which i could not train on my GPU,
+<div style="overflow: scroll;"><pre>&quot;latent_channels=64 &quot;
+&quot;encoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
+&quot;encoder.width_list=[64,128,256,256,512,512] encoder.depth_list=[0,4,8,2,3,4] &quot;
+&quot;decoder.block_type=[ResBlock,ResBlock,ResBlock,EViT_GLU,EViT_GLU,EViT_GLU] &quot;
+&quot;decoder.width_list=[64,128,256,256,512,512] decoder.depth_list=[0,5,10,2,3,4] &quot;  
+&quot;decoder.norm=[bn2d,bn2d,bn2d,trms2d,trms2d,trms2d] decoder.act=[relu,relu,relu,silu,silu,silu]&quot;
+</pre></div><p>The original model in the repo has 323M parameters which i could not train on my GPU,
 so i lowered the width of the layers to make it fit. Also increased the learning rate from
 originally <code>9.375e-7</code> to <code>9.375e-5</code>. Batch size was 64.</p>
 <p>The latent shape for 32x32 images is actually <code>[&lt;latent_channels&gt;, 1, 1]</code>. The first try with

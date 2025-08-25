@@ -57,22 +57,20 @@ For the MNIST digits dataset this yield 4x4 7x7 patches for each 28x28 image. </
 <p>Then they are flattened to 16 1-D vectors of size 49. Those vectors are moved to the batch-dimension
 (the first one) of the vector that the linear layers ought to process. For example, when passing
 in a batch-size of 64 (64 images at once):</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>input:                      (64, 1, 28, 28)
+<div style="overflow: scroll;"><pre>input:                      (64, 1, 28, 28)
 patches:                    (64, 4, 4, 1, 7, 7)
 flatten:                    (64, 16, 49)
 move to batch dimension:    (1024, 49)
-</pre></div>
-</div><p>Now these 1024 49-D vectors can be processed by a stack of linear layers (MLP). Each vector is
+</pre></div><p>Now these 1024 49-D vectors can be processed by a stack of linear layers (MLP). Each vector is
 processed by the same layer and since it's only one little patch, the linear layer can be very
 small. However, there is no information shared between those patches. Each patch is processed
 individually. To apply the &quot;mixing&quot; strategy, i first tried a 1-D convolutional layer</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>input:                      (1024, 49)
+<div style="overflow: scroll;"><pre>input:                      (1024, 49)
 reverse batch-flattening:   (64, 16, 49)
 apply Conv1d(16, 16, 1):    (64, 16, 49)
 move to batch dimension:    (1024, 49)
 process further with MLP:   (1024, 49)
-</pre></div>
-</div><p>The convolution is applied channel-wise and is able to mix information from the different patches.</p>
+</pre></div><p>The convolution is applied channel-wise and is able to mix information from the different patches.</p>
 <p>Note that the <code>49</code> is the depth of each layer and does not have to stay like this. Each linear
 layer can make it larger or smaller. In the following experiment, i resized the 49 to 64 in the
 first layer and kept it like this until the final linear layer, which resizes it to 16 which yields
@@ -81,18 +79,18 @@ a compression ratio of 49 (28x28 -&gt; 49) for the auto-encoder.</p>
 (after the activation function).</p>
 <p>The whole auto-encoder is built <em>symmetrically</em>, so the decoder stack is the reverse of the
 encoder stack. Here is one example in pytorch speak:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>MixerMLP(
+<div style="overflow: scroll;"><pre>MixerMLP(
   (patchify): Patchify(patch_size=7)
   (encoder): ModuleList(
     (0): MLPLayer(
       residual=False
       (module): Linear(in_features=49, out_features=64, bias=True)
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (1): MLPLayer(
       residual=True
       (module): Linear(in_features=64, out_features=64, bias=True)
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (2): MLPMixerLayer(
       residual=True
@@ -101,7 +99,7 @@ encoder stack. Here is one example in pytorch speak:</p>
     (3): MLPLayer(
       residual=True
       (module): Linear(in_features=64, out_features=64, bias=True)
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (4): MLPMixerLayer(
       residual=True
@@ -110,7 +108,7 @@ encoder stack. Here is one example in pytorch speak:</p>
     (5): MLPLayer(
       residual=False
       (module): Linear(in_features=64, out_features=16, bias=True)
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (6): MLPMixerLayer(
       residual=True
@@ -129,32 +127,32 @@ encoder stack. Here is one example in pytorch speak:</p>
     (1): MLPMixerLayer(
       residual=True
       (module): Conv1d(16, 16, kernel_size=(1,), stride=(1,))
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (2): MLPLayer(
       residual=False
       (module): Linear(in_features=16, out_features=64, bias=True)
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (3): MLPMixerLayer(
       residual=True
       (module): Conv1d(16, 16, kernel_size=(1,), stride=(1,))
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (4): MLPLayer(
       residual=True
       (module): Linear(in_features=64, out_features=64, bias=True)
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (5): MLPMixerLayer(
       residual=True
       (module): Conv1d(16, 16, kernel_size=(1,), stride=(1,))
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (6): MLPLayer(
       residual=True
       (module): Linear(in_features=64, out_features=64, bias=True)
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (7): MLPLayer(
       residual=False
@@ -163,8 +161,7 @@ encoder stack. Here is one example in pytorch speak:</p>
   )
   (unpatchify): Unpatchify(patch_size=7)
 )
-</pre></div>
-</div><p>Note that, in the encoder, layer 5 compresses each patch from 64 to 16 dimensions, then there
+</pre></div><p>Note that, in the encoder, layer 5 compresses each patch from 64 to 16 dimensions, then there
 is another mixing layer, and layer 7 processes all 16 patches at once and outputs
 a final 16-dim vector (256 -&gt; 16).</p>
 <p>As with other MLPs, this auto-encoder is input-size-dependent. The network is constructed
@@ -298,15 +295,14 @@ is mean-squared error. Scheduler is cosine-annealing with warmup.</p>
 But it's not so bad either for such a small network.</p>
 <h3 id="linear-layer-as-mixer">Linear layer as mixer <a href="#linear-layer-as-mixer" class="heading-linker">←</a></h3>
 <p>So let's try a linear layer for mixing between patches.</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>input:                      (1024, 49)
+<div style="overflow: scroll;"><pre>input:                      (1024, 49)
 reverse batch-flattening:   (64, 16, 49)
 flatten 2nd dimension:      (64, 784)
 apply Linear(784, 784):     (64, 784)
 unflatten 2nd dimension:    (64, 16, 49)
 and move to batch dim:      (1024, 49)
 process further with MLP:   (1024, 49)
-</pre></div>
-</div><p>Obviously, the linear mixing layer increases the network size considerably. The benefit is, that
+</pre></div><p>Obviously, the linear mixing layer increases the network size considerably. The benefit is, that
 each pixel in each patch can be compared/processed against each other.</p>
 <p>I guess, this is kind of what the MLP-Mixer paper suggests, only i can not confidentially read
 <a href="https://github.com/google-research/vision_transformer/blob/main/vit_jax/models_mixer.py" target="_blank">their jax code</a>
@@ -450,7 +446,7 @@ to confirm.</p>
 <p>Performance is much better but the number of model parameters is much larger as well.</p>
 <h3 id="comparison-with-baseline-cnn">Comparison with baseline CNN <a href="#comparison-with-baseline-cnn" class="heading-linker">←</a></h3>
 <p>How well does it perform against a baseline CNN with a final linear layer?</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>EncoderDecoder(
+<div style="overflow: scroll;"><pre>EncoderDecoder(
   (encoder): EncoderConv2d(
     (convolution): Conv2dBlock(
       (layers): Sequential(
@@ -478,8 +474,7 @@ to confirm.</p>
     )
   )
 )
-</pre></div>
-</div><p><code>ks</code> is kernel size</p>
+</pre></div><p><code>ks</code> is kernel size</p>
 <div style="overflow: scroll;"><table>
 <thead>
 <tr>
@@ -543,7 +538,7 @@ correlate nearby pixels of individual patches. Since it's a 1-D convolution that
 only correlate pixels left and right and not the ones above and below. </p>
 <p>Secondly we might use 2 convolutions. One that mixes the patches and one that mixes the pixels.
 Following the example above, that would look like:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>input:                      (1024, 49)
+<div style="overflow: scroll;"><pre>input:                      (1024, 49)
 reverse batch-flattening:   (64, 16, 49)
 apply Conv1d(16, 16):       (64, 16, 49)
 transpose vector:           (64, 49, 16)
@@ -551,24 +546,22 @@ apply Conv1d(49, 49):       (64, 49, 16)
 transpose vector:           (64, 16, 49)
 move to batch dimension:    (1024, 49)
 process further with MLP:   (1024, 49)
-</pre></div>
-</div><p>And thirdly, we <em>could</em> actually do a 2-dimensional convolutional mixing: </p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>input:                      (1024, 49)
+</pre></div><p>And thirdly, we <em>could</em> actually do a 2-dimensional convolutional mixing: </p>
+<div style="overflow: scroll;"><pre>input:                      (1024, 49)
 reverse batch-flattening:   (64, 16, 49)
 restore 2-D patches:        (64, 16, 7, 7) 
 apply Conv2d(16, 16):       (64, 16, 7, 7)
 flatten the patches:        (64, 16, 49)
 move to batch dimension:    (1024, 49)
 process further with MLP:   (1024, 49)
-</pre></div>
-</div><p>However, since the final dimension is not actually fixed at 49 (7x7) but can be anything, it does
+</pre></div><p>However, since the final dimension is not actually fixed at 49 (7x7) but can be anything, it does
 not really represent the 2-dimensional patch content but rather just the computational breadth of
 the MLP stack at each layer. We might still treat it as <em>spatial</em>, and let the network figure
 out some good way to use it.</p>
 <p>Fourthly, if that is even a word, we can combine the two-consecutive-convolution method with the
 2-D convolution which puts another constraint on the number of patches resulting from the input
 image: It also has to be a square number. It gets a bit complicated then:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>input:                      (1024, 49)
+<div style="overflow: scroll;"><pre>input:                      (1024, 49)
 reverse batch-flattening:   (64, 16, 49)
 restore 2-D patches:        (64, 16, 7, 7) 
 apply Conv2d(16, 16, 1):    (64, 16, 7, 7)
@@ -580,8 +573,7 @@ flatten &quot;breadth&quot; dim:      (64, 49, 16)
 transpose dimensions:       (64, 16, 49)
 move to batch dimension:    (1024, 49)
 process further with MLP:   (1024, 49)
-</pre></div>
-</div><p>Okay, lets test all the methods with different kernel sizes from 1 to 13. The padding of the
+</pre></div><p>Okay, lets test all the methods with different kernel sizes from 1 to 13. The padding of the
 convolution is adjusted (<code>(ks - 1) // 2</code>) so the convolutions always produce the same output size.</p>
 <p>In below table <code>mixtype</code> is either:</p>
 <ul>
@@ -1171,50 +1163,49 @@ then the validation loss beats every previous model run on the MNIST digits data
 closer at both phenomena.</p>
 <p>The increased parameter count can be blamed to mostly a single layer.
 Look at the encoder of the patch-size-8 model:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>(patchify): Patchify(patch_size=8)
+<div style="overflow: scroll;"><pre>(patchify): Patchify(patch_size=8)
 (encoder): ModuleList(
     (0): MLPLayer(
       residual=False
       (module): Linear(in_features=192, out_features=64, bias=True)
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (1): MLPLayer(
       residual=True
       (module): Linear(in_features=64, out_features=64, bias=True)
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (2): MLPMixerLayer(
       residual=True
       (module): Conv1d(144, 144, kernel_size=(3,), stride=(1,), padding=(1,))
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (3): MLPLayer(
       residual=True
       (module): Linear(in_features=64, out_features=64, bias=True)
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (4): MLPMixerLayer(
       residual=True
       (module): Conv1d(144, 144, kernel_size=(3,), stride=(1,), padding=(1,))
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (5): MLPLayer(
       residual=False
       (module): Linear(in_features=64, out_features=564, bias=True)
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (6): MLPMixerLayer(
       residual=True
       (module): Conv1d(144, 144, kernel_size=(3,), stride=(1,), padding=(1,))
-      (act): GELU(approximate=&#39;none&#39;)
+      (act): GELU(approximate=&#x27;none&#x27;)
     )
     (7): MLPLayer(
       residual=False
       (module): Linear(in_features=81216, out_features=564, bias=True)
     )
 )
-</pre></div>
-</div><p>The 96x96 images are sliced into 144 8x8 patches.
+</pre></div><p>The 96x96 images are sliced into 144 8x8 patches.
 The convolutions require <code>144 * 144 * 3 * 3 = 186,624</code> parameters each (+ the bias) so their
 size is <em>acceptable</em>.</p>
 <p>The fifth layer expands to hidden dimension of 564 and the final mixdown-to-latent-code

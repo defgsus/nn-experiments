@@ -42,13 +42,12 @@ quantizing 32 bit floats to 4 bit. With a context length of 2048.</p>
 <p>A context length of 4 million tokens is f***ing amazing. That's all of
 <a href="https://en.wikipedia.org/wiki/Das_Kapital" target="_blank">Karl Marx's Kapital</a> and more!
 Theoretically, you can process a prompt like</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>Following is a famous three-volume essay about why capitalism sucks.
+<div style="overflow: scroll;"><pre>Following is a famous three-volume essay about why capitalism sucks.
 
-&lt;insert &#39;Das Kapital&#39;&gt;
+&lt;insert &#x27;Das Kapital&#x27;&gt;
 
 Now, write a representative Python program:
-</pre></div>
-</div><p>On the other hand, what`s the training process for these 4M-context-length models? Did they really
+</pre></div><p>On the other hand, what`s the training process for these 4M-context-length models? Did they really
 feed <strong>a lot</strong> of 4M token snippets into the model? And if so, what were those snippets?</p>
 <p>I mean, i just read the <a href="https://arxiv.org/abs/2412.08905" target="_blank">Phi-4 Tech Report</a> today about
 Microsoft's newest <em>small</em> language model which is fed by <strong>a lot</strong> of synthetic data. Basically,

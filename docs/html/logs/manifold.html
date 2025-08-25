@@ -56,7 +56,7 @@
         <h1 id="quotimplicit-neural-representationquot">&quot;implicit neural representation&quot; <a href="#quotimplicit-neural-representationquot" class="heading-linker">←</a></h1>
 <p>which mainly means, calculate: <code>position + code -&gt; color</code>.</p>
 <p>After preliminary experiments, running this setup:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>DalleManifoldAutoencoder(
+<div style="overflow: scroll;"><pre>DalleManifoldAutoencoder(
     shape=(1, 32, 32), 
     vocab_size=128, n_hid=64, n_blk_per_group=1, act_fn=nn.GELU, space_to_depth=True, 
     decoder_n_blk=4, decoder_n_layer=2, decoder_n_hid=64,
@@ -66,21 +66,18 @@ decoder params: 42,497
 batch_size: 64
 steps: 1M
 learnrate: .0003 AdamW, CosineAnnealingLR 
-</pre></div>
-</div><p>on only 300 (randomly h&amp;v-flipped) images of the RPG-tiles dataset (/scripts/datasets.py).</p>
+</pre></div><p>on only 300 (randomly h&amp;v-flipped) images of the RPG-tiles dataset (/scripts/datasets.py).</p>
 <p>Find the code at <a href="https://github.com/defgsus/nn-experiments/blob/master/scripts/train_autoencoder.py" target="_blank">scripts.train_autoencoder</a>.</p>
 <p>The encoder is a small version of the DALL-E VQ-VAE model.
 The decoder is basically a function of</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span><span class="n">encoding</span><span class="p">,</span><span class="w"> </span><span class="n">pixel</span><span class="o">-</span><span class="n">position</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">pixel</span><span class="o">-</span><span class="n">color</span>
-</pre></div>
-</div><p>which i call &quot;manifold&quot; for now until i stumble across a better name.
+<div style="overflow: scroll;"><pre>encoding, pixel-position -&gt; pixel-color
+</pre></div><p>which i call &quot;manifold&quot; for now until i stumble across a better name.
 It's made of X equal blocks of Y fully connected layers with
 batch-normalization and residual skip connections per block.</p>
 <p>Besides l2 reconstruction loss there is an extra constraint on the distribution of the encoding:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>loss_batch_std = (.5 - feature_batch.std(0).mean()).abs()
+<div style="overflow: scroll;"><pre>loss_batch_std = (.5 - feature_batch.std(0).mean()).abs()
 loss_batch_mean = (0. - feature_batch.mean()).abs()
-</pre></div>
-</div><p>The three runs add these losses with factor 0.1 (green), 0.001 (orange) and 0.0 (gray).</p>
+</pre></div><p>The three runs add these losses with factor 0.1 (green), 0.001 (orange) and 0.0 (gray).</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint.png" alt="loss plots" /></div></p>
 <p>Below are reproduced (right) samples of the orange model.</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-001-repros.png" alt="repros" /></div></p>
@@ -88,52 +85,47 @@ loss_batch_mean = (0. - feature_batch.mean()).abs()
 <div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-001-repros-64.png" alt="repros" /></div></p>
 <h3 id="upgrade-decoder">upgrade decoder <a href="#upgrade-decoder" class="heading-linker">←</a></h3>
 <p>fixed the std/mean loss factor to 0.0001 and increased number of decoder blocks:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649
-</pre></div>
-</div><p>plots in x = steps (top) and relative time (bottom):
+<div style="overflow: scroll;"><pre>decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649
+</pre></div><p>plots in x = steps (top) and relative time (bottom):
 <div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-plus-b8.png" alt="loss plots" /></div></p>
 <p>The reproductions from the training set look good enough.
 other tiles can hardly be reproduced:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-0001-b8-l2-repros.png" alt="repros" /></div>
 <div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-0001-b8-l2-repros-64.png" alt="repros" /></div></p>
 <p>Some (very short) tests with different block/layer settings:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>(cyan)    decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649 
+<div style="overflow: scroll;"><pre>(cyan)    decoder_n_blk=8,  decoder_n_layer=2, decoder_n_hid=128, params: 283,649 
 (yellow)  decoder_n_blk=8,  decoder_n_layer=4, decoder_n_hid=128, params: 547,841
 (brown)   decoder_n_blk=16, decoder_n_layer=1, decoder_n_hid=128, params: 285,697 
 (magenta) decoder_n_blk=16, decoder_n_layer=2, decoder_n_hid=128, params: 549,889
-</pre></div>
-</div><p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-block-level-compare.png" alt="repros" /></div></p>
+</pre></div><p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-std-constraint-block-level-compare.png" alt="repros" /></div></p>
 <h3 id="back-to-quotrealquot-dataset">back to &quot;real&quot; dataset <a href="#back-to-quotrealquot-dataset" class="heading-linker">←</a></h3>
 <p>The current dataset of choice for my autoencoders is a mixture of all
 the rpg tiles (about 8k, h&amp;v-flipped) and kali-set fractal patches
 (about 50k, at 128x128 randomly cropped to 32x32).</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-fullds-b8.png" alt="loss plots" /></div></p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>(light green) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=300, params: 1,490,401
+<div style="overflow: scroll;"><pre>(light green) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=300, params: 1,490,401
 (dark green)  decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=128, params: 283,649
 (cyan)        sames as dark green but on above small dataset
-</pre></div>
-</div><p>The light-green model above was quite unsuccessful in terms of
+</pre></div><p>The light-green model above was quite unsuccessful in terms of
 image quality. It still uses 0.1 factor for std/mean-loss.
 Dark green model uses factor 0.0001 and performs a little better
 even though having less parameters. It's not getting close
 to the desirable baseline of the 300-tile dataset (cyan), though.</p>
 <p>Increasing the number of hidden cells in the decoder to 256 does
 not seem to be enough for acceptable quality:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>(yellow) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=256, params: 1,091,585
-</pre></div>
-</div><p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-fullds-b8-h256.png" alt="loss plots" /></div></p>
+<div style="overflow: scroll;"><pre>(yellow) decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=256, params: 1,091,585
+</pre></div><p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-fullds-b8-h256.png" alt="loss plots" /></div></p>
 <p>It might get below 0.004 reconstruction loss with another 10 hours
 but i'm targeting &lt; 0.001. Stopping it.</p>
 <h3 id="2023-11-10-back-to-small-dataset">2023-11-10: back to small dataset <a href="#2023-11-10-back-to-small-dataset" class="heading-linker">←</a></h3>
 <p>Changing residual logic to either add (like previous) or concat features:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=64, 
+<div style="overflow: scroll;"><pre>decoder_n_blk=8, decoder_n_layer=2, decoder_n_hid=64, 
     decoder_concat_residual=[True, False] * 4,
     params: 3,502,785
 
 which leads to hidden sizes per block:
     64, 128, 128, 256, 256, 512, 512, 1024
-</pre></div>
-</div><p>With no apparent difference within the first 80k steps (cyan)
+</pre></div><p>With no apparent difference within the first 80k steps (cyan)
 compared to the previous small-dataset-experiments.
 Unless it's runtime, which is just terrible:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-smallds-b8l2-64-resTF.png" alt="loss plots" /></div></p>
@@ -261,7 +253,7 @@ All larger versions performed worse:</p>
 <p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-rpg-size.png" alt="loss plots" /></div></p>
 <p>And, actually, it turns out that a simple 3-layer CNN (ks=3, channels=[16, 24, 32])
 as the encoder performs much better than the resnet:</p>
-<div style="overflow: scroll;"><div class="highlight"><pre><span></span>(encoder): EncoderConv2d(
+<div style="overflow: scroll;"><pre>(encoder): EncoderConv2d(
     (convolution): Conv2dBlock(
       (_act_fn): ReLU()
       (layers): Sequential(
@@ -275,8 +267,7 @@ as the encoder performs much better than the resnet:</p>
     )
     (linear): Linear(in_features=21632, out_features=102, bias=True)
   )
-</pre></div>
-</div><p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-rpg-simple-cnn.png" alt="loss plots" /></div></p>
+</pre></div><p><div style="overflow: scroll;"><img src="../../logs/img/ae-manifold-rpg-simple-cnn.png" alt="loss plots" /></div></p>
 <h2 id="back-to-simple-cnn-encoder">back to simple CNN encoder <a href="#back-to-simple-cnn-encoder" class="heading-linker">←</a></h2>
 <p>Everything i tried in the last couple of days is performing
 worse, e.g. changing the pos-embedding frequencies,
