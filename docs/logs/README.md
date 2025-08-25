@@ -9,6 +9,13 @@ You can also view these files online at [defgsus.github.io/nn-experiments/](http
 
 
 ## Index
+- [2025-08-23-evaluating-granite-llm.md](2025-08-23-evaluating-granite-llm.md)
+  - [:arrow_forward:](2025-08-23-evaluating-granite-llm.md#tool-usage-with-the-granite-language-model) Tool usage with the granite language model
+      - [:arrow_forward:](2025-08-23-evaluating-granite-llm.md#unrestricted-access-to-python) Unrestricted access to python
+      - [:arrow_forward:](2025-08-23-evaluating-granite-llm.md#running-code-directly-without-the-tool-detour) Running code directly without the tool detour
+      - [:arrow_forward:](2025-08-23-evaluating-granite-llm.md#some-typical-toy-examples-to-showcase-llm-prowess) Some typical toy examples, to showcase LLM prowess
+    - [:arrow_forward:](2025-08-23-evaluating-granite-llm.md#multi-turn-tool-calls) Multi-turn tool calls
+  - [:arrow_forward:](2025-08-23-evaluating-granite-llm.md#conclusion) Conclusion
 - [2025-06-17-random-cnn.md](2025-06-17-random-cnn.md)
   - [:arrow_forward:](2025-06-17-random-cnn.md#exploring-classification-accuracy-of-convolutional-neural-network-architectures-with-random-weights) Exploring classification accuracy of convolutional neural network architectures with random weights
     - [:arrow_forward:](2025-06-17-random-cnn.md#conclusion) Conclusion
