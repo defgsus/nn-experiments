@@ -12,13 +12,15 @@ because it is
 - deployable on my laptop
 - and well prepared for tool usage, document retrieval and customizable agentic tasks, 
   according to the technical report ([github.com/ibm-granite](https://github.com/ibm-granite/granite-3.0-language-models/blob/main/paper.pdf))
-- and i think i need to actually try to work with these things to justify my occasional rantings
+- and i think i need to actually try to work with these things, once in a while, to justify my occasional rantings
 
-*Deployable on my laptop* means i can **run it with 4-bit weight quantization**, 
+*Deployable on my laptop* means i can **load it with 4-bit weight quantization**, 
 which requires only about 3GB of VRAM for moderate prompt lengths. 
 
 In this article, i'm just looking at the promoted tool-use capability of the model. No document retrieval,
 no bias checking, no super complicated tasks.
+
+---
 
 The plain chat text is supposed to be separated into several role blocks. 
 To ask the model something in chat-style, it looks like this:
@@ -29,7 +31,7 @@ To ask the model something in chat-style, it looks like this:
 <|start_of_role|>assistant<|end_of_role|>
 ```
 
-And then the AI-auto-complete extrapolates how this text could continue.
+And then the AI-auto-complete extrapolates ([arxiv:2501.10361](https://arxiv.org/pdf/2501.10361)) how this text could continue.
 
 When checking the [documentation](https://www.ibm.com/granite/docs/) for tool usage it does tell you
 to download LMStudio and setup a watson AI account and similar things but there is no example of how 
@@ -81,7 +83,7 @@ So, that is our latest, most top-notch, revolutionary technology, that changes h
 - The *assistant* 'calls' the tool, 'hallucinates' a return value and then messes up the json syntax with an 
   unmatched `}`.
 
-*I think this is ready to push to our users!*
+*I think this is ready to push to our customers!*
 
 Okay, never mind, it might have some issues because of the 4-bit quantization. That's not how IBM 
 advised me to deploy it in my enterprise company. However, it seems like this *'stochastic json'* 
@@ -930,8 +932,8 @@ You are Granite, developed by IBM. You are a helpful assistant with access to th
 <|start_of_role|>assistant<|end_of_role|>The temperature has dropped to 10 degrees celsius. It's lower than the desired 20 degrees celsius. I will switch on the heating.<|end_of_text|>
 ```
 
-Okay ... It's very nice how the intermediate temperature values are extrapolated from the text. 
-Those numbers sound pretty reasonable. Your fired, janitor!
+Okay ... It's very nice how the intermediate temperature values are extrapolated from the text. Or should
+we say interpolated? Those numbers sound pretty reasonable. Your fired, janitor!
 
 Wait, why not let the model generate the user queries as well? We just swap the `user` and `assistant`
 role at each round:
@@ -1002,14 +1004,16 @@ You are Granite, developed by IBM. You are a helpful assistant with access to th
 <|tool_call|>[{"name": "check_temperature", "arguments": {}, "return": 20}}<|end_of_text|>
 ```
 
-This transcript gives my html renderer some trouble. Check the "Show plain text" to see it's messiness. 
+This transcript gave my html renderer some trouble. Check the "Show plain text" to see it's **messiness**. 
 The model generated many empty user queries and once in a while issued a `tool_call` which is 
 **not** executed by my tool framework because it's inside the user role. However, the model sees 
 the **20 degrees return value** (which it generated itself), and the situation is under control!
 
+(To be fair, i'm not entirely sure if my stochastic tool parser handled it all correctly, and i don't actually care.)
+
 Note that, from the instruction fine-tuning set, the model is trained such that it generates user queries like:
 *Thank you for your vigilance. No further action is required at this time.* Nobody is AI-chatting like this -
-except AIs.
+except language models. 
 
 If something's not right we just twiddle the system prompt:
 
@@ -1083,31 +1087,38 @@ If something's not right we just twiddle the system prompt:
 
 Cosy 30 degrees, as requested! And such delightful conversation: *I'm just a user. You're the janitor. Keep it real!*
 
-Well, i am just kidding, this method is complete shit and not meaningfully raising productivity in my company.
-Guess we need to buy more GPUs, then!
+Well, i am just kidding, this method is complete shit, the janitor is not *'genuinely funny'* and 
+this is not meaningfully raising productivity in my company. Guess we need to buy more GPUs!
 
 # Conclusion
 
 - **Is it fun to use this model?**
-  - Yes, if you use it for recreational purposes.
+  - Yes, to an extent, if you use it for recreational purposes.
   - Probably not so much, if you are ['reverse centaur-ed'](https://pluralistic.net/tag/reverse-centaurs/) into using it.
 - **Does it raise productivity?**
   - Likely in the same amount as an intern or research assistant, who you do not trust and who's 
-    contributions need to be validated every time.
+    contributions need to be validated every time. If there is a contribution, at all.
 - **How well does the 'tooling' work?**
   - I really doubt that *stochastic json* is a good protocol for that.
   - The fact that the model generates text **as if** there was a result from a tool, even if there wasn't,
-    is **not** enterprise-ready functionality.
+    is **not** enterprise-ready functionality. Or, let's put it in other words: it is certainly not suitable
+    for small businesses we care about. 
+    In enterprise land, it [does not matter](https://ludic.mataroa.blog/blog/brainwash-an-executive-today/).  
 - **Is this test comprehensive?**
-  - No, i potentially degraded the model performance by running it in 4-bit weight quantization.
-  - On the other hand, yes, because if one says: 
-    - Oh, 16-bit weights are more accurate, or
-    - Oh, you need to use the 8 billion parameters version, or
-    - Oh, better user a trillion parameter model from OpenAI/Anthropic/Google/Meta/XAI
+  - No, of course not! I did not setup a watson account, i did not download LMStudio, i loaded the model with 4-bit weight quantization.
+  - And someone might even argue: 
+    - 16-bit weights are *much more* accurate!
+    - You need to use the 8 billion parameters model!
+    - You really need to use a trillion parameter model from OpenÄI/Anthropiss/Googi/Mate/EXAI
     
-  then i have to reply that 
-  unreliability is inherent to these text extrapolators. You can find mentions of, e.g., messed-up
-  json formatting or *hallucinated* content in many research papers, regardless of model size. 
-  Current workaround (at least in research papers, mainly for the purpose of evaluation): 
-  Generate many responses with random sampling and take the average of the ones that worked. 
+  However, 
+  unreliability seems to be totally inherent to these text extrapolators. 
+  You can find mentions of, e.g., messed-up json formatting in many research papers, regardless of model size. 
+  The workaround in those papers, for the plain purpose of evaluation: 
+  Generate many responses with random sampling and take the average of the ones that worked, 
+  and report a success metric. 
+
+So, here you go, i report usefulness, measured in 
+"so useful that i actually will fix the tool parsing bugs and implement a daemon running on my laptop."
+I give it 17%
 

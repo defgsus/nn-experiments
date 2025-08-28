@@ -58,18 +58,19 @@ because it is</p>
 <li>deployable on my laptop</li>
 <li>and well prepared for tool usage, document retrieval and customizable agentic tasks,
 according to the technical report (<a href="https://github.com/ibm-granite/granite-3.0-language-models/blob/main/paper.pdf" target="_blank">github.com/ibm-granite</a>)</li>
-<li>and i think i need to actually try to work with these things to justify my occasional rantings</li>
+<li>and i think i need to actually try to work with these things, once in a while, to justify my occasional rantings</li>
 </ul>
-<p><em>Deployable on my laptop</em> means i can <strong>run it with 4-bit weight quantization</strong>,
+<p><em>Deployable on my laptop</em> means i can <strong>load it with 4-bit weight quantization</strong>,
 which requires only about 3GB of VRAM for moderate prompt lengths. </p>
 <p>In this article, i'm just looking at the promoted tool-use capability of the model. No document retrieval,
 no bias checking, no super complicated tasks.</p>
+<hr />
 <p>The plain chat text is supposed to be separated into several role blocks.
 To ask the model something in chat-style, it looks like this:</p>
 <div style="overflow: scroll;"><pre>&lt;|start_of_role|&gt;system&lt;|end_of_role|&gt;You are Granite, developed by IBM ...&lt;|end_of_text|&gt;
 &lt;|start_of_role|&gt;user&lt;|end_of_role|&gt;Wha&#x27;s up?&lt;|end_of_text|&gt;
 &lt;|start_of_role|&gt;assistant&lt;|end_of_role|&gt;
-</pre></div><p>And then the AI-auto-complete extrapolates how this text could continue.</p>
+</pre></div><p>And then the AI-auto-complete extrapolates (<a href="https://arxiv.org/pdf/2501.10361" target="_blank">arxiv:2501.10361</a>) how this text could continue.</p>
 <p>When checking the <a href="https://www.ibm.com/granite/docs/" target="_blank">documentation</a> for tool usage it does tell you
 to download LMStudio and setup a watson AI account and similar things but there is no example of how
 the whole tool calling round-trip is supposed to look like in plain text. The shipped chat template,
@@ -170,7 +171,7 @@ it's json, it will be parsed by a language model, not a json parser.</li>
 <li>The <em>assistant</em> 'calls' the tool, 'hallucinates' a return value and then messes up the json syntax with an
 unmatched <code>}</code>.</li>
 </ul>
-<p><em>I think this is ready to push to our users!</em></p>
+<p><em>I think this is ready to push to our customers!</em></p>
 <p>Okay, never mind, it might have some issues because of the 4-bit quantization. That's not how IBM
 advised me to deploy it in my enterprise company. However, it seems like this <em>'stochastic json'</em>
 is the interface to the tool method above. So i'm parsing the model output and heuristically check
@@ -2662,8 +2663,8 @@ You are Granite, developed by IBM. You are a helpful assistant with access to th
 </pre>
                 </label>
             </div>
-        <p>Okay ... It's very nice how the intermediate temperature values are extrapolated from the text.
-Those numbers sound pretty reasonable. Your fired, janitor!</p>
+        <p>Okay ... It's very nice how the intermediate temperature values are extrapolated from the text. Or should
+we say interpolated? Those numbers sound pretty reasonable. Your fired, janitor!</p>
 <p>Wait, why not let the model generate the user queries as well? We just swap the <code>user</code> and <code>assistant</code>
 role at each round:</p>
 
@@ -2977,13 +2978,14 @@ You are Granite, developed by IBM. You are a helpful assistant with access to th
 </pre>
                 </label>
             </div>
-        <p>This transcript gives my html renderer some trouble. Check the &quot;Show plain text&quot; to see it's messiness.
+        <p>This transcript gave my html renderer some trouble. Check the &quot;Show plain text&quot; to see it's <strong>messiness</strong>.
 The model generated many empty user queries and once in a while issued a <code>tool_call</code> which is
 <strong>not</strong> executed by my tool framework because it's inside the user role. However, the model sees
 the <strong>20 degrees return value</strong> (which it generated itself), and the situation is under control!</p>
+<p>(To be fair, i'm not entirely sure if my stochastic tool parser handled it all correctly, and i don't actually care.)</p>
 <p>Note that, from the instruction fine-tuning set, the model is trained such that it generates user queries like:
 <em>Thank you for your vigilance. No further action is required at this time.</em> Nobody is AI-chatting like this -
-except AIs.</p>
+except language models. </p>
 <p>If something's not right we just twiddle the system prompt:</p>
 
             <div class="llm-chat">
@@ -3324,14 +3326,14 @@ except AIs.</p>
                 </label>
             </div>
         <p>Cosy 30 degrees, as requested! And such delightful conversation: <em>I'm just a user. You're the janitor. Keep it real!</em></p>
-<p>Well, i am just kidding, this method is complete shit and not meaningfully raising productivity in my company.
-Guess we need to buy more GPUs, then!</p>
+<p>Well, i am just kidding, this method is complete shit, the janitor is not <em>'genuinely funny'</em> and
+this is not meaningfully raising productivity in my company. Guess we need to buy more GPUs!</p>
 <h1 id="conclusion">Conclusion <a href="#conclusion" class="heading-linker">←</a></h1>
 <ul>
 <li>
 <p><strong>Is it fun to use this model?</strong></p>
 <ul>
-<li>Yes, if you use it for recreational purposes.</li>
+<li>Yes, to an extent, if you use it for recreational purposes.</li>
 <li>Probably not so much, if you are <a href="https://pluralistic.net/tag/reverse-centaurs/" target="_blank">'reverse centaur-ed'</a> into using it.</li>
 </ul>
 </li>
@@ -3339,7 +3341,7 @@ Guess we need to buy more GPUs, then!</p>
 <p><strong>Does it raise productivity?</strong></p>
 <ul>
 <li>Likely in the same amount as an intern or research assistant, who you do not trust and who's
-contributions need to be validated every time.</li>
+contributions need to be validated every time. If there is a contribution, at all.</li>
 </ul>
 </li>
 <li>
@@ -3347,28 +3349,34 @@ contributions need to be validated every time.</li>
 <ul>
 <li>I really doubt that <em>stochastic json</em> is a good protocol for that.</li>
 <li>The fact that the model generates text <strong>as if</strong> there was a result from a tool, even if there wasn't,
-is <strong>not</strong> enterprise-ready functionality.</li>
+is <strong>not</strong> enterprise-ready functionality. Or, let's put it in other words: it is certainly not suitable
+for small businesses we care about.
+In enterprise land, it <a href="https://ludic.mataroa.blog/blog/brainwash-an-executive-today/" target="_blank">does not matter</a>.  </li>
 </ul>
 </li>
 <li>
 <p><strong>Is this test comprehensive?</strong></p>
 <ul>
-<li>No, i potentially degraded the model performance by running it in 4-bit weight quantization.</li>
+<li>No, of course not! I did not setup a watson account, i did not download LMStudio, i loaded the model with 4-bit weight quantization.</li>
 <li>
-On the other hand, yes, because if one says: <ul>
-<li>Oh, 16-bit weights are more accurate, or</li>
-<li>Oh, you need to use the 8 billion parameters version, or</li>
-<li>Oh, better user a trillion parameter model from OpenAI/Anthropic/Google/Meta/XAI</li>
+And someone might even argue: <ul>
+<li>16-bit weights are <em>much more</em> accurate!</li>
+<li>You need to use the 8 billion parameters model!</li>
+<li>You really need to use a trillion parameter model from OpenÄI/Anthropiss/Googi/Mate/EXAI</li>
 </ul>
 </li>
 </ul>
-<p>then i have to reply that
-unreliability is inherent to these text extrapolators. You can find mentions of, e.g., messed-up
-json formatting or <em>hallucinated</em> content in many research papers, regardless of model size.
-Current workaround (at least in research papers, mainly for the purpose of evaluation):
-Generate many responses with random sampling and take the average of the ones that worked.</p>
+<p>However,
+unreliability seems to be totally inherent to these text extrapolators.
+You can find mentions of, e.g., messed-up json formatting in many research papers, regardless of model size.
+The workaround in those papers, for the plain purpose of evaluation:
+Generate many responses with random sampling and take the average of the ones that worked,
+and report a success metric. </p>
 </li>
 </ul>
+<p>So, here you go, i report usefulness, measured in
+&quot;so useful that i actually will fix the tool parsing bugs and implement a daemon running on my laptop.&quot;
+I give it 17%</p>
 
 
         <!-- article footer -->
