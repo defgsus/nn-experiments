@@ -505,7 +505,7 @@ class EditWidget(TextWidget):
 
     def header_string(self) -> str:
         return (
-            f"{super().header_string()} cur={self._cursor_pos}"
+            f"{super().header_string()} cur={self._cursor_pos} tpos={self.get_cursor_text_offset()}"
         )
 
     def on_key(self, key: str) -> bool:
@@ -528,10 +528,56 @@ class EditWidget(TextWidget):
             # self.app.log("ofs", ofs)
             self.move_cursor(-1)
             self.set_text(self.text[:ofs] + self.text[ofs + 1:])
+        elif key == "kLFT5": # CTRL+LEFT
+            self.set_cursor_text_offset(
+                self._find_next_text_cursor_breakpoint(self.get_cursor_text_offset(), -1)
+            )
+        elif key == "kRIT5": # CTRL+RIGHT
+            self.set_cursor_text_offset(
+                self._find_next_text_cursor_breakpoint(self.get_cursor_text_offset(), +1)
+            )
+        elif key == "KEY_HOME":
+            if self._cursor_pos[1] != 0:
+                self.set_cursor_pos(self._cursor_pos[0], 0)
+            else:
+                self.set_cursor_pos(0, 0)
+        elif key == "KEY_END":
+            if self.wrapped_text_lines and 0 <= self._cursor_pos[0] < len(self.wrapped_text_lines):
+                wl = self.wrapped_text_lines[self._cursor_pos[0]][-1]
+                if self._cursor_pos[1] < len(wl):
+                    self.set_cursor_pos(self._cursor_pos[0], len(wl))
+                else:
+                    self.set_cursor_pos(len(self.wrapped_text_lines) - 1, len(self.wrapped_text_lines[-1][-1]))
         else:
-            self.app.log("KEY", repr(key))
-            self.insert_text_at_cursor(key)
+            if len(key) > 1:
+                self.app.log("KEY", repr(key))
+                return False
+            else:
+                self.insert_text_at_cursor(key)
+
         return True
+
+    def _find_next_text_cursor_breakpoint(self, ofs: int, direction: int = 1):
+        def _get_type(ch: str):
+            if ch.isspace():
+                return "space"
+            if ch.isalpha():
+                return "alpha"
+            if ch.isnumeric():
+                return "num"
+            if ch in "-_:;,.!?":
+                return "break"
+            return "any"
+
+        if 0 <= ofs < len(self.text):
+            start_type = _get_type(self.text[ofs])
+            while 0 <= ofs < len(self.text):
+                ofs += direction
+                if 0 <= ofs < len(self.text):
+                    cur_type = _get_type(self.text[ofs])
+                    if cur_type != start_type:
+                        break
+        return max(0, min(len(self.text), ofs))
 
     def insert_text_at_cursor(self, text: str):
         wrapped_lines = self.wrapped_text_lines
@@ -588,7 +634,7 @@ class EditWidget(TextWidget):
         if self._cursor_pos[0] >= len(self.wrapped_text_lines):
             return len(self.text)
         org_y, off_x = self.wrapped_text_lines[self._cursor_pos[0]][:2]
-        return self.text_lines[org_y][0] + off_x + self._cursor_pos[1] - 1
+        return self.text_lines[org_y][0] + off_x + self._cursor_pos[1]
 
     def set_cursor_text_offset(self, offset: int):
         o = 0

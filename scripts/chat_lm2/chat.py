@@ -1,6 +1,10 @@
+import datetime
+import json
+import os
 import threading
 import time
-from typing import List, Dict, Optional
+from pathlib import Path
+from typing import List, Dict, Optional, Union
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig, BitsAndBytesConfig
@@ -13,9 +17,11 @@ class ChatModel:
             self,
             model_name: str = "ibm-granite/granite-3.3-2b-instruct",
             device: str = "cuda",
+            save_log_path: Optional[Union[str, Path]] = None,
     ):
         self.model_name = model_name
         self.device = device
+        self.save_log_path = Path(save_log_path) if save_log_path is not None else None
         self._model = None
         self._tokenizer = None
 
@@ -75,7 +81,8 @@ class ChatModel:
                     while self.output:
                         yield self.output.pop(0)
 
-                    time.sleep(1/20)
+                    yield ""
+                    time.sleep(1/5)
 
                 yield from self.output
 
@@ -88,11 +95,32 @@ class ChatModel:
 
         thread = threading.Thread(target=_generate)
         thread.start()
+        assistent_output = []
         try:
-            yield from streamer
+            for text in streamer:
+                assistent_output.append(text)
+                yield text
         finally:
             if thread.is_alive():
                 thread.join()
+
+        if self.save_log_path:
+            os.makedirs(self.save_log_path, exist_ok=True)
+            (
+                self.save_log_path
+                / datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d-%H-%M-%S.json")
+            ).write_text(json.dumps({
+                "model": self.model_name,
+                "config": {
+                    "do_sample": config.do_sample,
+                    "temperature": config.temperature,
+                    "max_new_tokens": config.max_new_tokens,
+                },
+                "blocks": [
+                    *blocks,
+                    {"role": "assistant", "content": "".join(assistent_output)},
+                ]
+            }, indent=2))
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ from websockets.sync.client import connect, Connection
 
 # logging.basicConfig()
 
+
 class Client:
 
     def __init__(
@@ -46,7 +47,7 @@ class Client:
     def add_block(self, role: str, content: str = ""):
         self._blocks.append({"role": role, "content": content})
 
-    def generate(self) -> Generator[str, None, None]:
+    def generate(self) -> Generator[dict, None, None]:
         self.send_command(
             "generate",
             blocks=self._blocks,
@@ -64,6 +65,7 @@ class Client:
                         self._blocks[-1]["content"] += text
                     if m_data.get("end"):
                         break
+
         except Exception as e:
             yield f"\n{type(e).__name__}: {e}"
 
@@ -73,12 +75,16 @@ def main():
     try:
         client.add_block("user", "Whus up?")
 
-        gen = iter(client.generate())
-        while True:
-            print(next(gen))
-        return
+        for i, msg in enumerate(client.generate()):
+            print(msg, end="")
+            if i == 5:
+                print("\nBREAKING with new query")
+
+        client.add_block("user", "Sorry to interrupt!")
+
         for msg in client.generate():
-            print(msg)
+            print(msg, end="")
+
     except KeyboardInterrupt:
         pass
     finally:
