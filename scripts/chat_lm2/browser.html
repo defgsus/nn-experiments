@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<title>CHAT LM2</title>
+<script type="text/javascript">
+
+    const websocket_url = "ws://__WEBSOCKET_URL__";
+    let first_contact = true;
+    let chat_window = null;
+    let chat_window_owner = null;
+    let ws = null;
+    let current_status = {};
+    let chat_blocks = [];
+    let some_id_counter = 0;
+
+    function strip_comments(text) {
+        return text.split("\n").filter(line => !line.startsWith("//")).join("\n");
+    }
+
+    function post(who, text) {
+        // console.log({who, text});
+        if (!chat_window || chat_window_owner !== who)
+            new_chat_window(who);
+
+        const is_at_bottom = (window.innerHeight + Math.round(window.scrollY)) >= document.body.offsetHeight / 1.05;
+
+        chat_window.querySelector(".chat-window-content").innerText += text;
+        chat_window_owner = who;
+
+        if (is_at_bottom) {
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+    }
+
+    function new_chat_window(who) {
+        const elem_id = `chat-window-${some_id_counter++}`;
+        const html = (
+            `<div id="${elem_id}" class="chat-window chat-window-${who}">
+                <div class="chat-window-title">${who}:</div>
+                <div class="chat-window-content"></div>
+            </div>`
+        );
+        document.querySelector(".prompt").insertAdjacentHTML("beforebegin", html);
+        chat_window = document.querySelector(`#${elem_id}`);
+    }
+
+    function update_status(status) {
+        current_status = {...current_status, ...status};
+        // console.log(current_status, status)
+        let text = JSON.stringify(current_status, null, 2);
+        document.querySelector(".status").innerText = text.slice(2, -1);
+    }
+
+    function hook_websocket() {
+        ws = new WebSocket(websocket_url);
+        ws.onopen = (event) => {
+            update_status({"connected": true});
+            ws.send(JSON.stringify({command: "hello"}));
+        };
+        ws.onclose = (event) => {
+            update_status({"connected": false});
+            setTimeout(hook_websocket, 1000);
+        };
+        ws.onerror = (event) => {
+        };
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === "completion")
+                if (data.data.text) {
+                    post("ai", data.data.text);
+                    if (!chat_blocks || chat_blocks[chat_blocks.length - 1].role !== "assistant") {
+                        chat_blocks.push({role: "assistant", content: ""});
+                    }
+                    chat_blocks[chat_blocks.length - 1].content += data.data.text;
+                }
+            if (data.type === "info")
+                update_status(data.data);
+            if (data.type === "error")
+                post("error", data.data.message);
+            if (data.type === "last_prompts" && first_contact) {
+                first_contact = false;
+                for (const role of Object.keys(data.data)) {
+                    const text = data.data[role];
+                    if (role === "system")
+                        document.querySelector(".system-prompt-input").value = text;
+                    if (role === "user")
+                        document.querySelector(".prompt-input").value = text;
+                }
+            }
+        };
+    }
+
+    function user_post(text) {
+        if (!chat_blocks.length) {
+            const $input = document.querySelector(".system-prompt-input");
+            if ($input.value) {
+                chat_blocks.push({role: "system", content: $input.value});
+                post("system", $input.value);
+            }
+        }
+        post("user", text);
+        chat_blocks.push({role: "user", content: text});
+        ws.send(JSON.stringify({
+            command: "generate",
+            kwargs: {
+                blocks: chat_blocks,
+                temperature: parseFloat(document.querySelector("#input-temperature").value),
+                //do_sample: false,
+            }
+        }));
+    }
+
+    function reset_chat(no_reset_message) {
+        if (!no_reset_message) {
+            post("message", "RESET");
+        }
+        chat_blocks = [];
+    }
+
+    function hook_prompt_input() {
+        const $input = document.querySelector(".prompt-input");
+        $input.addEventListener("keypress", (event) => {
+            let handled = false;
+            if (event.code === "Enter" || event.code === "Return") {
+                if (event.shiftKey) {
+                    ws.send(JSON.stringify({"command": "stop"}));
+                    reset_chat();
+                    handled = true;
+                }
+                if (event.shiftKey || event.ctrlKey) {
+                    user_post($input.value);
+                    window.scrollTo(0, document.body.scrollHeight);
+                    handled = true;
+                }
+            }
+            if (handled) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        });
+        window.addEventListener("keydown", (event) => {
+            if (event.code === "KeyB" && event.ctrlKey) {
+                ws.send(JSON.stringify({"command": "stop"}));
+                event.stopPropagation();
+                event.preventDefault();
+            }
+        });
+    }
+    function hook_system_prompt_input() {
+        const $input = document.querySelector(".system-prompt-input");
+        $input.addEventListener("keypress", (event) => {
+            if ((event.code === "Enter" || event.code === "Return") && event.ctrlKey) {
+                reset_chat();
+            }
+        });
+    }
+
+    function hook() {
+        hook_prompt_input();
+        hook_system_prompt_input();
+        hook_websocket();
+        reset_chat(true);
+        document.querySelector(".prompt-input").focus();
+    }
+
+    window.addEventListener("DOMContentLoaded", hook);
+
+</script>
+<style type="text/css">
+    body, textarea {
+        background: #272727;
+        color: #e8e8e8;
+        font-family: monospace;
+        font-size: 1rem;
+        padding: 0;
+        margin: 0;
+    }
+    .page-content {
+        position: relative;
+        width: 100%;
+    }
+    .content {
+        position: relative;
+        max-width: 70%;
+        margin: 0 auto;
+    }
+    .status-container {
+        position: sticky;
+        z-index: 100;
+        top: 0;
+    }
+    .status {
+        white-space: pre-wrap;
+        background: rgba(0, 0, 0, 0.5);
+        font-size: 50%;
+        padding: .2rem;
+        right: 0;
+        position: absolute;
+        display: inline-block;
+        color: #a0a0a0;
+        padding-right: 1rem;
+    }
+    .prompt .info {
+        color: #aaa;
+        font-size: 75%;
+    }
+    .prompt .prompt-input, .prompt .system-prompt-input {
+        width: 100%;
+        border: 1px solid #616161;
+        border-radius: .5rem;
+        padding: .5rem;
+    }
+    .prompt .system-prompt-input {
+        color: #9d9d9d;
+        font-size: 90%;
+    }
+    .prompt .prompt-input:focus-visible, .prompt .system-prompt-input:focus-visible {
+        border-width: 2px;
+        outline: none;
+    }
+    .prompt .system-prompt-input {
+        background: #1c1c1c;
+    }
+    .chat-window {
+        border-radius: .5rem;
+        margin-bottom: .5rem;
+    }
+    .chat-window .chat-window-title {
+        font-size: 62%;
+        margin-left: .5rem;
+        color: rgba(255, 255, 255, .4);
+    }
+    .chat-window .chat-window-content {
+        padding: .5rem;
+        padding-top: .2rem;
+        white-space: pre-wrap;
+    }
+    .chat-window-ai {
+        background: #3a3a50;
+    }
+    .chat-window-user {
+        background: #365036;
+    }
+    .chat-window-system {
+        background: #1c1c1c;
+        color: #9d9d9d;
+        font-size: 90%;
+    }
+    .chat-window-message {
+        background: #4c4c4c;
+        border: none;
+        color: #000;
+        padding: 0.2rem .5rem;
+        font-size: 90%;
+    }
+    .chat-window-error {
+        background: #400;
+        border-color: #633;
+        font-size: 80%;
+    }
+</style>
+<body>
+
+<div class="page-content">
+    <div class="status-container"><div class="status"></div></div>
+    <div class="content">
+        <div class="prompt">
+            <div class="info">prompt: Ctrl+Enter to submit, Shift+Enter to reset and submit, Ctrl+B to stop generation</div>
+            <textarea class="prompt-input" spellcheck="true" rows="5"></textarea>
+            <div>
+                <input id="input-temperature" type="number" value="1."/>
+            </div>
+            <div class="info">system prompt: Ctrl+Enter to reset chat and apply</div>
+            <textarea class="system-prompt-input" spellcheck="true" rows="3"></textarea>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
