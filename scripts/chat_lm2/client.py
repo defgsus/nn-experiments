@@ -47,11 +47,18 @@ class Client:
     def add_block(self, role: str, content: str = ""):
         self._blocks.append({"role": role, "content": content})
 
-    def generate(self) -> Generator[dict, None, None]:
+    def generate(
+            self,
+            temperature: float = 1.,
+            do_sample: Optional[bool] = None,
+            save_path: Optional[str] = None,
+    ) -> Generator[dict, None, None]:
         self.send_command(
             "generate",
             blocks=self._blocks,
-            temperature=1.01,
+            temperature=temperature,
+            do_sample=do_sample,
+            save_path=save_path,
         )
         try:
             for message in self.websocket:

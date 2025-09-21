@@ -18,12 +18,10 @@ class ChatModel:
             model_name: str = "ibm-granite/granite-3.3-2b-instruct",
             device: str = "cuda",
             bits: Optional[int] = None,
-            log_path: Optional[Union[str, Path]] = None,
     ):
         self.model_name = model_name
         self.device = device
         self.bits = bits
-        self.log_path = Path(log_path) if log_path is not None else None
         self._model = None
         self._tokenizer = None
         self.tokens_per_second: float = 0.
@@ -50,24 +48,22 @@ class ChatModel:
             ).eval()
         return self._model
 
-    def last_stored_chat_log(self) -> Optional[dict]:
-        if self.log_path:
-            filenames = sorted(self.log_path.glob("*.json"))
-            if filenames:
-                return json.loads(filenames[-1].read_text())
+    def last_stored_chat_log(self, log_path: Union[str, Path]) -> Optional[dict]:
+        filenames = sorted(Path(log_path).glob("*.json"))
+        if filenames:
+            return json.loads(filenames[-1].read_text())
 
-    def last_stored_prompts(self) -> Optional[dict]:
-        if self.log_path:
-            filenames = sorted(self.log_path.glob("*.json"), reverse=True)
-            last_prompts = {}
-            for fn in filenames:
-                log = json.loads(fn.read_text())
-                for block in log["blocks"]:
-                    if block["role"] in ("system", "user") and block["content"]:
-                        last_prompts[block["role"]] = block["content"]
-                if len(last_prompts) == 2:
-                    break
-            return last_prompts
+    def last_stored_prompts(self, log_path: Union[str, Path]) -> Optional[dict]:
+        filenames = sorted(Path(log_path).glob("*.json"), reverse=True)
+        last_prompts = {}
+        for fn in filenames:
+            log = json.loads(fn.read_text())
+            for block in log["blocks"]:
+                if block["role"] in ("system", "user") and block["content"]:
+                    last_prompts[block["role"]] = block["content"]
+            if len(last_prompts) == 2:
+                break
+        return last_prompts
 
     def generate(
             self,
@@ -75,7 +71,11 @@ class ChatModel:
             temperature: float = 1.,
             do_sample: Optional[bool] = None,
             max_new_tokens: int = 10_000,
+            log_path: Optional[Union[str, Path]] = None,
     ):
+        if log_path:
+            log_path = Path(log_path)
+
         chat = self.tokenizer.apply_chat_template(blocks, tokenize=False, add_generation_prompt=True)
         input_tokens = self.tokenizer(chat, return_tensors="pt").to(self.device)
         config = GenerationConfig.from_model_config(self.model.config)
@@ -144,11 +144,10 @@ class ChatModel:
                 streamer.running = False
                 thread.join()
 
-            if self.log_path:
-                os.makedirs(self.log_path, exist_ok=True)
+            if log_path:
+                os.makedirs(log_path, exist_ok=True)
                 (
-                    self.log_path
-                    / datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d-%H-%M-%S.json")
+                    log_path / datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d-%H-%M-%S.json")
                 ).write_text(json.dumps({
                     "model": self.model_name,
                     "bits": self.bits,

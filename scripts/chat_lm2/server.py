@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import json
 import time
+import traceback
 from pathlib import Path
 from typing import List, Optional, Literal
 
@@ -15,10 +16,6 @@ LOG_PATH = Path(__file__).resolve().parent / "logs"
 def parse_args() -> dict:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-s", "--save-output", type=str, default=None,
-        help=f"Store all chats in {LOG_PATH / '<save>'}",
-    )
-    parser.add_argument(
         "-b", "--bits", type=int, default=None,
         help=f"Weight quantization",
     )
@@ -31,12 +28,10 @@ class Server:
 
     def __init__(
             self,
-            save_output: Optional[str] = None,
             bits: Optional[int] = None,
     ):
         self.sessions = {}
         self.model = ChatModel(
-            log_path=None if save_output is None else (LOG_PATH / save_output),
             bits=bits,
         )
 
@@ -89,11 +84,16 @@ class Server:
                 if func := getattr(self, f"command_{command}", None):
                    await func(websocket=websocket, **(message.get("kwargs") or {}))
         except Exception as e:
+            traceback.print_exc()
             await self.send(websocket, self.construct_message("error", {"message": f"{type(e).__name__}: {e}"}))
 
     async def command_hello(self, websocket: ServerConnection):#
         await self.send(websocket, self.construct_message("info", self.info()))
-        await self.send(websocket, self.construct_message("last_prompts", self.model.last_stored_prompts()))
+
+    async def command_load_last(self, websocket: ServerConnection, path: str):#
+        await self.send(websocket, self.construct_message("last_prompts", self.model.last_stored_prompts(
+            LOG_PATH / path
+        )))
 
     async def command_generate(
             self,
@@ -101,6 +101,7 @@ class Server:
             blocks: List[dict],
             temperature: float = 1.,
             do_sample: Optional[bool] = None,
+            save_path: Optional[str] = None,
     ):
         last_info_time = 0
 
@@ -110,6 +111,7 @@ class Server:
                     blocks=blocks,
                     temperature=temperature,
                     do_sample=do_sample,
+                    log_path=None if save_path is None else (LOG_PATH / save_path)
             ):
                 cur_time = time.time()
                 if cur_time - last_info_time >= 1.:

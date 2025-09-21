@@ -106,6 +106,7 @@
                 blocks: chat_blocks,
                 temperature: parseFloat(document.querySelector("#input-temperature").value),
                 //do_sample: false,
+                save_path: document.querySelector("#input-save-path").value || undefined,
             }
         }));
     }
@@ -115,6 +116,13 @@
             post("message", "RESET");
         }
         chat_blocks = [];
+    }
+
+    function load_last_prompts() {
+        ws.send(JSON.stringify({
+            command: "load_last",
+            kwargs: {path: document.querySelector("#input-save-path").value},
+        }));
     }
 
     function hook_prompt_input() {
@@ -175,6 +183,18 @@
         padding: 0;
         margin: 0;
     }
+    input {
+        background: #444;
+        color: #fff;
+    }
+    input#input-save-path { width: 100%; }
+    .flex-row {
+        display: flex;
+        flex-direction: row;
+    }
+    .flex-grow {
+        flex-grow: 10;
+    }
     .page-content {
         position: relative;
         width: 100%;
@@ -203,6 +223,7 @@
     .prompt .info {
         color: #aaa;
         font-size: 75%;
+        padding-top: .2rem;
     }
     .prompt .prompt-input, .prompt .system-prompt-input {
         width: 100%;
@@ -267,11 +288,18 @@
         <div class="prompt">
             <div class="info">prompt: Ctrl+Enter to submit, Shift+Enter to reset and submit, Ctrl+B to stop generation</div>
             <textarea class="prompt-input" spellcheck="true" rows="5"></textarea>
-            <div>
-                <input id="input-temperature" type="number" value="1."/>
+            <div class="flex-row">
+                <div><label for="input-temperature">temperature:</label></div>
+                <div><input id="input-temperature" type="number" value="1."/></div>
+                <div class="flex-grow"></div>
             </div>
             <div class="info">system prompt: Ctrl+Enter to reset chat and apply</div>
             <textarea class="system-prompt-input" spellcheck="true" rows="3"></textarea>
+            <div class="flex-row">
+                <div><input type="text" id="input-save-path" placeholder="relative path for saving output, e.g. 'user01'"/></div>
+                <div class="flex-grow"></div>
+                <div><button onclick="load_last_prompts()">load prompts</button></div>
+            </div>
         </div>
     </div>
 </div>
