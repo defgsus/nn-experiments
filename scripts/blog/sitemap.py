@@ -67,7 +67,10 @@ class Page:
 
     @property
     def js_files(self) -> List[str]:
-        return ["main.js"]
+        files = ["main.js"]
+        if self.document.placeholder_map and any("plotly.js" in p for p in self.document.placeholder_map.values()):
+            files += ["plotly.js"]
+        return files
 
     @property
     def template(self) -> str:
@@ -137,6 +140,20 @@ class JavascriptFile:
         return self._content
 
 
+class PlotlyJavascriptFile(JavascriptFile):
+
+    def __init__(self):
+        super().__init__(Path("plotly.js"))
+
+    def content(self):
+        import inspect
+        import plotly
+        if self._content is None:
+            file = Path(plotly.__file__).parent / "package_data/plotly.min.js"
+            self._content = file.read_text()
+        return self._content
+
+
 class Sitemap:
 
     def __init__(
@@ -158,6 +175,7 @@ class Sitemap:
         }
         self.js_files_mapping = {
             "main.js": JavascriptFile(self.template_path / "main.js"),
+            "plotly.js": PlotlyJavascriptFile(),
         }
 
         self._doc_page_mapping: Optional[Dict[str, Page]] = None
@@ -229,6 +247,14 @@ class Sitemap:
         if page.document.placeholder_map:
             for placeholder, content in page.document.placeholder_map.items():
                 html = html.replace(placeholder, content)
+
+        try:
+            idx = html.index('<script type="text/javascript">/**\n* plotly.js')
+            plotly_string = html[idx:]
+            plotly_string = plotly_string[:plotly_string.index("</script>") + 9]
+            html = html.replace(plotly_string, "<!-- PLOTLY -->")
+        except ValueError:
+            pass
 
         return html
 
