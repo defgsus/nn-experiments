@@ -10,6 +10,8 @@ import yaml
 from marko import block, inline
 from marko.ext.gfm import GFM
 
+from .nbooks import notebook_to_markdown
+
 
 class Document:
 
@@ -26,6 +28,8 @@ class Document:
             anchors: List[Anchor],
             links: List[str],
             frontmatter: Optional[dict] = None,
+            asset_map: Optional[Dict[str, bytes]] = None,
+            placeholder_map: Optional[Dict[str, str]] = None,  # replace in final html
     ):
         from .__main__ import DOCS_PATH
         self.filename = filename
@@ -35,6 +39,8 @@ class Document:
         self.anchors = anchors
         self.links = links
         self.frontmatter = frontmatter or dict()
+        self.asset_map = asset_map
+        self.placeholder_map = placeholder_map
         self._link_mapping: Optional[Dict[str, str]] = None
         self.assets = [
             link for link in links
@@ -46,7 +52,14 @@ class Document:
 
     @classmethod
     def from_file(cls, filename: Path):
-        frontmatter, text = split_front_matter_and_markup(filename.read_text())
+        if filename.suffix.lower() == ".md":
+            markdown, asset_map, placeholder_map = filename.read_text(), None, None
+        elif filename.suffix.lower() == ".ipynb":
+            markdown, asset_map, placeholder_map = notebook_to_markdown(filename)
+        else:
+            raise NotImplementedError(f"Filetype unhandled: {filename}")
+
+        frontmatter, text = split_front_matter_and_markup(markdown)
 
         parser = marko.Markdown(
             extensions=['gfm', 'codehilite']
@@ -64,6 +77,8 @@ class Document:
             anchors=renderer.anchors,
             links=renderer.links,
             frontmatter=frontmatter,
+            asset_map=asset_map,
+            placeholder_map=placeholder_map,
         )
 
     @property
@@ -87,9 +102,10 @@ class Document:
                     filename = self.filename
 
                 if not filename.exists():
-                    raise AssertionError(
-                        f"Document {self} links to non-existent file '{link}' (resolved: '{filename}')"
-                    )
+                    if not self.asset_map or link not in self.asset_map:
+                        raise AssertionError(
+                            f"Document {self} links to non-existent file '{link}' (resolved: '{filename}')"
+                        )
 
                 if "../src/" in str(filename):
                     short = str(filename).split("../src/", 1)[-1]

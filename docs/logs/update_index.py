@@ -16,6 +16,7 @@ def update_readme(do_write: bool = True):
     fp = StringIO()
     for file in sorted(LOG_PATH.rglob("*.md"), reverse=True):
         if file.name != "README.md":
+            print("X", file)
             documents.append((file, render_file_index(file, fp)))
 
     # check for wrong links

@@ -19,9 +19,12 @@ def main(
 ):
     documents: List[Document] = []
 
-    for file in sorted(DOCS_PATH.rglob("*.md")):
-        if file.name != "README.md" and not "DRAFT" in file.name:
-            documents.append(Document.from_file(file))
+    for file in sorted(DOCS_PATH.rglob("*.*")):
+        if file.suffix.lower() in (".md", ".ipynb"):
+            if not ".ipynb_checkpoints" in str(file):
+                if file.name[:4].isnumeric():
+                    if file.name != "README.md" and not "DRAFT" in file.name:
+                        documents.append(Document.from_file(file))
 
     sitemap = Sitemap(documents)
     sitemap.create_index_page()
@@ -30,13 +33,12 @@ def main(
         sitemap.dump()
 
     elif command == "test":
-        update_readme(do_write=False)
+        # update_readme(do_write=False)
         sitemap.render_all(write=False)
-        print()
-        print("Call with 'render' to actually render files")
+        print("\nCall with 'render' to actually render the files\n")
 
     elif command == "render":
-        update_readme()
+        # update_readme()
         sitemap.render_all(write=True)
 
     else:

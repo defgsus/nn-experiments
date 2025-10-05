@@ -226,6 +226,10 @@ class Sitemap:
         }
         html = render_template(self.base_templates[page.template], context)
 
+        if page.document.placeholder_map:
+            for placeholder, content in page.document.placeholder_map.items():
+                html = html.replace(placeholder, content)
+
         return html
 
     def create_index_page(self):
@@ -307,14 +311,20 @@ class Sitemap:
     def render_all(self, write: bool):
         from .__main__ import DOCS_PATH
 
-        def _write_file(filename: Union[str, Path], content):
+        def _write_file(filename: Union[str, Path], content: Union[str, bytes]):
             filename = DOCS_PATH / str(filename).lstrip("/")
             exists = filename.exists()
-            unchanged = exists and filename.read_text() == content
+            unchanged = exists and (
+                (isinstance(content, bytes) and filename.read_bytes() == content)
+                or filename.read_text() == content
+            )
 
             if not unchanged and write:
                 os.makedirs(filename.parent, exist_ok=True)
-                filename.write_text(content)
+                if isinstance(content, bytes):
+                    filename.write_bytes(content)
+                else:
+                    filename.write_text(content)
 
             if not exists:
                 tag = "CREATED  "
@@ -328,6 +338,13 @@ class Sitemap:
 
         for page in self.iter_pages():
             _write_file(page.url, self.render_page(page))
+            if write and page.document.asset_map:
+                asset_path = page.document.filename.parent / f"{page.document.filename.with_suffix('').name}_files"
+                if asset_path.exists():
+                    shutil.rmtree(asset_path)
+                for link, data in page.document.asset_map.items():
+                    asset_filename = page.document.filename.parent / link
+                    _write_file(asset_filename.relative_to(DOCS_PATH), data)
 
         for style in self.stylesheets_mapping.values():
             _write_file(style.target_filename, style.content())
