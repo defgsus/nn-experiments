@@ -52,6 +52,7 @@ class Client:
             temperature: float = 1.,
             do_sample: Optional[bool] = None,
             save_path: Optional[str] = None,
+            stop_at_newline: bool = False,
     ) -> Generator[dict, None, None]:
         self.send_command(
             "generate",
@@ -59,6 +60,7 @@ class Client:
             temperature=temperature,
             do_sample=do_sample,
             save_path=save_path,
+            stop_at_newline=stop_at_newline,
         )
         try:
             for message in self.websocket:

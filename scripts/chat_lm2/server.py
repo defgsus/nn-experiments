@@ -102,6 +102,7 @@ class Server:
             temperature: float = 1.,
             do_sample: Optional[bool] = None,
             save_path: Optional[str] = None,
+            stop_at_newline: bool = False,
     ):
         last_info_time = 0
 
@@ -120,6 +121,9 @@ class Server:
 
                 if text:
                     await self.send(websocket, self.construct_message("completion", {"text": text}))
+
+                    if stop_at_newline and "\n" in text:
+                        break
 
                 # break on new messages
                 try:

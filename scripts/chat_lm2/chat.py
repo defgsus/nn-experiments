@@ -6,9 +6,15 @@ import time
 from pathlib import Path
 from typing import List, Dict, Optional, Union
 
+os.environ["HF_HUB_DISABLE_XET"] = "1"
+os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+os.environ["DO_NOT_TRACK"] = "1"
+os.environ["DISABLE_TELEMETRY"] = "1"
+
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig, BitsAndBytesConfig
 from transformers.utils import get_json_schema
+
 
 
 class ChatModel:
@@ -29,7 +35,7 @@ class ChatModel:
     @property
     def tokenizer(self):
         if self._tokenizer is None:
-            self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+            self._tokenizer = AutoTokenizer.from_pretrained(self.model_name, local_files_only=True,)
         return self._tokenizer
 
     @property
@@ -44,6 +50,7 @@ class ChatModel:
             self._model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
                 device_map=self.device,
+                local_files_only=True,
                 **kwargs
             ).eval()
         return self._model
@@ -166,5 +173,3 @@ class ChatModel:
 if __name__ == "__main__":
     for msg in ChatModel(bits=4).generate([{"role": "user", "content": "Whas up?"}]):
         print("X", repr(msg))
-
-
