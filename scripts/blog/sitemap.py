@@ -15,6 +15,7 @@ import scss
 from .document import Document
 
 TAGS = {
+    "ml": "machine learning",
     "lm": "language model",
     "ae": "autoencoder",
     "pow": "papers of the week",
@@ -68,8 +69,11 @@ class Page:
     @property
     def js_files(self) -> List[str]:
         files = ["main.js"]
+        # if there is a plotly script waiting in one of the held-back notebook outputs
         if self.document.placeholder_map and any("plotly.js" in p for p in self.document.placeholder_map.values()):
             files += ["plotly.js"]
+        if js_files := self.document.frontmatter.get("js"):
+            files.extend(js_files)
         return files
 
     @property
@@ -146,7 +150,6 @@ class PlotlyJavascriptFile(JavascriptFile):
         super().__init__(Path("plotly.js"))
 
     def content(self):
-        import inspect
         import plotly
         if self._content is None:
             file = Path(plotly.__file__).parent / "package_data/plotly.min.js"
@@ -200,8 +203,11 @@ class Sitemap:
 
     def _markdown_filename_to_page_url(self, filename: Path):
         name = filename.with_suffix(".html").name
-        if re.match(r"^\d\d\d\d-\d\d-\d\d-", name):
+        if m := re.match(r"^(\d\d\d\d)-(\d\d)-(\d\d)-", name):
+            m = m.groups()
             name = name[11:]
+            if int(m[0]) >= 2025 and int(m[1]) >= 9:
+                name = Path(m[1]) / m[2] / name
         return Path(f"html") / filename.parent / name
 
     def all_tags(self) -> List[Tag]:
@@ -232,7 +238,7 @@ class Sitemap:
                     for f in page.scss_files
                 ],
                 "js": [
-                    page.relative_url(self.get_javascript(f).target_filename)
+                    page.relative_url(self.get_javascript(f, page.document.filename.parent).target_filename)
                     for f in page.js_files
                 ],
             },
@@ -240,6 +246,7 @@ class Sitemap:
             "pages": list(reversed(pages)),
             "previous_page": pages[page_index - 1] if page_index > 0 else None,
             "next_page": pages[page_index + 1] if page_index < len(pages) - 1 else None,
+            "frontmatter": page.document.frontmatter,
             **(page.document.frontmatter.get("context") or {}),
         }
         html = render_template(self.base_templates[page.template], context)
@@ -331,7 +338,12 @@ class Sitemap:
     def get_stylesheet(self, scss_file: str) -> StyleSheet:
         return self.stylesheets_mapping[scss_file]
 
-    def get_javascript(self, js_file: str) -> StyleSheet:
+    def get_javascript(self, js_file: str, relative_to: Optional[Path] = None) -> StyleSheet:
+        if js_file not in self.js_files_mapping:
+            if relative_to:
+                full_path = relative_to / js_file
+                js_file = full_path.relative_to(self.docs_path)
+                self.js_files_mapping[js_file] = JavascriptFile(full_path)
         return self.js_files_mapping[js_file]
 
     def render_all(self, write: bool):

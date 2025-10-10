@@ -104,6 +104,11 @@ h1, h2, h3, h4 {
   font-size: 75%;
 }
 
+.align-left { text-align: left; }
+.align-right { text-align: right; }
+.align-center { text-align: center; }
+.mono { font-family: monospace; }
+
 table {
   // font-family: monospace;
   // border: 1px solid $color-border;

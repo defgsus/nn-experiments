@@ -257,3 +257,6 @@ class HTMLTeaserRenderer(GFMRendererMixin, marko.HTMLRenderer):
 
     def render_thematic_break(self, element: block.ThematicBreak) -> str:
         return ""
+
+    def render_html_block(self, element):
+        return ""

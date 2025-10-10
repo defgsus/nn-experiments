@@ -7,11 +7,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
             // remove commas from integers
             v = v.replaceAll(",", "");
+
             // remove the typical endings
             if (v.endsWith("/s"))
                 v = v.slice(0, v.length - 2);
             else if (v.endsWith(" sec"))
                 v = v.slice(0, v.length - 4);
+            else if (v.indexOf(" (") > 0)
+                v = v.split("(")[0];
             return v;
         }
 
@@ -59,7 +62,7 @@ document.addEventListener("DOMContentLoaded", function() {
             })
         });
     }
-
+    window.nnblog_hook_tables = hookTables;
     hookTables();
 
     function hookIndexTagSelect() {
