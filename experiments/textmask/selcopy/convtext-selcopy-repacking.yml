@@ -1,0 +1,82 @@
+experiment_name: textmask/convtext-selcopy-repack_${matrix_slug}
+
+matrix:
+  trial:
+    - 1
+    - 2
+  bs: [64]
+  opt: ["AdamW"]
+  lr: [.0005]
+  nitem:
+    - 10
+  area:
+    - 40
+    - 80
+  repack:
+    #- 0
+    - 1
+  l:
+    - 6
+  ch:
+    #- 32
+    - 64
+    #- 128
+#    - 256
+#    - 512
+  ks:
+    - 7
+#    - 13
+  dil:
+    #- 1
+    - [1, 2, 3, 4, 5, 1]
+  $filter: (isinstance(${dil}, int) or len(${dil}) == ${l})
+  act:
+    - "gelu"
+  embdiag:
+    - True
+  norm:
+    #- "None"
+    - "'bn1d'"
+
+
+trainer: experiments.textmask.texttrainer.TextMaskTrainer
+mask_is_arg: 1
+
+train_set: |
+  train_set, validation_set = TextSelectiveCopyingIterableDataset.create_train_and_validation_set(
+    num_items=${nitem},
+    area=${area},
+    train_count=100_000,
+    validation_count=10_000,
+    validation_seed=23,
+    with_masked=True,
+  )
+  train_set
+
+validation_set: |
+  validation_set.freeze()
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+max_inputs: 4_000_000
+#num_epochs_between_validations: 1
+num_inputs_between_validations: 100_000
+
+
+model: |
+  from experiments.textmask.textmodel import ConvTextModel
+  
+  ConvTextModel(
+      vocab_size=256,
+      num_layers=${l},
+      num_channels=${ch},
+      kernel_size=${ks},
+      dilation=${dil},
+      activation="${act}",
+      norm=${norm},
+      repacking=bool(${repack}),
+      #pos_embedding=bool({posemb}),
+      diagonal_embedding=${embdiag},
+  )

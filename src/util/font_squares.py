@@ -9,6 +9,7 @@ import PIL.Image, PIL.ImageFont, PIL.ImageDraw
 class FontSquares:
     def __init__(
             self,
+            # get the font from http://viznut.fi/unscii/
             file: Union[str, Path] = Path("~/.local/share/fonts/unscii-8.ttf").expanduser(),
             shape: Tuple[int, int, int] = (1, 8, 8),
             center: bool = False,

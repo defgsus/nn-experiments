@@ -72,7 +72,7 @@ class DiagonalEmbedding(nn.Module):
         return (
             f"diagonal={self._diagonal}, symmetric={self._symmetric}"
             f", fft={self._fft}, fft_concat_dim={self._fft_concat_dim}"
-            f"channels_in={self._channels_in}, channels_out={self._channels_out}"
+            f", channels_in={self._channels_in}, channels_out={self._channels_out}"
             f",\ndiagonal={self._diagonal}, symmetric={self._symmetric}"
             f",\nfft={self._fft}, fft_concat_dim={self._fft_concat_dim}"
         )

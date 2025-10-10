@@ -31,6 +31,20 @@ class FFTConvLayer(nn.Module):
         return y
 
 
+class StateRepacker(nn.Module):
+    def __init__(
+            self,
+    ):
+        super().__init__()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        org_shape = x.shape
+        #x = torch.concat([x[..., 2:], x[..., :2]], axis=-1)
+        x = x.transpose(-1, -2)
+        #x = torch.concat([x[..., 1:], x[..., :1]], axis=-1)
+        return x.reshape(org_shape)
+
+
 class ConvTextLayer(nn.Module):
     def __init__(
             self,
@@ -42,6 +56,7 @@ class ConvTextLayer(nn.Module):
             activation: Union[None, str, Callable],
             residual: bool,
             cheap: bool = False,
+            repacking: bool = False,
             num_attention_heads: Union[bool, int] = 0,
             attention_invention: str = "QK",  # "QK", "QV", "KV", "QKV"
             attention_activation: Union[None, str, Callable] = "elu+1",
@@ -54,6 +69,7 @@ class ConvTextLayer(nn.Module):
 
         padding = int(math.floor(kernel_size / 2)) * dilation
         self.norm = normalization_to_module(norm, channels=num_channels_in)
+        self.repacker = StateRepacker() if repacking else None
         self.conv = (CheapConv1d if cheap else nn.Conv1d)(
             num_channels_in,
             num_channels_out * (len(attention_invention) if num_attention_heads else 1),
@@ -91,6 +107,9 @@ class ConvTextLayer(nn.Module):
 
         if self.norm is not None:
             x = self.norm(x)
+
+        if self.repacker is not None:
+            x = self.repacker(x)
 
         y = self.conv(x)
 
@@ -150,6 +169,7 @@ class ConvTextModel(nn.Module):
             norm: Union[None, str, Type[nn.Module]] = None,
             out_norm: Union[None, str, Type[nn.Module]] = None,
             activation: Union[None, str, Callable] = None,
+            repacking: Union[bool, Iterable[bool]] = None,
             cheap: Union[bool, Iterable[bool]] = False,
             num_attention_heads: Union[int, Iterable[int]] = 0,
             attention_activation: Union[None, str, Callable] = "elu+1",
@@ -194,7 +214,7 @@ class ConvTextModel(nn.Module):
         self.layers = nn.ModuleList()
 
         ch = num_channels
-        for i, next_ch, ks, dil, res, attn_heads, fftc_, cheap_ in zip(
+        for i, next_ch, ks, dil, res, attn_heads, fftc_, repacking_, cheap_ in zip(
                 range(num_layers),
                 layer_output_channels,
                 param_make_tuple(kernel_size, num_layers, "kernel_size"),
@@ -202,6 +222,7 @@ class ConvTextModel(nn.Module):
                 param_make_tuple(residual, num_layers, "residual"),
                 param_make_tuple(num_attention_heads, num_layers, "num_attention_heads"),
                 param_make_tuple(fft_conv, num_layers, "fft_conv"),
+                param_make_tuple(repacking, num_layers, "repacking"),
                 param_make_tuple(cheap, num_layers, "cheap"),
         ):
             is_last_layer = i == num_layers - 1
@@ -226,6 +247,7 @@ class ConvTextModel(nn.Module):
                     norm=None if is_last_layer else norm,
                     activation=activation,
                     residual=res,
+                    repacking=repacking_,
                     cheap=cheap_,
                     num_attention_heads=attn_heads,
                     attention_activation=attention_activation,
