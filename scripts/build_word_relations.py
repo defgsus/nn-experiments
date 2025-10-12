@@ -9,6 +9,7 @@ import datetime
 import re
 from typing import Optional
 
+import torch
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
@@ -32,6 +33,7 @@ class Calculator:
         self.min_edge_count = 0
         self.num_pca_components = 300
         self.profiles = json.loads(profiles_filename.read_text())
+        self.features: dict[str, torch.Tensor] = {}
         print(f"Scraped profiles: {len(self.profiles):,}")
 
     def norm_name(self, name: str) -> Optional[str]:
@@ -153,8 +155,18 @@ class Calculator:
         }
         return vertex_map_f, edge_map_f
 
+    def get_cache_filename(self, name: str|Path) -> Path:
+        sub_path = f"nv{len(self.vertex_map)}-nu{len(self.usernames)}" #-ne{len(self.edge_map)}"
+        return self.cache_path / sub_path / name
+
     def run(self):
         self.get_graph()
+        self.write_dataset()
+        #self.calc_own_model_embeddings("pca-mlp6K", "experiments/ae/interest-graph-linear.yml")
+        self.calc_sf_embeddings("granite107M")
+        self.calc_sf_embeddings("zip1M", "tabularisai/Zip-1")
+        self.calc_sf_embeddings("mdbr-mt22M", "MongoDB/mdbr-leaf-mt")
+        self.calc_sf_embeddings("mdbr-ir22M", "MongoDB/mdbr-leaf-ir")
         self.calc_pca()
 
         vertex_positions = []
@@ -172,8 +184,8 @@ class Calculator:
                 "name": name,
                 "data": [
                     [round(f, 4) for f in row]
-                    for row in self.calc_tsne(comp_min=comp_min, comp_max=comp_max).tolist()
-                ]
+                    for row in self.calc_tsne("pca", comp_min=comp_min, comp_max=comp_max).tolist()
+                ],
             }
             for name, comp_min, comp_max in vertex_positions
         ]
@@ -184,6 +196,16 @@ class Calculator:
                 for row in self.interests_pca[:, :2].tolist()
             ]
         })
+        vertex_positions.extend([
+            {
+                "name": f"{feature_name}-tsne2",
+                "data": [
+                    [round(f, 4) for f in row]
+                    for row in self.calc_tsne(feature_name, source=self.features[feature_name]).tolist()
+                ]
+            }
+            for feature_name in self.features
+        ])
 
         filename = self.save_path / "interest-graph.json"
         vertex_to_id = {v: i for i, v in enumerate(self.vertex_map.keys())}
@@ -211,40 +233,133 @@ class Calculator:
         np.savez(self.cache_path / "vertex_pca_fetures.npz", self.interests_pca)
         (self.cache_path / "usernames.json").write_text(json.dumps(self.usernames))
 
-    def calc_pca(self):
-        interests = list(self.vertex_map)
+    def calc_own_model_embeddings(self, name: str, experiment_filename: str):
+        from src.train.experiment import load_experiment_trainer
 
-        def iter_matrix_batches():
-            batch_size = self.num_pca_components
-            for batch_idx in tqdm(range(0, len(interests), batch_size), desc=f"calc PCA{self.num_pca_components}"):
-                batch_interests = interests[batch_idx: batch_idx + batch_size]
-                batch_interest_ids = {n: i for i, n in enumerate(batch_interests)}
-                batch = np.zeros((len(batch_interests), len(self.usernames)))
-                for u_i, u in enumerate(self.usernames):
-                    for i in self.profiles[u]["interests"]:
-                        if i in batch_interest_ids:
-                            batch[batch_interest_ids[i], u_i] = 1
+        cache_filename = self.get_cache_filename(f"features-own-{name}.npz")
+        if cache_filename.exists():
+            with cache_filename.open("rb") as fp:
+                self.features[name] = np.load(fp)["arr_0"]
+            return
+
+        trainer = load_experiment_trainer(experiment_filename)
+        trainer.model.eval()
+        features = []
+        for batch in self.iter_matrix_batches(32, desc=f"Calc {name}"):
+            feature_batch = trainer.model.encode(torch.from_numpy(batch).to(trainer.device).to(torch.float32))
+            features.append(feature_batch.detach().cpu())
+
+        self.features[name] = torch.concat(features)
+        with cache_filename.open("wb") as fp:
+            np.savez(fp, self.features[name])
+
+    def calc_sf_embeddings(
+            self,
+            name: str,
+            model_path: str = "ibm-granite/granite-embedding-107m-multilingual",
+    ):
+        from transformers import AutoModel, AutoTokenizer
+
+        cache_filename = self.get_cache_filename(f"features-{name}.npz")
+        if cache_filename.exists():
+            with cache_filename.open("rb") as fp:
+                self.features[name] = np.load(fp)["arr_0"]
+            return
+
+        def iter_batches():
+            batch = []
+            for word in self.vertex_map.keys():
+                batch.append(word)
+                if len(batch) >= 100:
+                    yield batch
+                    batch.clear()
+            if batch:
                 yield batch
 
+        model = AutoModel.from_pretrained(model_path)
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        model.eval()
+        with torch.no_grad():
+            features_list = []
+            for batch in tqdm(iter_batches(), desc=f"calc {name} embeddings"):
+                tokens = tokenizer(batch, padding=True, truncation=True, return_tensors='pt')
+                features = model(**tokens)[0][:, 0]
+                features_list.append(features)
+        self.features[name] = torch.concat(features_list)
+        with cache_filename.open("wb") as fp:
+            np.savez(fp, self.features[name])
+
+    def iter_matrix_batches(self, batch_size: int, desc: str|None = None):
+        interests = list(self.vertex_map)
+        for batch_idx in tqdm(range(0, len(interests), batch_size), desc=desc):
+            batch_interests = interests[batch_idx: batch_idx + batch_size]
+            batch_interest_ids = {n: i for i, n in enumerate(batch_interests)}
+            batch = np.zeros((len(batch_interests), len(self.usernames)))
+            for u_i, u in enumerate(self.usernames):
+                for i in self.profiles[u]["interests"]:
+                    if i in batch_interest_ids:
+                        batch[batch_interest_ids[i], u_i] = 1
+            yield batch
+
+    def calc_pca(self):
+        cache_filename = self.get_cache_filename(f"pca{self.num_pca_components}.pkl")
+        if cache_filename.exists():
+            with cache_filename.open("rb") as fp:
+                self.pca = pickle.load(fp)
+            with (cache_filename.parent / f"pca{self.num_pca_components}-features.npz").open("rb") as fp:
+                self.interests_pca = np.load(fp)["arr_0"]
+            return
+
         pca = IncrementalPCA(self.num_pca_components)
-        for batch in iter_matrix_batches():
+        for batch in self.iter_matrix_batches(batch_size=self.num_pca_components, desc=f"fit PCA{self.num_pca_components}"):
             pca.partial_fit(batch)
 
         interests_pca = []
-        for batch in iter_matrix_batches():
+        for batch in self.iter_matrix_batches(batch_size=self.num_pca_components, desc=f"calc PCA{self.num_pca_components}"):
             interests_pca.append(pca.transform(batch))
         self.interests_pca = np.concat(interests_pca)
         self.pca = pca
+        os.makedirs(cache_filename.parent, exist_ok=True)
+        with cache_filename.open("wb") as fp:
+            pickle.dump(self.pca, fp)
+        with (cache_filename.parent / f"pca{self.num_pca_components}-features.npz").open("wb") as fp:
+            np.savez(fp, self.interests_pca)
 
     def calc_tsne(
             self,
+            name: str,
+            source: torch.Tensor|np.ndarray|None = None,
             comp_min: Optional[int] = None,
             comp_max: Optional[int] = None,
             dimensions: int = 2,
     ):
+        cache_filename = self.get_cache_filename(f"tsne-{name}-{comp_min}-{comp_max}-{dimensions}.pkl")
+        if cache_filename.exists():
+            with cache_filename.open("rb") as fp:
+                return np.load(fp)["arr_0"]
+
         tsne = TSNE(n_components=dimensions, verbose=1)
-        vertex_pos: np.ndarray = tsne.fit_transform(self.interests_pca[:, comp_min: comp_max])
+        if source is None:
+            source = self.interests_pca[:, comp_min: comp_max]
+        else:
+            if hasattr(source, "to_numpy"):
+                source = source.to_numpy()
+        vertex_pos: np.ndarray = tsne.fit_transform(source)
+
+        os.makedirs(cache_filename.parent, exist_ok=True)
+        with cache_filename.open("wb") as fp:
+            np.savez(fp, vertex_pos)
         return vertex_pos
+
+    def write_dataset(self):
+        cache_filename = self.get_cache_filename("interest-user-matrix.pt")
+        if not cache_filename.exists():
+            batches = []
+            for batch in self.iter_matrix_batches(128, desc="store dataset"):
+                batch = torch.from_numpy(batch.astype(np.uint8))
+                batches.append(batch)
+            batches = torch.concat(batches)
+            torch.save(batches, cache_filename)
 
 
 def main():

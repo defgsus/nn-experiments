@@ -1,0 +1,88 @@
+experiment_name: ae/interest-graph_${matrix_slug}
+
+matrix:
+  ch:
+    - 16
+  ks:
+    - 13
+  dil:
+    - [1, 3, 4, 5, 6, 7, 1]
+  dtype:
+    - float32
+    #- float8_e4m3fn
+    #- float8_e4m3fnuz
+    #- float8_e5m2
+    #- float8_e5m2fnuz
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+
+train_set: |
+  class InterestUserDataset(BaseDataset):
+      def __init__(
+              self, 
+              shape: Tuple[int, int], 
+              dtype: torch.dtype = torch.${dtype},
+          ):
+          self.matrix = torch.load("${PATH}/cache/porn-profiles/nv3063-nu116122/interest-user-matrix.pt")
+          self.shape = shape
+          self.full_size = math.prod(shape)
+          assert self.full_size >= self.matrix.shape[1]
+          self.dtype = dtype
+  
+      def __len__(self):
+          return self.matrix.shape[0]
+  
+      def __getitem__(self, i):
+          row = self.matrix[i]    
+          return torch.constant_pad_nd(row, (0, self.full_size - row.shape[0])).view(1, *self.shape).to(self.dtype)
+  
+  dataset = InterestUserDataset((341, 341))
+  dataset
+
+validation_set: |
+  dataset.limit(16)
+
+batch_size: 16
+learnrate: 0.0003
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l2
+max_inputs: 3_000_000
+
+model: |
+  class AutoEncoder(nn.Module):
+      def __init__(
+          self,
+          channels: int = ${ch},
+          kernel_size: int = ${ks},
+          dilations: list[int] = ${dil},
+      ):
+          super().__init__()
+          self.encoder = nn.Sequential()
+          self.decoder = nn.Sequential()
+      
+          for i, dil in enumerate(dilations):
+              self.encoder.append(nn.Conv2d(
+                  in_channels=1 if i == 0 else channels,
+                  out_channels=1 if i == len(dilations) - 1 else channels,
+                  kernel_size=kernel_size,
+                  dilation=dil,
+              ))
+              if i != len(dilations) - 1:
+                  self.encoder.append(nn.GELU())
+      
+          for i, dil in enumerate(reversed(dilations)):
+              self.decoder.append(nn.ConvTranspose2d(
+                  in_channels=1 if i == 0 else channels,
+                  out_channels=1 if i == len(dilations) - 1 else channels,
+                  kernel_size=kernel_size,
+                  dilation=dil,
+              ))
+              self.decoder.append(nn.GELU() if i != len(dilations)-1 else nn.ReLU())
+      
+      def forward(self, x: torch.Tensor) -> torch.Tensor:
+          x = self.encoder(x)
+          x = self.decoder(x)
+          return x
+  
+  torch.compile(AutoEncoder().to(torch.${dtype}))

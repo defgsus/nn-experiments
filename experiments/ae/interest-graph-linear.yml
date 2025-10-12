@@ -1,0 +1,103 @@
+experiment_name: ae/interest-graph-lin_frozenpca_${matrix_slug}
+
+matrix:
+  ga:
+    - 32
+  ch:
+    - [116122, 300, 10]
+  noise:
+    - 1000
+  stdloss:
+    - 0.
+    #- 1.
+  dtype:
+    - float32
+    #- float8_e4m3fn
+    #- float8_e4m3fnuz
+    #- float8_e5m2
+    #- float8_e5m2fnuz
+
+trainer: experiments.ae.trainer.TrainAutoencoderSpecial
+feature_loss_weight: ${stdloss}
+
+train_set: |
+  class InterestUserDataset(BaseDataset):
+      def __init__(
+              self, 
+              shape: Tuple[int, int], 
+              dtype: torch.dtype = torch.${dtype},
+          ):
+          self.matrix = torch.load("${PATH}/cache/porn-profiles/nv3063-nu116122/interest-user-matrix.pt")
+          self.shape = shape
+          self.full_size = math.prod(shape)
+          assert self.full_size >= self.matrix.shape[1]
+          self.dtype = dtype
+  
+      def __len__(self):
+          return self.matrix.shape[0]
+  
+      def __getitem__(self, i):
+          row = self.matrix[i]  
+          return torch.constant_pad_nd(row, (0, self.full_size - row.shape[0])).view(1, *self.shape).to(self.dtype) * 2 - 1
+  
+  dataset = InterestUserDataset((341, 341))
+  (dataset
+   .shuffle()
+   .repeat(10)
+   .transform([lambda x: (x + (torch.ones_like(x) / ${noise}).bernoulli()).clamp(0, 1).to(torch.${dtype})])
+  )
+
+validation_set: |
+  dataset #.limit(16)
+
+batch_size: 16
+gradient_accumulation: ${ga}
+learnrate: 0.0001
+optimizer: AdamW
+scheduler: CosineAnnealingLR
+loss_function: l1
+max_inputs: 3_000_000
+
+model: |
+  class AutoEncoderLinear(nn.Module):
+      def __init__(
+          self,
+          channels: list[int] = ${ch},
+      ):
+          super().__init__()
+          self.encoder_ = nn.Sequential()
+          self.decoder_ = nn.Sequential()
+  
+          import pickle
+          with Path("./cache/porn-profiles/nv3063-nu116122/pca300.pkl").open("rb") as fp:
+              components = torch.from_numpy(pickle.load(fp).components_)
+  
+          with torch.no_grad():
+              for i, (ch, ch_next) in enumerate(zip(channels, channels[1:])):
+                  self.encoder_.append(nn.Linear(ch, ch_next, bias=i != 0))
+                  if i == 0:
+                      self.encoder_[-1].weight[:] = components
+                      self.encoder_[-1].weight.requires_grad = False
+                  if i != len(channels) - 2:
+                      self.encoder_.append(nn.GELU())
+  
+              channels = list(reversed(channels))
+              for i, (ch, ch_next) in enumerate(zip(channels, channels[1:])):
+                  self.decoder_.append(nn.Linear(ch, ch_next, bias=i != len(channels) - 2))
+                  if i == len(channels) - 2:
+                      self.decoder_[-1].weight[:] = components.T
+                      self.decoder_[-1].weight.requires_grad = False
+                      # self.decoder_.append(nn.ReLU())
+                  else:
+                      self.decoder_.append(nn.GELU())
+      
+      def encode(self, x):
+          return self.encoder_(x.flatten(1)[..., :116122])
+      
+      def decode(self, x):
+          return torch.constant_pad_nd(self.decoder_(x), (0, 116281-116122)).reshape(x.shape[0], 1, 341, 341)
+  
+      def forward(self, x: torch.Tensor) -> torch.Tensor:
+          return self.decode(self.encode(x))
+  
+  torch.compile(AutoEncoderLinear().to(torch.${dtype}))

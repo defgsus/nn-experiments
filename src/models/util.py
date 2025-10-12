@@ -32,6 +32,9 @@ def get_loss_callable(loss: Union[str, Callable, nn.Module]) -> Callable:
     elif hasattr(F, loss) and callable(getattr(F, loss)):
         return getattr(F, loss)
 
+    elif hasattr(nn, loss) and callable(getattr(nn, loss)):
+        return getattr(nn, loss)()
+
     else:
         raise ValueError(f"Unexpected loss function '{loss}'")
 
