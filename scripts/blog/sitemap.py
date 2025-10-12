@@ -224,15 +224,18 @@ class Sitemap:
         from .render import render_document_html, render_template
 
         markup = render_document_html(
-            page.document.document,
+            page.document,
             link_mapping=self.page_link_mapping(page),
         )
+        if page.document.placeholder_map:
+            for placeholder, content in page.document.placeholder_map.items():
+                markup = markup.replace(placeholder, content)
+
         pages = list(self.iter_pages())
         page_index = pages.index(page)
         context = {
             "html": {
                 "title": page.title,
-                "body": markup,
                 "css": [
                     page.relative_url(self.get_stylesheet(f).target_filename)
                     for f in page.scss_files
@@ -249,11 +252,9 @@ class Sitemap:
             "frontmatter": page.document.frontmatter,
             **(page.document.frontmatter.get("context") or {}),
         }
-        html = render_template(self.base_templates[page.template], context)
+        context["html"]["body"] = render_template(markup, context)
 
-        if page.document.placeholder_map:
-            for placeholder, content in page.document.placeholder_map.items():
-                html = html.replace(placeholder, content)
+        html = render_template(self.base_templates[page.template], context)
 
         try:
             idx = html.index('<script type="text/javascript">/**\n* plotly.js')

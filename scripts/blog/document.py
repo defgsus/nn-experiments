@@ -8,9 +8,9 @@ import marko.inline
 import github_slugger
 import yaml
 from marko import block, inline
-from marko.ext.gfm import GFM
 
 from .nbooks import notebook_to_markdown
+from .ext import IntegratedFootnoteExtension, IntegratedFootnoteReference, extract_markdown_foot_notes
 
 
 class Document:
@@ -30,6 +30,7 @@ class Document:
             frontmatter: Optional[dict] = None,
             asset_map: Optional[Dict[str, bytes]] = None,
             placeholder_map: Optional[Dict[str, str]] = None,  # replace in final html
+            foot_notes: Optional[Dict[str, block.Element]] = None,
     ):
         from .__main__ import DOCS_PATH
         self.filename = filename
@@ -41,6 +42,7 @@ class Document:
         self.frontmatter = frontmatter or dict()
         self.asset_map = asset_map
         self.placeholder_map = placeholder_map
+        self.foot_notes = foot_notes
         self._link_mapping: Optional[Dict[str, str]] = None
         self.assets = [
             link for link in links
@@ -61,14 +63,16 @@ class Document:
 
         frontmatter, text = split_front_matter_and_markup(markdown)
 
+        text, foot_notes = extract_foot_notes(text)
+
         parser = marko.Markdown(
-            extensions=['gfm', 'codehilite']
+            extensions=['gfm', 'codehilite', IntegratedFootnoteExtension]
         )
         doc = parser.parse(text)
 
         slugger = github_slugger.GithubSlugger()
 
-        renderer = ExtractionRenderer(slugger)
+        renderer = ExtractionRenderer(slugger, foot_notes)
         renderer.render(doc)
 
         return cls(
@@ -79,6 +83,7 @@ class Document:
             frontmatter=frontmatter,
             asset_map=asset_map,
             placeholder_map=placeholder_map,
+            foot_notes=foot_notes,
         )
 
     @property
@@ -104,7 +109,7 @@ class Document:
                 if not filename.exists():
                     if not self.asset_map or link not in self.asset_map:
                         raise AssertionError(
-                            f"Document {self} links to non-existent file '{link}' (resolved: '{filename}')"
+                            f"Document {self} links to non-existent file '{link}' (resolved: '{filename.resolve()}')"
                         )
 
                 if "../src/" in str(filename):
@@ -133,9 +138,10 @@ class ExtractionRenderer(marko.HTMLRenderer):
     """
     extracts all relevant content like anchors and links
     """
-    def __init__(self, slugger: github_slugger.GithubSlugger):
+    def __init__(self, slugger: github_slugger.GithubSlugger, foot_notes: Dict[str, block.Element]):
         super().__init__()
         self.slugger = slugger
+        self.foot_notes = foot_notes
         self.anchors = []
         self.links = []
 
@@ -157,6 +163,11 @@ class ExtractionRenderer(marko.HTMLRenderer):
     def render_image(self, element: inline.Image) -> str:
         self.links.append(element.dest)
         return super().render_image(element)
+
+    def render_integrated_footnote_reference(self, element: IntegratedFootnoteReference):
+        """Render integrated footnotes in-place, just to catch any contained resources"""
+        doc = self.foot_notes[element.footnote_id]
+        return self.render(doc)
 
 
 def split_front_matter_and_markup(markup: str) -> Tuple[Optional[dict], str]:
@@ -187,3 +198,26 @@ def split_front_matter_and_markup(markup: str) -> Tuple[Optional[dict], str]:
     front_matter = yaml.safe_load(fp)
 
     return front_matter, returned_markup
+
+
+def extract_foot_notes(text: str) -> Tuple[str, Dict[str, block.Element]]:
+    text, foot_notes = extract_markdown_foot_notes(text)
+    # parse the footnotes separately
+    parser = marko.Markdown(extensions=['gfm', 'codehilite'])
+    for footnote_id, footnote_text in foot_notes.items():
+        foot_notes[footnote_id] = doc = parser.parse(footnote_text)
+        #for elem in iter_marko_sub_elements(doc):
+        #    if isinstance(elem, block.BlockElement):
+        #        if not isinstance(elem, (block.Document, block.Paragraph)):
+        #            raise ValueError(f"Found block element in foot-note '{footnote_id}': {elem}")
+
+    return text, foot_notes
+
+
+def iter_marko_sub_elements(element: block.Element):
+    yield element
+    try:
+        for e in element.children:
+            yield from iter_marko_sub_elements(e)
+    except AttributeError:
+        pass

@@ -5,8 +5,10 @@ $sidebar-width-pad: 21rem;
 
 $color-font: #000;
 $color-font-transparent: rgba(0, 0, 0, .5);
+$color-font-strong: #000;
 $color-back: #fff;
 $color-back-hover: #ebebeb;
+$color-back-footnote: #f3f3f3;
 $color-table-head-back: #e6e6e6;
 $color-table-border: #c8c8c8;
 $color-border: #bababa;
@@ -38,8 +40,10 @@ $color-llmchat-full-transcript-background: unset;
 
 $d-color-font: #ddd;
 $d-color-font-transparent: rgba(224, 224, 224, .5);
+$d-color-font-strong: white;
 $d-color-back: #222;
 $d-color-back-hover: #3a3a3a;
+$d-color-back-footnote: #191919;
 $d-color-table-head-back: #353535;
 $d-color-table-border: #4c4c4d;
 $d-color-border: #5c5c5c;
@@ -108,6 +112,29 @@ h1, h2, h3, h4 {
 .align-right { text-align: right; }
 .align-center { text-align: center; }
 .mono { font-family: monospace; }
+
+.foot-note-label {
+  cursor: pointer;
+  color: $color-font-strong;
+  font-weight: bold;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.foot-note-checkbox:checked ~ .foot-note-content {
+  display: block !important;
+}
+
+.foot-note-content {
+  display: none;
+  white-space: pre-wrap;
+  margin: .5rem 0;
+  padding: 0.3rem;
+  border-radius: .3rem;
+  background: $color-back-footnote;
+}
+
 
 table {
   // font-family: monospace;
@@ -335,7 +362,7 @@ main.index {
 }
 
 
-/* dark-theme colors */
+/* ----------------- dark-theme colors ------------------------ */
 
 @media (prefers-color-scheme: dark) {
 
@@ -367,6 +394,13 @@ main.index {
 
   .tag-select {
     margin-bottom: 1rem;
+  }
+
+  .foot-note-label {
+    color: $d-color-font-strong;
+  }
+  .foot-note-content {
+    background-color: $d-color-back-footnote;
   }
 
   table {
