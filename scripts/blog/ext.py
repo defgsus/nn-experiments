@@ -8,24 +8,25 @@ from marko.helpers import MarkoExtension
 def extract_markdown_foot_notes(text: str) -> Tuple[str, Dict[str, str]]:
     foot_notes = {}
     foot_note_index = 1
-    cur_start = None
+    start_positions = []
     last_end = 0
     trimmed_text = []
     for match in re.finditer(r"(\[\[\[start|end]]])", text, re.MULTILINE):
         if match.group() == "[[[start":
-            if cur_start is not None:
-                raise ValueError(f"`[[[start` tag at {match.span()} duplicates tag at {cur_start}")
-            cur_start = match.span()[0]
+            start_positions.append(match.span()[0])
         elif match.group() == "end]]]":
-            if cur_start is None:
+            if not start_positions:
                 raise ValueError(f"`end]]]` tag at {match.span()} without at `[[[start`")
             end = match.span()[1]
-            foot_notes[str(foot_note_index)] = text[cur_start + 8: end - 6]
-            trimmed_text.append(text[last_end:cur_start])
+            foot_notes[str(foot_note_index)] = text[start_positions[-1] + 8: end - 6]
+            trimmed_text.append(text[last_end:start_positions[-1]])
             trimmed_text.append(f"[[[footnote-{foot_note_index}]]]")
             last_end = end
-            cur_start = None
             foot_note_index += 1
+            start_positions.pop(-1)
+
+    if start_positions:
+        raise ValueError(f"Unclosed [[[start at {start_positions[-1]}")
 
     trimmed_text.append(text[last_end:])
     return "".join(trimmed_text), foot_notes

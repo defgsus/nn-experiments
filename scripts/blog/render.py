@@ -3,6 +3,7 @@ from pathlib import Path
 import html as html_lib
 from typing import Dict, Any, List, Tuple
 
+import jinja2.exceptions
 import marko
 import marko.inline
 from jinja2 import Environment as JinjaEnvironment
@@ -41,9 +42,17 @@ def render_template(
         loader=FileSystemLoader(searchpath=[TEMPLATE_PATH]),
     )
 
-    template = env.from_string(
-        source=markup,
-    )
+    try:
+        template = env.from_string(source=markup)
+    except jinja2.exceptions.TemplateSyntaxError as e:
+        lines = e.source.splitlines()
+        lines = "\n".join(
+            f"{lineno:04} {'->' if lineno == e.lineno-1 else '..'} {lines[lineno]}"
+            for lineno in range(e.lineno-3, e.lineno+4)
+            if 0 <= lineno < len(lines)
+        )
+        raise ValueError(f"""{type(e).__name__}: {e}\n{lines}""")
+
     return template.render(**context)
 
 
@@ -61,6 +70,18 @@ class HTMLRenderer(_get_renderer_base_class()):
         self.document = document
         self._link_mapping = link_mapping
         self._generated_id = 1022
+        self._current_parent: List[marko.element.Element] = []
+        self._footnotes_per_parent: Dict[marko.element.Element, int] = {}
+
+    @property
+    def current_parent(self) -> marko.element.Element|None:
+        return self._current_parent[-1] if self._current_parent else None
+
+    def render_children(self, element: Any) -> Any:
+        self._current_parent.append(element)
+        res = super().render_children(element)
+        self._current_parent.pop()
+        return res
 
     def get_new_id(self):
         self._generated_id += 1
@@ -106,12 +127,14 @@ class HTMLRenderer(_get_renderer_base_class()):
         return f"""<div style="overflow: scroll;">{html}</div>"""
 
     def render_integrated_footnote_reference(self, element: IntegratedFootnoteReference):
+        parent = self.current_parent
+        self._footnotes_per_parent[parent] = block_id = self._footnotes_per_parent.get(parent, 0) + 1
         children = self.render_inline_only(self.document.foot_notes[element.footnote_id]).strip()
         elem_id = self.get_new_id()
         return (
             f"""<label for="{elem_id}" class="foot-note-label"><sup>{element.footnote_id}</sup></label>"""
-            + f"""<input type="checkbox" id="{elem_id}" class="foot-note-checkbox" style="display: none"></input>"""
-            + f"""<span class="foot-note-content" style="display: none">{children}</span>"""
+            + f"""<input type="checkbox" id="{elem_id}" class="foot-note-checkbox-{block_id}" style="display: none"></input>"""
+            + f"""<span class="foot-note-content foot-note-content-{block_id}" style="display: none">{children}</span>"""
         )
 
     def render_inline_only(self, element):

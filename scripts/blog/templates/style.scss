@@ -8,7 +8,8 @@ $color-font-transparent: rgba(224, 224, 224, .5);
 $color-font-strong: white;
 $color-back: #222;
 $color-back-hover: #3a3a3a;
-$color-back-footnote: #191919;
+$color-back-footnote: #2c2c2c;
+$color-footnote-border: rgba(255, 255, 255, .2);
 $color-table-head-back: #353535;
 $color-table-border: #4c4c4d;
 $color-border: #5c5c5c;
@@ -87,9 +88,16 @@ h1, h2, h3, h4 {
   }
 }
 
-.foot-note-checkbox:checked ~ .foot-note-content {
-  display: block !important;
-}
+/* allows up to 9 integrated foot-notes per parent-DOM-element */
+.foot-note-checkbox-1:checked ~ .foot-note-content-1 { display: block !important; }
+.foot-note-checkbox-2:checked ~ .foot-note-content-2 { display: block !important; }
+.foot-note-checkbox-3:checked ~ .foot-note-content-3 { display: block !important; }
+.foot-note-checkbox-4:checked ~ .foot-note-content-4 { display: block !important; }
+.foot-note-checkbox-5:checked ~ .foot-note-content-5 { display: block !important; }
+.foot-note-checkbox-6:checked ~ .foot-note-content-6 { display: block !important; }
+.foot-note-checkbox-7:checked ~ .foot-note-content-7 { display: block !important; }
+.foot-note-checkbox-8:checked ~ .foot-note-content-8 { display: block !important; }
+.foot-note-checkbox-9:checked ~ .foot-note-content-9 { display: block !important; }
 
 .foot-note-content {
   display: none;
@@ -98,6 +106,7 @@ h1, h2, h3, h4 {
   padding: 0.3rem;
   border-radius: .3rem;
   background: $color-back-footnote;
+  border: 1px solid $color-footnote-border;
 }
 
 
@@ -149,7 +158,13 @@ table {
   .flex-grow {
     flex-grow: 10;
   }
+
+  @media (max-width: $screen-small) {
+    &.reverse-when-small { flex-flow: wrap-reverse; }
+  }
 }
+
+
 
 li {
   &.indent-1 { margin-left: .5rem; }

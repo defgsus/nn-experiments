@@ -223,14 +223,6 @@ class Sitemap:
     def render_page(self, page: Page) -> str:
         from .render import render_document_html, render_template
 
-        markup = render_document_html(
-            page.document,
-            link_mapping=self.page_link_mapping(page),
-        )
-        if page.document.placeholder_map:
-            for placeholder, content in page.document.placeholder_map.items():
-                markup = markup.replace(placeholder, content)
-
         pages = list(self.iter_pages())
         page_index = pages.index(page)
         context = {
@@ -244,6 +236,10 @@ class Sitemap:
                     page.relative_url(self.get_javascript(f, page.document.filename.parent).target_filename)
                     for f in page.js_files
                 ],
+                "js_map": {
+                    f.split("/")[-1]: page.relative_url(self.get_javascript(f, page.document.filename.parent).target_filename)
+                    for f in page.js_files
+                }
             },
             "page": page,
             "pages": list(reversed(pages)),
@@ -252,6 +248,15 @@ class Sitemap:
             "frontmatter": page.document.frontmatter,
             **(page.document.frontmatter.get("context") or {}),
         }
+
+        markup = render_document_html(
+            page.document,
+            link_mapping=self.page_link_mapping(page),
+        )
+        if page.document.placeholder_map:
+            for placeholder, content in page.document.placeholder_map.items():
+                markup = markup.replace(placeholder, content)
+
         context["html"]["body"] = render_template(markup, context)
 
         html = render_template(self.base_templates[page.template], context)
