@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
         $feature_select.innerHTML = [{name: "edge count"}].concat(graph_data.vertex_positions).map(i => {
             return `<option value="${i.name.replaceAll(' ', '_')}">${i.name}</option>`;
         });
-        $feature_select.value = "pca300-tsne2";
+        $feature_select.value = "pca1000-tsne2";
         $feature_select.onchange = () => query_word($input.value);
 
         if (!update_ui_from_url_hash() && $input.value) {
@@ -210,7 +210,8 @@ document.addEventListener("DOMContentLoaded", () => {
         //window.history.pushState({}, "", window.location);
         if (count === graph_data.num_vertices)
             count = "all";
-        window.location.hash = `#w=${word}&n=${count}&f=${feature_name}`;
+        const param = new URLSearchParams({w: word, n: count, f: feature_name});
+        window.location.hash = `#${param.toString()}`;
     }
 
     function update_ui_from_url_hash() {

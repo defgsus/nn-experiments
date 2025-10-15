@@ -31,32 +31,13 @@ class Calculator:
         self.min_interests_per_user = 5
         self.min_vertex_count = 30  #30
         self.min_edge_count = 0
-        self.num_pca_components = 300
+        self.num_pca_components = 1000  #300
         self.profiles = json.loads(profiles_filename.read_text())
         self.features: dict[str, torch.Tensor] = {}
+        self.fa_features: dict[int, torch.Tensor] = {}
         print(f"Scraped profiles: {len(self.profiles):,}")
 
     def norm_name(self, name: str) -> Optional[str]:
-        # fix other people's encoding problems
-        if 0:
-            name = (
-                name
-                .replace("Ã„", "Ö")
-                .replace("Ã–", "Ö")
-                .replace("Ã¶", "ö")
-                .replace("Å‘", "ö")
-                .replace("Ãœ", "Ü")
-                .replace("Ã¼", "ü")
-                .replace("ÃŸ", "ß")
-                .replace("â€™", "'")
-                .replace("Ã‰", "é")
-                .replace("â™", "!")  # not sure about this
-            )
-            try:
-                name.encode("latin1")
-            except (UnicodeDecodeError, UnicodeEncodeError) as e:
-                print("ENCODING PROBLEM:", repr(name))
-                return
         name = name.lower()
         #if "ss" not in name:
         #    name = name.rstrip("s")
@@ -167,35 +148,66 @@ class Calculator:
         self.calc_sf_embeddings("zip1M", "tabularisai/Zip-1")
         self.calc_sf_embeddings("mdbr-mt22M", "MongoDB/mdbr-leaf-mt")
         self.calc_sf_embeddings("mdbr-ir22M", "MongoDB/mdbr-leaf-ir")
-        self.calc_pca()
+
+        _, interests_pca = self.calc_pca()
+
+        #interest_weights = 1. / np.abs(interests_pca).sum(axis=1)
+        #interest_weights = 1. / (100 + np.abs(interests_pca).sum(axis=1))
+        #interest_weights = 1. / np.array([10 * self.min_vertex_count + v["count"] for v in self.vertex_map.values()])
+        #interest_weights = 1. / np.array([100 + v["count"] for v in self.vertex_map.values()])
+        interest_weights = 1. / np.array([1000 + v["count"] for v in self.vertex_map.values()])
+
+        _, interests_pca_weighted = self.calc_pca(vertex_weights=interest_weights)
+
+        for n in (5, 15, 25):#, 50):
+            self.calc_fa(n)
 
         vertex_positions = []
-        for n_comp in sorted({10, 50, 100, 200, self.num_pca_components}):
+        for n_comp in sorted({10, 50, 100, 200, 500, self.num_pca_components}):
             if n_comp <= self.num_pca_components:
                 vertex_positions.append(
-                    (f"pca{n_comp}-tsne2", 0, n_comp)
+                    (f"pca{n_comp}-tsne2", interests_pca, 0, n_comp)
                 )
-        for n_comp in (50, 100, 200, 250):
+        for n_comp in sorted({10, 50, 100, 200, 500, self.num_pca_components}):
+            if n_comp <= self.num_pca_components:
+                vertex_positions.append(
+                    (f"wpca{n_comp}-tsne2", interests_pca_weighted, 0, n_comp)
+                )
+        for n_comp in (1, 10, 50, 100, 200, 500, 900):
             vertex_positions.append(
-                (f"pca[{n_comp}:{self.num_pca_components}]-tsne2", n_comp, None)
+                (f"pca[{n_comp}:{self.num_pca_components}]-tsne2", interests_pca, n_comp, None)
+            )
+        for n_comp in (1, 10, 50, 100, 200, 500, 900):
+            vertex_positions.append(
+                (f"wpca[{n_comp}:{self.num_pca_components}]-tsne2", interests_pca_weighted, n_comp, None)
             )
         vertex_positions = [
             {
                 "name": name,
                 "data": [
                     [round(f, 4) for f in row]
-                    for row in self.calc_tsne("pca", comp_min=comp_min, comp_max=comp_max).tolist()
+                    for row in self.calc_tsne(name, source=features, comp_min=comp_min, comp_max=comp_max).tolist()
                 ],
             }
-            for name, comp_min, comp_max in vertex_positions
+            for name, features, comp_min, comp_max in vertex_positions
         ]
         vertex_positions.insert(0, {
             "name": "pca2",
             "data": [
                 [round(f, 4) for f in row]
-                for row in self.interests_pca[:, :2].tolist()
+                for row in interests_pca[:, :2].tolist()
             ]
         })
+        vertex_positions.extend([
+            {
+                "name": f"fa{num_comp}-tsne2",
+                "data": [
+                    [round(f, 4) for f in row]
+                    for row in self.calc_tsne(f"fa{num_comp}", source=self.fa_features[num_comp]).tolist()
+                ]
+            }
+            for num_comp in self.fa_features
+        ])
         vertex_positions.extend([
             {
                 "name": f"{feature_name}-tsne2",
@@ -226,12 +238,6 @@ class Calculator:
             # "vertex_pca_features": self.interests_pca.round(4).tolist(),
         }, separators=(",", ":")))
         print(f"Saved {size:,} bytes in {filename}")
-
-        os.makedirs(self.cache_path, exist_ok=True)
-        with (self.cache_path / "pca.pkl").open("wb") as fp:
-            pickle.dump(self.pca, fp)
-        np.savez(self.cache_path / "vertex_pca_fetures.npz", self.interests_pca)
-        (self.cache_path / "usernames.json").write_text(json.dumps(self.usernames))
 
     def calc_own_model_embeddings(self, name: str, experiment_filename: str):
         from src.train.experiment import load_experiment_trainer
@@ -289,8 +295,14 @@ class Calculator:
         with cache_filename.open("wb") as fp:
             np.savez(fp, self.features[name])
 
-    def iter_matrix_batches(self, batch_size: int, desc: str|None = None):
+    def iter_matrix_batches(
+            self,
+            batch_size: int,
+            desc: str|None = None,
+            vertex_weights: Optional[np.ndarray] = None
+    ):
         interests = list(self.vertex_map)
+        interest_ids = {n: i for i, n in enumerate(interests)}
         for batch_idx in tqdm(range(0, len(interests), batch_size), desc=desc):
             batch_interests = interests[batch_idx: batch_idx + batch_size]
             batch_interest_ids = {n: i for i, n in enumerate(batch_interests)}
@@ -298,37 +310,66 @@ class Calculator:
             for u_i, u in enumerate(self.usernames):
                 for i in self.profiles[u]["interests"]:
                     if i in batch_interest_ids:
-                        batch[batch_interest_ids[i], u_i] = 1
+                        weight = 1.
+                        if vertex_weights is not None:
+                            weight = vertex_weights[interest_ids[i]]
+                            #weight = 0.01 + 0.99 * (interest_ids[i] / len(interests))
+                            #weight = 1. / (20 * self.min_vertex_count + self.vertex_map[i]["count"])
+                        batch[batch_interest_ids[i], u_i] = weight
             yield batch
 
-    def calc_pca(self):
-        cache_filename = self.get_cache_filename(f"pca{self.num_pca_components}.pkl")
+    def calc_pca(self, vertex_weights: Optional[np.ndarray] = None):
+        pca_name = f"wpca" if vertex_weights is not None else f"pca"
+        cache_filename = self.get_cache_filename(f"{pca_name}{self.num_pca_components}.pkl")
         if cache_filename.exists():
             with cache_filename.open("rb") as fp:
-                self.pca = pickle.load(fp)
-            with (cache_filename.parent / f"pca{self.num_pca_components}-features.npz").open("rb") as fp:
-                self.interests_pca = np.load(fp)["arr_0"]
-            return
+                pca = pickle.load(fp)
+            with (cache_filename.parent / f"{pca_name}{self.num_pca_components}-features.npz").open("rb") as fp:
+                interests_pca = np.load(fp)["arr_0"]
+            return pca, interests_pca
 
         pca = IncrementalPCA(self.num_pca_components)
-        for batch in self.iter_matrix_batches(batch_size=self.num_pca_components, desc=f"fit PCA{self.num_pca_components}"):
+        for batch in self.iter_matrix_batches(
+                batch_size=self.num_pca_components, desc=f"fit {pca_name}{self.num_pca_components}",
+                vertex_weights=vertex_weights,
+        ):
             pca.partial_fit(batch)
 
         interests_pca = []
-        for batch in self.iter_matrix_batches(batch_size=self.num_pca_components, desc=f"calc PCA{self.num_pca_components}"):
+        for batch in self.iter_matrix_batches(batch_size=self.num_pca_components, desc=f"calc {pca_name}{self.num_pca_components}", vertex_weights=vertex_weights):
             interests_pca.append(pca.transform(batch))
-        self.interests_pca = np.concat(interests_pca)
-        self.pca = pca
+        interests_pca = np.concat(interests_pca)
+        pca = pca
         os.makedirs(cache_filename.parent, exist_ok=True)
         with cache_filename.open("wb") as fp:
-            pickle.dump(self.pca, fp)
-        with (cache_filename.parent / f"pca{self.num_pca_components}-features.npz").open("wb") as fp:
-            np.savez(fp, self.interests_pca)
+            pickle.dump(pca, fp)
+        with (cache_filename.parent / f"{pca_name}{self.num_pca_components}-features.npz").open("wb") as fp:
+            np.savez(fp, interests_pca)
+        return pca, interests_pca
+
+    def calc_fa(self, num_components: int = 10):
+        cache_filename = self.get_cache_filename(f"fa{num_components}.pkl")
+        if cache_filename.exists():
+            #with cache_filename.open("rb") as fp:
+            #    self.fa = pickle.load(fp)
+            with (cache_filename.parent / f"fa{num_components}-features.npz").open("rb") as fp:
+                self.fa_features[num_components] = np.load(fp)["arr_0"]
+            return
+
+        fa = FactorAnalysis(num_components)
+        for batch in self.iter_matrix_batches(batch_size=len(self.vertex_map), desc=f"fit FA{num_components}"):
+            self.fa_features[num_components] = fa.fit_transform(batch)
+
+        os.makedirs(cache_filename.parent, exist_ok=True)
+        with cache_filename.open("wb") as fp:
+            pickle.dump(fa, fp)
+        with (cache_filename.parent / f"fa{num_components}-features.npz").open("wb") as fp:
+            np.savez(fp, self.fa_features[num_components])
 
     def calc_tsne(
             self,
             name: str,
-            source: torch.Tensor|np.ndarray|None = None,
+            source: torch.Tensor|np.ndarray,
             comp_min: Optional[int] = None,
             comp_max: Optional[int] = None,
             dimensions: int = 2,
@@ -339,11 +380,8 @@ class Calculator:
                 return np.load(fp)["arr_0"]
 
         tsne = TSNE(n_components=dimensions, verbose=1)
-        if source is None:
-            source = self.interests_pca[:, comp_min: comp_max]
-        else:
-            if hasattr(source, "to_numpy"):
-                source = source.to_numpy()
+        if hasattr(source, "to_numpy"):
+            source = source.to_numpy()
         vertex_pos: np.ndarray = tsne.fit_transform(source)
 
         os.makedirs(cache_filename.parent, exist_ok=True)
@@ -359,6 +397,7 @@ class Calculator:
                 batch = torch.from_numpy(batch.astype(np.uint8))
                 batches.append(batch)
             batches = torch.concat(batches)
+            os.makedirs(cache_filename.parent, exist_ok=True)
             torch.save(batches, cache_filename)
 
 
