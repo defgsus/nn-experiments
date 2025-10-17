@@ -151,45 +151,49 @@ class Calculator:
 
         _, interests_pca = self.calc_pca()
 
-        #interest_weights = 1. / np.abs(interests_pca).sum(axis=1)
+        interest_weights = 1. / np.abs(interests_pca).mean(axis=1)
+        #interest_weights = 1. / (20 + np.abs(interests_pca).sum(axis=1))
         #interest_weights = 1. / (100 + np.abs(interests_pca).sum(axis=1))
         #interest_weights = 1. / np.array([10 * self.min_vertex_count + v["count"] for v in self.vertex_map.values()])
         #interest_weights = 1. / np.array([100 + v["count"] for v in self.vertex_map.values()])
-        interest_weights = 1. / np.array([1000 + v["count"] for v in self.vertex_map.values()])
+        #interest_weights = 1. / np.array([1000 + v["count"] for v in self.vertex_map.values()])
 
-        _, interests_pca_weighted = self.calc_pca(vertex_weights=interest_weights)
+        #_, interests_pca_weighted = self.calc_pca(vertex_weights=interest_weights)
+
+        #component_max = np.abs(interests_pca).max(axis=0)
+        #interests_pca_weighted = interests_pca / component_max[None, ...] * component_max.mean()
 
         for n in (5, 15, 25):#, 50):
             self.calc_fa(n)
 
         vertex_positions = []
-        for n_comp in sorted({10, 50, 100, 200, 500, self.num_pca_components}):
+        for n_comp in sorted({10, 50, 100, 300, self.num_pca_components}):
             if n_comp <= self.num_pca_components:
                 vertex_positions.append(
-                    (f"pca{n_comp}-tsne2", interests_pca, 0, n_comp)
+                    (f"pca{n_comp}-tsne2", interests_pca, 0, n_comp, "euclidean")
                 )
-        for n_comp in sorted({10, 50, 100, 200, 500, self.num_pca_components}):
-            if n_comp <= self.num_pca_components:
-                vertex_positions.append(
-                    (f"wpca{n_comp}-tsne2", interests_pca_weighted, 0, n_comp)
-                )
-        for n_comp in (1, 10, 50, 100, 200, 500, 900):
+        for n_comp in (1, 10, 50, 300, 900):
             vertex_positions.append(
-                (f"pca[{n_comp}:{self.num_pca_components}]-tsne2", interests_pca, n_comp, None)
+                (f"pca[{n_comp}:{self.num_pca_components}]-tsne2", interests_pca, n_comp, None, "euclidean")
             )
-        for n_comp in (1, 10, 50, 100, 200, 500, 900):
-            vertex_positions.append(
-                (f"wpca[{n_comp}:{self.num_pca_components}]-tsne2", interests_pca_weighted, n_comp, None)
-            )
+        #for n_comp in sorted({10, 50, 100, 300, self.num_pca_components}):
+        #    if n_comp <= self.num_pca_components:
+        #        vertex_positions.append(
+        #            (f"wpca{n_comp}-tsne2", interests_pca_weighted, 0, n_comp, "correlation")
+        #        )
+        #for n_comp in (1, 10, 50, 300, 900):
+        #    vertex_positions.append(
+        #        (f"wpca[{n_comp}:{self.num_pca_components}]-tsne2", interests_pca_weighted, n_comp, None)
+        #    )
         vertex_positions = [
             {
                 "name": name,
                 "data": [
                     [round(f, 4) for f in row]
-                    for row in self.calc_tsne(name, source=features, comp_min=comp_min, comp_max=comp_max).tolist()
+                    for row in self.calc_tsne(name, source=features, comp_min=comp_min, comp_max=comp_max, metric=metric).tolist()
                 ],
             }
-            for name, features, comp_min, comp_max in vertex_positions
+            for name, features, comp_min, comp_max, metric in vertex_positions
         ]
         vertex_positions.insert(0, {
             "name": "pca2",
@@ -217,6 +221,25 @@ class Calculator:
                 ]
             }
             for feature_name in self.features
+        ])
+        vertex_positions.extend([
+            {
+                "name": f"magic-mix-tsne2",
+                "data": [
+                    [round(f, 4) for f in row]
+                    for row in self.calc_tsne(
+                        f"magic",
+                        source=np.concat([
+                            1.0 * interests_pca,
+                            1.0 * self.fa_features[25],
+                            0.3 * self.features["granite107M"],
+                            #1.0 * interests_pca / np.abs(interests_pca).mean(),
+                            #1.0 * self.fa_features[25] / np.abs(self.fa_features[25]).mean(),
+                            #0.3 * self.features["granite107M"] / np.abs(self.features["granite107M"]).mean(),
+                        ], axis=1)
+                    ).tolist()
+                ]
+            }
         ])
 
         filename = self.save_path / "interest-graph.json"
@@ -373,13 +396,16 @@ class Calculator:
             comp_min: Optional[int] = None,
             comp_max: Optional[int] = None,
             dimensions: int = 2,
+            metric: str = "euclidean",
     ):
-        cache_filename = self.get_cache_filename(f"tsne-{name}-{comp_min}-{comp_max}-{dimensions}.pkl")
+        cache_filename = self.get_cache_filename(f"tsne-{name}-{comp_min}-{comp_max}-{dimensions}-{metric}.pkl")
         if cache_filename.exists():
             with cache_filename.open("rb") as fp:
                 return np.load(fp)["arr_0"]
 
-        tsne = TSNE(n_components=dimensions, verbose=1)
+        print(f"\nCalc tSNE{dimensions} '{name}' {metric}")
+
+        tsne = TSNE(n_components=dimensions, verbose=1, metric=metric, random_state=23)
         if hasattr(source, "to_numpy"):
             source = source.to_numpy()
         vertex_pos: np.ndarray = tsne.fit_transform(source)

@@ -38,12 +38,18 @@ document.addEventListener("DOMContentLoaded", () => {
         $result_num.innerHTML = [10, 50, 100, 500, "all"].map(i => {
             return `<option value="${i}">${i === 'all' ? `all (${graph_data.num_vertices})` : i}</option>`;
         });
-        $result_num.onchange = () => query_word($input.value);
+        $result_num.onchange = () => {
+            query_word($input.value);
+            set_url_hash($input.value, $result_num.value, $feature_select.value);
+        }
         $feature_select.innerHTML = [{name: "edge count"}].concat(graph_data.vertex_positions).map(i => {
             return `<option value="${i.name.replaceAll(' ', '_')}">${i.name}</option>`;
         });
         $feature_select.value = "pca1000-tsne2";
-        $feature_select.onchange = () => query_word($input.value);
+        $feature_select.onchange = () => {
+            query_word($input.value);
+            set_url_hash($input.value, $result_num.value, $feature_select.value);
+        }
 
         if (!update_ui_from_url_hash() && $input.value) {
             query_word($input.value);
@@ -180,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return p.innerHTML;
     }
 
-    function query_word(word, no_hash_update) {
+    function query_word(word) {
         word = escape_html(word);
         $input.value = word;
         const feature_name = $feature_select.value;
@@ -200,10 +206,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         render_result_table(word, vertices, count, feature_name !== "edge_count");
         render_map(word, vertices, feature_name);
-
-        if (!no_hash_update) {
-            set_url_hash($input.value, $result_num.value, $feature_select.value);
-        }
     }
 
     function set_url_hash(word, count, feature_name) {
@@ -241,6 +243,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 e.preventDefault();
                 scroll_to_ui();
                 query_word($elem.getAttribute("data-word"));
+                set_url_hash($input.value, $result_num.value, $feature_select.value);
             }
         });
     }
@@ -250,7 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if ($elem.getAttribute("href")?.indexOf("=") > 0) {
                 $elem.onclick = (e) => {
                     scroll_to_ui();
-                    $root_elem.scrollIntoView();
                 }
             }
 
@@ -260,7 +262,10 @@ document.addEventListener("DOMContentLoaded", () => {
     function hook_ui() {
         hook_links();
 
-        $input.onchange = () => query_word($input.value);
+        $input.onchange = () => {
+            query_word($input.value);
+            set_url_hash($input.value, $result_num.value, $feature_select.value);
+        }
         window.addEventListener("hashchange", e => {
             update_ui_from_url_hash();
         })
