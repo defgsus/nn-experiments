@@ -5,11 +5,8 @@ style: |
   .interest-graph-word { cursor: pointer; }
   .interest-graph-word:hover { cursor: pointer; text-decoration: underline; }
   .interest-graph-ui-map { 
-      width: 400px; 
-      height: 400px; 
       position: relative; 
       overflow: hidden;
-      background: #181818;
       font-size: .8rem;
   }
   .interest-graph-ui-map-item { font-family: mono: color: rgba(255, 255, 255, .4); }

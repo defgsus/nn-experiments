@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
         $feature_select.innerHTML = [{name: "edge count"}].concat(graph_data.vertex_positions).map(i => {
             return `<option value="${i.name.replaceAll(' ', '_')}">${i.name}</option>`;
         });
-        $feature_select.value = "pca1000-tsne2";
+        $feature_select.value = "magic-mix-tsne2";
         $feature_select.onchange = () => {
             query_word($input.value);
             set_url_hash($input.value, $result_num.value, $feature_select.value);
@@ -136,6 +136,91 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function mix(a, b, t) {
+        return a * (1. - t) + t * b;
+    }
+
+    function change_map_zoom(zoom, rx, ry) {
+        const $svg = $map.querySelector("svg");
+        const [vx, vy, vw, vh] = $svg.getAttribute("viewBox").split(/\s+/).map(parseFloat);
+        const new_vw = vw * zoom;
+        const new_vh = vh * zoom;
+        const new_vx = mix(vx, vx - (new_vw - vw), rx);
+        const new_vy = mix(vy, vy - (new_vh - vh), ry);
+        $svg.setAttribute("viewBox", [new_vx, new_vy, new_vw, new_vh].join(" "));
+    };
+
+    function on_map_wheel(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const $svg = $map.querySelector("svg");
+        const zoom = 1. + .1 * (event.deltaY > 0 ? 1. : -1.);
+        const x = event.layerX;
+        const y = event.layerY;
+        const rx = x / $svg.clientWidth;
+        const ry = y / $svg.clientHeight;
+        change_map_zoom(zoom, rx, ry);
+    }
+
+    const MAP_SCALE = 20.;
+
+    function render_map_svg(word, vertices, feature_name) {
+        const positions = graph_data.vertex_positions.filter(i => i.name === feature_name)[0].data;
+        let [x, y] = positions[graph_data.vertex_map[word].index];
+        x = x * MAP_SCALE;
+        y = y * MAP_SCALE;
+        const pad = 5 * MAP_SCALE;
+
+        let html = "";
+        html = (
+            `<div class="flex"><div>`
+            + `<svg width="400" height="400" viewBox="${x-pad} ${y-pad} ${pad*2} ${pad*2}" xmlns="http://www.w3.org/2000/svg" style="background: #181818; user-select: none;"><style>`
+            + ` .text { font: ${.4*MAP_SCALE}px sans-serif; fill: #bbb; cursor: pointer; }`
+            + ` .text.highlight { font-weight: bold; fill: #ddd; }`
+            + ` .text:hover { text-shadow: 0 0 7px black; fill: #ffffff; }`
+            + ` .line { stroke: rgba(100, 150, 200, .3); }`
+            + ` .line:hover { stroke: rgba(150, 200, 250, .9); z-index: 10; }`
+            + ` </style>`
+        );
+
+        for (const [word2, count] of graph_data.vertex_map[word].edges) {
+            let [x2, y2] = positions[graph_data.vertex_map[word2].index];
+            x2 = x2 * MAP_SCALE;
+            y2 = y2 * MAP_SCALE;
+            html += (
+                `<line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" class="line">`
+                + `<title>${word} -> ${word2}\n(${count}x)</title>`
+                + `</line>`
+            );
+        }
+        /*for (const [x, y] of positions) {
+            html += `<circle cx="${x}" cy="${y}" r=".2" fill="#aaa"/>`;
+        }*/
+        for (const i in positions) {
+            let [x, y] = positions[i];
+            x = x * MAP_SCALE;
+            y = y * MAP_SCALE;
+            const text = graph_data.vertices[i];
+            //html += `<circle cx="${x}" cy="${y}" r=".2" fill="#aaa"><title>${text}</title></circle>`;
+            html += (
+                `<text x="${x}" y="${y}" class="text${text === word ? ' highlight' : ''}" data-word="${text}">${text}`
+                + `<title>${text}\n(used ${graph_data.vertex_counts[i]} times)</title></text>`
+            );
+        }
+        html += (
+            `</svg></div>`
+            + `<div><div style="display: flex; flex-direction: column">`
+            + `<div><button style="width: 24px" id="zoom-button-plus">+</button></div>`
+            + `<div><button style="width: 24px" id="zoom-button-minus">-</button></div>`
+            + `</div></div>`
+        );
+        $map.innerHTML = html;
+        $map.onwheel = on_map_wheel;
+        hook_words();
+        $map.querySelector("#zoom-button-plus").onclick = () => { change_map_zoom(0.8, .5, .5); };
+        $map.querySelector("#zoom-button-minus").onclick = () => { change_map_zoom(1.2, .5, .5); };
+    }
+
     function render_map(word, vertices, feature_name) {
         let html = "";
         if (feature_name !== "edge_count") {
@@ -205,7 +290,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         render_result_table(word, vertices, count, feature_name !== "edge_count");
-        render_map(word, vertices, feature_name);
+        render_map_svg(word, vertices, feature_name);
     }
 
     function set_url_hash(word, count, feature_name) {

@@ -151,7 +151,7 @@ class Calculator:
 
         _, interests_pca = self.calc_pca()
 
-        interest_weights = 1. / np.abs(interests_pca).mean(axis=1)
+        #interest_weights = 1. / np.abs(interests_pca).mean(axis=1)
         #interest_weights = 1. / (20 + np.abs(interests_pca).sum(axis=1))
         #interest_weights = 1. / (100 + np.abs(interests_pca).sum(axis=1))
         #interest_weights = 1. / np.array([10 * self.min_vertex_count + v["count"] for v in self.vertex_map.values()])
@@ -187,15 +187,34 @@ class Calculator:
         #    )
         vertex_positions = [
             {
-                "name": name,
+                "name": f"magic-mix-tsne2",
                 "data": [
                     [round(f, 4) for f in row]
-                    for row in self.calc_tsne(name, source=features, comp_min=comp_min, comp_max=comp_max, metric=metric).tolist()
-                ],
-            }
-            for name, features, comp_min, comp_max, metric in vertex_positions
+                    for row in self.calc_tsne(
+                        f"magic",
+                        source=np.concat([
+                            1.0 * interests_pca,
+                            1.0 * self.fa_features[25],
+                            0.3 * self.features["granite107M"],
+                            #1.0 * interests_pca / np.abs(interests_pca).mean(),
+                            #1.0 * self.fa_features[25] / np.abs(self.fa_features[25]).mean(),
+                            #0.3 * self.features["granite107M"] / np.abs(self.features["granite107M"]).mean(),
+                        ], axis=1)
+                    ).tolist()
+                ]
+            },
+            *(
+                {
+                    "name": name,
+                    "data": [
+                        [round(f, 4) for f in row]
+                        for row in self.calc_tsne(name, source=features, comp_min=comp_min, comp_max=comp_max, metric=metric).tolist()
+                    ],
+                }
+                for name, features, comp_min, comp_max, metric in vertex_positions
+            )
         ]
-        vertex_positions.insert(0, {
+        vertex_positions.insert(1, {
             "name": "pca2",
             "data": [
                 [round(f, 4) for f in row]
@@ -221,25 +240,6 @@ class Calculator:
                 ]
             }
             for feature_name in self.features
-        ])
-        vertex_positions.extend([
-            {
-                "name": f"magic-mix-tsne2",
-                "data": [
-                    [round(f, 4) for f in row]
-                    for row in self.calc_tsne(
-                        f"magic",
-                        source=np.concat([
-                            1.0 * interests_pca,
-                            1.0 * self.fa_features[25],
-                            0.3 * self.features["granite107M"],
-                            #1.0 * interests_pca / np.abs(interests_pca).mean(),
-                            #1.0 * self.fa_features[25] / np.abs(self.fa_features[25]).mean(),
-                            #0.3 * self.features["granite107M"] / np.abs(self.features["granite107M"]).mean(),
-                        ], axis=1)
-                    ).tolist()
-                ]
-            }
         ])
 
         filename = self.save_path / "interest-graph.json"
