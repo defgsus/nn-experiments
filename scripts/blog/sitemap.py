@@ -13,6 +13,8 @@ import marko
 import scss
 
 from .document import Document
+from .transpile import transpile_js
+
 
 TAGS = {
     "ml": "machine learning",
@@ -128,8 +130,9 @@ class StyleSheet:
 
 class JavascriptFile:
 
-    def __init__(self, original_filename: Path):
+    def __init__(self, original_filename: Path, transpile: bool = True):
         self.original_filename = original_filename
+        self.transpile = transpile
         self._content = None
 
     @property
@@ -141,6 +144,8 @@ class JavascriptFile:
     def content(self):
         if self._content is None:
             self._content = Path(self.original_filename).read_text()
+            if self.transpile:
+                self._content = transpile_js(self._content)
         return self._content
 
 

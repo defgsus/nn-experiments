@@ -54,7 +54,7 @@ a {
   &[target="_blank"]::before {
     font-size: 75%;
     font-weight: bold;
-    content: "↗ ";
+    content: "↗\0000a0";
   }
 }
 
