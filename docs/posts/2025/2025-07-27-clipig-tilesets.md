@@ -106,7 +106,7 @@ Starting from random noise with the prompt "rpg tile map", the algorithm yielded
 ![rpg tileset from noise ec 16x16px 7x7map](assets/2025-07-27-clipig-tilesets/rpg-tileset-from-noise-ec-16x16px-7x7map.png)
 
 It's nice and smooth and tileable. But it's also pretty chaotic. 
-Using the spiky lighting template from above as source creates a tileset that better follows the inside/outside 
+Using the spiky lighting template from above as source (instead of noise) creates a tileset that better follows the inside/outside 
 logic of the tiling:
 
 ![rpg tileset from template preview](assets/2025-07-27-clipig-tilesets/rpg-tileset-from-template-preview.png)
@@ -114,7 +114,7 @@ logic of the tiling:
 ![rpg tileset from template ec 16x16px 7x7map](assets/2025-07-27-clipig-tilesets/rpg-tileset-from-template-ec-16x16px-7x7map.png)
 
 And to gain further control over the image generation, one can use a soft or hard mask to apply different prompts at
-the inside and outside of the tiling.
+the inside and outside of the tiling. (The masking is described in more detail [here](https://github.com/BorisTheBrave/resynth-tiles/issues/3#issuecomment-3317364256))
 
 In this case "desert wasteland" and "top-down view of an ancient castle":
 
