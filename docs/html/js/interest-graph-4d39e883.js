@@ -417,7 +417,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     $info.innerHTML = "Loading data ...";
     $root_elem.removeAttribute("hidden");
-    fetch("/posts/2025/interest-graph.json").then(function (r) {
+    fetch("/nn-experiments/posts/2025/interest-graph.json").then(function (r) {
       return r.json();
     })["catch"](function (e) {
       $result.innerText = "Sorry, could not load the data.";
