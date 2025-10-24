@@ -1,0 +1,565 @@
+html {
+  font-family: sans-serif;
+  background: #222;
+  color: #ddd; }
+
+  a {
+    color: #899ef1;
+    text-decoration: none; }
+    a:visited {
+      color: #5a78ef; }
+      a:hover {
+        color: #8db8fa;
+        text-decoration: underline; }
+        a[target="_blank"]::before {
+          font-size: 75%;
+          font-weight: bold;
+          content: "↗ "; }
+
+pre {
+  background: #191919;
+  color: #fff;
+  padding: 0.25rem;
+  line-height: 125%; }
+
+  h1, h2, h3, h4 {
+    margin-top: 2rem; }
+
+    .small {
+      font-size: 75%; }
+
+      .align-left {
+        text-align: left; }
+
+        .align-right {
+          text-align: right; }
+
+          .align-center {
+            text-align: center; }
+
+            .mono {
+              font-family: monospace; }
+
+              .foot-note-label {
+                cursor: pointer;
+                color: white;
+                font-weight: bold; }
+                .foot-note-label:hover {
+                  text-decoration: underline; }
+
+.foot-note-checkbox-1:checked ~ .foot-note-content-1 {
+  display: block !important; }
+
+  .foot-note-checkbox-2:checked ~ .foot-note-content-2 {
+    display: block !important; }
+
+    .foot-note-checkbox-3:checked ~ .foot-note-content-3 {
+      display: block !important; }
+
+      .foot-note-checkbox-4:checked ~ .foot-note-content-4 {
+        display: block !important; }
+
+        .foot-note-checkbox-5:checked ~ .foot-note-content-5 {
+          display: block !important; }
+
+          .foot-note-checkbox-6:checked ~ .foot-note-content-6 {
+            display: block !important; }
+
+            .foot-note-checkbox-7:checked ~ .foot-note-content-7 {
+              display: block !important; }
+
+              .foot-note-checkbox-8:checked ~ .foot-note-content-8 {
+                display: block !important; }
+
+                .foot-note-checkbox-9:checked ~ .foot-note-content-9 {
+                  display: block !important; }
+
+                  .foot-note-content {
+                    display: none;
+                    white-space: pre-wrap;
+                    margin: 0.5rem 0;
+                    padding: 0.3rem;
+                    border-radius: 0.3rem;
+                    background: #2c2c2c;
+                    border: 1px solid rgba(255, 255, 255, 0.2); }
+
+                    table td, table th {
+                      padding-right: 4px;
+                      vertical-align: top;
+                      border-right: 1px solid #4c4c4d;
+                      border-bottom: 1px solid #4c4c4d; }
+                      table td:nth-child(1), table th:nth-child(1) {
+                        border-left: 1px solid #4c4c4d; }
+                    table th.sortable {
+                      cursor: pointer; }
+                      table th.sortable.sorted:before {
+                        content: "⬇"; }
+                        table th.sortable.sorted.ascending:before {
+                          content: "⬆"; }
+                    table thead th {
+                      background: #353535; }
+                    table tbody tr:hover {
+                      background: #3a3a3a; }
+
+.flex {
+  display: flex;
+  flex-direction: row; }
+  .flex.wrap {
+    flex-wrap: wrap; }
+    .flex .flex-grow {
+      flex-grow: 10; }
+      @media (max-width: 1000px) {
+        .flex.reverse-when-small {
+          flex-flow: wrap-reverse;   }
+}
+
+li.indent-1 {
+  margin-left: 0.5rem; }
+  li.indent-2 {
+    margin-left: 1rem; }
+    li.indent-3 {
+      margin-left: 1.5rem; }
+
+.show-when-small {
+  display: none; }
+  @media (max-width: 1000px) {
+    .show-when-small {
+      display: unset;   }
+}
+
+a.heading-linker {
+  color: rgba(224, 224, 224, 0.5); }
+  a.heading-linker:hover {
+    color: #8db8fa;
+    text-decoration: none; }
+
+.hidden {
+  display: none; }
+
+  .tags {
+    display: inline-block; }
+    .tags .tag {
+      display: inline-block;
+      background: #525252;
+      border: 1px solid #000;
+      border-radius: 0.2rem;
+      padding: 0.2rem 0.3rem;
+      margin-right: 0.3rem;
+      margin-bottom: 0.3rem; }
+      .tags .tag.selected {
+        background: #55a; }
+
+.tag-select .tags .tag {
+  cursor: pointer; }
+
+  main.article .article-left {
+    width: 20rem;
+    position: fixed;
+    top: 0; }
+    @media (max-width: 1000px) {
+      main.article .article-left {
+        display: none;   }
+}
+  main.article .article-mid {
+    padding-left: 21rem;
+    width: 70%;
+    max-width: 1800px; }
+    @media (max-width: 1000px) {
+      main.article .article-mid {
+        max-width: 95%;
+        padding-left: 0;
+        width: unset;   }
+}
+      main.article .article-mid .article-footer {
+        margin: 3rem 0; }
+        main.article .article-mid img {
+          overflow: scroll;
+          max-width: 100%; }
+
+main.index {
+  text-align: center; }
+  main.index .index-wrapper {
+    max-width: 70%;
+    margin: 0 auto; }
+    @media (max-width: 1000px) {
+      main.index .index-wrapper {
+        max-width: 95%;   }
+}
+  main.index .article-list .article-item {
+    margin-bottom: 3rem; }
+    main.index .article-list .article-item .date {
+      font-size: 120%; }
+      main.index .article-list .article-item .link {
+        font-size: 150%;
+        color: #ddd; }
+
+.llm-chat {
+  margin-top: 1rem;
+  border: 1px solid #3c3c3c;
+  border-radius: 0.3rem;
+  padding: 0.2rem; }
+  .llm-chat .llm-chat-window {
+    cursor: pointer;
+    background: #181818;
+    color: #ddd;
+    border: 1px solid #919191;
+    border-radius: 0.5rem;
+    padding: 0.8rem 0.5rem;
+    margin-bottom: 0.3rem;
+    position: relative; }
+    .llm-chat .llm-chat-window .llm-chat-window-title {
+      position: absolute;
+      top: -0.01rem;
+      left: 0.3rem;
+      font-size: 62%;
+      color: #5c5c5c; }
+      .llm-chat .llm-chat-window .llm-chat-window-content {
+        white-space: pre-wrap; }
+        .llm-chat .llm-chat-window .llm-chat-window-content pre {
+          background: unset;
+          color: unset;
+          padding: 0;
+          white-space: pre-wrap;
+          overflow: scroll; }
+    .llm-chat .llm-chat-window.llm-chat-role-system {
+      color: #cacaca;
+      border-color: #3b3b3b; }
+      .llm-chat .llm-chat-window.llm-chat-role-available_tools {
+        background: #182a2f;
+        border-color: #314449; }
+        .llm-chat .llm-chat-window.llm-chat-role-available_tools .llm-chat-window-content {
+          font-family: monospace; }
+    .llm-chat .llm-chat-window.llm-chat-role-user {
+      background: #444; }
+      .llm-chat .llm-chat-window.llm-chat-role-user .llm-chat-window-content {
+        color: white; }
+    .llm-chat .llm-chat-window.llm-chat-role-assistant {
+      background: #394d33; }
+      .llm-chat .llm-chat-window.llm-chat-role-assistant .llm-chat-window-content {
+        color: white; }
+    .llm-chat .llm-chat-window.llm-chat-role-tool_call {
+      background: #182a2f;
+      border-color: #314449; }
+      .llm-chat .llm-chat-window.llm-chat-role-tool_call .llm-chat-window-content {
+        font-family: monospace; }
+    .llm-chat .llm-chat-window input[type="checkbox"] {
+      display: none; }
+      .llm-chat .llm-chat-window input[type="checkbox"] ~ .llm-chat-window-content {
+        display: none; }
+        .llm-chat .llm-chat-window input[type="checkbox"]:checked ~ .llm-chat-window-content {
+          display: unset; }
+  .llm-chat .llm-chat-full-transcript {
+    cursor: pointer;
+    background: #191919;
+    color: #686868;
+    padding: 0.25rem;
+    line-height: 125%; }
+    .llm-chat .llm-chat-full-transcript pre {
+      display: block;
+      overflow: scroll; }
+      .llm-chat .llm-chat-full-transcript .llm-chat-label-show {
+        font-size: 62%; }
+        .llm-chat .llm-chat-full-transcript input[type="checkbox"] {
+          display: none; }
+          .llm-chat .llm-chat-full-transcript input[type="checkbox"] ~ pre {
+            display: none; }
+            .llm-chat .llm-chat-full-transcript input[type="checkbox"]:checked ~ pre {
+              display: block; }
+              .llm-chat .llm-chat-full-transcript input[type="checkbox"] ~ .llm-chat-label-show {
+                display: unset; }
+                .llm-chat .llm-chat-full-transcript input[type="checkbox"]:checked ~ .llm-chat-label-show {
+                  display: none; }
+
+td.linenos .normal {
+  color: #6e7681;
+  background-color: #0d1117;
+  padding-left: 5px;
+  padding-right: 5px; }
+
+  span.linenos {
+    color: #6e7681;
+    background-color: #0d1117;
+    padding-left: 5px;
+    padding-right: 5px; }
+
+    td.linenos .special {
+      color: #e6edf3;
+      background-color: #6e7681;
+      padding-left: 5px;
+      padding-right: 5px; }
+
+      span.linenos.special {
+        color: #e6edf3;
+        background-color: #6e7681;
+        padding-left: 5px;
+        padding-right: 5px; }
+
+        .highlight .hll {
+          background-color: #6e7681; }
+
+          .highlight {
+            background: #0d1117;
+            color: #e6edf3; }
+
+            .highlight .c {
+              color: #8b949e;
+              font-style: italic; }
+
+              .highlight .err {
+                color: #f85149; }
+
+                .highlight .esc {
+                  color: #e6edf3; }
+
+                  .highlight .g {
+                    color: #e6edf3; }
+
+                    .highlight .k {
+                      color: #ff7b72; }
+
+                      .highlight .l {
+                        color: #a5d6ff; }
+
+                        .highlight .n {
+                          color: #e6edf3; }
+
+                          .highlight .o {
+                            color: #ff7b72;
+                            font-weight: bold; }
+
+                            .highlight .x {
+                              color: #e6edf3; }
+
+                              .highlight .p {
+                                color: #e6edf3; }
+
+                                .highlight .ch {
+                                  color: #8b949e;
+                                  font-style: italic; }
+
+                                  .highlight .cm {
+                                    color: #8b949e;
+                                    font-style: italic; }
+
+                                    .highlight .cp {
+                                      color: #8b949e;
+                                      font-weight: bold;
+                                      font-style: italic; }
+
+                                      .highlight .cpf {
+                                        color: #8b949e;
+                                        font-style: italic; }
+
+                                        .highlight .c1 {
+                                          color: #8b949e;
+                                          font-style: italic; }
+
+                                          .highlight .cs {
+                                            color: #8b949e;
+                                            font-weight: bold;
+                                            font-style: italic; }
+
+                                            .highlight .gd {
+                                              color: #ffa198;
+                                              background-color: #490202; }
+
+                                              .highlight .ge {
+                                                color: #e6edf3;
+                                                font-style: italic; }
+
+                                                .highlight .ges {
+                                                  color: #e6edf3;
+                                                  font-weight: bold;
+                                                  font-style: italic; }
+
+                                                  .highlight .gr {
+                                                    color: #ffa198; }
+
+                                                    .highlight .gh {
+                                                      color: #79c0ff;
+                                                      font-weight: bold; }
+
+                                                      .highlight .gi {
+                                                        color: #56d364;
+                                                        background-color: #0f5323; }
+
+                                                        .highlight .go {
+                                                          color: #8b949e; }
+
+                                                          .highlight .gp {
+                                                            color: #8b949e; }
+
+                                                            .highlight .gs {
+                                                              color: #e6edf3;
+                                                              font-weight: bold; }
+
+                                                              .highlight .gu {
+                                                                color: #79c0ff; }
+
+                                                                .highlight .gt {
+                                                                  color: #ff7b72; }
+
+                                                                  .highlight .g-Underline {
+                                                                    color: #e6edf3;
+                                                                    text-decoration: underline; }
+
+                                                                    .highlight .kc {
+                                                                      color: #79c0ff; }
+
+                                                                      .highlight .kd {
+                                                                        color: #ff7b72; }
+
+                                                                        .highlight .kn {
+                                                                          color: #ff7b72; }
+
+                                                                          .highlight .kp {
+                                                                            color: #79c0ff; }
+
+                                                                            .highlight .kr {
+                                                                              color: #ff7b72; }
+
+                                                                              .highlight .kt {
+                                                                                color: #ff7b72; }
+
+                                                                                .highlight .ld {
+                                                                                  color: #79c0ff; }
+
+                                                                                  .highlight .m {
+                                                                                    color: #a5d6ff; }
+
+                                                                                    .highlight .s {
+                                                                                      color: #a5d6ff; }
+
+                                                                                      .highlight .na {
+                                                                                        color: #e6edf3; }
+
+                                                                                        .highlight .nb {
+                                                                                          color: #e6edf3; }
+
+                                                                                          .highlight .nc {
+                                                                                            color: #f0883e;
+                                                                                            font-weight: bold; }
+
+                                                                                            .highlight .no {
+                                                                                              color: #79c0ff;
+                                                                                              font-weight: bold; }
+
+                                                                                              .highlight .nd {
+                                                                                                color: #d2a8ff;
+                                                                                                font-weight: bold; }
+
+                                                                                                .highlight .ni {
+                                                                                                  color: #ffa657; }
+
+                                                                                                  .highlight .ne {
+                                                                                                    color: #f0883e;
+                                                                                                    font-weight: bold; }
+
+                                                                                                    .highlight .nf {
+                                                                                                      color: #d2a8ff;
+                                                                                                      font-weight: bold; }
+
+                                                                                                      .highlight .nl {
+                                                                                                        color: #79c0ff;
+                                                                                                        font-weight: bold; }
+
+                                                                                                        .highlight .nn {
+                                                                                                          color: #ff7b72; }
+
+                                                                                                          .highlight .nx {
+                                                                                                            color: #e6edf3; }
+
+                                                                                                            .highlight .py {
+                                                                                                              color: #79c0ff; }
+
+                                                                                                              .highlight .nt {
+                                                                                                                color: #7ee787; }
+
+                                                                                                                .highlight .nv {
+                                                                                                                  color: #79c0ff; }
+
+                                                                                                                  .highlight .ow {
+                                                                                                                    color: #ff7b72;
+                                                                                                                    font-weight: bold; }
+
+                                                                                                                    .highlight .pm {
+                                                                                                                      color: #e6edf3; }
+
+                                                                                                                      .highlight .w {
+                                                                                                                        color: #6e7681; }
+
+                                                                                                                        .highlight .mb {
+                                                                                                                          color: #a5d6ff; }
+
+                                                                                                                          .highlight .mf {
+                                                                                                                            color: #a5d6ff; }
+
+                                                                                                                            .highlight .mh {
+                                                                                                                              color: #a5d6ff; }
+
+                                                                                                                              .highlight .mi {
+                                                                                                                                color: #a5d6ff; }
+
+                                                                                                                                .highlight .mo {
+                                                                                                                                  color: #a5d6ff; }
+
+                                                                                                                                  .highlight .sa {
+                                                                                                                                    color: #79c0ff; }
+
+                                                                                                                                    .highlight .sb {
+                                                                                                                                      color: #a5d6ff; }
+
+                                                                                                                                      .highlight .sc {
+                                                                                                                                        color: #a5d6ff; }
+
+                                                                                                                                        .highlight .dl {
+                                                                                                                                          color: #79c0ff; }
+
+                                                                                                                                          .highlight .sd {
+                                                                                                                                            color: #a5d6ff; }
+
+                                                                                                                                            .highlight .s2 {
+                                                                                                                                              color: #a5d6ff; }
+
+                                                                                                                                              .highlight .se {
+                                                                                                                                                color: #79c0ff; }
+
+                                                                                                                                                .highlight .sh {
+                                                                                                                                                  color: #79c0ff; }
+
+                                                                                                                                                  .highlight .si {
+                                                                                                                                                    color: #a5d6ff; }
+
+                                                                                                                                                    .highlight .sx {
+                                                                                                                                                      color: #a5d6ff; }
+
+                                                                                                                                                      .highlight .sr {
+                                                                                                                                                        color: #79c0ff; }
+
+                                                                                                                                                        .highlight .s1 {
+                                                                                                                                                          color: #a5d6ff; }
+
+                                                                                                                                                          .highlight .ss {
+                                                                                                                                                            color: #a5d6ff; }
+
+                                                                                                                                                            .highlight .bp {
+                                                                                                                                                              color: #e6edf3; }
+
+                                                                                                                                                              .highlight .fm {
+                                                                                                                                                                color: #d2a8ff;
+                                                                                                                                                                font-weight: bold; }
+
+                                                                                                                                                                .highlight .vc {
+                                                                                                                                                                  color: #79c0ff; }
+
+                                                                                                                                                                  .highlight .vg {
+                                                                                                                                                                    color: #79c0ff; }
+
+                                                                                                                                                                    .highlight .vi {
+                                                                                                                                                                      color: #79c0ff; }
+
+                                                                                                                                                                      .highlight .vm {
+                                                                                                                                                                        color: #79c0ff; }
+
+                                                                                                                                                                        .highlight .il {
+                                                                                                                                                                          color: #a5d6ff; }

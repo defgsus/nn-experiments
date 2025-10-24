@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Interest aggregation</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../../../html/style/style-ab80046a.css">
+    <script type="text/javascript" src="../../../../../html/js/main-04542d2b.js"></script><script type="text/javascript" src="../../../../../html/js/interest-graph-6b4dea86.js"></script>
+    
+    <style>.interest-graph-word { cursor: pointer; }
+.interest-graph-word:hover { cursor: pointer; text-decoration: underline; }
+.interest-graph-ui-map { 
+    position: relative; 
+    overflow: hidden;
+    font-size: .8rem;
+}
+.interest-graph-ui-map-item { font-family: mono: color: rgba(255, 255, 255, .4); }
+.interest-graph-ui-map-item:hover {
+    text-shadow: 0 0 7px black;
+    color: white;
+    z-index: 10;
+}
+.interest-graph-ui-map-item.highlight { 
+    color: rgba(255, 255, 255, 1); 
+    text-shadow: 0 0 5px white;
+    font-weight: bold;    
+}
+</style>
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#interest-aggregation" title="Interest aggregation">Interest aggregation</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#interest-similarity-search" title="Interest Similarity Search">Interest Similarity Search</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#data-source" title="Data source">Data source</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#graphnetwork-representation" title="Graph/network representation">Graph/network representation</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#latent-representation" title="Latent representation">Latent representation</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#representation-learning-with-pca" title="Representation learning with PCA">Representation learning with PCA</a></li>
+            
+            
+            
+            <li class="indent-3"><a href="#comparison-with-factor-analysis" title="Comparison with Factor Analysis">Comparison with Factor Analysis</a></li>
+            
+            
+            
+            <li class="indent-2"><a href="#visual-representation" title="Visual representation">Visual representation</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="interest-aggregation">Interest aggregation <a href="#interest-aggregation" class="heading-linker">←</a></h1>
+<p>This post might contain off-putting things, for two reasons: Firstly, it is investigating methods of user data aggregation, which can be an offending topic in itself and secondly, it investigates the interests of porn website users. For educational purposes only.</p>
+<p>The data has been politely scraped over a couple of days from a free website that hosts images/videos, blogs and public user profiles. For this post i just looked at the &quot;interests&quot;, which are zero or more words or groups of words, that each user can specify, to be found more easily on the profile search page, or to simply state the obvious.</p>
+<p>The data<label for="subgenius-1023" class="foot-note-label"><sup>1</sup></label><input type="checkbox" id="subgenius-1023" class="foot-note-checkbox-1" style="display: none"></input><span class="foot-note-content foot-note-content-1" style="display: none">You can download the file <a href="../../../../../posts/2025/interest-graph.json">interest-graph.json</a> it contains some 2D-maps of interests and all the edges between interests that have been used together. The format:
+<span style="overflow: scroll;"><span style="white-space: pre-wrap;"><code>{
+    # all &quot;interests&quot; sorted by most-used first
+    &quot;vertices&quot;: [&quot;anal&quot;, &quot;bdsm&quot;, ...],
+    # all connections of &quot;interests&quot; [index1, index2, count]
+    &quot;edges&quot;: [[0,23,3367], [0,5,3278], ...],
+    # number of times each &quot;interest&quot; was used
+    &quot;vertex_counts&quot;: [22339, 10737, ...],
+    # list of 2D-maps
+    &quot;vertex_positions&quot;: [
+        {
+            &quot;name&quot;: &quot;pca1000-tsne2&quot;,
+            # list of xy positions
+            &quot;data&quot;: [[1.1901,-0.9366], [-0.5495,6.2871], ...]
+        },
+        ...
+    }
+}
+</code></span>
+</span>
+The file has been rendered with <a href="https://github.com/defgsus/nn-experiments/blob/master/scripts/build_word_relations.py" target="_blank">scripts/build_word_relations.py</a>. You can have a look but it requires the scraped profiles data, of course.</span> published in this article does not contain any user data. Instead it is a point-cloud of interests, gathered by looking at patterns in about 116K profiles. Now dive into the realms of this little porn community with the <em>Interest Similarity Search</em><label for="subgenius-1024" class="foot-note-label"><sup>2</sup></label><input type="checkbox" id="subgenius-1024" class="foot-note-checkbox-2" style="display: none"></input><span class="foot-note-content foot-note-content-2" style="display: none">If you are worried that what you click and type will be transmitted to <em>'other parties'</em>, well.. I did not put anything like that into the javascript (<a href="../../../../../html/js/main-04542d2b.js" target="_blank">main.js</a> <a href="../../../../../html/js/interest-graph-6b4dea86.js" target="_blank">interest-graph.js</a> ).
+
+That does not mean that your browser can be trusted to keep your web behaviour private. That's not how things are nowadays.</span> and read the technical details below.<label for="subgenius-1025" class="foot-note-label"><sup>3</sup></label><input type="checkbox" id="subgenius-1025" class="foot-note-checkbox-3" style="display: none"></input><span class="foot-note-content foot-note-content-3" style="display: none">Haha, sorry. I'm over-using those newly implemented foot notes that work without javascript (thanks to <a href="https://www.tylervigen.com/spurious-correlations" target="_blank">Tyler Vigen</a> for bringing it to my attention). 
+
+However, this post is not so much a numerical log with endless technical terms and abbreviations like others in this blog. I assumed a more general audience and describe things in more detail.
+
+In fact this article is more suited for my data blog <a href="https://defgsus.github.io/blog/" target="_blank">defgsus.github.io/blog/</a> but i just realized that i never want to use the <a href="https://github.com/jekyll/jekyll" target="_blank">Jekyll</a> static site renderer ever again. I tried it back then because it was the '<em>github</em>' thing to do but today i rather develop something myself. Which i did right here! So let's go on with this article and don't think about migrating the data blog at some point in distant time...
+
+And yes! I tried to implement recursive integrated js-free foot notes but it's a bit complicated..</span></p>
+<h2 id="interest-similarity-search">Interest Similarity Search <a href="#interest-similarity-search" class="heading-linker">←</a></h2>
+<div>
+<noscript><hr><p>
+Enable javascript to browse through the different interests.
+<a href="../../../../../html/js/interest-graph-6b4dea86.js">The script</a> fetches the json data from the static github page and manages the UI, nothing more.
+</p><hr></noscript>
+<div id="interest-graph-ui" hidden="hidden">
+    <input class="interest-graph-ui-input" value="love"/>
+    <select class="interest-graph-ui-select"></select>
+    <select class="interest-graph-ui-num"></select>
+    <div class="flex wrap reverse-when-small" style="margin-top: 1rem;">
+        <div class="interest-graph-ui-result"></div>
+        <div>&nbsp;</div>
+        <div class="interest-graph-ui-map"></div>
+    </div>
+    <pre class="interest-graph-ui-info"></pre>
+    <hr/>
+</div>
+</div>
+<h2 id="data-source">Data source <a href="#data-source" class="heading-linker">←</a></h2>
+<p>I do not usually scrape user profiles but this data is genuinely interesting. The particular website attracts and promotes all kinds of <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=kinky">kinkiness</a> and <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=perversion">perversions</a> as long as it looks like legal content. It's a safe place for people to freely admit they require <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=small%20penis%20humiliation">small penis humiliation</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cum%20on%20food">cum on food</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cock%20milking">cock milking</a> or <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=financial%20domination">financial domination</a>. And i wondered if i could produce a map of sexual interests.</p>
+<p>Those interest strings are case-sensitive in the search page, i guess because in porn language, ANAL means something different than just anal. I lower-cased all strings but otherwise left them as they are.<label for="subgenius-1026" class="foot-note-label"><sup>4</sup></label><input type="checkbox" id="subgenius-1026" class="foot-note-checkbox-1" style="display: none"></input><span class="foot-note-content foot-note-content-1" style="display: none">I also left the encoding errors as they are because i found it hard to fix. For german phrases like <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=%C3%A3%E2%80%9Ersche">Ärsche</a> or <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=f%C3%A3%C2%BC%C3%A3%C3%BFe">Füße</a>, it seems like utf8 encoding was latin1-decoded. Reversing that error via <code>encode(&quot;latin1&quot;).decode(&quot;utf8&quot;)</code> works for stuff that fits into latin1 but there is also a bit of chinese and smileys and other non-latin1 things so i just left everything as it is.</span> <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=girl">girl</a> is not <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=girls">girls</a> and <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=mother/son">mother/son</a> is not the same as <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=mother%20son">mother son</a>. The site only lists the first 5 pages for any search result and then repeats, which, i think, is a fair thing to do.<label for="subgenius-1027" class="foot-note-label"><sup>5</sup></label><input type="checkbox" id="subgenius-1027" class="foot-note-checkbox-2" style="display: none"></input><span class="foot-note-content foot-note-content-2" style="display: none">It's actually quite funny how it just repeats the same page. That's how you quick-fix things permanently in the shady areas of the web.</span> I got about 147K profiles at all but included only the ones with at least 5 listed interests. That's still 116K profiles which create a graph of 137K interests and 3.2M interconnections - links between one interest and another.<label for="subgenius-1028" class="foot-note-label"><sup>6</sup></label><input type="checkbox" id="subgenius-1028" class="foot-note-checkbox-3" style="display: none"></input><span class="foot-note-content foot-note-content-3" style="display: none">Because the search only shows 5 pages, i searched for all interest strings that i previously found, sorted by most-famous and by last-logged-in and then repeated that for newly found interests. It's possible i got a quite skewed representation of user interests that way. Who knows? Certainly only got a fraction of the user profiles that list the top-ranking interests like anal, bdsm, bondage, mature, aso..</span></p>
+<h2 id="graphnetwork-representation">Graph/network representation <a href="#graphnetwork-representation" class="heading-linker">←</a></h2>
+<p>It turned out that, as graph representation, this data is quite unusable because of the overwhelming number of interconnections. The 30 most often listed interests already have like 600 connections between each other. I tried a few graph/network programs and they would stop reacting within acceptable amounts of time when loading networks with a thousand interests. Not to mention that the layouting algorithms, just by looking at interconnectedness - even weighted, do not have much chance to find a visual arrangement that really helps to understand the interest topology. <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> is used 23 thousand times and is connected 230 thousands times with almost every other major interest. To visualize a network, you actually need to exclude anal, bdsm and a few others. I also
+filtered out edges by some criteria, just to be able to look at the rest of the network more conveniently.</p>
+<p><div style="overflow: scroll;"><img src="../../../../../posts/2025/assets/interest-graph-network.png" alt="network of a lot of interests with a lot of edges" /></div></p>
+<p>This network plot shows 375 nodes and many connections have been removed. It's an interesting starting point but not good for displaying all words and all connections. And, for example, the words 'public' and 'outdoors' are at very different places in the map. One can see that they are related because they have a thick connection drawn in between but i'd rather have them close together. The <a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0098679" target="_blank">layout algorithm</a> did what it could. </p>
+<p>Note that there is nothing much of the users left in this representation, except the sum of how often each interest has been proclaimed together. Sorting the interests-browser above by the <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#f=edge_count">number of edges</a> with your query-interest calculates the relation between one interest and another by how often these terms have been used together, but it's kind of boring. The top interests are spread everywhere. </p>
+<p><em>Large graphs</em> are a heavy topic. There exist neat and well-researched algorithms to extract essential information from graphs, like <em>community detection</em>. But all of them have a terrible run-time for large graphs (e.g. running for days). Sensible pruning or reduction of graphs is the only means i am aware of to run any of the sophisticated graph algorithms in a short amount of time.<label for="subgenius-1029" class="foot-note-label"><sup>7</sup></label><input type="checkbox" id="subgenius-1029" class="foot-note-checkbox-1" style="display: none"></input><span class="foot-note-content foot-note-content-1" style="display: none">For example, check <em>A Comprehensive Survey on Graph Reduction: Sparsification, Coarsening, and Condensation</em> (<a href="https://arxiv.org/abs/2402.03358" target="_blank">arXiv:2402.03358</a>)</span></p>
+<h2 id="latent-representation">Latent representation <a href="#latent-representation" class="heading-linker">←</a></h2>
+<p>Instead of comparing interests by their number of connections we can measure similarity in some 'representational space', which might be called <a href="https://en.wikipedia.org/wiki/Latent_space" target="_blank">latent space</a>, embedding space, latent features or feature vectors. There are many methods to compress complex data into latent features, including many kinds of neural networks. These methods typically create a vector (a list) of numbers of fixed size that can be compared with classic numeric means. A recommendation system can then suggest similar interests by calculating a single number from two feature vectors, e.g., the euclidean distance.</p>
+<p>As an example, i added the feature vectors of some text embedding models to the similarity search. They take in a piece of text and output a fixed-sized vector that allows comparing the texts in a numerical way. It was done using the <a href="https://www.sbert.net/" target="_blank">Sentence Transformers</a> library which supports an <a href="https://huggingface.co/models?library=sentence-transformers" target="_blank">incalculable collection of models</a>.<label for="subgenius-1030" class="foot-note-label"><sup>8</sup></label><input type="checkbox" id="subgenius-1030" class="foot-note-checkbox-1" style="display: none"></input><span class="foot-note-content foot-note-content-1" style="display: none"><a href="https://huggingface.co" target="_blank">huggingface</a> is <strong>the</strong> machine learning model hub with literally <strong>millions</strong> of models which makes it's model search page close to useless. You can search by tag or by full text but not both. Huh? They print the model sizes in the search results but you can't restrict your search to, e.g. small models or sort by size. I don't get it.</span> I picked the following models:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">name in search interface</th>
+<th align="left">huggingface page</th>
+<th align="left">comment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#f=granite107M-tsne2">granite107M</a></td>
+<td align="left"><a href="https://huggingface.co/ibm-granite/granite-embedding-107m-multilingual" target="_blank">ibm-granite/granite-embedding-107m-multilingual</a></td>
+<td align="left">It's small, multilingual and quite good</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#f=zip1M-tsne2">zip1M</a></td>
+<td align="left"><a href="https://huggingface.co/tabularisai/Zip-1" target="_blank">tabularisai/Zip-1</a></td>
+<td align="left">It's <strong>very</strong> small, which makes a difference if you need to embed a trillion texts. Judge it's quality yourself.</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#f=mdbr-mt22M-tsne2">mdbr-mt22M</a></td>
+<td align="left"><a href="https://huggingface.co/MongoDB/mdbr-leaf-mt" target="_blank">MongoDB/mdbr-leaf-mt</a></td>
+<td align="left">A general text embedding model from the MongoDB team</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#f=mdbr-ir22M-tsne2">mdbr-ir22M</a></td>
+<td align="left"><a href="https://huggingface.co/MongoDB/mdbr-leaf-ir" target="_blank">MongoDB/mdbr-leaf-ir</a></td>
+<td align="left">From the same family but fine-tuned for <em>Information Retrieval</em>. Just included both models for comparison.</td>
+</tr>
+</tbody></table></div><p>The embeddings produced by these models have nothing (or only a microscopic fraction) to do with this dataset. They are trained on huge text corpora to facilitate the search for similar text. For example, the ibm granite model judges <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=love&amp;f=granite107M-tsne2">love</a> very close to 'romance' and 'romantic', the general MongoDB model ties <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=love&amp;f=mdbr-mt22M-tsne2">love</a> to 'relationship' and 'couple'. The MongoDB IR model puts <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=love&amp;f=mdbr-ir22M-tsne2">love</a> close to 'innocent', 'beautiful' and 'showing off' (?), while the Zip-1 model more or less fails the <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=love&amp;n=50&amp;f=zip1M-tsne2">love</a>. The embeddings created by these models are a mix of syntactic and semantic features of the input text. E.g., they judge 'winter' and 'winter sports' to be similar but also 'january' or 'snow'. </p>
+<p>Here is an example for three different words and how the embeddings of the granite model look like:</p>
+<p><div style="overflow: scroll;"><img src="../../../../../posts/2025/assets/interest-graph-granite-embeddings.png" alt="plot of the embeddings for three different interests" /></div></p>
+<p>'love' and 'romance' are pretty similar. We don't see much red in the plot because it's mostly behind the green. There is a lot of blue visible, though, because the 'monster cocks' embedding is very different from the other two. Please note that an embedding by itself carries no meaning. We don't know why there is a peak at index 304 and we don't need to care. The embeddings are meaningful only in relation to one another.</p>
+<p>If you wonder what the <code>-tsne2</code> part in the search method dropdown means then jump to the <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#visual-representation">visual representation</a> part. In short, instead of publishing a lot of long embedding vectors i compressed them to 2-dimensional vectors to limit the download bandwidth.<label for="subgenius-1031" class="foot-note-label"><sup>9</sup></label><input type="checkbox" id="subgenius-1031" class="foot-note-checkbox-1" style="display: none"></input><span class="foot-note-content foot-note-content-1" style="display: none">This is just a static website without a backend. The similarity search runs in your browser so it needs to download all the vectors beforehand. If there was a backend, this site could post the search term to the backend and retrieve the results. In that case, the backend can crunch through any amount of data, provided the server has enough resources to respond in a quick manner.</span></p>
+<p>That was a little digression on latent embeddings in general. Now, how do we create numeric vectors that represent this particular porn interests dataset?</p>
+<h3 id="representation-learning-with-pca">Representation learning with PCA <a href="#representation-learning-with-pca" class="heading-linker">←</a></h3>
+<p>We can try to build a model of conglomerated user interest groups from the shared interests. First build a table like this:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th></th>
+<th align="right">user0</th>
+<th align="right">user1</th>
+<th align="right">user...</th>
+<th align="right">user100000</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>anal</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0</td>
+</tr>
+<tr>
+<td>bdsm</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">1</td>
+</tr>
+<tr>
+<td>...</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+</tr>
+</tbody></table></div><p>Then, for a start, fit a <a href="https://en.wikipedia.org/wiki/Principal_component_analysis" target="_blank">Principal Component Analysis</a> (PCA) to the data. It will <em>squeeze</em> the vector of a 100K+ users into something smaller, say 1000, while preserving a high explainability of the variations in the data. I used the <a href="https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.IncrementalPCA.html" target="_blank">sklearn IncrementalPCA</a> which can be trained in batches which avoids having to put together a potentially gigantic table in memory at once.</p>
+<p>I'm actually not sure if it's okay to call PCA a method of <em>representation learning</em> because nowadays, researchers almost always mean some form of neural network training while in comparison, the PCA is an ancient machine learning technique that <em>simply</em> fits a linear model by error-regression. However, it's output is mathematically understandable, it <em>represents</em> the most prominent features in the data and it is not a black-box like most neural networks. </p>
+<p>The <em>components</em> of the PCA, after fitting, each represent, in decreasing order of variance explanation, an aspect or trade of a modelled user interest group. That compresses the above table's size to <code>number-of-interests * 1000</code>,  which is an acceptable amount of data to process further and still contains (mathematically proven) a high amount of the stuff one is interested in.</p>
+<p>To limit the size of the json data in this article, i only included interests that are proclaimed at least 30 times, which are about 3,000. <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#n=all">Click here</a> to view them all. This also limits the interest-interest connections to mere 866K.<label for="subgenius-1032" class="foot-note-label"><sup>10</sup></label><input type="checkbox" id="subgenius-1032" class="foot-note-checkbox-1" style="display: none"></input><span class="foot-note-content foot-note-content-1" style="display: none">These connections are the largest part of the json data. They are included merely to show that the interest similarity search above does something different than counting the number of connections between words.</span></p>
+<p>The interests compressed into numbers by the fitted PCA look like this:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right"></th>
+<th align="right">component0</th>
+<th align="right">component1</th>
+<th align="right">component...</th>
+<th align="right">component999</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">anal</td>
+<td align="right">113.367</td>
+<td align="right">15.9827</td>
+<td align="right">-86.7374</td>
+<td align="right">-0.00222</td>
+</tr>
+<tr>
+<td align="right">bdsm</td>
+<td align="right">35.8675</td>
+<td align="right">42.4413</td>
+<td align="right">25.5585</td>
+<td align="right">-0.00038</td>
+</tr>
+<tr>
+<td align="right">...</td>
+<td align="right">33.5606</td>
+<td align="right">43.3588</td>
+<td align="right">23.8518</td>
+<td align="right">-0.00636</td>
+</tr>
+</tbody></table></div><p>To conceptually grasp the meaning of this compressed representation, first look at a plot of these numbers for the top-3 interests:</p>
+<p><div style="overflow: scroll;"><img src="../../../../../posts/2025/assets/interest-pca-features.png" alt="plot of pca features" /></div></p>
+<p>As mentioned above, the components are sorted by variance explanation. The first component explains the most variation in the data. So the mean amplitude of these numbers decreases from left to right. Every further component explains a piece of variation that is not explained by the components before. If we would calculate as many components as there are users, the PCA representation would not be a compression and the user interests could be lossless-ly reproduced from the representation. </p>
+<p>Here is a zoomed-in view as bar plot:</p>
+<p><div style="overflow: scroll;"><img src="../../../../../posts/2025/assets/interest-pca-features-zoomed.png" alt="plot of pca features" /></div></p>
+<p>We do not yet know what the components actually represent but we can see that each interest is mapped to a unique mixture of these components. For example, the amplitudes of components 10 and 11 are positive for 'bondage' and negative for 'bdsm' and then it flips at component 12. They are mutually exclusive, although bdsm and bondage are quite related interests. These components seem to explain different streams of interests within the modelled user group. 'anal' just has a small amplitude in these components so it's not about that. Probably both sub-group users like 'anal', like 23 thousand others.</p>
+<p>To represent interests and arrive at these numbers, the PCA is learning a number-of-users-sized vectors for each component during training. Those are amplitudes of relations between each component and each user:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="right"></th>
+<th align="right">user0</th>
+<th align="right">user1</th>
+<th align="right">user...</th>
+<th align="right">user100000</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">component0</td>
+<td align="right">0.00208772</td>
+<td align="right">0.00158501</td>
+<td align="right">0.00215929</td>
+<td align="right">0.00246174</td>
+</tr>
+<tr>
+<td align="right">component1</td>
+<td align="right">-0.00518107</td>
+<td align="right">0.00306462</td>
+<td align="right">-0.00334413</td>
+<td align="right">-0.00128104</td>
+</tr>
+<tr>
+<td align="right">component2</td>
+<td align="right">0.00365257</td>
+<td align="right">0.0017839</td>
+<td align="right">0.00269069</td>
+<td align="right">-0.000469027</td>
+</tr>
+<tr>
+<td align="right">...</td>
+<td align="right">-0.00235109</td>
+<td align="right">-0.0026599</td>
+<td align="right">-0.000812727</td>
+<td align="right">-0.00101272</td>
+</tr>
+</tbody></table></div><p>To calculate the amplitude of, e.g., component 10 from above for the interest '<a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=friends">friends</a>', we create a vector of zeros or ones for each user, putting a one wherever the user has listed 'friends' as interest and then calculate the <a href="https://en.wikipedia.org/wiki/Dot_product" target="_blank">dot product</a> of this vector and the component vector, which yields a single number: the amplitude of that component for the specified interest.<label for="subgenius-1033" class="foot-note-label"><sup>11</sup></label><input type="checkbox" id="subgenius-1033" class="foot-note-checkbox-1" style="display: none"></input><span class="foot-note-content foot-note-content-1" style="display: none">There is also some mean-shifting and everything is done in big matrix operations but that's not relevant for understanding the concept.</span> </p>
+<p>As long as we have the internal PCA vectors available, we can map back and forth between interests and users. As an example, we can look at which users are weighted strongest (positively and negatively) by component 10.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">user</th>
+<th align="right">component 10 weight to user</th>
+<th align="left">this user's interests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">user55363</td>
+<td align="right">0.01943</td>
+<td align="left"><strong><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a></strong>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=big%20tits">big tits</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bisexuals">bisexuals</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blindfolds">blindfolds</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blondes">blondes</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blowjobs">blowjobs</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bondage">bondage</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=brunettes">brunettes</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cock%20sucking">cock sucking</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=crossdressers">crossdressers</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cum%20swapping">cum swapping</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=dildos">dildos</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=fucking">fucking</a>, heels and nylons, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=incest">incest</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=milfs">milfs</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=pussy%20licking">pussy licking</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=redheads">redheads</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=shemales">shemales</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=teen">teen</a></td>
+</tr>
+<tr>
+<td align="left">user83340</td>
+<td align="right">0.01595</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal%20sex">anal sex</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bbw">bbw</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=big%20ass">big ass</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=big%20tits">big tits</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blondes">blondes</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blowjobs">blowjobs</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=brunettes">brunettes</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=deepthroat">deepthroat</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ebony">ebony</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=futanari">futanari</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=hentai">hentai</a>, <strong><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=lesbian">lesbian</a></strong>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=masturbation">masturbation</a>, <strong><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=milf">milf</a></strong>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=petite">petite</a>, pussyfucking, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=redheads">redheads</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=shemale">shemale</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=squirting">squirting</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=threesome">threesome</a></td>
+</tr>
+<tr>
+<td align="left">...</td>
+<td align="right"></td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left">user48429</td>
+<td align="right">-0.0144</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=amateur">amateur</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ass">ass</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bdsm">bdsm</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=black">black</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=housewives">housewives</a>, <strong><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=lesbian">lesbian</a></strong>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=lezdom">lezdom</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=mature">mature</a>, <strong><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=milf">milf</a></strong>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=oral">oral</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=race%20play">race play</a>, redheads gingers, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=role%20play">role play</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=schoolgirls">schoolgirls</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=small%20tits">small tits</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=spanking">spanking</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=teens">teens</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=young">young</a></td>
+</tr>
+<tr>
+<td align="left">user353</td>
+<td align="right">-0.0150</td>
+<td align="left"><strong><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a></strong>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bareback">bareback</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bdsm">bdsm</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=celebs">celebs</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=creampies">creampies</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=exposure">exposure</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gangbang">gangbang</a>, girl girl, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=groupsex">groupsex</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=humiliation">humiliation</a>, many more, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=mature">mature</a>, <strong><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=milf">milf</a></strong>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=objects">objects</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=orgies">orgies</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=pee">pee</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=public">public</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=teens">teens</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=upskirts">upskirts</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=voyeur">voyeur</a></td>
+</tr>
+</tbody></table></div><p>The <strong>bold</strong> words are shared between these 4 positive and negative weighted users, all the other words are not shared. The non-linked words are not in the dataset (used less than 30 times) and have therefore not been seen by the PCA. Looking at the interests, it kind of gives a hint of what this component 10 is about. Or does it? For comparison, here is the same for component 0, the most important one:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">user</th>
+<th align="right">component 0 weight to user</th>
+<th align="left">this user's interests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">user239</td>
+<td align="right">0.0121141</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=amateur">amateur</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ass">ass</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bdsm">bdsm</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=big%20tits">big tits</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bondage">bondage</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=brunettes">brunettes</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cuckold">cuckold</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cum">cum</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=fetish">fetish</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=humiliation">humiliation</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=lingerie">lingerie</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=milf">milf</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=panties">panties</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=pussy">pussy</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=sex">sex</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=sluts">sluts</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=stockings">stockings</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=swingers">swingers</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=threesome">threesome</a></td>
+</tr>
+<tr>
+<td align="left">user60045</td>
+<td align="right">0.0113297</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=amateur">amateur</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ass">ass</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bbc">bbc</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bdsm">bdsm</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bisexual">bisexual</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blowjobs">blowjobs</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bondage">bondage</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=captions">captions</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=chubby">chubby</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cock">cock</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=creampie">creampie</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=crossdressing">crossdressing</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cuckold">cuckold</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=curvy">curvy</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=interracial">interracial</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=latex">latex</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=pussy">pussy</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=sissy">sissy</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=traps">traps</a></td>
+</tr>
+<tr>
+<td align="left">...</td>
+<td align="right"></td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left">user82882</td>
+<td align="right">-0.000236861</td>
+<td align="left">bycicling, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=clothing">clothing</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cumming">cumming</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=dancing">dancing</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=drinking">drinking</a>, driving car, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=eating">eating</a>, listening to music, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=painting">painting</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=reading">reading</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=riding">riding</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=singing">singing</a>, sunbathing (beach or solarium), <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=swimming">swimming</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=walking">walking</a>, watching tv, working, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=writing">writing</a></td>
+</tr>
+<tr>
+<td align="left">user18683</td>
+<td align="right">-0.000244663</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blank">blank</a>, dauerwichsen, eng, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=euter">euter</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=fett">fett</a>, grabschen, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=huren">huren</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=h%C3%A3%C2%A4ngetitten">hã¤ngetitten</a>, kein limit, kein taboo, milchtitten, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=mutter">mutter</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=promis">promis</a>, sacktitten, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=schwanger">schwanger</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=slips">slips</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=spannen">spannen</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=strumpfhosen">strumpfhosen</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=titten">titten</a>, wã¤schewichsen</td>
+</tr>
+</tbody></table></div><p>I would argue that component 0 has a lot to do with the usage frequency of the interests and, in extension, because of the source material, how 'generically porn' the interest is. user82882 has more facebook-style of interests and, as painful as it is to read user18683's interests, i think they are likely not judged by the PCA as belonging to the 'generic porn interests' group. From what has been put in front of the PCA, it has no idea what the words are. It's only looking at distributions. </p>
+<p>Similarly to the weights-per-user we can look at the interests which have the highest or lowest number for a particular component in their representation.</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">interest</th>
+<th align="right">component 0 amplitude</th>
+<th align="right">interest frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a></td>
+<td align="right">113.382</td>
+<td align="right">22339</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cum">cum</a></td>
+<td align="right">38.2688</td>
+<td align="right">9571</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=mature">mature</a></td>
+<td align="right">37.2678</td>
+<td align="right">10514</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bdsm">bdsm</a></td>
+<td align="right">35.8654</td>
+<td align="right">10737</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bondage">bondage</a></td>
+<td align="right">33.5587</td>
+<td align="right">10685</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ass">ass</a></td>
+<td align="right">30.7251</td>
+<td align="right">8133</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=teens">teens</a></td>
+<td align="right">30.1846</td>
+<td align="right">10142</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=milf">milf</a></td>
+<td align="right">29.556</td>
+<td align="right">8386</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bbw">bbw</a></td>
+<td align="right">29.4967</td>
+<td align="right">9000</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=teen">teen</a></td>
+<td align="right">29.0985</td>
+<td align="right">8705</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=incest">incest</a></td>
+<td align="right">28.3718</td>
+<td align="right">9267</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=amateur">amateur</a></td>
+<td align="right">24.9595</td>
+<td align="right">7319</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=pussy">pussy</a></td>
+<td align="right">24.8622</td>
+<td align="right">6828</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=sissy">sissy</a></td>
+<td align="right">24.4194</td>
+<td align="right">7144</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=oral">oral</a></td>
+<td align="right">24.057</td>
+<td align="right">5818</td>
+</tr>
+<tr>
+<td align="left">...</td>
+<td align="right"></td>
+<td align="right"></td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=honesty">honesty</a></td>
+<td align="right">-0.934953</td>
+<td align="right">39</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=painting">painting</a></td>
+<td align="right">-0.934953</td>
+<td align="right">38</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=computer">computer</a></td>
+<td align="right">-0.935473</td>
+<td align="right">32</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=pregnant%20girls">pregnant girls</a></td>
+<td align="right">-0.936342</td>
+<td align="right">33</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=sun">sun</a></td>
+<td align="right">-0.938043</td>
+<td align="right">34</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=fgm">fgm</a></td>
+<td align="right">-0.938227</td>
+<td align="right">31</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=walking">walking</a></td>
+<td align="right">-0.938477</td>
+<td align="right">40</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=magic">magic</a></td>
+<td align="right">-0.938915</td>
+<td align="right">33</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=running">running</a></td>
+<td align="right">-0.939578</td>
+<td align="right">35</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=analverkehr">analverkehr</a></td>
+<td align="right">-0.940006</td>
+<td align="right">30</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bleach">bleach</a></td>
+<td align="right">-0.940138</td>
+<td align="right">33</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=being%20naked">being naked</a></td>
+<td align="right">-0.941903</td>
+<td align="right">31</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=working%20out">working out</a></td>
+<td align="right">-0.942007</td>
+<td align="right">32</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gardening">gardening</a></td>
+<td align="right">-0.945972</td>
+<td align="right">32</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=singing">singing</a></td>
+<td align="right">-0.952776</td>
+<td align="right">32</td>
+</tr>
+</tbody></table></div><p>Haha, singing and gardening! So, yes, component 0 is highly related to the number of times an interest appears in the dataset. Semantically, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=analverkehr">analverkehr</a> belongs to the 'typical group of interests` but the PCA is grouping it together with all the other german words. Not because it knows german but from the distributions in the dataset.  </p>
+<p>The component 10 interests ranking:</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">interest</th>
+<th align="right">component 10 amplitude</th>
+<th align="right">interest frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blondes">blondes</a></td>
+<td align="right">30.2575</td>
+<td align="right">7389</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bondage">bondage</a></td>
+<td align="right">28.7884</td>
+<td align="right">10685</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=big%20tits">big tits</a></td>
+<td align="right">25.748</td>
+<td align="right">6805</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=incest">incest</a></td>
+<td align="right">24.94</td>
+<td align="right">9267</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bbw">bbw</a></td>
+<td align="right">21.9398</td>
+<td align="right">9000</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=brunettes">brunettes</a></td>
+<td align="right">13.1694</td>
+<td align="right">3407</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=redheads">redheads</a></td>
+<td align="right">12.9896</td>
+<td align="right">4290</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=teen">teen</a></td>
+<td align="right">10.176</td>
+<td align="right">8705</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=hentai">hentai</a></td>
+<td align="right">8.01342</td>
+<td align="right">4040</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=sissy">sissy</a></td>
+<td align="right">6.20872</td>
+<td align="right">7144</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=crossdressing">crossdressing</a></td>
+<td align="right">5.86478</td>
+<td align="right">4553</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=lingerie">lingerie</a></td>
+<td align="right">5.82677</td>
+<td align="right">5367</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=big%20ass">big ass</a></td>
+<td align="right">5.40358</td>
+<td align="right">2129</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=latex">latex</a></td>
+<td align="right">5.0976</td>
+<td align="right">3722</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ebony">ebony</a></td>
+<td align="right">4.71462</td>
+<td align="right">3651</td>
+</tr>
+<tr>
+<td align="left">...</td>
+<td align="right"></td>
+<td align="right"></td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=hairy">hairy</a></td>
+<td align="right">-3.71873</td>
+<td align="right">4445</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=homemade">homemade</a></td>
+<td align="right">-3.8613</td>
+<td align="right">1725</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=wife">wife</a></td>
+<td align="right">-3.86667</td>
+<td align="right">2073</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gangbang">gangbang</a></td>
+<td align="right">-3.86836</td>
+<td align="right">5776</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=femdom">femdom</a></td>
+<td align="right">-4.15352</td>
+<td align="right">7417</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=feet">feet</a></td>
+<td align="right">-5.05971</td>
+<td align="right">6550</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=milf">milf</a></td>
+<td align="right">-5.70252</td>
+<td align="right">8386</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ass">ass</a></td>
+<td align="right">-6.38355</td>
+<td align="right">8133</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cuckold">cuckold</a></td>
+<td align="right">-9.01121</td>
+<td align="right">7399</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=humiliation">humiliation</a></td>
+<td align="right">-9.59685</td>
+<td align="right">7637</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=voyeur">voyeur</a></td>
+<td align="right">-9.85645</td>
+<td align="right">4386</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=mature">mature</a></td>
+<td align="right">-20.1691</td>
+<td align="right">10514</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=amateur">amateur</a></td>
+<td align="right">-22.3213</td>
+<td align="right">7319</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bdsm">bdsm</a></td>
+<td align="right">-27.7799</td>
+<td align="right">10737</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=teens">teens</a></td>
+<td align="right">-34.5912</td>
+<td align="right">10142</td>
+</tr>
+</tbody></table></div><p>This component's amplitude is not proportional to the word frequency. Blondes and teens are completely opposite here. As well as bondage and bdsm, as we have seen before. Note that 'teen' and 'teens' are also in the opposite sides of this component. Some deep psychological archetype might divide users that identify themselves as interested in <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=teen">teen</a> from users interested in <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=teens">teens</a>. The terms have not been used together a single time in this dataset.  </p>
+<p>Now, whatever exact explanation behind each component's meaning might exist, the mixture of a 1000 components should give us a quite diverse map of interest territories.</p>
+<p>In the next plot, the interests, sorted by frequency, are put on the x-axis, with the most-used on the left. The y-axis shows the PCA component amplitudes for a couple of components.   </p>
+<p><div style="overflow: scroll;"><img src="../../../../../posts/2025/assets/interest-graph-pca1000-components.png" alt="plot of interests on x-axis and component amplitude on y-axis" /></div></p>
+<p>Component 0 (blue) indeed is tied to the interest frequency. I imagine it like this: PCA starts to build user groups and realizes that the most variation in all the data can be explained by how typical or atypical the interests of each user are, in terms of the usage frequency. Then it goes out and tries to find the explanation for all the remaining data variation that is not explained by component 0. Interestingly, in the plot we see that each component's amplitudes are strongest (positive or negative) at around the X-th most frequent interest. Component 50 (red) has the largest amplitudes at around the 50 most frequent interest and this tendency holds for all the other components.   </p>
+<p>This is not entirely optimal in my opinion. I'd like to calculate <em>interest similarity</em> with less dependence on the actual usage frequency. Eventually, i'm calculating the euclidean distance between those PCA features and a large component amplitude is not similar to a small one. I tried a couple of things to somehow <em>normalize</em> the PCA features<label for="subgenius-1034" class="foot-note-label"><sup>12</sup></label><input type="checkbox" id="subgenius-1034" class="foot-note-checkbox-1" style="display: none"></input><span class="foot-note-content foot-note-content-1" style="display: none">For example, in the initial table, instead of placing a 1.0 into each cell, i placed the number <code>1.0 / (a + interest-frequency)</code> (with <code>a</code> between 0 and 1000) and then calculated the PCA on that data. Or i used the original PCA but divided each interest's PCA feature by the mean of it's absolute values. 
+
+Some normalization methods actually worked when not comparing the normalized features by euclidean distance but instead by their <a href="https://en.wikipedia.org/wiki/Pearson_correlation_coefficient" target="_blank">Pearson correlation coefficient</a> but i can not actually explain why it works for the normalized features but not for original features, although the correlation normalizes everything anyway..</span> but results got much more messy. The similarity search might consider quite unrelated interests as close to each other. </p>
+<p>In any case, the PCA is a very powerful and efficient method to get started. Above you can select different PCA component ranges in the method choice-box. For example, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#f=pca1000-tsne2">pca1000</a> uses the whole 1000 components to compare the interests, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#f=pca100-tsne2">pca100</a> only uses the first 100 and <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#f=pca%5B10:1000%5D-tsne2">pca[10:1000]</a> will use all components <strong>except</strong> the first 10. I included them just for experimentation.</p>
+<h3 id="comparison-with-factor-analysis">Comparison with Factor Analysis <a href="#comparison-with-factor-analysis" class="heading-linker">←</a></h3>
+<p>More common in psychology is the <a href="https://en.wikipedia.org/wiki/Factor_analysis" target="_blank">Factor Analysis</a> (FA). It tries to explain the variation in the data in terms of a number of unobserved variables that are learned. As initial step, one needs to define the number of components that are taken into account. That's a bit different to PCA, where the first 100 components are the same regardless if we fit a PCA with 100, 200 or a 1000 components. The Factor Analysis gives different results depending on the number of components that are fitted. I tried a few numbers and found that <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#f=fa25-tsne2">25</a> works quite well for this dataset. For example it groups most of the different <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=mother%20son&amp;f=fa25-tsne2">mother son</a> spellings nicely together, although it does not actually see the words.</p>
+<p>Below are two plots like above but for the Factor Analysis with 10 and 25 components each:</p>
+<p><div style="overflow: scroll;"><img src="../../../../../posts/2025/assets/interest-graph-fa10-components.png" alt="plot of interests on x-axis and component amplitude on y-axis" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../../../posts/2025/assets/interest-graph-fa25-components.png" alt="plot of interests on x-axis and component amplitude on y-axis" /></div></p>
+<p>It generally shows the same phenomenon that largest amplitudes are around the X-th most frequent interests.<label for="subgenius-1035" class="foot-note-label"><sup>13</sup></label><input type="checkbox" id="subgenius-1035" class="foot-note-checkbox-1" style="display: none"></input><span class="foot-note-content foot-note-content-1" style="display: none">It's not so visible in this plot but i checked it with more components as well.</span> The component 0 is certainly tied to the frequency of the interests as with the PCA. The first 4 components also behave the same for FA10 and FA25 but the following components each describe something different in the data.</p>
+<p>There is some open research to determine the correct number of FA factors analytically but i'm not diving into that. I just tried a few numbers and subjectively chose one. You can try the FA with <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#f=fa5-tsne2">5</a>, <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#f=fa15-tsne2">15</a> or <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#f=fa25-tsne2">25</a> factors and judge it yourselves. </p>
+<p>Finally i merged the (subjectively) best working representations into the <a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#f=magic-mix-tsne2">magic-mix</a> method. It concatenates, for each interest, the PCA1000 features, the FA25 features and the granite sentence embedding into one vector (1000 + 25 + 384). The sentence embedding is multiplied by 0.3 so it has less influence on the overall interest similarity. However, since the PCA features have a lower amplitude for lesser used interest, as shown above, the sentence similarity has a stronger influence for these interests. I'm telling you because this is an article. A real-world recommendation system usually does not reveal what it is doing behind the curtains.</p>
+<p>A little privacy notice.<label for="subgenius-1036" class="foot-note-label"><sup>14</sup></label><input type="checkbox" id="subgenius-1036" class="foot-note-checkbox-1" style="display: none"></input><span class="foot-note-content foot-note-content-1" style="display: none">For educational purposes i'm creating a map of interests, aggregated over the individual user profiles. If we transpose the initial table at the top and put the interests into the columns, we create a map of users, aggregated over their shared interests. That is what's done every day. To target you with ads that supposedly do not waste your time (that's what the ad people are told), to calculate an individual price for your purchase that archives a maximum transfer of money to the shareholders (that's what the shareholders are told), to target fickle media consumers before the next election (that's what Cambridge Analytica was bragging about some years ago) or to algorithmically lower the wages of workers to the minimum possible.
+
+<a href="https://pluralistic.net/tag/algorithmic-wage-discrimination/" target="_blank">https://pluralistic.net/tag/algorithmic-wage-discrimination/</a></span></p>
+<p>Below is a comparison for the top-50 interests. It shows the closest interests in terms of edge count (how often used together) and in terms of distance of feature-vectors. Note that we got rid of the 'anal' popping up everywhere without removing it from the graph or similar destructive measures. (The number in brackets is the edge count between top-interest and the closest interest.)</p>
+<div style="overflow: scroll;"><table>
+<thead>
+<tr>
+<th align="left">interest</th>
+<th align="left">closest by edge count</th>
+<th align="left">closest by pca300 distance</th>
+<th align="left">closest by pca1000 distance</th>
+<th align="left">closest by fa25 distance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=oral">oral</a> (3367x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=oral">oral</a> (3367x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=oral">oral</a> (3367x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=fisting">fisting</a> (1721x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bdsm">bdsm</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bondage">bondage</a> (2982x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=whipping">whipping</a> (268x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=flogging">flogging</a> (64x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=torture">torture</a> (785x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bondage">bondage</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bdsm">bdsm</a> (2982x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gags">gags</a> (496x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gags">gags</a> (496x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=latex">latex</a> (1152x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=mature">mature</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bbw">bbw</a> (2676x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=granny">granny</a> (1520x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=granny">granny</a> (1520x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=granny">granny</a> (1520x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=teens">teens</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (2135x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=schoolgirls">schoolgirls</a> (209x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=virgins">virgins</a> (54x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=young">young</a> (1039x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cum">cum</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (3278x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=swallowing">swallowing</a> (193x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=jizz">jizz</a> (91x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cock">cock</a> (1578x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=incest">incest</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1952x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=mother">mother</a> (404x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=sister">sister</a> (662x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=family">family</a> (1128x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bbw">bbw</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=mature">mature</a> (2676x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ssbbw">ssbbw</a> (914x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ssbbw">ssbbw</a> (914x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=chubby">chubby</a> (1686x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=teen">teen</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (2083x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=girl">girl</a> (155x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=babe">babe</a> (43x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=young">young</a> (1450x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=milf">milf</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=mature">mature</a> (2676x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cougar">cougar</a> (264x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gilf">gilf</a> (591x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gilf">gilf</a> (591x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ass">ass</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (2643x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=butt">butt</a> (292x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=butt">butt</a> (292x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=tits">tits</a> (1404x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=humiliation">humiliation</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bdsm">bdsm</a> (1959x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=degradation">degradation</a> (866x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=degradation">degradation</a> (866x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=degradation">degradation</a> (866x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=femdom">femdom</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=humiliation">humiliation</a> (1789x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=forced%20bi">forced bi</a> (301x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ruined%20orgasm">ruined orgasm</a> (82x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=chastity">chastity</a> (1374x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cuckold">cuckold</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bbc">bbc</a> (1687x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=forced%20bi">forced bi</a> (185x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=hotwife">hotwife</a> (730x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=hotwife">hotwife</a> (730x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blondes">blondes</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=brunettes">brunettes</a> (1898x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=red%20heads">red heads</a> (230x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=brunettes">brunettes</a> (1898x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=brunettes">brunettes</a> (1898x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=amateur">amateur</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1678x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=girlfriend">girlfriend</a> (178x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=homemade">homemade</a> (962x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=voyeur">voyeur</a> (1078x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=sissy">sissy</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1895x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=faggot">faggot</a> (268x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=faggot">faggot</a> (268x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=crossdressing">crossdressing</a> (1484x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=pussy">pussy</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (2067x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cunt">cunt</a> (151x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=closeup">closeup</a> (44x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=tits">tits</a> (1329x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=big%20tits">big tits</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1542x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=big%20asses">big asses</a> (254x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=big%20areolas">big areolas</a> (34x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=milfs">milfs</a> (659x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=interracial">interracial</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bbc">bbc</a> (1936x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=big%20black%20cock">big black cock</a> (174x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=snowbunny">snowbunny</a> (55x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bbc">bbc</a> (1936x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bbc">bbc</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=interracial">interracial</a> (1936x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bwc">bwc</a> (367x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bnwo">bnwo</a> (461x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=interracial">interracial</a> (1936x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=feet">feet</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1459x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=toes">toes</a> (658x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=toes">toes</a> (658x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=legs">legs</a> (854x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=panties">panties</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1171x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bras">bras</a> (316x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bras">bras</a> (316x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=lingerie">lingerie</a> (1152x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=oral">oral</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (3367x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=vaginal">vaginal</a> (94x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=nsa">nsa</a> (19x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=sex">sex</a> (519x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gangbang">gangbang</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (2048x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blowbang">blowbang</a> (242x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blowbang">blowbang</a> (242x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bukkake">bukkake</a> (1242x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=lingerie">lingerie</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=stockings">stockings</a> (1216x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bras">bras</a> (161x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=suspenders">suspenders</a> (47x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=crossdressing">crossdressing</a> (803x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=shemale">shemale</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1700x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=transexual">transexual</a> (151x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ladyboy">ladyboy</a> (450x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gay">gay</a> (574x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=asian">asian</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1154x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=thai">thai</a> (198x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=indonesian">indonesian</a> (72x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ebony">ebony</a> (988x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=creampie">creampie</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1746x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ao">ao</a> (78x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=insemination">insemination</a> (46x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bukkake">bukkake</a> (459x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=stockings">stockings</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=pantyhose">pantyhose</a> (1521x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=corsets">corsets</a> (178x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=suspenders">suspenders</a> (79x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=pantyhose">pantyhose</a> (1521x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=milfs">milfs</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=teens">teens</a> (1255x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gilfs">gilfs</a> (293x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gilfs">gilfs</a> (293x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blowjobs">blowjobs</a> (267x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=piss">piss</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1503x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=shit">shit</a> (221x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=shit">shit</a> (221x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=scat">scat</a> (1173x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=crossdressing">crossdressing</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=sissy">sissy</a> (1484x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=transvestite">transvestite</a> (136x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=femboi">femboi</a> (31x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=feminization">feminization</a> (636x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=young">young</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=teen">teen</a> (1450x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=tiny">tiny</a> (168x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=little">little</a> (62x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=taboo">taboo</a> (273x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=hairy">hairy</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=mature">mature</a> (1426x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=armpits">armpits</a> (131x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=hirsute">hirsute</a> (37x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ebony">ebony</a> (307x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=voyeur">voyeur</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=amateur">amateur</a> (1078x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=spy">spy</a> (201x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=hidden%20cam">hidden cam</a> (72x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=homemade">homemade</a> (285x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=pantyhose">pantyhose</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=stockings">stockings</a> (1521x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=tights">tights</a> (670x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=tights">tights</a> (670x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=stockings">stockings</a> (1521x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=redheads">redheads</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blondes">blondes</a> (1455x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=freckles">freckles</a> (189x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=pale%20skin">pale skin</a> (44x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=brunettes">brunettes</a> (973x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=sex">sex</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1052x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=fuck">fuck</a> (109x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cyber">cyber</a> (27x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=oral">oral</a> (519x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=captions">captions</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=incest">incest</a> (854x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gifs">gifs</a> (129x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=babecock">babecock</a> (33x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anime">anime</a> (103x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=shemales">shemales</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1127x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=trannies">trannies</a> (160x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cross%20dressers">cross dressers</a> (40x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=crossdressers">crossdressers</a> (502x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cock">cock</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cum">cum</a> (1578x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=balls">balls</a> (169x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=spunk">spunk</a> (28x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gay">gay</a> (585x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=tits">tits</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ass">ass</a> (1404x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=cunt">cunt</a> (101x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=arse">arse</a> (23x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=boobs">boobs</a> (473x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bukkake">bukkake</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1285x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gokkun">gokkun</a> (207x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=gokkun">gokkun</a> (207x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=creampie">creampie</a> (459x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=hentai">hentai</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (915x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=futa">futa</a> (187x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=pokemon">pokemon</a> (76x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anime">anime</a> (659x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=lesbian">lesbian</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1112x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=lezdom">lezdom</a> (90x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=tribbing">tribbing</a> (31x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=hardcore">hardcore</a> (210x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=masturbation">masturbation</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1015x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=fingering">fingering</a> (119x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ejaculation">ejaculation</a> (28x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=shaved">shaved</a> (176x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=blowjob">blowjob</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=anal">anal</a> (1625x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=rimjob">rimjob</a> (99x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=titjob">titjob</a> (52x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=facial">facial</a> (550x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=chubby">chubby</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bbw">bbw</a> (1686x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=plump">plump</a> (136x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=plumper">plumper</a> (75x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=ssbbw">ssbbw</a> (153x)</td>
+</tr>
+<tr>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=latex">latex</a></td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=bondage">bondage</a> (1152x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=rubber">rubber</a> (689x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=rubber">rubber</a> (689x)</td>
+<td align="left"><a href="../../../../../html/posts/2025/10/24/interest-aggregation.html#w=boots">boots</a> (492x)</td>
+</tr>
+</tbody></table></div><h2 id="visual-representation">Visual representation <a href="#visual-representation" class="heading-linker">←</a></h2>
+<p>Okay, so how do we browse this modelled territory of interests except via endless tables of sorted words? The latent vector of any algorithm has a specific size, in our case 1000. That requires 1000-dimensional vision and thinking capability! Fortunately, other 3-dimensional beings have developed nice tools for further compressing an N-dimensional vector to a more comprehensible 2d or 3d version. Compressing our 100K users vector into two dimensions sounds like a <strong>very</strong> lossy process for sure, but to make far-too-complex data understandable, a plot
+in two or three dimensions can be very informative. It's not that a 1000-dimensional problem can not be looked at in 2d, it just takes many different angles to do so.</p>
+<p>One of the most famous algorithms is tSNE (<a href="https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding" target="_blank">wiki</a>, <a href="https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html" target="_blank">python</a>). It's there for the exact purpose of mapping any feature space into two or three dimensions and make it look good. You don't have to think about anything<label for="subgenius-1037" class="foot-note-label"><sup>15</sup></label><input type="checkbox" id="subgenius-1037" class="foot-note-checkbox-1" style="display: none"></input><span class="foot-note-content foot-note-content-1" style="display: none">except you have millions of items... then you have to think about what to do with your time until tSNE finishes</span>, not even remember what tSNE stands for. Just put your vectors in and get 2d positions out. If there are clusters in the data, tSNE will make them visible. If your data is uniformly distributed, you will see it in the plot. The thing about a point in the map is not if it's east or north, but how far away it is from other points of interest.</p>
+<p><div style="overflow: scroll;"><img src="../../../../../posts/2025/assets/interest-graph-pca300-tsn2.png" alt="2d tsne plot of pca300 features" /></div></p>
+<p>Looks nice, doesn't it? Even without some interactivity like showing the word when hovering a point, one can see some specifics of the whole dataset. It has some homogeneous core, a couple of clusters and a few outliers. </p>
+<p>In the Interest Similarity Search above, the similarity is calculated by calculating the euclidean distance of the resulting 2d positions. The 2d map is also displayed in a (pretty ugly) plot. You can zoom in and out (with the mouse-wheel or the zoom buttons) and explore the different interest territories. For the selected interest, all connections to other used-together interests are drawn via lines.</p>
+<p>And that's about it. At the moment, i'm quite tired of the whole topic because i spent about two weeks on writing and data-crunching. Hope you enjoy and feel free to drop a comment on <a href="https://github.com/defgsus/nn-experiments/issues" target="_blank">github</a> or send me a mail <code>cy5iZXJrZUBuZXR6a29sY2hvc2UuZGU=</code>.</p>
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a target="_blank" href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a target="_blank" href="https://github.com/defgsus/nn-experiments/blob/master/docs/posts/2025/2025-10-24-interest-aggregation.md">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../../../html/logs/evaluating-granite-llm.html">
+                        &lt;&lt; Tool usage with the granite language model
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

@@ -17,10 +17,15 @@ from .transpile import transpile_js
 
 
 TAGS = {
+    "cnn": "convolutional neural network",
     "ml": "machine learning",
+    "mlp": "multi-layer perceptron",
     "lm": "language model",
     "ae": "autoencoder",
-    "pow": "papers of the week",
+    "reservoir": "reservoir computing - untrained recurrent networks with some trained read-out",
+    "pow": "papers of the week - a certainly not weekly link to interesting research papers",
+    "kan": "Kolmogorov-Arnold style neural networks",
+    "post": "more like a blog post - less a technical log",
 }
 
 @dataclasses.dataclass
