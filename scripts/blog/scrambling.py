@@ -17,11 +17,11 @@ class ScrambledFont:
             # the following characters are not usable anymore, but that's fine for my purposes
             # Note that they must exists in the original font file because i could not figure out
             #   how to ADD new glyphs to the font-file via fontTools
-            extra_chars: str = "ϗϘϙϚϛϜϝϞϟϠϡϢϣϤϥϦϧϨϩϪϫϬϭϮϯϰϱϲϳϴϵ϶ϷϸϹϺϻϼϽϾϿЀЁЂЃЄЅІЇЈЉЊЋЌЍЎЏАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрсљњћќѝўџѠѡѢѣѤѥѦѧѨѩѪѫѬѭѮѯѰѱѲѳѴѵѶѷѸѹѺѻѼѽѾѿҀҁҊҋҌҍҎҏҐґҒғҔҕҖҗҘҙҚқҜҝҞҟҠҡҢңҤҥҦҧҨҩҪҫҬҭҮүҰұҲҳҴҵҶҷҸҹҺһҼҽҾҿӀӁӂӃӄӅӆӇӈӉӊӋӌӍӎӏӶӷӸӹӺӻӼӽӾӿԀԁԂԃԄԅԆԇԈԉԊԋԌԍԎԏԐԑԒԓԔԕԖԗԘԙԚԛԜԝԞԟԠԡԢԣԤԥԱԲԳԴԵԶԷԸԹԺԻԼԽԾԿՀՁՂՃՄՅՆՇՈՉՊՋՌՍՎՏՐՑՒՓՔՕՖՙ՚՛՜՝՞՟աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆև",
+            extra_chars: str = "ϗϘϙϚϛϜϝϞϟϠϡϰϱϲϳϴϵ϶ϷϸϹϺϻϼϽϾϿЀЁЂЃЄЅІЇЈЉЊЋЌЍЎЏАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрсљњћќѝўџѢѣѲѳҐґҒғҔҕҖҗҘҙҚқҢңҤҥҪҫҬҭҮүҰұҲҳҺһӀӁӂӃӄӇӈӋӌӏӶӷӸӹԐԑԚԛԜԝԱԲԳԴԵԶԷԸԹԺԻԼԽԾԿՀՁՂՃՄՅՆՇՈՉՊՋՌՍՎՏՐՑՒՓՔՕՖՙ՚՛՜՝՞՟աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆև։֊აბგდევზთიკლმნოპჟრსტუფქღყშჩცძწჭხჯჰჱჲჳჴჵჶჷჸჹჺ჻ჼᴂᴈᴉᴔᴖᴗᴝᴞᴟᴬᴭᴮᴰᴱᴲᴳᴴᴵᴶᴷᴸᴹᴺᴻᴼᴾᴿᵀᵁᵂᵃᵄᵅᵆᵇᵈᵉᵊᵋᵌᵍᵎᵏᵐᵑᵒᵓᵔᵕᵖᵗᵘᵙᵚᵛᵢᵣᵤᵥᵷᵸᵻᶅᶛᶜᶝᶞᶟᶠᶡᶢᶣᶤᶥᶦᶧᶨᶩᶪᶫᶬᶭᶮᶯᶰᶱᶲᶳᶴᶵᶶᶷᶹᶺᶻᶼᶽᶾᶿḀḁḂḃḄḅḆḇḈḉḊḋḌḍḎḏḐḑḒḓḘḙḚḛḜḝḞḟḠḡḢḣḤḥḦḧḨḩḪḫḬḭḰḱḲḳḴḵḶḷḸḹḺḻḼḽḾḿṀṁṂṃṄṅṆṇṈṉṊṋṌṍṔṕṖṗṘṙṚṛṜṝṞṟṠṡṢṣṨṩṪṫṬṭṮṯṰṱṲṳṴṵṶṷṸṹṼṽṾṿẀẁẂẃẄẅẆẇẈẉẊẋẌẍẎẏẐẑẒẓẔẕẖẗẘẙẛẟẠạẬậẰằẶặẸẹẼẽỆệỊịỌọỘộỚớỜờỠỡỢợỤụỨứỪừỮữỰựỲỳỴỵỸỹἀἁἂἃἄἅἆἇἈἉἊἋἌἍἎἏἐἑἒἓἔἕἘἙἚἛἜἝἠἡἢἣἤἥἦἧἨἩἪἫἬἭἮἯἰἱἲἳἴἵἶἷἸἹἺἻἼἽἾἿὀὁὂὃὄὅὈὉὊὋὌὍὐὑὒὓὔὕὖὗὙὛὝὟὠὡὢὣὤὥὦὧὨὩὪὫὬὭὮὯὰάὲέὴήὶίὸόὺύὼώᾀᾁᾂᾃᾄᾅᾆᾇᾈᾉᾊᾋᾌᾍᾎᾏᾐᾑᾒᾓᾔᾕᾖᾗᾘᾙᾚᾛᾜᾝᾞᾟᾠᾡᾢᾣᾤᾥᾦᾧᾨᾩᾪᾫᾬᾭᾮᾯᾰᾱᾲᾳᾴᾶᾷᾸᾹᾺΆᾼ᾽ι᾿῀῁ῂῃῄῆῇῈΈῊΉῌ῍῎῏ῐῑῒΐῖῗῘῙῚΊ῝῞῟ῠῡῢΰῤῥῦῧῨῩῪΎῬ῭΅`ῲῳῴῶῷῸΌῺΏῼ",
             seed: int = 23,
             font_files: dict[str, str] = {
                 "regular": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                #"bold": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "mono": "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
             },
     ):
         self.seed = seed
@@ -38,20 +38,26 @@ class ScrambledFont:
         }
 
         scrambled_chars = list(chars_to_scramble)
-        rng = random.Random(self.seed)
-        rng.shuffle(scrambled_chars)
+        self.rng = random.Random(self.seed)
+        self.rng.shuffle(scrambled_chars)
 
         self.scramble_map = {
             ch1: [ch2]
             for ch1, ch2 in zip(self.chars_to_scramble, scrambled_chars)
         }
         extra_chars = list(self.extra_chars)
-        rng.shuffle(extra_chars)
+        self.rng.shuffle(extra_chars)
         for i, c in enumerate(extra_chars):
             self.scramble_map[self.chars_to_scramble[i % len(self.chars_to_scramble)]].append(c)
         #import json
         #print(json.dumps(self.scramble_map, indent=2))
         #print(self.scramble_map)
+
+    def scramble(self, text: str) -> str:
+        return "".join(
+            self.rng.choice(self.scramble_map[c]) if c in self.scramble_map else c
+            for c in text
+        )
 
     def render_font_files(self):
         for key, input_filename in self.original_font_files.items():

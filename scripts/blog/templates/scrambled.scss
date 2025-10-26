@@ -3,6 +3,15 @@
   src: url({{regular}}) format('woff2');
 }
 
+@font-face {
+  font-family: "scrambled-font-mono";
+  src: url({{mono}}) format('woff2');
+}
+
 .scramble {
   font-family: "scrambled-font";
+}
+
+.scramble-mono {
+  font-family: "scrambled-font-mono";
 }

@@ -1,5 +1,6 @@
 ---
 tags: ["lm"]
+scss: ["scrambled.scss"]
 ---
 
 # Tool usage with the granite language model
@@ -1113,7 +1114,7 @@ this is not meaningfully raising productivity in my company. Guess we need to bu
     
   However, 
   unreliability seems to be totally inherent to these text extrapolators. 
-  You can find mentions of, e.g., messed-up json formatting in many research papers, regardless of model size. 
+  You can find mentions of messed-up formatting in many research papers, regardless of model size. 
   The workaround in those papers, for the plain purpose of evaluation: 
   Generate many responses with random sampling and take the average of the ones that worked, 
   and report a success metric. 
@@ -1124,9 +1125,11 @@ So, here you go, i report usefulness of the tooling support, measured in
 I give that 17%.
 
 I mean, just look at this last example with a tool that returns the frequencies of words over time in
-some made-up posts database. In contrast to all the examples above, i used random sampling (temperature
-1.01) and ran the "What is the current time?" prompt a few times. It's even okay for me that the text
-extrapolation always constructs an answer as if one would've asked about the frequency of this term.
+some made-up posts database. I'm a hobbyist data collector and it would be kinda cool to query the
+databases with natural language.
+
+In contrast to all the examples above, i used random sampling and ran the "What is the current time?" prompt a few times. It's even okay for me that the text
+extrapolation always constructs an answer as if i would've asked about the frequency of this term.
 The `available_tools` part of the input prompt understandably provokes this context. 
 But the 'interpretation generation' of the tool result, showed no signs of meaning, understanding, comprehension
 or connection for as long as i tried. It just doesn't make sense. It's just complete *never-mind* 
@@ -1135,7 +1138,7 @@ diddledidoo, i would need to look at each tool call result myself, anyway. So i 
 extrapolation algorithm after the tool call result. That means i don't have to run the algorithm at all
 and just call that tool myself.
 
-```llmchat
+```llmchat+tools
 <|start_of_role|>system<|end_of_role|>Knowledge Cutoff Date: April 2024.
 Today's Date: September 21, 2025.
 You are Granite, developed by IBM. You are a helpful assistant with access to the following tools. When a tool is required to answer the user's query, respond only with <|tool_call|> followed by a JSON list of tools used. If a tool does not exist in the provided list of tools, notify the user that you do not have the ability to fulfill the request.<|end_of_text|>

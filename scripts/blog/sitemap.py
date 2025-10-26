@@ -76,6 +76,10 @@ class Page:
         files = ["style.scss"]
         if self.scrambled:
             files.append("scrambled.scss")
+        if fmfiles := self.document.frontmatter.get("scss"):
+            for file in fmfiles:
+                if file not in files:
+                    files.append(file)
         return files
 
     @property
@@ -286,7 +290,8 @@ class Sitemap:
         markup = render_document_html(
             page.document,
             link_mapping=self.page_link_mapping(page),
-            text_scrambling=self.scrambled_font.scramble_map if page.scrambled else None,
+            do_scramble=page.scrambled,
+            scrambler=self.scrambled_font,
         )
         if page.document.placeholder_map:
             for placeholder, content in page.document.placeholder_map.items():

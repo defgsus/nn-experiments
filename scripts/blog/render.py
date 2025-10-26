@@ -15,17 +15,20 @@ from marko.ext.gfm.renderer import GFMRendererMixin
 
 from .document import Document
 from .ext import IntegratedFootnoteReference
+from .scrambling import ScrambledFont
 
 
 def render_document_html(
         document: Document,
         link_mapping: Dict[str, str],
-        text_scrambling: Optional[Dict[str, List[str]]] = None,
+        scrambler: ScrambledFont,
+        do_scramble: bool
 ):
     return HTMLRenderer(
         document=document,
         link_mapping=link_mapping,
-        text_scrambling=text_scrambling,
+        scrambler=scrambler,
+        do_scramble=do_scramble,
     ).render(document.document)
 
 
@@ -71,13 +74,15 @@ class HTMLRenderer(_get_renderer_base_class()):
             self,
             document: Document,
             link_mapping: Dict[str, str],
-            text_scrambling: Optional[Dict[str, List[str]]] = None,
+            scrambler: ScrambledFont,
+            do_scramble: bool,
             **kwargs,
     ):
         super().__init__(**kwargs)
         self.document = document
         self._link_mapping = link_mapping
-        self._text_scrambling = text_scrambling
+        self._scrambler = scrambler
+        self._do_scramble = do_scramble
         self._generated_id = 1022
         self._current_parent: List[marko.element.Element] = []
         self._footnotes_per_parent: Dict[marko.element.Element, int] = {}
@@ -96,12 +101,9 @@ class HTMLRenderer(_get_renderer_base_class()):
         self._generated_id += 1
         return f"subgenius-{self._generated_id}"
 
-    def _scramble_text(self, text: str) -> str:
-        if self._text_scrambling:
-            text = "".join(
-                random.choice(self._text_scrambling[c]) if c in self._text_scrambling else c
-                for c in text
-            )
+    def _scramble_text(self, text: str, always: bool = False) -> str:
+        if self._do_scramble or always:
+            text = self._scrambler.scramble(text)
         return text
 
     def render_plain_text(self, element: Any) -> str:
@@ -110,7 +112,7 @@ class HTMLRenderer(_get_renderer_base_class()):
         return self.render_children(element)
 
     def render_raw_text(self, element: inline.RawText) -> str:
-        if not self._text_scrambling:
+        if not self._do_scramble:
             return self.escape_html(element.children)
         else:
             return f"""<span class="scramble">{self.escape_html(self._scramble_text(element.children))}</span>"""
@@ -152,7 +154,8 @@ class HTMLRenderer(_get_renderer_base_class()):
             # TODO: insert text-scrambling into the codehilite plugin
             html = super().render_fenced_code(element)
         else:
-            html = f"<pre>{html_lib.escape(self._scramble_text(element.children[0].children))}</pre>"
+            scram_class = ' class="scramble-mono"' if self._do_scramble else ""
+            html = f"<pre{scram_class}>{html_lib.escape(self._scramble_text(element.children[0].children))}</pre>"
         return f"""<div style="overflow: scroll;">{html}</div>"""
 
     def render_integrated_footnote_reference(self, element: IntegratedFootnoteReference):
@@ -170,7 +173,8 @@ class HTMLRenderer(_get_renderer_base_class()):
         return HTMLInlineRenderer(
             document=self.document,
             link_mapping=self._link_mapping,
-            text_scrambling=self._text_scrambling,
+            scrambler=self._scrambler,
+            do_scramble=self._do_scramble,
         ).render(element)
 
     def _render_llm_chat(self, element: marko.block.FencedCode):
@@ -199,7 +203,7 @@ class HTMLRenderer(_get_renderer_base_class()):
                 </label>
                 """.format(
                     role=role,
-                    html=self._render_llm_chat_block(text),
+                    html=self._render_llm_chat_block(text, mono=role in ("available_tools", "tool_call")),
                     checkbox_id=checkbox_id,
                     checked_attr='checked=""' if block_open else "",
                 )
@@ -211,27 +215,28 @@ class HTMLRenderer(_get_renderer_base_class()):
                 <label class="llm-chat-full-transcript">
                     <input id="{checkbox_id}" type="checkbox">
                     <div class="llm-chat-label-show">Show plain text</div>
-                    <pre>{full_transcript}</pre>
+                    <pre class="scramble-mono">{full_transcript}</pre>
                 </label>
             </div>
         """.format(
             windows="\n".join(htmls),
             checkbox_id=self.get_new_id(),
-            full_transcript=html_lib.escape(chat_text.replace("\\```", "```")),
+            full_transcript=html_lib.escape(self._scramble_text(chat_text.replace("\\```", "```"), True)),
         )
         # print("X", html)
         return html
 
-    def _render_llm_chat_block(self, text: str) -> str:
+    def _render_llm_chat_block(self, text: str, mono: bool = False) -> str:
         blocks = re.split(r"\\```", text)
         is_code_block = False
         htmls = []
         for block in blocks:
-            block = html_lib.escape(block)
+            block = html_lib.escape(self._scramble_text(block, True))
             if is_code_block:
-                html = f"""<pre>```{block.rstrip()}\n```</pre>"""
+                html = f"""<pre class="scramble-mono">```{block.rstrip()}\n```</pre>"""
             else:
-                html = block.strip()
+                kls = "scramble-mono" if mono else "scramble"
+                html = f'<span class="{kls}">{block.strip()}</span>'
             htmls.append(html)
             is_code_block = not is_code_block
         return "".join(htmls)
@@ -300,7 +305,7 @@ class HTMLInlineRenderer(HTMLRenderer):
             else ""
         )
         html = """<span style="white-space: pre-wrap;"><code{}>{}</code></span>\n""".format(
-            lang, html_lib.escape(element.children[0].children)  # type: ignore
+            lang, html_lib.escape(self._scramble_text(element.children[0].children))  # type: ignore
         )
         return f"""<span style="overflow: scroll;">{html}</span>"""
 
