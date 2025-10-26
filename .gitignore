@@ -13,6 +13,7 @@ runs/
 scratchpad/
 /datasets/
 cache/
+nn-experiments
 
 *.pyc
 __pycache__/

@@ -13,7 +13,9 @@ import marko
 import scss
 
 from .document import Document
+from .render import render_template
 from .transpile import transpile_js
+from .scrambling import ScrambledFont
 
 
 TAGS = {
@@ -71,14 +73,17 @@ class Page:
 
     @property
     def scss_files(self) -> List[str]:
-        return ["style.scss"]
+        files = ["style.scss"]
+        if self.scrambled:
+            files.append("scrambled.scss")
+        return files
 
     @property
     def js_files(self) -> List[str]:
         files = ["main.js"]
         # if there is a plotly script waiting in one of the held-back notebook outputs
         if self.document.placeholder_map and any("plotly.js" in p for p in self.document.placeholder_map.values()):
-            files += ["plotly.js"]
+            files.append("plotly.js")
         if js_files := self.document.frontmatter.get("js"):
             files.extend(js_files)
         return files
@@ -108,11 +113,16 @@ class Page:
             for tag in sorted(tags)
         ]
 
+    @property
+    def scrambled(self) -> bool:
+        return bool(self.document.frontmatter.get("scramble"))
+
 
 class StyleSheet:
 
-    def __init__(self, original_filename: Path):
+    def __init__(self, original_filename: Path, context: Optional[dict] = None):
         self.original_filename = original_filename
+        self.context = context
         self._content = None
 
     @property
@@ -129,7 +139,13 @@ class StyleSheet:
                 root=TEMPLATE_PATH,
                 ignore_parse_errors=False,
             )
-            self._content = compiler.compile(self.original_filename)
+            if self.context is None:
+                self._content = compiler.compile(self.original_filename)
+            else:
+                source = self.original_filename.read_text()
+                source = render_template(source, self.context)
+                self._content = compiler.compile_string(source)
+
         return self._content
 
 
@@ -177,6 +193,7 @@ class Sitemap:
 
         self.template_path = TEMPLATE_PATH
         self.docs_path = DOCS_PATH
+        self.scrambled_font = ScrambledFont(self.docs_path / "html" / "fonts")
 
         self.base_templates = {
             "base": (self.template_path / "base.html").read_text(),
@@ -185,6 +202,13 @@ class Sitemap:
         }
         self.stylesheets_mapping = {
             "style.scss": StyleSheet(self.template_path / "style.scss"),
+            "scrambled.scss": StyleSheet(
+                self.template_path / "scrambled.scss",
+                context={
+                    key: f"/nn-experiments/{filename.relative_to(self.docs_path)}"
+                    for key, filename in self.scrambled_font.font_files.items()
+                }
+            ),
         }
         self.js_files_mapping = {
             "main.js": JavascriptFile(self.template_path / "main.js"),
@@ -262,6 +286,7 @@ class Sitemap:
         markup = render_document_html(
             page.document,
             link_mapping=self.page_link_mapping(page),
+            text_scrambling=self.scrambled_font.scramble_map if page.scrambled else None,
         )
         if page.document.placeholder_map:
             for placeholder, content in page.document.placeholder_map.items():
@@ -389,6 +414,7 @@ class Sitemap:
         if write:
             shutil.rmtree(DOCS_PATH / "html" / "style", ignore_errors=True)
             shutil.rmtree(DOCS_PATH / "html" / "js", ignore_errors=True)
+            self.scrambled_font.render_font_files()
 
         for page in self.iter_pages():
             _write_file(page.url, self.render_page(page))

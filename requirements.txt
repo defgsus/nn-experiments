@@ -4,6 +4,7 @@ accelerate
 bitsandbytes
 einops
 faiss-cpu
+fonttools[lxml,woff,unicode]
 git+https://github.com/openai/CLIP.git
 github-slugger
 graphviz

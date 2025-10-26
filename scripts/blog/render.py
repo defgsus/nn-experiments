@@ -1,7 +1,8 @@
+import random
 import re
 from pathlib import Path
 import html as html_lib
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 import jinja2.exceptions
 import marko
@@ -19,10 +20,12 @@ from .ext import IntegratedFootnoteReference
 def render_document_html(
         document: Document,
         link_mapping: Dict[str, str],
+        text_scrambling: Optional[Dict[str, List[str]]] = None,
 ):
     return HTMLRenderer(
         document=document,
         link_mapping=link_mapping,
+        text_scrambling=text_scrambling,
     ).render(document.document)
 
 
@@ -57,7 +60,6 @@ def render_template(
 
 
 def _get_renderer_base_class():
-    from .ext import IntegratedFootnoteExtension
     md = marko.Markdown(extensions=["gfm", "codehilite"])
     md._setup_extensions()
     return type(md.renderer)
@@ -65,10 +67,17 @@ def _get_renderer_base_class():
 
 class HTMLRenderer(_get_renderer_base_class()):
 
-    def __init__(self, document: Document, link_mapping: Dict[str, str], **kwargs):
+    def __init__(
+            self,
+            document: Document,
+            link_mapping: Dict[str, str],
+            text_scrambling: Optional[Dict[str, List[str]]] = None,
+            **kwargs,
+    ):
         super().__init__(**kwargs)
         self.document = document
         self._link_mapping = link_mapping
+        self._text_scrambling = text_scrambling
         self._generated_id = 1022
         self._current_parent: List[marko.element.Element] = []
         self._footnotes_per_parent: Dict[marko.element.Element, int] = {}
@@ -86,6 +95,25 @@ class HTMLRenderer(_get_renderer_base_class()):
     def get_new_id(self):
         self._generated_id += 1
         return f"subgenius-{self._generated_id}"
+
+    def _scramble_text(self, text: str) -> str:
+        if self._text_scrambling:
+            text = "".join(
+                random.choice(self._text_scrambling[c]) if c in self._text_scrambling else c
+                for c in text
+            )
+        return text
+
+    def render_plain_text(self, element: Any) -> str:
+        if isinstance(element.children, str):
+            return self.escape_html(self._scramble_text(element.children))
+        return self.render_children(element)
+
+    def render_raw_text(self, element: inline.RawText) -> str:
+        if not self._text_scrambling:
+            return self.escape_html(element.children)
+        else:
+            return f"""<span class="scramble">{self.escape_html(self._scramble_text(element.children))}</span>"""
 
     def render_heading(self, element: marko.block.Heading) -> str:
         if hasattr(element, "anchor"):
@@ -121,9 +149,10 @@ class HTMLRenderer(_get_renderer_base_class()):
         if element.lang.startswith("llmchat"):
             return self._render_llm_chat(element)
         if element.lang:
+            # TODO: insert text-scrambling into the codehilite plugin
             html = super().render_fenced_code(element)
         else:
-            html = f"<pre>{html_lib.escape(element.children[0].children)}</pre>"
+            html = f"<pre>{html_lib.escape(self._scramble_text(element.children[0].children))}</pre>"
         return f"""<div style="overflow: scroll;">{html}</div>"""
 
     def render_integrated_footnote_reference(self, element: IntegratedFootnoteReference):
@@ -138,7 +167,11 @@ class HTMLRenderer(_get_renderer_base_class()):
         )
 
     def render_inline_only(self, element):
-        return HTMLInlineRenderer(document=self.document, link_mapping=self._link_mapping).render(element)
+        return HTMLInlineRenderer(
+            document=self.document,
+            link_mapping=self._link_mapping,
+            text_scrambling=self._text_scrambling,
+        ).render(element)
 
     def _render_llm_chat(self, element: marko.block.FencedCode):
         all_open = "+all" in element.lang
@@ -271,8 +304,9 @@ class HTMLInlineRenderer(HTMLRenderer):
         )
         return f"""<span style="overflow: scroll;">{html}</span>"""
 
-
-
+    def render_image(self, element: marko.inline.Image) -> str:
+        element.dest = self._link_mapping.get(element.dest, element.dest)
+        return marko.HTMLRenderer.render_image(self, element)
 
 
 class HTMLTeaserRenderer(GFMRendererMixin, marko.HTMLRenderer):
