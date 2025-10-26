@@ -1,0 +1,13 @@
+@font-face {
+  font-family: "scrambled-font";
+  src: url(/nn-experiments/html/fonts/scrambled-regular-3965faf54c.woff2) format('woff2'); }
+
+  @font-face {
+    font-family: "scrambled-font-mono";
+    src: url(/nn-experiments/html/fonts/scrambled-mono-3965faf54c.woff2) format('woff2'); }
+
+    .scramble {
+      font-family: "scrambled-font"; }
+
+      .scramble-mono {
+        font-family: "scrambled-font-mono"; }

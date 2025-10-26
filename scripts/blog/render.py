@@ -152,11 +152,38 @@ class HTMLRenderer(_get_renderer_base_class()):
             return self._render_llm_chat(element)
         if element.lang:
             # TODO: insert text-scrambling into the codehilite plugin
-            html = super().render_fenced_code(element)
+            html = self._render_fenced_code(element)
         else:
             scram_class = ' class="scramble-mono"' if self._do_scramble else ""
             html = f"<pre{scram_class}>{html_lib.escape(self._scramble_text(element.children[0].children))}</pre>"
         return f"""<div style="overflow: scroll;">{html}</div>"""
+
+    def _render_fenced_code(self, element: marko.block.FencedCode):
+        if not self._do_scramble:
+            return super().render_fenced_code(element)
+
+        # -- copy the marko.ext.codehilite code and adjust the highlighter to scramble text --
+
+        from marko.ext.codehilite import (
+            html, get_lexer_by_name, guess_lexer, ClassNotFound, _parse_extras
+        )
+        from pygments import lex, format
+
+        code = element.children[0].children
+        options = {**self.options, **_parse_extras(getattr(element, "extra", None))}
+        if element.lang:
+            try:
+                lexer = get_lexer_by_name(element.lang, stripall=True)
+            except ClassNotFound:
+                lexer = guess_lexer(code)
+        else:
+            lexer = guess_lexer(code)
+        formatter = html.HtmlFormatter(**options, classprefix="scramble-mono ")
+        def iter_tokens():
+            for typ, tok in lexer.get_tokens(code):
+                tok = self._scrambler.scramble(tok)
+                yield typ, tok
+        return format(iter_tokens(), formatter)
 
     def render_integrated_footnote_reference(self, element: IntegratedFootnoteReference):
         parent = self.current_parent
