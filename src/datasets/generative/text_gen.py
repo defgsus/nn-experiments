@@ -27,6 +27,7 @@ class TextQABaseIterableDataset(BaseIterableDataset):
             seed: Optional[int] = None,
             exclude: Optional[Iterable[str]] = None,
             with_masked: bool = False,
+            mask_char: str = "\0",
     ):
         super().__init__()
         self._count = count
@@ -38,6 +39,7 @@ class TextQABaseIterableDataset(BaseIterableDataset):
         self._seed = seed
         self._exclude = None if exclude is None else set(exclude)
         self._with_masked = with_masked
+        self._mask_char = mask_char
 
     def iter_question_answer(self, rng: random.Random) -> Generator[Tuple[str, str], None, None]:
         raise NotImplementedError
@@ -109,7 +111,7 @@ class TextQABaseIterableDataset(BaseIterableDataset):
             if not self._with_masked:
                 yield self._make_fixed_width(text)
             else:
-                masked_text = f"{question}{self._separator}" + "\0" * len(answer)
+                masked_text = f"{question}{self._separator}" + self._mask_char * len(answer)
                 yield self._make_fixed_width(text), self._make_fixed_width(masked_text)
 
             num += 1
@@ -126,7 +128,7 @@ class TextQABaseIterableDataset(BaseIterableDataset):
 
 class TextQAMathIterableDataset(TextQABaseIterableDataset):
     """
-    Yields things like '3 + 4 = 7'
+    Yields things like '3+4=7'
     """
     def __init__(
             self,
@@ -142,7 +144,12 @@ class TextQAMathIterableDataset(TextQABaseIterableDataset):
     ):
         self._operators = list(operators)
         if count is None:
-            count = (max_number ** (num_operations + 1)) * (num_operations ** len(self._operators))
+            c1 = 0
+            c2 = 0
+            for i in ([num_operations] if isinstance(num_operations, int) else num_operations):
+                c1 += i ** len(self._operators)
+                c2 += max_number ** (i + 1)
+            count = c1 * c2
         super().__init__(
             count=count, seed=seed, exclude=exclude, with_masked=with_masked, **kwargs,
             fixed_answer_width=fixed_answer_width,

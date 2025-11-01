@@ -13,6 +13,52 @@ from src.models.encoder import DiagonalEmbedding
 from src.util.params import param_make_tuple
 
 
+class KANLayer(nn.Module):
+    """
+    based on https://github.com/SciYu/KAE/blob/main/DenseLayerPack/KAE.py
+    """
+    def __init__(
+            self,
+            dim: int,
+            order: int,
+            bias: bool = True,
+            activation: Union[None, str, Callable] = None,
+    ):
+        super().__init__()
+        self.dim = dim
+        self.order = order
+        self.coeffs = nn.Parameter(torch.randn(dim, dim, order + 1) * 0.01)
+        self.bias = None
+        if bias:
+            self.bias = nn.Parameter(torch.zeros(1, dim))
+        self.act = activation_to_module(activation)
+
+    def extra_repr(self):
+        return f"dim={self.dim}, order={self.order}, bias={self.bias is not None}"
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B, C, L = x.shape
+        assert C == self.dim, f"Got {C}, shape={x.shape}"
+
+        x_expanded = x.permute(0, 2, 1).reshape(B * L, 1, C).expand(-1, C, -1)
+
+        y = torch.zeros((B * L, self.dim), device=x.device, dtype=x.dtype)
+
+        for i in range(self.order + 1):
+            term = (x_expanded ** i) * self.coeffs[:, :, i]
+            y += term.sum(dim=-1)
+
+        if self.bias is not None:
+            y = y + self.bias
+
+        if self.act is not None:
+            y = self.act(y)
+
+        y = y.reshape(B, L, C).permute(0, 2, 1)
+
+        return y
+
+
 class FFTConvLayer(nn.Module):
 
     def __init__(self, mode: str = "same", residual: bool = True):
@@ -32,6 +78,9 @@ class FFTConvLayer(nn.Module):
 
 
 class StateRepacker(nn.Module):
+    """
+    Based on BigBang-Proton https://arxiv.org/abs/2510.00129
+    """
     def __init__(
             self,
     ):
@@ -57,6 +106,7 @@ class ConvTextLayer(nn.Module):
             residual: bool,
             cheap: bool = False,
             repacking: bool = False,
+            kan_order: int = 0,
             num_attention_heads: Union[bool, int] = 0,
             attention_invention: str = "QK",  # "QK", "QV", "KV", "QKV"
             attention_activation: Union[None, str, Callable] = "elu+1",
@@ -77,6 +127,10 @@ class ConvTextLayer(nn.Module):
             padding=padding,
             dilation=dilation,
         )
+        self.kan_layer = None
+        if kan_order > 0:
+            assert num_channels_in == num_channels_out, f"Got: {num_channels_in}, {num_channels_out}"
+            self.kan_layer = KANLayer(dim=num_channels_in, order=kan_order)
         self.attn = None
         if num_attention_heads:
             if num_attention_heads is True:
@@ -112,6 +166,9 @@ class ConvTextLayer(nn.Module):
             x = self.repacker(x)
 
         y = self.conv(x)
+
+        if self.kan_layer is not None:
+            y = self.kan_layer(y)
 
         if self.attn is not None:
             # channel-wise attention (put channels into last dim)

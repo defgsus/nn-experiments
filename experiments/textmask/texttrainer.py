@@ -36,6 +36,7 @@ class TextMaskTrainer(Trainer):
             mask_is_arg: Optional[int] = None,
             mask_size: int = 10,
             mask_type: Union[str, Iterable[str]] = "single",  # "block", "single", "end"
+            fixed_length: Optional[int] = None,
             tokenizer: Optional[PreTrainedTokenizerBase] = None,
             **kwargs,
     ):
@@ -43,6 +44,7 @@ class TextMaskTrainer(Trainer):
         self._mask_is_arg = mask_is_arg
         self._mask_size = mask_size
         self._mask_type = [mask_type] if isinstance(mask_type, str) else set(mask_type)
+        self._fixed_length = fixed_length
         self._font_squares = FontSquares(shape=(3, 8, 8))
         self._tokenizer = tokenizer
         if self._tokenizer is not None:
@@ -113,7 +115,7 @@ class TextMaskTrainer(Trainer):
                 self._tokenizer.encode(text)
                 for text in texts
             ]
-            fixed_len = min(len(t) for t in texts)
+            fixed_len = self._fixed_length or max(len(t) for t in texts)
             token_batch = []
             for tokens in token_ids:
                 if len(tokens) < fixed_len:
@@ -125,7 +127,7 @@ class TextMaskTrainer(Trainer):
 
         text_batch = []
         texts = [list(t.encode()) for t in texts]
-        fixed_len = min(len(t) for t in texts)
+        fixed_len = self._fixed_length or max(len(t) for t in texts)
         for text in texts:
             if len(text) < fixed_len:
                 text += [32] * (fixed_len - len(text))

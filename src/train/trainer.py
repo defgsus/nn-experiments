@@ -37,8 +37,8 @@ class Trainer:
             self,
             experiment_name: str,
             model: torch.nn.Module,
-            data_loader: DataLoader,
-            validation_loader: Optional[DataLoader] = None,
+            data_loaders: List[Tuple[int, DataLoader]],
+            validation_loaders: Optional[List[Tuple[int, DataLoader]]] = None,
             freeze_validation_set: bool = False,
             min_loss: Optional[float] = None,
             max_epoch: Optional[int] = None,
@@ -68,8 +68,8 @@ class Trainer:
 
         self.experiment_name = experiment_name
         self.model = model
-        self.data_loader = data_loader
-        self.validation_loader = validation_loader
+        self.data_loaders = data_loaders
+        self.validation_loaders = validation_loaders
         self.freeze_validation_set = freeze_validation_set
         self._validation_batches: Optional[torch.Tensor] = None
         self._best_validation_loss: Optional[float] = None
@@ -149,6 +149,21 @@ class Trainer:
 
     def write_step(self):
         pass
+
+    @property
+    def data_loader(self) -> DataLoader:
+        for i, dl in reversed(self.data_loaders):
+            if self.epoch >= i:
+                return dl
+        raise ValueError(f"No dataset for epoch 0 defined")
+
+    @property
+    def validation_loader(self) -> Optional[DataLoader]:
+        if not self.validation_loaders:
+            return
+        for i, dl in reversed(self.validation_loaders):
+            if self.epoch >= i:
+                return dl
 
     def load_checkpoint(self, name: str = "snapshot") -> bool:
         checkpoint_filename = self.checkpoint_path / f"{name}.pt"

@@ -1,0 +1,82 @@
+experiment_name: textmask/convtext-math4_${matrix_slug}
+
+matrix:
+  bs:
+    - 64
+  opt: ["AdamW"]
+  lr: [.0005]
+  len:
+    - 40
+  lnum:
+    - 9999
+  nops:
+    - [1, 3]
+  l:
+    #- 18
+    #- 3
+    #- 4
+    - 6
+    - 12
+    - 18
+  ch:
+    - 64
+    #- 128
+    #- 256
+  ks:
+    - 13
+    #- 11
+    #- 13
+  dil:
+    - [1, 2, 3, 4, 5, 1]
+    - [1, 2, 3, 4, 5, 1, 1, 2, 3, 4, 5, 1]
+    - [1, 2, 3, 4, 5, 1, 1, 2, 3, 4, 5, 1, 1, 2, 3, 4, 5, 1]
+  $filter: (isinstance(${dil}, int) or len(${dil}) == ${l})
+  act:
+    - "gelu"
+
+
+trainer: experiments.textmask.texttrainer.TextMaskTrainer
+mask_is_arg: 1
+fixed_length: ${len}
+
+train_set: |
+  def create_datasets(max_num, num_ops):
+      return TextQAMathIterableDataset.create_train_and_validation_set(
+          with_masked=True,
+          mask_char=" ",
+          fixed_width=${len},
+          train_count=500_000,
+          validation_count=10_000,
+          validation_seed=23,
+          max_number=max_num,
+          num_operations=num_ops,
+          operators=["+", "-", "*"],
+      )
+  train_set, validation_set = create_datasets(${lnum}, ${nops})
+  train_set
+
+validation_set: |
+  validation_set.freeze()
+
+batch_size: ${bs}
+learnrate: ${lr}
+optimizer: ${opt}
+scheduler: CosineAnnealingWarmupLR
+#loss_function: l1
+max_inputs: 10_000_000
+num_epochs_between_validations: 1
+#num_inputs_between_validations: 50_000
+#freeze_validation_set: True
+
+
+model: |
+  from experiments.textmask.textmodel import ConvTextModel
+  
+  ConvTextModel(
+      vocab_size=256,
+      num_layers=${l},
+      num_channels=${ch},
+      kernel_size=${ks},
+      dilation=${dil},
+      activation="${act}",
+  )

@@ -510,24 +510,22 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
         "EXTRA_VALUES": {}
     }
     for key, value in data.items():
-        if key in (
-                "model",
-                "train_set",
-                "validation_set",
+        if (
+            key == "model"
+            or key.startswith("train_set") or key.startswith("validation_set")
         ):
-            value = construct_from_code(value, locals_)
+            kwargs[key] = construct_from_code(value, locals_)
 
         # interpret multiline strings as code
         elif isinstance(value, str) and "\n" in value:
-            value = construct_from_code(value, locals_)
+            kwargs[key] = construct_from_code(value, locals_)
 
-        kwargs[key] = value
+        else:
+            kwargs[key] = value
 
     kwargs["extra_description_values"]["extra"].update(locals_["EXTRA_VALUES"])
 
     trainer_class = kwargs.pop("trainer", None)
-    train_set = kwargs.pop("train_set")
-    validation_set = kwargs.pop("validation_set", None)
     batch_size = kwargs.pop("batch_size")
     learnrate = kwargs.pop("learnrate")
     optimizer = kwargs.pop("optimizer")
@@ -540,21 +538,41 @@ def get_trainer_kwargs_from_dict(data: dict) -> Tuple[Type[Trainer], dict]:
     else:
         trainer_class = Trainer
 
-    kwargs["data_loader"] = DataLoader(
-        train_set,
-        batch_size=batch_size,
-        shuffle=not isinstance(train_set, IterableDataset),
-        num_workers=num_workers,
-        collate_fn=dataloader_collate_fn,
-    )
+    train_sets = []
+    validation_sets = []
+    for key, value in list(kwargs.items()):
+        if key.startswith("train_set"):
+            i = 0 if key == "train_set" else int(key[9:])
+            train_sets.append((i, value))
+            kwargs.pop(key)
+        elif key.startswith("validation_set"):
+            i = 0 if key == "validation_set" else int(key[14:])
+            validation_sets.append((i, value))
+            kwargs.pop(key)
+
+    kwargs["data_loaders"] = [
+        (i, DataLoader(
+                train_set,
+                batch_size=batch_size,
+                shuffle=not isinstance(train_set, IterableDataset),
+                num_workers=num_workers,
+                collate_fn=dataloader_collate_fn,
+            )
+        )
+        for i, train_set in train_sets
+    ]
 
     validation_batch_size = kwargs.pop("validation_batch_size", None)
-    if validation_set is not None:
-        kwargs["validation_loader"] = DataLoader(
-            validation_set,
-            batch_size=validation_batch_size or batch_size,
-            collate_fn=dataloader_collate_fn,
-        )
+    if validation_sets:
+        kwargs["validation_loaders"] = [
+            (i, DataLoader(
+                    validation_set,
+                    batch_size=validation_batch_size or batch_size,
+                    collate_fn=dataloader_collate_fn,
+                )
+            )
+            for i, validation_set in validation_sets
+        ]
 
     kwargs["optimizers"] = [
         construct_optimizer(kwargs["model"], learnrate, optimizer)
