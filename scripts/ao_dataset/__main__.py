@@ -14,6 +14,7 @@ from src.config import PROJECT_PATH
 from scripts.ao_dataset.render_base import create_font_image, get_distance_field
 from scripts.ao_dataset.render_gl import render_shader
 from src.util import to_torch_device
+from src.models.ca import TotalCALayer
 
 DATASET_PATH = PROJECT_PATH / "datasets" / "ao"
 AA = 2
@@ -60,12 +61,19 @@ def render_source_images(
                 VF.to_pil_image(source_image).save(fn_source_big)
 
 
+torch.no_grad()
 def render_target_images(
         path: Path = DATASET_PATH,
         device: str = "auto",
         aa: int = AA,
 ):
     device = to_torch_device(device)
+    ca = TotalCALayer(
+        birth=[0, 1, 1, 0, 0, 0, 0, 0, 0],
+        survive=[0, 1, 1, 1, 1, 1, 0, 0, 0],
+        iterations=10,
+        threshold=.01,
+    ).to(device)
     for dataset in ("train", "validation"):
         files = sorted((path / dataset / "source-big").glob("*.png"))
         for fn_idx, fn_source in enumerate(files):
@@ -84,16 +92,20 @@ def render_target_images(
                 fn_distance.parent.mkdir(parents=True, exist_ok=True)
                 torch.save(distances, fn_distance)
 
-            if not fn_target.exists():
-                print(f"{dataset} {fn_idx+1}/{len(files)} target image {source_image.shape}")
+            if 1 or not fn_target.exists():
+                target_size = [source_image.shape[0] // aa, source_image.shape[1] // aa]
+                print(f"{dataset} {fn_idx+1}/{len(files)} target image {target_size}")
                 d = distances / distances.shape[0]
-                d = VF.resize(d.unsqueeze(0), [d.shape[0] // aa, d.shape[1] // aa], VF.InterpolationMode.BICUBIC)[0]
-                source_image
-                image = render_shader(d)
+                d = VF.resize(d.unsqueeze(0), target_size, VF.InterpolationMode.BICUBIC)[0]
+                db = VF.gaussian_blur(d.unsqueeze(0), [target_size[0]//64+1]*2, [20., 20.])[0]
+                s = VF.resize(source_image.unsqueeze(0), target_size, VF.InterpolationMode.BICUBIC)[0]
+                sb = VF.gaussian_blur(s.unsqueeze(0), [target_size[0]//8+1]*2, [20., 20.])[0]
+                #sb = ca(s.unsqueeze(0).to(device))[0].cpu()
+                image = render_shader(torch.stack([d, db, s, sb]))
                 fn_target.parent.mkdir(parents=True, exist_ok=True)
                 image.save(fn_target)
 
-            # break
+            #break
 
 
 if __name__ == "__main__":

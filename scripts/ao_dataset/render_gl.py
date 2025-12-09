@@ -47,7 +47,7 @@ def render_shader(
     if multisamples == "max":
         multisamples = ctx.max_samples
 
-    size = (distance_image.shape[1], distance_image.shape[0])
+    size = (distance_image.shape[-1], distance_image.shape[-2])
     fbo_multi = ctx.framebuffer(
         color_attachments=[ctx.renderbuffer(size, 3, samples=multisamples)],
     )
@@ -69,8 +69,8 @@ def render_shader(
     except KeyError:
         pass
 
-    distance_image = distance_image.numpy()
-    texture = ctx.texture(size=size, components=1, data=distance_image[::-1].tobytes(), dtype="f4")
+    data = distance_image.permute(1, 2, 0).numpy()[::-1]
+    texture = ctx.texture(size=size, components=4, data=data.tobytes(), dtype="f4")
     sampler = ctx.sampler(texture=texture)
     sampler.filter = (ctx.LINEAR, ctx.LINEAR)
     sampler.use(0)

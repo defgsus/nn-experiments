@@ -12,14 +12,14 @@ uniform sampler2D u_texture;
 float DE(in vec3 pos) {
     vec2 uv = pos.xy * .5 + .5;
 
-    // distance from input texture
-    float t = texture(u_texture, uv).x;
-    // cut at z=0.1
-    float f = max(t * 3., dot(pos - vec3(0, 0, .1), vec3(0, 0, 1)));
+    // distance from input texture (distance, blurred distance, mask, blurred mask)
+    vec4 t = texture(u_texture, uv).xyzw;
+    // cut at z
+    float f = max(t.x * 3., dot(pos - vec3(0, 0, .2 * (.2+.8*t.w)), vec3(0, 0, 1)));
 
     float d = dot(pos, vec3(0, 0, 1));
     d = min(d, f);
-    d += min(0., t) / 4.;
+    d += min(0., t.y + t.x) / 4.;
 
     //d = min(d, length(pos) - 1.);
 
@@ -57,12 +57,13 @@ float light_at(in vec3 pos) {
 float ambient_at(in vec3 pos, in vec3 dir) {
     const float k = 1.5;
 
-    float t = 0.001;
+    float t = 0.01;
     float light = 1.;
     for (int i=0; i < 250; ++i) {
         vec3 p = pos + dir * t;
+        if (p.x<=-1 || p.x>=1 || p.y<=-1 || p.y>=1) break;
         float d = DE(p);
-        if (d <= 0.0001) {
+        if (d <= 0.001) {
             return 0.;
         }
         light = min(light, k * d / t);
@@ -71,6 +72,14 @@ float ambient_at(in vec3 pos, in vec3 dir) {
     float soft = pow(light, 2.);
     float hard = pow(light, 1/2.);
     return hard * .7 + .3 * soft;
+}
+
+vec3 rotate_z(in vec3 p, in float r) {
+    return vec3(
+        p.x * cos(r) - p.y * sin(r),
+        p.x * sin(r) + p.y * cos(r),
+        p.z
+    );
 }
 
 
@@ -91,7 +100,7 @@ vec3 render(in vec3 pos, in vec3 dir) {
     float light = light_at(p);
 
     vec3 adir = reflect(dir, norm);
-    float f = .3;
+    float f = .7;
     float amb = (
           ambient_at(p, normalize(adir + vec3(-f, 0, 0)))
         + ambient_at(p, normalize(adir + vec3( f, 0, 0)))
@@ -99,16 +108,24 @@ vec3 render(in vec3 pos, in vec3 dir) {
         + ambient_at(p, normalize(adir + vec3(0, -f, 0)))
     )/4.;
 
+    vec4 tex = texture(u_texture, p.xy * .5 + .5);
     //vec3 col = norm * .5 + .5;
-    vec3 col = p.z < 0.001 ? vec3(.4, .3, .1) : vec3(.5);
+    vec3 col = vec3(.2-.2*tex.x, .4-.2*tex.y, .3-.2*tex.w);
+    col = rotate_z(col, tex.w+amb);
+    col = rotate_z(col.yzx, -tex.y*2.).zxy;
+    col = rotate_z(rotate_z(col, -1.2).yzx, -1.3).zxy;
+    col *= .6*vec3(3, 2, 1);  //mix(col.xy, col.yx, .8);
 
-    float phong = max(0., dot(norm, normalize(light_norm * vec3(1, 1, .9))));
-    col += pow(phong, 17.) * light;
+    col = mix(col, vec3(.5), tex.z);
 
-    col *= .3 + .7 * light;
+    float phong = max(0., dot(norm, normalize(light_norm * vec3(1, 1, .4))));
+    col += pow(phong, 7.) * (.2 + .8 * light);
+
+    col *= .5 + .5 * light;
     col *= .5 + .5 * amb;
 
 
+    col = mix(col, vec3(col.r*.3 + col.g*.6 + col.b*.1), .5);
     return clamp(col, 0, 1);
 }
 
