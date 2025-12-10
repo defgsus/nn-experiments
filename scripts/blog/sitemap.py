@@ -121,6 +121,10 @@ class Page:
     def scrambled(self) -> bool:
         return bool(self.document.frontmatter.get("scramble"))
 
+    @property
+    def is_draft(self) -> bool:
+        return bool(self.document.frontmatter.get("draft")) or "DRAFT" in self.document.filename.name
+
 
 class StyleSheet:
 
@@ -251,8 +255,9 @@ class Sitemap:
     def all_tags(self) -> List[Tag]:
         tags = set()
         for page in self._pages:
-            for tag in page.tags:
-                tags.add(tag.tag)
+            if not page.is_draft:
+                for tag in page.tags:
+                    tags.add(tag.tag)
         return [
             Tag(tag, TAGS.get(tag, tag))
             for tag in sorted(tags)
@@ -263,6 +268,14 @@ class Sitemap:
 
         pages = list(self.iter_pages())
         page_index = pages.index(page)
+
+        def _next_page(dir: int) -> Optional[Page]:
+            i = page_index + dir
+            while 0 <= i < len(pages):
+                if not pages[i].is_draft:
+                    return pages[i]
+                i += dir
+
         context = {
             "html": {
                 "title": page.title,
@@ -280,9 +293,9 @@ class Sitemap:
                 }
             },
             "page": page,
-            "pages": list(reversed(pages)),
-            "previous_page": pages[page_index - 1] if page_index > 0 else None,
-            "next_page": pages[page_index + 1] if page_index < len(pages) - 1 else None,
+            "pages": list(reversed([p for p in pages if not p.is_draft])),
+            "previous_page": _next_page(-1),
+            "next_page": _next_page(1),
             "frontmatter": page.document.frontmatter,
             **(page.document.frontmatter.get("context") or {}),
         }

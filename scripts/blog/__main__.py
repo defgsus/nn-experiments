@@ -23,7 +23,7 @@ def main(
         if file.suffix.lower() in (".md", ".ipynb"):
             if not ".ipynb_checkpoints" in str(file):
                 if file.name[:4].isnumeric():
-                    if file.name != "README.md" and not "DRAFT" in file.name:
+                    if file.name != "README.md":
                         documents.append(Document.from_file(file))
 
     sitemap = Sitemap(documents)

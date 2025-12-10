@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ambient Occlusion with a Neural Network</title>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="../../../../html/style/style-ab80046a.css">
+    <script type="text/javascript" src="../../../../html/js/main-04542d2b.js"></script>
+    
+</head>
+<body>
+
+
+<main class="article">
+    <div class="article-left">
+        <h3><a href="../../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        <ul>
+            
+            
+            <li class="indent-1"><a href="#ambient-occlusion-with-a-neural-network" title="Ambient Occlusion with a Neural Network">Ambient Occlusion with a Neural Network</a></li>
+            
+            
+        </ul>
+    </div>
+
+    <div class="article-mid">
+
+        <div class="show-when-small">
+            <a href="../../../../index.html">&lt;&lt; nn-experiments</a></h3>
+        </div>
+
+        <h1 id="ambient-occlusion-with-a-neural-network">Ambient Occlusion with a Neural Network <a href="#ambient-occlusion-with-a-neural-network" class="heading-linker">←</a></h1>
+<p>Ambient Occlusion is a computer graphics technique that adds nice, smooth shadows where appropriate, like in the corners of things. The brute-force approach is very expensive and i've trained a small neural network to approximate those shadows.</p>
+<p>This is a quick continuation of the <a href="../../../../html/logs/shiny-tubes.html">&quot;Shiny Tubes&quot;</a> experiment. It uses the same UNet-style, classic CNN model, just the source and target images are different.</p>
+<p>The source is, again, just white shapes on black:</p>
+<p><div style="overflow: scroll;"><img src="../../../../logs/img/ao/0006-source.png" alt="source image with randomly placed white letters on black background" /></div></p>
+<p>From this, i calculate a <em>Signed Distance Field</em>. That's not a <a href="https://en.wikipedia.org/wiki/Signed_distance_function" target="_blank">Signed Distance Function</a> but a pre-calculated 2d-array, where each pixel holds the distance
+to the closest outline of the white shapes. Below displayed cyan for positive and red for negative distances:</p>
+<p><div style="overflow: scroll;"><img src="../../../../logs/img/ao/0006-distance.png" alt="image of distances to closest outlines of the above shapes" /></div></p>
+<p>This procedure can be computationally expensive so i'm using an approximation algorithm called Dead Reckoning (<a href="https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.102.7988&amp;rep=rep1&amp;type=pdf" target="_blank">10.1.1.102.7988</a>). Once the minimum distances are calculated, one can use all the &quot;cheap&quot; ray-marching render techniques as popularized by <a href="https://iquilezles.org/articles/" target="_blank">iQ</a> on <a href="https://shadertoy.com" target="_blank">shadertoy.com</a>.</p>
+<p>I'm a bit out of practice but eventually wrote an okay-ish shader. The distance function in the shader defines a plane and the shapes/letters from the pre-calculated distance field are <em>made solid</em> and placed on the plane to cast shadows and occlusion.</p>
+<p><div style="overflow: scroll;"><img src="../../../../logs/img/ao/0006-target.png" alt="image with white letters on smoothly shadowed brownish background" /></div></p>
+<p>There's also some simple <a href="https://en.wikipedia.org/wiki/Phong_reflection_model" target="_blank">phong lighting</a>. The full code to render the source and target images is in <a href="https://github.com/defgsus/nn-experiments/blob/master/scripts/ao_dataset" target="_blank">scripts/ao_dataset/</a>.</p>
+<p>To train the network, it gets random 128x128 cuts from the source images as input and the training loss is the <em>mean absolute error</em> of it's output to the target image cuts. I used batch size of 64, AdamW optimizer with learnrate 0.003 and a model that looks like this:</p>
+<div style="overflow: scroll;"><pre>Module(
+  (module): ResConv(
+    (encoder): ModuleDict(
+      (layer_1): ConvLayer(
+        (bn): BatchNorm2d(3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv): Conv2d(3, 32, kernel_size=(7, 7), stride=(1, 1))
+        (act): GELU(approximate=&#x27;none&#x27;)
+      )
+      (layer_2): ConvLayer(
+        (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv): Conv2d(32, 32, kernel_size=(7, 7), stride=(1, 1))
+        (act): GELU(approximate=&#x27;none&#x27;)
+      )
+      (layer_3): ConvLayer(
+        (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv): Conv2d(32, 32, kernel_size=(7, 7), stride=(2, 2))
+        (act): GELU(approximate=&#x27;none&#x27;)
+      )
+      (layer_4): ConvLayer(
+        (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv): Conv2d(32, 32, kernel_size=(7, 7), stride=(1, 1))
+        (act): GELU(approximate=&#x27;none&#x27;)
+      )
+      (layer_5): ConvLayer(
+        (conv): Conv2d(32, 32, kernel_size=(7, 7), stride=(1, 1))
+      )
+    )
+    (decoder): ModuleDict(
+      (layer_1): ConvLayer(
+        (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv): ConvTranspose2d(32, 32, kernel_size=(7, 7), stride=(1, 1))
+        (act): GELU(approximate=&#x27;none&#x27;)
+      )
+      (layer_2): ConvLayer(
+        (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv): ConvTranspose2d(32, 32, kernel_size=(7, 7), stride=(1, 1))
+        (act): GELU(approximate=&#x27;none&#x27;)
+      )
+      (layer_3): ConvLayer(
+        (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv): ConvTranspose2d(32, 32, kernel_size=(7, 7), stride=(2, 2))
+        (act): GELU(approximate=&#x27;none&#x27;)
+      )
+      (layer_4): ConvLayer(
+        (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv): ConvTranspose2d(32, 32, kernel_size=(7, 7), stride=(1, 1))
+        (act): GELU(approximate=&#x27;none&#x27;)
+      )
+      (layer_5): ConvLayer(
+        (conv): ConvTranspose2d(32, 3, kernel_size=(7, 7), stride=(1, 1))
+      )
+    )
+  )
+)
+</pre></div><p>Encoder and decoder are symmetric and the output of each encoder layer <code>N</code> is added to the input of each decoder layer <code>6-N</code>, hence it's a <a href="https://en.wikipedia.org/wiki/U-Net" target="_blank">UNet</a>. The 3rd layer has a <em>stride</em> of 2, so it
+halfs the resolution of the input for further processing which gives the network a larger <a href="https://en.wikipedia.org/wiki/Receptive_field" target="_blank">receptive field</a>. With the chosen kernel-size of 7, it means each image pixel can be affected by others that are at most 85 pixels away. The first layer processes the 128x128 input and the 5th layer
+outputs a 43x43 feature space which is then decoded back to 128x128.</p>
+<p>Training went on smoothly and train as well as validation loss got down to around 0.02, which is quite okay for mean absolute error on images. The above network only has 411K parameters so i would not expect much better results. </p>
+<p>Now the fun part. Get any white on black image</p>
+<p><div style="overflow: scroll;"><img src="../../../../logs/img/ao/hello-world.png" alt="hello world written white on black" /></div></p>
+<p>and make it soft-shadowed and shiny in milliseconds:</p>
+<p><div style="overflow: scroll;"><img src="../../../../logs/img/ao/hello-world-processed.png" alt="hello world processed by the network" /></div></p>
+<p>There is a hard border in the shadow on the left. It's about 50 pixels away from the left side of the <code>H</code>. I'm sure that the network architecture could be improved, also the stride of 2 could be removed while still somehow maintaining a large receptive field size. Strides (or pooling) are usually the reason for stripy artifacts in image CNNs.</p>
+<p><div style="overflow: scroll;"><img src="../../../../logs/img/ao/parental-adivsory-processed.png" alt="the famous parental adivsory sticker processed by the network" /></div></p>
+<p>As a first try, i'm quite happy. And it does some interesting things to photos:</p>
+<p><div style="overflow: scroll;"><img src="../../../../logs/img/ao/photo-processed.png" alt="old advertisment photo processed by the network" /></div></p>
+<p><div style="overflow: scroll;"><img src="../../../../logs/img/ao/x-files-processed.png" alt="i want to believe poster from x-files processed by the network" /></div></p>
+
+        <!-- article footer -->
+        <div class="flex article-footer">
+            <div>
+                 <a target="_blank" href="https://github.com/defgsus/nn-experiments/issues">Leave a comment</a>
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                Edit on <a target="_blank" href="https://github.com/defgsus/nn-experiments/blob/master/docs/logs/2025-12-10-occlusion-cnn.md">github</a>
+            </div>
+        </div>
+
+        <div class="flex article-footer">
+            <div>
+                
+                    <a href="../../../../html/posts/2025/10/26/scraper-protection.html">
+                        &lt;&lt; Scraper protection without javascript
+                    </a>
+                
+            </div>
+
+            <div class="flex-grow"></div>
+
+            <div>
+                
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>

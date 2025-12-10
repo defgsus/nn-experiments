@@ -120,6 +120,10 @@ class Document:
                     short = str(filename).split("../scripts/", 1)[-1]
                     mapped_link = f"https://github.com/defgsus/nn-experiments/blob/master/scripts/{short}"
 
+                elif "../experiments/" in str(filename):
+                    short = str(filename).split("../experiments/", 1)[-1]
+                    mapped_link = f"https://github.com/defgsus/nn-experiments/blob/master/experiments/{short}"
+
                 else:
                     # resolve ../ links
                     mapped_link = (DOCS_PATH / str(filename.relative_to(DOCS_PATH))).resolve().relative_to(DOCS_PATH)
