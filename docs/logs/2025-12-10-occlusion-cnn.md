@@ -12,12 +12,12 @@ The source is, again, just white shapes on black:
 
 ![source image with randomly placed white letters on black background](img/ao/0006-source.png)
 
-From this, i calculate a *Signed Distance Field*. That's not a [Signed Distance Function](https://en.wikipedia.org/wiki/Signed_distance_function) but a pre-calculated 2d-array, where each pixel holds the distance
-to the closest outline of the white shapes. Below displayed cyan for positive and red for negative distances:
+From this, i calculate a *Signed Distance Field*. That's not (but related to) a [Signed Distance Function](https://en.wikipedia.org/wiki/Signed_distance_function) but a pre-calculated 2d-array, where each pixel holds the distance
+to the closest outline of the white shapes. Below displayed with cyan for positive and red for negative distances:
 
 ![image of distances to closest outlines of the above shapes](img/ao/0006-distance.png)
 
-This procedure can be computationally expensive so i'm using an approximation algorithm called Dead Reckoning ([10.1.1.102.7988](https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.102.7988&rep=rep1&type=pdf)). Once the minimum distances are calculated, one can use all the "cheap" ray-marching render techniques as popularized by [iQ](https://iquilezles.org/articles/) on [shadertoy.com](https://shadertoy.com).
+This procedure can be computationally expensive so i'm using an approximation algorithm called Dead Reckoning (paper [10.1.1.102.7988](https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.102.7988&rep=rep1&type=pdf), shadertoy example [4lKGDt](https://www.shadertoy.com/view/4lKGDt)). Once the minimum distances are calculated, one can use all the "cheap" ray-marching render techniques as popularized by [iQ](https://iquilezles.org/articles/) on [shadertoy.com](https://shadertoy.com).
 
 I'm a bit out of practice but eventually wrote an okay-ish shader. The distance function in the shader defines a plane and the shapes/letters from the pre-calculated distance field are *made solid* and placed on the plane to cast shadows and occlusion.
 
