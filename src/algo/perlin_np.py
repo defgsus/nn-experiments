@@ -12,7 +12,7 @@ def interpolate_linear(t):
 
 
 def interpolate_poly2(t):
-    return t*(3. - 2. * t)
+    return t*t*(3. - 2. * t)
 
 
 def interpolate_poly5(t):

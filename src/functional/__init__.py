@@ -1,3 +1,6 @@
+from ._experimental import (
+    Poly3
+)
 from ._fft import (
     normalized_fft2,
     normalized_ifft2,

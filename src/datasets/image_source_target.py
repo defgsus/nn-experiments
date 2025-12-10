@@ -9,6 +9,8 @@ import torchvision.transforms.functional as VF
 from src.datasets.base_dataset import BaseDataset
 from torchvision.datasets.folder import is_image_file
 
+from src.util.image import set_image_channels
+
 
 class ImageSourceTargetDataset(BaseDataset):
     def __init__(
@@ -37,6 +39,7 @@ class ImageSourceTargetDataset(BaseDataset):
         for filename in sorted(self._target_path.glob("*")):
             if is_image_file(str(filename)):
                 self._target_images[filename.name] = VF.to_tensor(PIL.Image.open(filename))
+                target_shape = self._target_images[filename.name].shape
 
         if self._adversarial_rate > 0:
             for filename in sorted(self._adversarials_path.glob("*")):
@@ -45,6 +48,15 @@ class ImageSourceTargetDataset(BaseDataset):
 
         if sorted(self._source_images) != sorted(self._target_images):
             raise RuntimeError(f"Source and target filenames are not identical")
+
+        self._source_images = {
+            fn: set_image_channels(img, target_shape[0])
+            for fn, img in self._source_images.items()
+        }
+        self._adversarials_images = {
+            fn: set_image_channels(img, target_shape[0])
+            for fn, img in self._adversarials_images.items()
+        }
 
         print(f"datatset: {len(self._source_images)} images, {len(self._adversarials_images)} adversarials")
 
@@ -106,7 +118,7 @@ class ImageSourceTargetCropDataset(BaseDataset):
             image_idx = random.randrange(len(self._dataset))
 
             source_image, target_image = self._dataset[image_idx]
-            assert source_image.shape == target_image.shape
+            assert source_image.shape == target_image.shape, f"Got {source_image.shape} != {target_image.shape}"
 
             x, y = self._get_crop_pos(source_image, random)
         else:

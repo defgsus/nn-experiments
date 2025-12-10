@@ -85,6 +85,8 @@ class Lambda(nn.Module):
 def activation_to_module(
         activation: Union[None, str, Callable, nn.Module, Type[nn.Module]]
 ) -> Union[None, nn.Module]:
+    import src.functional
+
     if activation is None:
         return None
 
@@ -106,13 +108,11 @@ def activation_to_module(
             return None
 
         if s.startswith("sinstep"):
-            from src.functional import SinStep
-            return SinStep.create_from_string(activation)
+            return src.functional.SinStep.create_from_string(activation)
         if s.startswith("sigmoidstep"):
-            from src.functional import SigmoidStep
-            return SigmoidStep.create_from_string(activation)
+            return src.functional.SigmoidStep.create_from_string(activation)
 
-        for module in (torch.nn, ):
+        for module in (src.functional, torch.nn, ):
             for key, value in vars(module).items():
                 try:
                     if key.lower() == s and issubclass(value, nn.Module):
