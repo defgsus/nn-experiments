@@ -149,6 +149,8 @@ class ConvTextLayer(nn.Module):
 
     def extra_repr(self) -> str:
         text = f"residual={self.residual}"
+        if self.kan_layer is not None:
+            text = f"{text}, kan_order={self.kan_layer.order}"
         if self.num_attention_heads:
             text = (
                 f"{text}, num_attention_heads={self.num_attention_heads}"
@@ -227,6 +229,7 @@ class ConvTextModel(nn.Module):
             out_norm: Union[None, str, Type[nn.Module]] = None,
             activation: Union[None, str, Callable] = None,
             repacking: Union[bool, Iterable[bool]] = None,
+            kan_order: Union[int, Iterable[int]] = 0,
             cheap: Union[bool, Iterable[bool]] = False,
             num_attention_heads: Union[int, Iterable[int]] = 0,
             attention_activation: Union[None, str, Callable] = "elu+1",
@@ -271,7 +274,7 @@ class ConvTextModel(nn.Module):
         self.layers = nn.ModuleList()
 
         ch = num_channels
-        for i, next_ch, ks, dil, res, attn_heads, fftc_, repacking_, cheap_ in zip(
+        for i, next_ch, ks, dil, res, attn_heads, fftc_, repacking_, cheap_, kan_order_ in zip(
                 range(num_layers),
                 layer_output_channels,
                 param_make_tuple(kernel_size, num_layers, "kernel_size"),
@@ -281,6 +284,7 @@ class ConvTextModel(nn.Module):
                 param_make_tuple(fft_conv, num_layers, "fft_conv"),
                 param_make_tuple(repacking, num_layers, "repacking"),
                 param_make_tuple(cheap, num_layers, "cheap"),
+                param_make_tuple(kan_order, num_layers, "kan_order"),
         ):
             is_last_layer = i == num_layers - 1
             in_channels = ch
@@ -309,6 +313,7 @@ class ConvTextModel(nn.Module):
                     num_attention_heads=attn_heads,
                     attention_activation=attention_activation,
                     attention_invention=attention_invention,
+                    kan_order=kan_order_,
                 )
             )
             ch = next_ch
